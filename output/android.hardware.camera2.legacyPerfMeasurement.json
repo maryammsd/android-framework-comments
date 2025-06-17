@@ -1,0 +1,140 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/hardware/camera2/legacy/PerfMeasurement.java",
+  "packageName" : "android.hardware.camera2.legacy",
+  "className" : "PerfMeasurement",
+  "comment" : "\n * GPU and CPU performance measurement for the legacy implementation.\n *\n * <p>Measures CPU and GPU processing duration for a set of operations, and dumps\n * the results into a file.</p>\n *\n * <p>Rough usage:\n * <pre>\n * {@code\n *   <set up workload>\n *   <start long-running workload>\n *   mPerfMeasurement.startTimer();\n *   ...render a frame...\n *   mPerfMeasurement.stopTimer();\n *   <end workload>\n *   mPerfMeasurement.dumpPerformanceData(\"/sdcard/my_data.txt\");\n * }\n * </pre>\n * </p>\n *\n * <p>All calls to this object must be made within the same thread, and the same GL context.\n * PerfMeasurement cannot be used outside of a GL context.  The only exception is\n * dumpPerformanceData, which can be called outside of a valid GL context.</p>\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_MAX_QUERIES",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContext",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCompletedQueryCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCollectedGpuDurations",
+    "type" : "ArrayList<Long>",
+    "comment" : "\n     * Values for completed measurements\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCollectedCpuDurations",
+    "type" : "ArrayList<Long>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCollectedTimestamps",
+    "type" : "ArrayList<Long>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTimestampQueue",
+    "type" : "Queue<Long>",
+    "comment" : "\n     * Values for in-progress measurements (waiting for async GPU results)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCpuDurationsQueue",
+    "type" : "Queue<Long>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStartTimeNs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NO_DURATION_YET",
+    "type" : "long",
+    "comment" : "\n     * The value returned by {@link #nativeGetNextGlDuration} if no new timing\n     * measurement is available since the last call.\n     ",
+    "links" : [ "#nativeGetNextGlDuration" ]
+  }, {
+    "name" : "FAILED_TIMING",
+    "type" : "long",
+    "comment" : "\n     * The value returned by {@link #nativeGetNextGlDuration} if timing failed for\n     * the next timing interval\n     ",
+    "links" : [ "#nativeGetNextGlDuration" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static boolean isGlTimingSupported()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the Gl timing methods will work, false otherwise.\n     *\n     * <p>Must be called within a valid GL context.</p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dumpPerformanceData(String path)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump collected data to file, and clear the stored data.\n     *\n     * <p>\n     * Format is a simple csv-like text file with a header,\n     * followed by a 3-column list of values in nanoseconds:\n     * <pre>\n     *   timestamp gpu_duration cpu_duration\n     *   <long> <long> <long>\n     *   <long> <long> <long>\n     *   <long> <long> <long>\n     *   ....\n     * </pre>\n     * </p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startTimer()",
+    "returnType" : "void",
+    "comment" : "\n     * Start a GPU/CPU timing measurement.\n     *\n     * <p>Call before starting a rendering pass. Only one timing measurement can be active at once,\n     * so {@link #stopTimer} must be called before the next call to this method.</p>\n     *\n     * @throws IllegalStateException if the maximum number of queries are in progress already,\n     *                               or the method is called multiple times in a row, or there is\n     *                               a GPU error.\n     ",
+    "links" : [ "#stopTimer" ]
+  }, {
+    "name" : "public void stopTimer()",
+    "returnType" : "void",
+    "comment" : "\n     * Finish a GPU/CPU timing measurement.\n     *\n     * <p>Call after finishing all the drawing for a rendering pass. Only one timing measurement can\n     * be active at once, so {@link #startTimer} must be called before the next call to this\n     * method.</p>\n     *\n     * @throws IllegalStateException if no GL timer is currently started, or there is a GPU\n     *                               error.\n     ",
+    "links" : [ "#startTimer" ]
+  }, {
+    "name" : "public void addTimestamp(long timestamp)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a timestamp to a timing measurement. These are queued up and matched to completed\n     * workload measurements as they become available.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long getNextGlDuration()",
+    "returnType" : "long",
+    "comment" : "\n     * Get the next available GPU timing measurement.\n     *\n     * <p>Since the GPU works asynchronously, the results of a single start/stopGlTimer measurement\n     * will only be available some time after the {@link #stopTimer} call is made. Poll this method\n     * until the result becomes available. If multiple start/endTimer measurements are made in a\n     * row, the results will be available in FIFO order.</p>\n     *\n     * @return The measured duration of the GPU workload for the next pending query, or\n     *         {@link #NO_DURATION_YET} if no queries are pending or the next pending query has not\n     *         yet finished, or {@link #FAILED_TIMING} if the GPU was unable to complete the\n     *         measurement.\n     *\n     * @throws IllegalStateException If there is a GPU error.\n     *\n     ",
+    "links" : [ "#stopTimer", "#NO_DURATION_YET", "#FAILED_TIMING" ]
+  }, {
+    "name" : "public int getCompletedQueryCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of measurements so far that returned a valid duration\n     * measurement.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeCreateContext(int maxQueryCount)",
+    "returnType" : "long",
+    "comment" : "\n     * Create a native performance measurement context.\n     *\n     * @param maxQueryCount maximum in-progress queries; must be >= 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeDeleteContext(long contextHandle)",
+    "returnType" : "void",
+    "comment" : "\n     * Delete the native context.\n     *\n     * <p>Not safe to call more than once.</p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeQuerySupport()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Query whether the relevant Gl extensions are available for Gl timing\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static native void nativeStartGlTimer(long contextHandle)",
+    "returnType" : "void",
+    "comment" : "\n     * Start a GL timing section.\n     *\n     * <p>All GL commands between this method and the next {@link #nativeEndGlTimer} will be\n     * included in the timing.</p>\n     *\n     * <p>Must be called from the same thread as calls to {@link #nativeEndGlTimer} and\n     * {@link #nativeGetNextGlDuration}.</p>\n     *\n     * @throws IllegalStateException if a GL error occurs or start is called repeatedly.\n     ",
+    "links" : [ "#nativeEndGlTimer", "#nativeEndGlTimer", "#nativeGetNextGlDuration" ]
+  }, {
+    "name" : "protected static native void nativeStopGlTimer(long contextHandle)",
+    "returnType" : "void",
+    "comment" : "\n     * Finish a GL timing section.\n     *\n     * <p>Some time after this call returns, the time the GPU took to\n     * execute all work submitted between the latest {@link #nativeStartGlTimer} and\n     * this call, will become available from calling {@link #nativeGetNextGlDuration}.</p>\n     *\n     * <p>Must be called from the same thread as calls to {@link #nativeStartGlTimer} and\n     * {@link #nativeGetNextGlDuration}.</p>\n     *\n     * @throws IllegalStateException if a GL error occurs or stop is called before start\n     ",
+    "links" : [ "#nativeStartGlTimer", "#nativeGetNextGlDuration", "#nativeStartGlTimer", "#nativeGetNextGlDuration" ]
+  }, {
+    "name" : "protected static native long nativeGetNextGlDuration(long contextHandle)",
+    "returnType" : "long",
+    "comment" : "\n     * Get the next available GL duration measurement, in nanoseconds.\n     *\n     * <p>Must be called from the same thread as calls to {@link #nativeStartGlTimer} and\n     * {@link #nativeEndGlTimer}.</p>\n     *\n     * @return the next GL duration measurement, or {@link #NO_DURATION_YET} if\n     *         no new measurement is available, or {@link #FAILED_TIMING} if timing\n     *         failed for the next duration measurement.\n     * @throws IllegalStateException if a GL error occurs\n     ",
+    "links" : [ "#nativeStartGlTimer", "#nativeEndGlTimer", "#NO_DURATION_YET", "#FAILED_TIMING" ]
+  } ],
+  "variableNames" : [ "TAG", "DEFAULT_MAX_QUERIES", "mNativeContext", "mCompletedQueryCount", "mCollectedGpuDurations", "mCollectedCpuDurations", "mCollectedTimestamps", "mTimestampQueue", "mCpuDurationsQueue", "mStartTimeNs", "NO_DURATION_YET", "FAILED_TIMING" ],
+  "methodNames" : [ "public static boolean isGlTimingSupported()", "public void dumpPerformanceData(String path)", "public void startTimer()", "public void stopTimer()", "public void addTimestamp(long timestamp)", "private long getNextGlDuration()", "public int getCompletedQueryCount()", "protected void finalize()", "private static native long nativeCreateContext(int maxQueryCount)", "private static native void nativeDeleteContext(long contextHandle)", "private static native boolean nativeQuerySupport()", "protected static native void nativeStartGlTimer(long contextHandle)", "protected static native void nativeStopGlTimer(long contextHandle)", "protected static native long nativeGetNextGlDuration(long contextHandle)" ]
+}

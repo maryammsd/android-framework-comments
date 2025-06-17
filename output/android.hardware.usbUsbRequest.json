@@ -1,0 +1,165 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/hardware/usb/UsbRequest.java",
+  "packageName" : "android.hardware.usb",
+  "className" : "UsbRequest",
+  "comment" : "\n * A class representing USB request packet.\n * This can be used for both reading and writing data to or from a\n * {@link android.hardware.usb.UsbDeviceConnection}.\n * UsbRequests can be used to transfer data on bulk and interrupt endpoints.\n * Requests on bulk endpoints can be sent synchronously via {@link UsbDeviceConnection#bulkTransfer}\n * or asynchronously via {@link #queue} and {@link UsbDeviceConnection#requestWait}.\n * Requests on interrupt endpoints are only send and received asynchronously.\n *\n * <p>Requests on endpoint zero are not supported by this class;\n * use {@link UsbDeviceConnection#controlTransfer} for endpoint zero requests instead.\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_USBFS_BUFFER_SIZE",
+    "type" : "int",
+    "comment" : " From drivers/usb/core/devio.c",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContext",
+    "type" : "long",
+    "comment" : " used by the JNI code",
+    "links" : [ ]
+  }, {
+    "name" : "mEndpoint",
+    "type" : "UsbEndpoint",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBuffer",
+    "type" : "ByteBuffer",
+    "comment" : " The buffer that is currently being read / written ",
+    "links" : [ ]
+  }, {
+    "name" : "mLength",
+    "type" : "int",
+    "comment" : " The amount of data to read / write when using {@link #queue} ",
+    "links" : [ "#queue" ]
+  }, {
+    "name" : "mClientData",
+    "type" : "Object",
+    "comment" : " for client use",
+    "links" : [ ]
+  }, {
+    "name" : "mConnection",
+    "type" : "UsbDeviceConnection",
+    "comment" : " Prevent the connection from being finalized",
+    "links" : [ ]
+  }, {
+    "name" : "mIsUsingNewQueue",
+    "type" : "boolean",
+    "comment" : "\n     * Whether this buffer was {@link #queue(ByteBuffer) queued using the new behavior} or\n     * {@link #queue(ByteBuffer, int) queued using the deprecated behavior}.\n     ",
+    "links" : [ "#queue", "#queue" ]
+  }, {
+    "name" : "mTempBuffer",
+    "type" : "ByteBuffer",
+    "comment" : " Temporary buffer than might be used while buffer is enqueued ",
+    "links" : [ ]
+  }, {
+    "name" : "mCloseGuard",
+    "type" : "CloseGuard",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "\n     * Lock for queue, enqueue and dequeue, so a queue operation can be finished by a dequeue\n     * operation on a different thread.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean initialize(UsbDeviceConnection connection, UsbEndpoint endpoint)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Initializes the request so it can read or write data on the given endpoint.\n     * Whether the request allows reading or writing depends on the direction of the endpoint.\n     *\n     * @param endpoint the endpoint to be used for this request.\n     * @return true if the request was successfully opened.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Releases all resources related to this request.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public UsbEndpoint getEndpoint()",
+    "returnType" : "UsbEndpoint",
+    "comment" : "\n     * Returns the endpoint for the request, or null if the request is not opened.\n     *\n     * @return the request's endpoint\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object getClientData()",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns the client data for the request.\n     * This can be used in conjunction with {@link #setClientData}\n     * to associate another object with this request, which can be useful for\n     * maintaining state between calls to {@link #queue} and\n     * {@link android.hardware.usb.UsbDeviceConnection#requestWait}\n     *\n     * @return the client data for the request\n     ",
+    "links" : [ "#setClientData", "#queue", "android.hardware.usb.UsbDeviceConnection#requestWait" ]
+  }, {
+    "name" : "public void setClientData(Object data)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the client data for the request.\n     * This can be used in conjunction with {@link #getClientData}\n     * to associate another object with this request, which can be useful for\n     * maintaining state between calls to {@link #queue} and\n     * {@link android.hardware.usb.UsbDeviceConnection#requestWait}\n     *\n     * @param data the client data for the request\n     ",
+    "links" : [ "#getClientData", "#queue", "android.hardware.usb.UsbDeviceConnection#requestWait" ]
+  }, {
+    "name" : "public boolean queue(ByteBuffer buffer, int length)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queues the request to send or receive data on its endpoint.\n     * <p>For OUT endpoints, the given buffer data will be sent on the endpoint. For IN endpoints,\n     * the endpoint will attempt to read the given number of bytes into the specified buffer. If the\n     * queueing operation is successful, return true. The result will be returned via\n     * {@link UsbDeviceConnection#requestWait}</p>\n     *\n     * @param buffer the buffer containing the bytes to write, or location to store the results of a\n     *               read. Position and array offset will be ignored and assumed to be 0. Limit and\n     *               capacity will be ignored. Once the request\n     *               {@link UsbDeviceConnection#requestWait() is processed} the position will be set\n     *               to the number of bytes read/written.\n     * @param length number of bytes to read or write. Before {@value Build.VERSION_CODES#P}, a\n     *               value larger than 16384 bytes would be truncated down to 16384. In API\n     *               {@value Build.VERSION_CODES#P} and after, any value of length is valid.\n     *\n     * @return true if the queueing operation succeeded\n     *\n     * @deprecated Use {@link #queue(ByteBuffer)} instead.\n     ",
+    "links" : [ "UsbDeviceConnection#requestWait", "UsbDeviceConnection#requestWait", "#queue" ]
+  }, {
+    "name" : "public boolean queue(@Nullable ByteBuffer buffer)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queues the request to send or receive data on its endpoint.\n     *\n     * <p>For OUT endpoints, the remaining bytes of the buffer will be sent on the endpoint. For IN\n     * endpoints, the endpoint will attempt to fill the remaining bytes of the buffer. If the\n     * queueing operation is successful, return true. The result will be returned via\n     * {@link UsbDeviceConnection#requestWait}</p>\n     *\n     * @param buffer the buffer containing the bytes to send, or the buffer to fill. The state\n     *               of the buffer is undefined until the request is returned by\n     *               {@link UsbDeviceConnection#requestWait}. If the request failed the buffer\n     *               will be unchanged; if the request succeeded the position of the buffer is\n     *               incremented by the number of bytes sent/received. Before\n     *               {@value Build.VERSION_CODES#P}, a buffer of length larger than 16384 bytes\n     *               would throw IllegalArgumentException. In API {@value Build.VERSION_CODES#P}\n     *               and after, any size buffer is valid.\n     *\n     * @return true if the queueing operation succeeded\n     ",
+    "links" : [ "UsbDeviceConnection#requestWait", "UsbDeviceConnection#requestWait" ]
+  }, {
+    "name" : " void dequeue(boolean useBufferOverflowInsteadOfIllegalArg)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean cancel()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Cancels a pending queue operation.\n     *\n     * @return true if cancelling succeeded\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean cancelIfOpen()",
+    "returnType" : "boolean",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "private native boolean native_init(UsbDeviceConnection connection, int ep_address, int ep_attributes, int ep_max_packet_size, int ep_interval)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_close()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native boolean native_queue(ByteBuffer buffer, int offset, int length)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native boolean native_queue_array(byte[] buffer, int length, boolean out)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int native_dequeue_array(byte[] buffer, int length, boolean out)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native boolean native_queue_direct(ByteBuffer buffer, int length, boolean out)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int native_dequeue_direct()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native boolean native_cancel()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "MAX_USBFS_BUFFER_SIZE", "mNativeContext", "mEndpoint", "mBuffer", "mLength", "mClientData", "mConnection", "mIsUsingNewQueue", "mTempBuffer", "mCloseGuard", "mLock" ],
+  "methodNames" : [ "public boolean initialize(UsbDeviceConnection connection, UsbEndpoint endpoint)", "public void close()", "protected void finalize() throws Throwable", "public UsbEndpoint getEndpoint()", "public Object getClientData()", "public void setClientData(Object data)", "public boolean queue(ByteBuffer buffer, int length)", "public boolean queue(@Nullable ByteBuffer buffer)", " void dequeue(boolean useBufferOverflowInsteadOfIllegalArg)", "public boolean cancel()", " boolean cancelIfOpen()", "private native boolean native_init(UsbDeviceConnection connection, int ep_address, int ep_attributes, int ep_max_packet_size, int ep_interval)", "private native void native_close()", "private native boolean native_queue(ByteBuffer buffer, int offset, int length)", "private native boolean native_queue_array(byte[] buffer, int length, boolean out)", "private native int native_dequeue_array(byte[] buffer, int length, boolean out)", "private native boolean native_queue_direct(ByteBuffer buffer, int length, boolean out)", "private native int native_dequeue_direct()", "private native boolean native_cancel()" ]
+}

@@ -1,0 +1,985 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/inputmethodservice/InputMethodService.java",
+  "packageName" : "android.inputmethodservice",
+  "className" : "InputMethodService",
+  "comment" : "\n * InputMethodService provides a standard implementation of an InputMethod,\n * which final implementations can derive from and customize.  See the\n * base class {@link AbstractInputMethodService} and the {@link InputMethod}\n * interface for more information on the basics of writing input methods.\n * \n * <p>In addition to the normal Service lifecycle methods, this class\n * introduces some new specific callbacks that most subclasses will want\n * to make use of:</p>\n * <ul>\n * <li> {@link #onInitializeInterface()} for user-interface initialization,\n * in particular to deal with configuration changes while the service is\n * running.\n * <li> {@link #onBindInput} to find out about switching to a new client.\n * <li> {@link #onStartInput} to deal with an input session starting with\n * the client.\n * <li> {@link #onCreateInputView()}, {@link #onCreateCandidatesView()},\n * and {@link #onCreateExtractTextView()} for non-demand generation of the UI.\n * <li> {@link #onStartInputView(EditorInfo, boolean)} to deal with input\n * starting within the input area of the IME.\n * </ul>\n * \n * <p>An input method has significant discretion in how it goes about its\n * work: the {@link android.inputmethodservice.InputMethodService} provides\n * a basic framework for standard UI elements (input view, candidates view,\n * and running in fullscreen mode), but it is up to a particular implementor\n * to decide how to use them.  For example, one input method could implement\n * an input area with a keyboard, another could allow the user to draw text,\n * while a third could have no input area (and thus not be visible to the\n * user) but instead listen to audio and perform text to speech conversion.</p>\n * \n * <p>In the implementation provided here, all of these elements are placed\n * together in a single window managed by the InputMethodService.  It will\n * execute callbacks as it needs information about them, and provides APIs for\n * programmatic control over them.  They layout of these elements is explicitly\n * defined:</p>\n * \n * <ul>\n * <li>The soft input view, if available, is placed at the bottom of the\n * screen.\n * <li>The candidates view, if currently shown, is placed above the soft\n * input view.\n * <li>If not running fullscreen, the application is moved or resized to be\n * above these views; if running fullscreen, the window will completely cover\n * the application and its top part will contain the extract text of what is\n * currently being edited by the application.\n * </ul>\n * \n * \n * <a name=\"SoftInputView\"></a>\n * <h3>Soft Input View</h3>\n * \n * <p>Central to most input methods is the soft input view.  This is where most\n * user interaction occurs: pressing on soft keys, drawing characters, or\n * however else your input method wants to generate text.  Most implementations\n * will simply have their own view doing all of this work, and return a new\n * instance of it when {@link #onCreateInputView()} is called.  At that point,\n * as long as the input view is visible, you will see user interaction in\n * that view and can call back on the InputMethodService to interact with the\n * application as appropriate.</p>\n * \n * <p>There are some situations where you want to decide whether or not your\n * soft input view should be shown to the user.  This is done by implementing\n * the {@link #onEvaluateInputViewShown()} to return true or false based on\n * whether it should be shown in the current environment.  If any of your\n * state has changed that may impact this, call\n * {@link #updateInputViewShown()} to have it re-evaluated.  The default\n * implementation always shows the input view unless there is a hard\n * keyboard available, which is the appropriate behavior for most input\n * methods.</p>\n * \n * \n * <a name=\"CandidatesView\"></a>\n * <h3>Candidates View</h3>\n * \n * <p>Often while the user is generating raw text, an input method wants to\n * provide them with a list of possible interpretations of that text that can\n * be selected for use.  This is accomplished with the candidates view, and\n * like the soft input view you implement {@link #onCreateCandidatesView()}\n * to instantiate your own view implementing your candidates UI.</p>\n * \n * <p>Management of the candidates view is a little different than the input\n * view, because the candidates view tends to be more transient, being shown\n * only when there are possible candidates for the current text being entered\n * by the user.  To control whether the candidates view is shown, you use\n * {@link #setCandidatesViewShown(boolean)}.  Note that because the candidate\n * view tends to be shown and hidden a lot, it does not impact the application\n * UI in the same way as the soft input view: it will never cause application\n * windows to resize, only cause them to be panned if needed for the user to\n * see the current focus.</p>\n * \n * \n * <a name=\"FullscreenMode\"></a>\n * <h3>Fullscreen Mode</h3>\n * \n * <p>Sometimes your input method UI is too large to integrate with the\n * application UI, so you just want to take over the screen.  This is\n * accomplished by switching to full-screen mode, causing the input method\n * window to fill the entire screen and add its own \"extracted text\" editor\n * showing the user the text that is being typed.  Unlike the other UI elements,\n * there is a standard implementation for the extract editor that you should\n * not need to change.  The editor is placed at the top of the IME, above the\n * input and candidates views.</p>\n * \n * <p>Similar to the input view, you control whether the IME is running in\n * fullscreen mode by implementing {@link #onEvaluateFullscreenMode()}\n * to return true or false based on\n * whether it should be fullscreen in the current environment.  If any of your\n * state has changed that may impact this, call\n * {@link #updateFullscreenMode()} to have it re-evaluated.  The default\n * implementation selects fullscreen mode when the screen is in a landscape\n * orientation, which is appropriate behavior for most input methods that have\n * a significant input area.</p>\n * \n * <p>When in fullscreen mode, you have some special requirements because the\n * user can not see the application UI.  In particular, you should implement\n * {@link #onDisplayCompletions(CompletionInfo[])} to show completions\n * generated by your application, typically in your candidates view like you\n * would normally show candidates.\n * \n * \n * <a name=\"GeneratingText\"></a>\n * <h3>Generating Text</h3>\n * \n * <p>The key part of an IME is of course generating text for the application.\n * This is done through calls to the\n * {@link android.view.inputmethod.InputConnection} interface to the\n * application, which can be retrieved from {@link #getCurrentInputConnection()}.\n * This interface allows you to generate raw key events or, if the target\n * supports it, directly edit in strings of candidates and committed text.</p>\n * \n * <p>Information about what the target is expected and supports can be found\n * through the {@link android.view.inputmethod.EditorInfo} class, which is\n * retrieved with {@link #getCurrentInputEditorInfo()} method.  The most\n * important part of this is {@link android.view.inputmethod.EditorInfo#inputType\n * EditorInfo.inputType}; in particular, if this is\n * {@link android.view.inputmethod.EditorInfo#TYPE_NULL EditorInfo.TYPE_NULL},\n * then the target does not support complex edits and you need to only deliver\n * raw key events to it.  An input method will also want to look at other\n * values here, to for example detect password mode, auto complete text views,\n * phone number entry, etc.</p>\n * \n * <p>When the user switches between input targets, you will receive calls to\n * {@link #onFinishInput()} and {@link #onStartInput(EditorInfo, boolean)}.\n * You can use these to reset and initialize your input state for the current\n * target.  For example, you will often want to clear any input state, and\n * update a soft keyboard to be appropriate for the new inputType.</p>\n * \n * @attr ref android.R.styleable#InputMethodService_imeFullscreenBackground\n * @attr ref android.R.styleable#InputMethodService_imeExtractEnterAnimation\n * @attr ref android.R.styleable#InputMethodService_imeExtractExitAnimation\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BACK_DISPOSITION_DEFAULT",
+    "type" : "int",
+    "comment" : "\n     * Allows the system to optimize the back button affordance based on the presence of software\n     * keyboard.\n     *\n     * <p>For instance, on devices that have navigation bar and software-rendered back button, the\n     * system may use a different icon while {@link #isInputViewShown()} returns {@code true}, to\n     * indicate that the back button has \"dismiss\" affordance.</p>\n     *\n     * <p>Note that {@link KeyEvent#KEYCODE_BACK} events continue to be sent to\n     * {@link #onKeyDown(int, KeyEvent)} even when this mode is specified. The default\n     * implementation of {@link #onKeyDown(int, KeyEvent)} for {@link KeyEvent#KEYCODE_BACK} does\n     * not take this mode into account.</p>\n     *\n     * <p>For API level {@link android.os.Build.VERSION_CODES#O_MR1} and lower devices, this is the\n     * only mode you can safely specify without worrying about the compatibility.</p>\n     *\n     * @see #setBackDisposition(int)\n     ",
+    "links" : [ "#isInputViewShown", "KeyEvent#KEYCODE_BACK", "#onKeyDown", "#onKeyDown", "KeyEvent#KEYCODE_BACK", "android.os.Build.VERSION_CODES#O_MR1" ]
+  }, {
+    "name" : "BACK_DISPOSITION_WILL_NOT_DISMISS",
+    "type" : "int",
+    "comment" : "\n     * Deprecated flag.\n     *\n     * <p>To avoid compatibility issues, IME developers should not use this flag.</p>\n     *\n     * @deprecated on {@link android.os.Build.VERSION_CODES#P} and later devices, this flag is\n     *             handled as a synonym of {@link #BACK_DISPOSITION_DEFAULT}. On\n     *             {@link android.os.Build.VERSION_CODES#O_MR1} and prior devices, expected behavior\n     *             of this mode had not been well defined. Most likely the end result would be the\n     *             same as {@link #BACK_DISPOSITION_DEFAULT}. Either way it is not recommended to\n     *             use this mode\n     * @see #setBackDisposition(int)\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#P", "#BACK_DISPOSITION_DEFAULT", "android.os.Build.VERSION_CODES#O_MR1", "#BACK_DISPOSITION_DEFAULT" ]
+  }, {
+    "name" : "BACK_DISPOSITION_WILL_DISMISS",
+    "type" : "int",
+    "comment" : "\n     * Deprecated flag.\n     *\n     * <p>To avoid compatibility issues, IME developers should not use this flag.</p>\n     *\n     * @deprecated on {@link android.os.Build.VERSION_CODES#P} and later devices, this flag is\n     *             handled as a synonym of {@link #BACK_DISPOSITION_DEFAULT}. On\n     *             {@link android.os.Build.VERSION_CODES#O_MR1} and prior devices, expected behavior\n     *             of this mode had not been well defined. In AOSP implementation running on devices\n     *             that have navigation bar, specifying this flag could change the software back\n     *             button to \"Dismiss\" icon no matter whether the software keyboard is shown or not,\n     *             but there would be no easy way to restore the icon state even after IME lost the\n     *             connection to the application. To avoid user confusions, do not specify this mode\n     *             anyway\n     * @see #setBackDisposition(int)\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#P", "#BACK_DISPOSITION_DEFAULT", "android.os.Build.VERSION_CODES#O_MR1" ]
+  }, {
+    "name" : "BACK_DISPOSITION_ADJUST_NOTHING",
+    "type" : "int",
+    "comment" : "\n     * Asks the system to not adjust the back button affordance even when the software keyboard is\n     * shown.\n     *\n     * <p>This mode is useful for UI modes where IME's main soft input window is used for some\n     * supplemental UI, such as floating candidate window for languages such as Chinese and\n     * Japanese, where users expect the back button is, or at least looks to be, handled by the\n     * target application rather than the UI shown by the IME even while {@link #isInputViewShown()}\n     * returns {@code true}.</p>\n     *\n     * <p>Note that {@link KeyEvent#KEYCODE_BACK} events continue to be sent to\n     * {@link #onKeyDown(int, KeyEvent)} even when this mode is specified. The default\n     * implementation of {@link #onKeyDown(int, KeyEvent)} for {@link KeyEvent#KEYCODE_BACK} does\n     * not take this mode into account.</p>\n     *\n     * @see #setBackDisposition(int)\n     ",
+    "links" : [ "#isInputViewShown", "KeyEvent#KEYCODE_BACK", "#onKeyDown", "#onKeyDown", "KeyEvent#KEYCODE_BACK" ]
+  }, {
+    "name" : "IME_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     * The IME is active.  It may or may not be visible.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "IME_VISIBLE",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     * The IME is visible.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "IME_INVISIBLE",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     * The IME is active and ready with views but set invisible.\n     * This flag cannot be combined with {@link #IME_VISIBLE}.\n     ",
+    "links" : [ "#IME_VISIBLE" ]
+  }, {
+    "name" : "BACK_DISPOSITION_MIN",
+    "type" : "int",
+    "comment" : " Min and max values for back disposition.",
+    "links" : [ ]
+  }, {
+    "name" : "BACK_DISPOSITION_MAX",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mImm",
+    "type" : "InputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPrivOps",
+    "type" : "InputMethodPrivilegedOperations",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTheme",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInflater",
+    "type" : "LayoutInflater",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mThemeAttrs",
+    "type" : "TypedArray",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRootView",
+    "type" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWindow",
+    "type" : "SoftInputWindow",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInitialized",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mViewsCreated",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDecorViewVisible",
+    "type" : "boolean",
+    "comment" : " IME views visibility.",
+    "links" : [ ]
+  }, {
+    "name" : "mDecorViewWasVisible",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInShowWindow",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCanPreRender",
+    "type" : "boolean",
+    "comment" : " True if pre-rendering of IME views/window is supported.",
+    "links" : [ ]
+  }, {
+    "name" : "mIsPreRendered",
+    "type" : "boolean",
+    "comment" : " If IME is pre-rendered.",
+    "links" : [ ]
+  }, {
+    "name" : "mWindowVisible",
+    "type" : "boolean",
+    "comment" : " Use (mDecorViewVisible && mWindowVisible) to check if IME is visible to the user.",
+    "links" : [ ]
+  }, {
+    "name" : "mFullscreenArea",
+    "type" : "ViewGroup",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractFrame",
+    "type" : "FrameLayout",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCandidatesFrame",
+    "type" : "FrameLayout",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputFrame",
+    "type" : "FrameLayout",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mToken",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputBinding",
+    "type" : "InputBinding",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputConnection",
+    "type" : "InputConnection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputStarted",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputViewStarted",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCandidatesViewStarted",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStartedInputConnection",
+    "type" : "InputConnection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputEditorInfo",
+    "type" : "EditorInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mShowInputFlags",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mShowInputRequested",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastShowInputRequested",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCandidatesVisibility",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurCompletions",
+    "type" : "CompletionInfo[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mFullscreenApplied",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsFullscreen",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractView",
+    "type" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractViewHidden",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractEditText",
+    "type" : "ExtractEditText",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractAccessories",
+    "type" : "ViewGroup",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractAction",
+    "type" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractedText",
+    "type" : "ExtractedText",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtractedToken",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputView",
+    "type" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsInputViewShown",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStatusIcon",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBackDisposition",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNotifyUserActionSent",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTmpInsets",
+    "type" : "Insets",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTmpLocation",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInlineSuggestionSessionController",
+    "type" : "InlineSuggestionSessionController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAutomotiveHideNavBarForKeyboard",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsAutomotive",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurShowInputToken",
+    "type" : "IBinder",
+    "comment" : "\n     * An opaque {@link Binder} token of window requesting {@link InputMethodImpl#showSoftInput}\n     * The original app window token is passed from client app window.\n     * {@link com.android.server.inputmethod.InputMethodManagerService} creates a unique dummy\n     * token to identify this window.\n     * This dummy token is only valid for a single call to {@link InputMethodImpl#showSoftInput},\n     * after which it is set null until next call.\n     ",
+    "links" : [ "Binder", "InputMethodImpl#showSoftInput", "com.android.server.inputmethod.InputMethodManagerService", "InputMethodImpl#showSoftInput" ]
+  }, {
+    "name" : "mCurHideInputToken",
+    "type" : "IBinder",
+    "comment" : "\n     * An opaque {@link Binder} token of window requesting {@link InputMethodImpl#hideSoftInput}\n     * The original app window token is passed from client app window.\n     * {@link com.android.server.inputmethod.InputMethodManagerService} creates a unique dummy\n     * token to identify this window.\n     * This dummy token is only valid for a single call to {@link InputMethodImpl#hideSoftInput},\n     * after which it is set {@code null} until next call.\n     ",
+    "links" : [ "Binder", "InputMethodImpl#hideSoftInput", "com.android.server.inputmethod.InputMethodManagerService", "InputMethodImpl#hideSoftInput" ]
+  }, {
+    "name" : "mInsetsComputer",
+    "type" : "ViewTreeObserver.OnComputeInternalInsetsListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActionClickListener",
+    "type" : "View.OnClickListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSettingsObserver",
+    "type" : "SettingsObserver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MOVEMENT_DOWN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MOVEMENT_UP",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public InlineSuggestionsRequest onCreateInlineSuggestionsRequest(@NonNull Bundle uiExtras)",
+    "returnType" : "InlineSuggestionsRequest",
+    "comment" : "\n     * Called when Autofill is requesting an {@link InlineSuggestionsRequest} from the IME.\n     *\n     * <p>The Autofill Framework will first request the IME to create and send an\n     * {@link InlineSuggestionsRequest} back. Once Autofill Framework receives a valid request and\n     * also receives valid inline suggestions, they will be returned via\n     * {@link #onInlineSuggestionsResponse(InlineSuggestionsResponse)}.</p>\n     *\n     * <p>IME Lifecycle - The request will wait to be created after inputStarted</p>\n     *\n     * <p>If the IME wants to support displaying inline suggestions, they must set\n     * supportsInlineSuggestions in its XML and implement this method to return a valid\n     * {@link InlineSuggestionsRequest}.</p>\n     *\n     * @param uiExtras the extras that contain the UI renderer related information\n     * @return an {@link InlineSuggestionsRequest} to be sent to Autofill.\n     ",
+    "links" : [ "InlineSuggestionsRequest", "InlineSuggestionsRequest", "#onInlineSuggestionsResponse", "InlineSuggestionsRequest", "InlineSuggestionsRequest" ]
+  }, {
+    "name" : "public boolean onInlineSuggestionsResponse(@NonNull InlineSuggestionsResponse response)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called when Autofill responds back with {@link InlineSuggestionsResponse} containing\n     * inline suggestions.\n     *\n     * <p>Should be implemented by subclasses.</p>\n     *\n     * @param response {@link InlineSuggestionsResponse} passed back by Autofill.\n     * @return Whether the IME will use and render  the inline suggestions.\n     ",
+    "links" : [ "InlineSuggestionsResponse", "InlineSuggestionsResponse" ]
+  }, {
+    "name" : "private IBinder getHostInputToken()",
+    "returnType" : "IBinder",
+    "comment" : "\n     * Returns the {@link IBinder} input token from the host view root.\n     ",
+    "links" : [ "IBinder" ]
+  }, {
+    "name" : "private void notifyImeHidden()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeImeSurface()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setImeWindowStatus(int visibilityFlags, int backDisposition)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setImeExclusionRect(int visibleTopInsets)",
+    "returnType" : "void",
+    "comment" : " Set region of the keyboard to be avoided from back gesture ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTheme(int theme)",
+    "returnType" : "void",
+    "comment" : "\n     * You can call this to customize the theme used by your IME's window.\n     * This theme should typically be one that derives from\n     * {@link android.R.style#Theme_InputMethod}, which is the default theme\n     * you will get.  This must be set before {@link #onCreate}, so you\n     * will typically call it in your constructor with the resource ID\n     * of your custom theme.\n     ",
+    "links" : [ "android.R.style#Theme_InputMethod", "#onCreate" ]
+  }, {
+    "name" : "public boolean enableHardwareAcceleration()",
+    "returnType" : "boolean",
+    "comment" : "\n     * You can call this to try to enable accelerated drawing for your IME. This must be set before\n     * {@link #onCreate()}, so you will typically call it in your constructor.  It is not always\n     * possible to use hardware accelerated drawing in an IME (for example on low-end devices that\n     * do not have the resources to support this), so the call {@code true} if it succeeds otherwise\n     * {@code false} if you will need to draw in software.  You must be able to handle either case.\n     *\n     * <p>In API 21 and later, system may automatically enable hardware accelerated drawing for your\n     * IME on capable devices even if this method is not explicitly called. Make sure that your IME\n     * is able to handle either case.</p>\n     *\n     * @return {@code true} if accelerated drawing is successfully enabled otherwise {@code false}.\n     *         On API 21 and later devices the return value is basically just a hint and your IME\n     *         does not need to change the behavior based on the it\n     * @deprecated Starting in API 21, hardware acceleration is always enabled on capable devices\n     ",
+    "links" : [ "#onCreate" ]
+  }, {
+    "name" : "public void onCreate()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onInitializeInterface()",
+    "returnType" : "void",
+    "comment" : "\n     * This is a hook that subclasses can use to perform initialization of\n     * their interface.  It is called for you prior to any of your UI objects\n     * being created, both after the service is first created and after a\n     * configuration change happens.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void initialize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void initViews()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDestroy()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConfigurationChanged(Configuration newConfig)",
+    "returnType" : "void",
+    "comment" : "\n     * Take care of handling configuration changes.  Subclasses of\n     * InputMethodService generally don't need to deal directly with\n     * this on their own; the standard implementation here takes care of\n     * regenerating the input method UI as a result of the configuration\n     * change, so you can rely on your {@link #onCreateInputView} and\n     * other methods being called as appropriate due to a configuration change.\n     * \n     * <p>When a configuration change does happen,\n     * {@link #onInitializeInterface()} is guaranteed to be called the next\n     * time prior to any of the other input or UI creation callbacks.  The\n     * following will be called immediately depending if appropriate for current \n     * state: {@link #onStartInput} if input is active, and\n     * {@link #onCreateInputView} and {@link #onStartInputView} and related\n     * appropriate functions if the UI is displayed.\n     ",
+    "links" : [ "#onCreateInputView", "#onInitializeInterface", "#onStartInput", "#onCreateInputView", "#onStartInputView" ]
+  }, {
+    "name" : "private void resetStateForNewConfiguration()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public AbstractInputMethodImpl onCreateInputMethodInterface()",
+    "returnType" : "AbstractInputMethodImpl",
+    "comment" : "\n     * Implement to return our standard {@link InputMethodImpl}.  Subclasses\n     * can override to provide their own customized version.\n     ",
+    "links" : [ "InputMethodImpl" ]
+  }, {
+    "name" : "public AbstractInputMethodSessionImpl onCreateInputMethodSessionInterface()",
+    "returnType" : "AbstractInputMethodSessionImpl",
+    "comment" : "\n     * Implement to return our standard {@link InputMethodSessionImpl}.  Subclasses\n     * can override to provide their own customized version.\n     ",
+    "links" : [ "InputMethodSessionImpl" ]
+  }, {
+    "name" : "public LayoutInflater getLayoutInflater()",
+    "returnType" : "LayoutInflater",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Dialog getWindow()",
+    "returnType" : "Dialog",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setBackDisposition(@BackDispositionMode int disposition)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the disposition mode that indicates the expected affordance for the back button.\n     *\n     * <p>Keep in mind that specifying this flag does not change the the default behavior of\n     * {@link #onKeyDown(int, KeyEvent)}.  It is IME developers' responsibility for making sure that\n     * their custom implementation of {@link #onKeyDown(int, KeyEvent)} is consistent with the mode\n     * specified to this API.</p>\n     *\n     * @see #getBackDisposition()\n     * @param disposition disposition mode to be set\n     ",
+    "links" : [ "#onKeyDown", "#onKeyDown" ]
+  }, {
+    "name" : "public int getBackDisposition()",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieves the current disposition mode that indicates the expected back button affordance.\n     *\n     * @see #setBackDisposition(int)\n     * @return currently selected disposition mode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMaxWidth()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the maximum width, in pixels, available the input method.\n     * Input methods are positioned at the bottom of the screen and, unless\n     * running in fullscreen, will generally want to be as short as possible\n     * so should compute their height based on their contents.  However, they\n     * can stretch as much as needed horizontally.  The function returns to\n     * you the maximum amount of space available horizontally, which you can\n     * use if needed for UI placement.\n     * \n     * <p>In many cases this is not needed, you can just rely on the normal\n     * view layout mechanisms to position your views within the full horizontal\n     * space given to the input method.\n     * \n     * <p>Note that this value can change dynamically, in particular when the\n     * screen orientation changes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public InputBinding getCurrentInputBinding()",
+    "returnType" : "InputBinding",
+    "comment" : "\n     * Return the currently active InputBinding for the input method, or\n     * null if there is none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public InputConnection getCurrentInputConnection()",
+    "returnType" : "InputConnection",
+    "comment" : "\n     * Retrieve the currently active InputConnection that is bound to\n     * the input method, or null if there is none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean switchToPreviousInputMethod()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Force switch to the last used input method and subtype. If the last input method didn't have\n     * any subtypes, the framework will simply switch to the last input method with no subtype\n     * specified.\n     * @return true if the current input method and subtype was successfully switched to the last\n     * used input method and subtype.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean switchToNextInputMethod(boolean onlyCurrentIme)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Force switch to the next input method and subtype. If there is no IME enabled except\n     * current IME and subtype, do nothing.\n     * @param onlyCurrentIme if true, the framework will find the next subtype which\n     * belongs to the current IME\n     * @return true if the current input method and subtype was successfully switched to the next\n     * input method and subtype.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean shouldOfferSwitchingToNextInputMethod()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the current IME needs to offer the users ways to switch to a next input\n     * method (e.g. a globe key.).\n     * When an IME sets supportsSwitchingToNextInputMethod and this method returns true,\n     * the IME has to offer ways to to invoke {@link #switchToNextInputMethod} accordingly.\n     * <p> Note that the system determines the most appropriate next input method\n     * and subtype in order to provide the consistent user experience in switching\n     * between IMEs and subtypes.\n     ",
+    "links" : [ "#switchToNextInputMethod" ]
+  }, {
+    "name" : "public boolean getCurrentInputStarted()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public EditorInfo getCurrentInputEditorInfo()",
+    "returnType" : "EditorInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void reportFullscreenMode()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void updateFullscreenMode()",
+    "returnType" : "void",
+    "comment" : "\n     * Re-evaluate whether the input method should be running in fullscreen\n     * mode, and update its UI if this has changed since the last time it\n     * was evaluated.  This will call {@link #onEvaluateFullscreenMode()} to\n     * determine whether it should currently run in fullscreen mode.  You\n     * can use {@link #isFullscreenMode()} to determine if the input method\n     * is currently running in fullscreen mode.\n     ",
+    "links" : [ "#onEvaluateFullscreenMode", "#isFullscreenMode" ]
+  }, {
+    "name" : "public void onConfigureWindow(Window win, boolean isFullscreen, boolean isCandidatesOnly)",
+    "returnType" : "void",
+    "comment" : "\n     * Update the given window's parameters for the given mode.  This is called\n     * when the window is first displayed and each time the fullscreen or\n     * candidates only mode changes.\n     * \n     * <p>The default implementation makes the layout for the window\n     * MATCH_PARENT x MATCH_PARENT when in fullscreen mode, and\n     * MATCH_PARENT x WRAP_CONTENT when in non-fullscreen mode.\n     * \n     * @param win The input method's window.\n     * @param isFullscreen If true, the window is running in fullscreen mode\n     * and intended to cover the entire application display.\n     * @param isCandidatesOnly If true, the window is only showing the\n     * candidates view and none of the rest of its UI.  This is mutually\n     * exclusive with fullscreen mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFullscreenMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return whether the input method is <em>currently</em> running in\n     * fullscreen mode.  This is the mode that was last determined and\n     * applied by {@link #updateFullscreenMode()}.\n     ",
+    "links" : [ "#updateFullscreenMode" ]
+  }, {
+    "name" : "public boolean onEvaluateFullscreenMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to control when the input method should run in\n     * fullscreen mode.  The default implementation runs in fullsceen only\n     * when the screen is in landscape mode.  If you change what\n     * this returns, you will need to call {@link #updateFullscreenMode()}\n     * yourself whenever the returned value may have changed to have it\n     * re-evaluated and applied.\n     ",
+    "links" : [ "#updateFullscreenMode" ]
+  }, {
+    "name" : "public void setExtractViewShown(boolean shown)",
+    "returnType" : "void",
+    "comment" : "\n     * Controls the visibility of the extracted text area.  This only applies\n     * when the input method is in fullscreen mode, and thus showing extracted\n     * text.  When false, the extracted text will not be shown, allowing some\n     * of the application to be seen behind.  This is normally set for you\n     * by {@link #onUpdateExtractingVisibility}.  This controls the visibility\n     * of both the extracted text and candidate view; the latter since it is\n     * not useful if there is no text to see.\n     ",
+    "links" : [ "#onUpdateExtractingVisibility" ]
+  }, {
+    "name" : "public boolean isExtractViewShown()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return whether the fullscreen extract view is shown.  This will only\n     * return true if {@link #isFullscreenMode()} returns true, and in that\n     * case its value depends on the last call to\n     * {@link #setExtractViewShown(boolean)}.  This effectively lets you\n     * determine if the application window is entirely covered (when this\n     * returns true) or if some part of it may be shown (if this returns\n     * false, though if {@link #isFullscreenMode()} returns true in that case\n     * then it is probably only a sliver of the application).\n     ",
+    "links" : [ "#isFullscreenMode", "#setExtractViewShown", "#isFullscreenMode" ]
+  }, {
+    "name" : " void updateExtractFrameVisibility()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onComputeInsets(Insets outInsets)",
+    "returnType" : "void",
+    "comment" : "\n     * Compute the interesting insets into your UI.  The default implementation\n     * uses the top of the candidates frame for the visible insets, and the\n     * top of the input frame for the content insets.  The default touchable\n     * insets are {@link Insets#TOUCHABLE_INSETS_VISIBLE}.\n     * \n     * <p>Note that this method is not called when\n     * {@link #isExtractViewShown} returns true, since\n     * in that case the application is left as-is behind the input method and\n     * not impacted by anything in its UI.\n     * \n     * @param outInsets Fill in with the current UI insets.\n     ",
+    "links" : [ "Insets#TOUCHABLE_INSETS_VISIBLE", "#isExtractViewShown" ]
+  }, {
+    "name" : "public void updateInputViewShown()",
+    "returnType" : "void",
+    "comment" : "\n     * Re-evaluate whether the soft input area should currently be shown, and\n     * update its UI if this has changed since the last time it\n     * was evaluated.  This will call {@link #onEvaluateInputViewShown()} to\n     * determine whether the input view should currently be shown.  You\n     * can use {@link #isInputViewShown()} to determine if the input view\n     * is currently shown.\n     ",
+    "links" : [ "#onEvaluateInputViewShown", "#isInputViewShown" ]
+  }, {
+    "name" : "public boolean isShowInputRequested()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if we have been asked to show our input view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInputViewShown()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return whether the soft input view is <em>currently</em> shown to the\n     * user.  This is the state that was last determined and\n     * applied by {@link #updateInputViewShown()}.\n     ",
+    "links" : [ "#updateInputViewShown" ]
+  }, {
+    "name" : "public boolean onEvaluateInputViewShown()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to control when the soft input area should be shown to the user.  The default\n     * implementation returns {@code false} when there is no hard keyboard or the keyboard is hidden\n     * unless the user shows an intention to use software keyboard.  If you change what this\n     * returns, you will need to call {@link #updateInputViewShown()} yourself whenever the returned\n     * value may have changed to have it re-evaluated and applied.\n     *\n     * <p>When you override this method, it is recommended to call\n     * {@code super.onEvaluateInputViewShown()} and return {@code true} when {@code true} is\n     * returned.</p>\n     ",
+    "links" : [ "#updateInputViewShown" ]
+  }, {
+    "name" : "public void setCandidatesViewShown(boolean shown)",
+    "returnType" : "void",
+    "comment" : "\n     * Controls the visibility of the candidates display area.  By default\n     * it is hidden.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void updateCandidatesVisibility(boolean shown)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCandidatesHiddenVisibility()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the visibility mode (either {@link View#INVISIBLE View.INVISIBLE}\n     * or {@link View#GONE View.GONE}) of the candidates view when it is not\n     * shown.  The default implementation returns GONE when\n     * {@link #isExtractViewShown} returns true,\n     * otherwise VISIBLE.  Be careful if you change this to return GONE in\n     * other situations -- if showing or hiding the candidates view causes\n     * your window to resize, this can cause temporary drawing artifacts as\n     * the resize takes place.\n     ",
+    "links" : [ "View#INVISIBLE", "View#GONE", "#isExtractViewShown" ]
+  }, {
+    "name" : "public void showStatusIcon(@DrawableRes int iconResId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void hideStatusIcon()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void switchInputMethod(String id)",
+    "returnType" : "void",
+    "comment" : "\n     * Force switch to a new input method, as identified by <var>id</var>.  This\n     * input method will be destroyed, and the requested one started on the\n     * current input field.\n     * \n     * @param id Unique identifier of the new input method to start.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void switchInputMethod(String id, InputMethodSubtype subtype)",
+    "returnType" : "void",
+    "comment" : "\n     * Force switch to a new input method, as identified by {@code id}.  This\n     * input method will be destroyed, and the requested one started on the\n     * current input field.\n     *\n     * @param id Unique identifier of the new input method to start.\n     * @param subtype The new subtype of the new input method to be switched to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setExtractView(View view)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCandidatesView(View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Replaces the current candidates view with a new one.  You only need to\n     * call this when dynamically changing the view; normally, you should\n     * implement {@link #onCreateCandidatesView()} and create your view when\n     * first needed by the input method.\n     ",
+    "links" : [ "#onCreateCandidatesView" ]
+  }, {
+    "name" : "public void setInputView(View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Replaces the current input view with a new one.  You only need to\n     * call this when dynamically changing the view; normally, you should\n     * implement {@link #onCreateInputView()} and create your view when\n     * first needed by the input method.\n     ",
+    "links" : [ "#onCreateInputView" ]
+  }, {
+    "name" : "public View onCreateExtractTextView()",
+    "returnType" : "View",
+    "comment" : "\n     * Called by the framework to create the layout for showing extacted text.\n     * Only called when in fullscreen mode.  The returned view hierarchy must\n     * have an {@link ExtractEditText} whose ID is \n     * {@link android.R.id#inputExtractEditText}.\n     ",
+    "links" : [ "ExtractEditText", "android.R.id#inputExtractEditText" ]
+  }, {
+    "name" : "public View onCreateCandidatesView()",
+    "returnType" : "View",
+    "comment" : "\n     * Create and return the view hierarchy used to show candidates.  This will\n     * be called once, when the candidates are first displayed.  You can return\n     * null to have no candidates view; the default implementation returns null.\n     * \n     * <p>To control when the candidates view is displayed, use\n     * {@link #setCandidatesViewShown(boolean)}.\n     * To change the candidates view after the first one is created by this\n     * function, use {@link #setCandidatesView(View)}.\n     ",
+    "links" : [ "#setCandidatesViewShown", "#setCandidatesView" ]
+  }, {
+    "name" : "public View onCreateInputView()",
+    "returnType" : "View",
+    "comment" : "\n     * Create and return the view hierarchy used for the input area (such as\n     * a soft keyboard).  This will be called once, when the input area is\n     * first displayed.  You can return null to have no input area; the default\n     * implementation returns null.\n     * \n     * <p>To control when the input view is displayed, implement\n     * {@link #onEvaluateInputViewShown()}.\n     * To change the input view after the first one is created by this\n     * function, use {@link #setInputView(View)}.\n     ",
+    "links" : [ "#onEvaluateInputViewShown", "#setInputView" ]
+  }, {
+    "name" : "public void onStartInputView(EditorInfo info, boolean restarting)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the input view is being shown and input has started on\n     * a new editor.  This will always be called after {@link #onStartInput},\n     * allowing you to do your general setup there and just view-specific\n     * setup here.  You are guaranteed that {@link #onCreateInputView()} will\n     * have been called some time before this function is called.\n     * \n     * @param info Description of the type of text being edited.\n     * @param restarting Set to true if we are restarting input on the\n     * same text field as before.\n     ",
+    "links" : [ "#onStartInput", "#onCreateInputView" ]
+  }, {
+    "name" : "public void onFinishInputView(boolean finishingInput)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the input view is being hidden from the user.  This will\n     * be called either prior to hiding the window, or prior to switching to\n     * another target for editing.\n     * \n     * <p>The default\n     * implementation uses the InputConnection to clear any active composing\n     * text; you can override this (not calling the base class implementation)\n     * to perform whatever behavior you would like.\n     * \n     * @param finishingInput If true, {@link #onFinishInput} will be\n     * called immediately after.\n     ",
+    "links" : [ "#onFinishInput" ]
+  }, {
+    "name" : "public void onStartCandidatesView(EditorInfo info, boolean restarting)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when only the candidates view has been shown for showing\n     * processing as the user enters text through a hard keyboard.\n     * This will always be called after {@link #onStartInput},\n     * allowing you to do your general setup there and just view-specific\n     * setup here.  You are guaranteed that {@link #onCreateCandidatesView()}\n     * will have been called some time before this function is called.\n     * \n     * <p>Note that this will <em>not</em> be called when the input method\n     * is running in full editing mode, and thus receiving\n     * {@link #onStartInputView} to initiate that operation.  This is only\n     * for the case when candidates are being shown while the input method\n     * editor is hidden but wants to show its candidates UI as text is\n     * entered through some other mechanism.\n     * \n     * @param info Description of the type of text being edited.\n     * @param restarting Set to true if we are restarting input on the\n     * same text field as before.\n     ",
+    "links" : [ "#onStartInput", "#onCreateCandidatesView", "#onStartInputView" ]
+  }, {
+    "name" : "public void onFinishCandidatesView(boolean finishingInput)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the candidates view is being hidden from the user.  This will\n     * be called either prior to hiding the window, or prior to switching to\n     * another target for editing.\n     * \n     * <p>The default\n     * implementation uses the InputConnection to clear any active composing\n     * text; you can override this (not calling the base class implementation)\n     * to perform whatever behavior you would like.\n     * \n     * @param finishingInput If true, {@link #onFinishInput} will be\n     * called immediately after.\n     ",
+    "links" : [ "#onFinishInput" ]
+  }, {
+    "name" : "public boolean onShowInputRequested(int flags, boolean configChange)",
+    "returnType" : "boolean",
+    "comment" : "\n     * The system has decided that it may be time to show your input method.\n     * This is called due to a corresponding call to your\n     * {@link InputMethod#showSoftInput InputMethod.showSoftInput()}\n     * method.  The default implementation uses\n     * {@link #onEvaluateInputViewShown()}, {@link #onEvaluateFullscreenMode()},\n     * and the current configuration to decide whether the input view should\n     * be shown at this point.\n     * \n     * @param flags Provides additional information about the show request,\n     * as per {@link InputMethod#showSoftInput InputMethod.showSoftInput()}.\n     * @param configChange This is true if we are re-showing due to a\n     * configuration change.\n     * @return Returns true to indicate that the window should be shown.\n     ",
+    "links" : [ "InputMethod#showSoftInput", "#onEvaluateInputViewShown", "#onEvaluateFullscreenMode", "InputMethod#showSoftInput" ]
+  }, {
+    "name" : "private boolean dispatchOnShowInputRequested(int flags, boolean configChange)",
+    "returnType" : "boolean",
+    "comment" : "\n     * A utility method to call {{@link #onShowInputRequested(int, boolean)}} and update internal\n     * states depending on its result.  Since {@link #onShowInputRequested(int, boolean)} is\n     * exposed to IME authors as an overridable public method without {@code @CallSuper}, we have\n     * to have this method to ensure that those internal states are always updated no matter how\n     * {@link #onShowInputRequested(int, boolean)} is overridden by the IME author.\n     * @param flags Provides additional information about the show request,\n     * as per {@link InputMethod#showSoftInput InputMethod.showSoftInput()}.\n     * @param configChange This is true if we are re-showing due to a\n     * configuration change.\n     * @return Returns true to indicate that the window should be shown.\n     * @see #onShowInputRequested(int, boolean)\n     ",
+    "links" : [ "#onShowInputRequested", "#onShowInputRequested", "#onShowInputRequested", "InputMethod#showSoftInput" ]
+  }, {
+    "name" : "public void showWindow(boolean showInput)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void maybeNotifyPreRendered()",
+    "returnType" : "void",
+    "comment" : "\n     * Notify {@link android.view.ImeInsetsSourceConsumer} if IME has been pre-rendered\n     * for current EditorInfo, when pre-rendering is enabled.\n     ",
+    "links" : [ "android.view.ImeInsetsSourceConsumer" ]
+  }, {
+    "name" : "private boolean prepareWindow(boolean showInput)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void startViews(boolean doShowInput)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onPreRenderedWindowVisibilityChanged(boolean setVisible)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void applyVisibilityInInsetsConsumerIfNecessary(boolean setVisible)",
+    "returnType" : "void",
+    "comment" : "\n     * Apply the IME visibility in {@link android.view.ImeInsetsSourceConsumer} when\n     * {@link ViewRootImpl.sNewInsetsMode} is enabled.\n     * @param setVisible {@code true} to make it visible, false to hide it.\n     ",
+    "links" : [ "android.view.ImeInsetsSourceConsumer", "ViewRootImpl.sNewInsetsMode" ]
+  }, {
+    "name" : "private boolean isVisibilityAppliedUsingInsetsConsumer()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void finishViews(boolean finishingInput)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void doHideWindow()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void hideWindow()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onWindowShown()",
+    "returnType" : "void",
+    "comment" : "\n     * Called immediately before the input method window is shown to the user.\n     * You could override this to prepare for the window to be shown\n     * (update view structure etc).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onWindowHidden()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the input method window has been hidden from the user,\n     * after previously being visible.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onBindInput()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a new client has bound to the input method.  This\n     * may be followed by a series of {@link #onStartInput(EditorInfo, boolean)}\n     * and {@link #onFinishInput()} calls as the user navigates through its\n     * UI.  Upon this call you know that {@link #getCurrentInputBinding}\n     * and {@link #getCurrentInputConnection} return valid objects.\n     ",
+    "links" : [ "#onStartInput", "#onFinishInput", "#getCurrentInputBinding", "#getCurrentInputConnection" ]
+  }, {
+    "name" : "public void onUnbindInput()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the previous bound client is no longer associated\n     * with the input method.  After returning {@link #getCurrentInputBinding}\n     * and {@link #getCurrentInputConnection} will no longer return\n     * valid objects.\n     ",
+    "links" : [ "#getCurrentInputBinding", "#getCurrentInputConnection" ]
+  }, {
+    "name" : "public void onStartInput(EditorInfo attribute, boolean restarting)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to inform the input method that text input has started in an\n     * editor.  You should use this callback to initialize the state of your\n     * input to match the state of the editor given to it.\n     * \n     * @param attribute The attributes of the editor that input is starting\n     * in.\n     * @param restarting Set to true if input is restarting in the same\n     * editor such as because the application has changed the text in\n     * the editor.  Otherwise will be false, indicating this is a new\n     * session with the editor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void doFinishInput()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void doStartInput(InputConnection ic, EditorInfo attribute, boolean restarting)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onFinishInput()",
+    "returnType" : "void",
+    "comment" : "\n     * Called to inform the input method that text input has finished in\n     * the last editor.  At this point there may be a call to\n     * {@link #onStartInput(EditorInfo, boolean)} to perform input in a\n     * new editor, or the input method may be left idle.  This method is\n     * <em>not</em> called when input restarts in the same editor.\n     * \n     * <p>The default\n     * implementation uses the InputConnection to clear any active composing\n     * text; you can override this (not calling the base class implementation)\n     * to perform whatever behavior you would like.\n     ",
+    "links" : [ "#onStartInput" ]
+  }, {
+    "name" : "public void onDisplayCompletions(CompletionInfo[] completions)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the application has reported auto-completion candidates that\n     * it would like to have the input method displayed.  Typically these are\n     * only used when an input method is running in full-screen mode, since\n     * otherwise the user can see and interact with the pop-up window of\n     * completions shown by the application.\n     * \n     * <p>The default implementation here does nothing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onUpdateExtractedText(int token, ExtractedText text)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the application has reported new extracted text to be shown\n     * due to changes in its current text state.  The default implementation\n     * here places the new text in the extract edit text, when the input\n     * method is running in fullscreen mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onUpdateSelection(int oldSelStart, int oldSelEnd, int newSelStart, int newSelEnd, int candidatesStart, int candidatesEnd)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the application has reported a new selection region of\n     * the text.  This is called whether or not the input method has requested\n     * extracted text updates, although if so it will not receive this call\n     * if the extracted text has changed as well.\n     *\n     * <p>Be careful about changing the text in reaction to this call with\n     * methods such as setComposingText, commitText or\n     * deleteSurroundingText. If the cursor moves as a result, this method\n     * will be called again, which may result in an infinite loop.\n     * \n     * <p>The default implementation takes care of updating the cursor in\n     * the extract text, if it is being shown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onViewClicked(boolean focusChanged)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the user tapped or clicked a text view.\n     * IMEs can't rely on this method being called because this was not part of the original IME\n     * protocol, so applications with custom text editing written before this method appeared will\n     * not call to inform the IME of this interaction.\n     * @param focusChanged true if the user changed the focused view by this click.\n     * @see InputMethodManager#viewClicked(View)\n     * @deprecated The method may not be called for composite {@link View} that works as a giant\n     *             \"Canvas\", which can host its own UI hierarchy and sub focus state.\n     *             {@link android.webkit.WebView} is a good example. Application / IME developers\n     *             should not rely on this method. If your goal is just being notified when an\n     *             on-going input is interrupted, simply monitor {@link #onFinishInput()}.\n     ",
+    "links" : [ "View", "android.webkit.WebView", "#onFinishInput" ]
+  }, {
+    "name" : "public void onUpdateCursor(Rect newCursor)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the application has reported a new location of its text\n     * cursor.  This is only called if explicitly requested by the input method.\n     * The default implementation does nothing.\n     * @deprecated Use {@link #onUpdateCursorAnchorInfo(CursorAnchorInfo)} instead.\n     ",
+    "links" : [ "#onUpdateCursorAnchorInfo" ]
+  }, {
+    "name" : "public void onUpdateCursorAnchorInfo(CursorAnchorInfo cursorAnchorInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the application has reported a new location of its text insertion point and\n     * characters in the composition string.  This is only called if explicitly requested by the\n     * input method. The default implementation does nothing.\n     * @param cursorAnchorInfo The positional information of the text insertion point and the\n     * composition string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void requestHideSelf(int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Close this input method's soft input area, removing it from the display.\n     *\n     * The input method will continue running, but the user can no longer use it to generate input\n     * by touching the screen.\n     *\n     * @see InputMethodManager#HIDE_IMPLICIT_ONLY\n     * @see InputMethodManager#HIDE_NOT_ALWAYS\n     * @param flags Provides additional operating flags.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void requestShowSelf(int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Show the input method's soft input area, so the user sees the input method window and can\n     * interact with it.\n     *\n     * @see InputMethodManager#SHOW_IMPLICIT\n     * @see InputMethodManager#SHOW_FORCED\n     * @param flags Provides additional operating flags.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean handleBack(boolean doIt)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ExtractEditText getExtractEditTextIfVisible()",
+    "returnType" : "ExtractEditText",
+    "comment" : "\n     * @return {@link ExtractEditText} if it is considered to be visible and active. Otherwise\n     * {@code null} is returned.\n     ",
+    "links" : [ "ExtractEditText" ]
+  }, {
+    "name" : "public boolean onKeyDown(int keyCode, KeyEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called back when a {@link KeyEvent} is forwarded from the target application.\n     *\n     * <p>The default implementation intercepts {@link KeyEvent#KEYCODE_BACK} if the IME is\n     * currently shown , to possibly hide it when the key goes up (if not canceled or long pressed).\n     * In addition, in fullscreen mode only, it will consume DPAD movement events to move the cursor\n     * in the extracted text view, not allowing them to perform navigation in the underlying\n     * application.</p>\n     *\n     * <p>The default implementation does not take flags specified to\n     * {@link #setBackDisposition(int)} into account, even on API version\n     * {@link android.os.Build.VERSION_CODES#P} and later devices.  IME developers are responsible\n     * for making sure that their special handling for {@link KeyEvent#KEYCODE_BACK} are consistent\n     * with the flag they specified to {@link #setBackDisposition(int)}.</p>\n     *\n     * @param keyCode The value in {@code event.getKeyCode()}\n     * @param event Description of the key event\n     *\n     * @return {@code true} if the event is consumed by the IME and the application no longer needs\n     *         to consume it.  Return {@code false} when the event should be handled as if the IME\n     *         had not seen the event at all.\n     ",
+    "links" : [ "KeyEvent", "KeyEvent#KEYCODE_BACK", "#setBackDisposition", "android.os.Build.VERSION_CODES#P", "KeyEvent#KEYCODE_BACK", "#setBackDisposition" ]
+  }, {
+    "name" : "public boolean onKeyLongPress(int keyCode, KeyEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Default implementation of {@link KeyEvent.Callback#onKeyLongPress(int, KeyEvent)\n     * KeyEvent.Callback.onKeyLongPress()}: always returns false (doesn't handle\n     * the event).\n     ",
+    "links" : [ "KeyEvent.Callback#onKeyLongPress" ]
+  }, {
+    "name" : "public boolean onKeyMultiple(int keyCode, int count, KeyEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to intercept special key multiple events before they are\n     * processed by the\n     * application.  If you return true, the application will not itself\n     * process the event.  If you return false, the normal application processing\n     * will occur as if the IME had not seen the event at all.\n     * \n     * <p>The default implementation always returns false, except when\n     * in fullscreen mode, where it will consume DPAD movement\n     * events to move the cursor in the extracted text view, not allowing\n     * them to perform navigation in the underlying application.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean onKeyUp(int keyCode, KeyEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to intercept key up events before they are processed by the\n     * application.  If you return true, the application will not itself\n     * process the event.  If you return false, the normal application processing\n     * will occur as if the IME had not seen the event at all.\n     * \n     * <p>The default implementation intercepts {@link KeyEvent#KEYCODE_BACK\n     * KeyEvent.KEYCODE_BACK} to hide the current IME UI if it is shown.  In\n     * addition, in fullscreen mode only, it will consume DPAD movement\n     * events to move the cursor in the extracted text view, not allowing\n     * them to perform navigation in the underlying application.\n     ",
+    "links" : [ "KeyEvent#KEYCODE_BACK" ]
+  }, {
+    "name" : "public boolean onTrackballEvent(MotionEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to intercept trackball motion events before they are\n     * processed by the application.\n     * If you return true, the application will not itself process the event.\n     * If you return false, the normal application processing will occur as if\n     * the IME had not seen the event at all.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean onGenericMotionEvent(MotionEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override this to intercept generic motion events before they are\n     * processed by the application.\n     * If you return true, the application will not itself process the event.\n     * If you return false, the normal application processing will occur as if\n     * the IME had not seen the event at all.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAppPrivateCommand(String action, Bundle data)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onToggleSoftInput(int showFlags, int hideFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Handle a request by the system to toggle the soft input area.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void reportExtractedMovement(int keyCode, int count)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean doMovementKey(int keyCode, KeyEvent event, int count)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendDownUpKeyEvents(int keyEventCode)",
+    "returnType" : "void",
+    "comment" : "\n     * Send the given key event code (as defined by {@link KeyEvent}) to the\n     * current input connection is a key down + key up event pair.  The sent\n     * events have {@link KeyEvent#FLAG_SOFT_KEYBOARD KeyEvent.FLAG_SOFT_KEYBOARD}\n     * set, so that the recipient can identify them as coming from a software\n     * input method, and\n     * {@link KeyEvent#FLAG_KEEP_TOUCH_MODE KeyEvent.FLAG_KEEP_TOUCH_MODE}, so\n     * that they don't impact the current touch mode of the UI.\n     *\n     * <p>Note that it's discouraged to send such key events in normal operation;\n     * this is mainly for use with {@link android.text.InputType#TYPE_NULL} type\n     * text fields, or for non-rich input methods. A reasonably capable software\n     * input method should use the\n     * {@link android.view.inputmethod.InputConnection#commitText} family of methods\n     * to send text to an application, rather than sending key events.</p>\n     *\n     * @param keyEventCode The raw key code to send, as defined by\n     * {@link KeyEvent}.\n     ",
+    "links" : [ "KeyEvent", "KeyEvent#FLAG_SOFT_KEYBOARD", "KeyEvent#FLAG_KEEP_TOUCH_MODE", "android.text.InputType#TYPE_NULL", "android.view.inputmethod.InputConnection#commitText", "KeyEvent" ]
+  }, {
+    "name" : "public boolean sendDefaultEditorAction(boolean fromEnterKey)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Ask the input target to execute its default action via\n     * {@link InputConnection#performEditorAction\n     * InputConnection.performEditorAction()}.\n     * \n     * @param fromEnterKey If true, this will be executed as if the user had\n     * pressed an enter key on the keyboard, that is it will <em>not</em>\n     * be done if the editor has set {@link EditorInfo#IME_FLAG_NO_ENTER_ACTION\n     * EditorInfo.IME_FLAG_NO_ENTER_ACTION}.  If false, the action will be\n     * sent regardless of how the editor has set that flag.\n     * \n     * @return Returns a boolean indicating whether an action has been sent.\n     * If false, either the editor did not specify a default action or it\n     * does not want an action from the enter key.  If true, the action was\n     * sent (or there was no input connection at all).\n     ",
+    "links" : [ "InputConnection#performEditorAction", "EditorInfo#IME_FLAG_NO_ENTER_ACTION" ]
+  }, {
+    "name" : "public void sendKeyChar(char charCode)",
+    "returnType" : "void",
+    "comment" : "\n     * Send the given UTF-16 character to the current input connection.  Most\n     * characters will be delivered simply by calling\n     * {@link InputConnection#commitText InputConnection.commitText()} with\n     * the character; some, however, may be handled different.  In particular,\n     * the enter character ('\\n') will either be delivered as an action code\n     * or a raw key event, as appropriate.  Consider this as a convenience\n     * method for IMEs that do not have a full implementation of actions; a\n     * fully complying IME will decide of the right action for each event and\n     * will likely never call this method except maybe to handle events coming\n     * from an actual hardware keyboard.\n     * \n     * @param charCode The UTF-16 character code to send.\n     ",
+    "links" : [ "InputConnection#commitText" ]
+  }, {
+    "name" : "public void onExtractedSelectionChanged(int start, int end)",
+    "returnType" : "void",
+    "comment" : "\n     * This is called when the user has moved the cursor in the extracted\n     * text view, when running in fullsreen mode.  The default implementation\n     * performs the corresponding selection change on the underlying text\n     * editor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onExtractedDeleteText(int start, int end)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onExtractedReplaceText(int start, int end, CharSequence text)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onExtractedSetSpan(Object span, int start, int end, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onExtractedTextClicked()",
+    "returnType" : "void",
+    "comment" : "\n     * This is called when the user has clicked on the extracted text view,\n     * when running in fullscreen mode.  The default implementation hides\n     * the candidates view when this happens, but only if the extracted text\n     * editor has a vertical scroll bar because its text doesn't fit.\n     * Re-implement this to provide whatever behavior you want.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onExtractedCursorMovement(int dx, int dy)",
+    "returnType" : "void",
+    "comment" : "\n     * This is called when the user has performed a cursor movement in the\n     * extracted text view, when it is running in fullscreen mode.  The default\n     * implementation hides the candidates view when a vertical movement\n     * happens, but only if the extracted text editor has a vertical scroll bar\n     * because its text doesn't fit.\n     * Re-implement this to provide whatever behavior you want.\n     * @param dx The amount of cursor movement in the x dimension.\n     * @param dy The amount of cursor movement in the y dimension.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean onExtractTextContextMenuItem(int id)",
+    "returnType" : "boolean",
+    "comment" : "\n     * This is called when the user has selected a context menu item from the\n     * extracted text view, when running in fullscreen mode.  The default\n     * implementation sends this action to the current InputConnection's\n     * {@link InputConnection#performContextMenuAction(int)}, for it\n     * to be processed in underlying \"real\" editor.  Re-implement this to\n     * provide whatever behavior you want.\n     ",
+    "links" : [ "InputConnection#performContextMenuAction" ]
+  }, {
+    "name" : "public CharSequence getTextForImeAction(int imeOptions)",
+    "returnType" : "CharSequence",
+    "comment" : "\n     * Return text that can be used as a button label for the given\n     * {@link EditorInfo#imeOptions EditorInfo.imeOptions}.  Returns null\n     * if there is no action requested.  Note that there is no guarantee that\n     * the returned text will be relatively short, so you probably do not\n     * want to use it as text on a soft keyboard key label.\n     *\n     * @param imeOptions The value from {@link EditorInfo#imeOptions EditorInfo.imeOptions}.\n     *\n     * @return Returns a label to use, or null if there is no action.\n     ",
+    "links" : [ "EditorInfo#imeOptions", "EditorInfo#imeOptions" ]
+  }, {
+    "name" : "private int getIconForImeAction(int imeOptions)",
+    "returnType" : "int",
+    "comment" : "\n     * Return a drawable resource id that can be used as a button icon for the given\n     * {@link EditorInfo#imeOptions EditorInfo.imeOptions}.\n     *\n     * @param imeOptions The value from @link EditorInfo#imeOptions EditorInfo.imeOptions}.\n     *\n     * @return Returns a drawable resource id to use.\n     ",
+    "links" : [ "EditorInfo#imeOptions", "EditorInfo#imeOptions" ]
+  }, {
+    "name" : "public void onUpdateExtractingVisibility(EditorInfo ei)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the fullscreen-mode extracting editor info has changed,\n     * to determine whether the extracting (extract text and candidates) portion\n     * of the UI should be shown.  The standard implementation hides or shows\n     * the extract area depending on whether it makes sense for the\n     * current editor.  In particular, a {@link InputType#TYPE_NULL}\n     * input type or {@link EditorInfo#IME_FLAG_NO_EXTRACT_UI} flag will\n     * turn off the extract area since there is no text to be shown.\n     ",
+    "links" : [ "InputType#TYPE_NULL", "EditorInfo#IME_FLAG_NO_EXTRACT_UI" ]
+  }, {
+    "name" : "public void onUpdateExtractingViews(EditorInfo ei)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the fullscreen-mode extracting editor info has changed,\n     * to update the state of its UI such as the action buttons shown.\n     * You do not need to deal with this if you are using the standard\n     * full screen extract UI.  If replacing it, you will need to re-implement\n     * this to put the appropriate action button in your own UI and handle it,\n     * and perform any other changes.\n     * \n     * <p>The standard implementation turns on or off its accessory area\n     * depending on whether there is an action button, and hides or shows\n     * the entire extract area depending on whether it makes sense for the\n     * current editor.  In particular, a {@link InputType#TYPE_NULL} or \n     * {@link InputType#TYPE_TEXT_VARIATION_FILTER} input type will turn off the\n     * extract area since there is no text to be shown.\n     ",
+    "links" : [ "InputType#TYPE_NULL", "InputType#TYPE_TEXT_VARIATION_FILTER" ]
+  }, {
+    "name" : "public void onExtractingInputChanged(EditorInfo ei)",
+    "returnType" : "void",
+    "comment" : "\n     * This is called when, while currently displayed in extract mode, the\n     * current input target changes.  The default implementation will\n     * auto-hide the IME if the new target is not a full editor, since this\n     * can be a confusing experience for the user.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void startExtractingText(boolean inputChanged)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispatchOnCurrentInputMethodSubtypeChanged(InputMethodSubtype newSubtype)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onCurrentInputMethodSubtypeChanged(InputMethodSubtype newSubtype)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the subtype was changed.\n     * @param newSubtype the subtype which is being changed to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getInputMethodWindowRecommendedHeight()",
+    "returnType" : "int",
+    "comment" : "\n     * Aimed to return the previous input method's {@link Insets#contentTopInsets}, but its actual\n     * semantics has never been well defined.\n     *\n     * <p>Note that the previous document clearly mentioned that this method could return {@code 0}\n     * at any time for whatever reason.  Now this method is just always returning {@code 0}.</p>\n     *\n     * @return on Android {@link android.os.Build.VERSION_CODES#Q} and later devices this method\n     *         always returns {@code 0}\n     * @deprecated the actual behavior of this method has never been well defined.  You cannot use\n     *             this method in a reliable and predictable way\n     ",
+    "links" : [ "Insets#contentTopInsets", "android.os.Build.VERSION_CODES#Q" ]
+  }, {
+    "name" : "public final void exposeContent(@NonNull InputContentInfo inputContentInfo, @NonNull InputConnection inputConnection)",
+    "returnType" : "void",
+    "comment" : "\n     * Allow the receiver of {@link InputContentInfo} to obtain a temporary read-only access\n     * permission to the content.\n     *\n     * @param inputContentInfo Content to be temporarily exposed from the input method to the\n     * application.\n     * This cannot be {@code null}.\n     * @param inputConnection {@link InputConnection} with which\n     * {@link InputConnection#commitContent(InputContentInfo, int, Bundle)} will be called.\n     * @hide\n     ",
+    "links" : [ "InputContentInfo", "InputConnection", "InputConnection#commitContent" ]
+  }, {
+    "name" : "public final void notifyUserActionIfNecessary()",
+    "returnType" : "void",
+    "comment" : "\n     * {@inheritDoc}\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void exposeContentInternal(@NonNull InputContentInfo inputContentInfo, @NonNull EditorInfo editorInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Allow the receiver of {@link InputContentInfo} to obtain a temporary read-only access\n     * permission to the content.\n     *\n     * <p>See {@link android.inputmethodservice.InputMethodService#exposeContent(InputContentInfo,\n     * InputConnection)} for details.</p>\n     *\n     * @param inputContentInfo Content to be temporarily exposed from the input method to the\n     * application.\n     * This cannot be {@code null}.\n     * @param editorInfo The editor that receives {@link InputContentInfo}.\n     ",
+    "links" : [ "InputContentInfo", "android.inputmethodservice.InputMethodService#exposeContent", "InputContentInfo" ]
+  }, {
+    "name" : "private int mapToImeWindowStatus()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isAutomotive()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void dump(FileDescriptor fd, PrintWriter fout, String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs a dump of the InputMethodService's internal state.  Override\n     * to add your own information to the dump.\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DEBUG", "BACK_DISPOSITION_DEFAULT", "BACK_DISPOSITION_WILL_NOT_DISMISS", "BACK_DISPOSITION_WILL_DISMISS", "BACK_DISPOSITION_ADJUST_NOTHING", "IME_ACTIVE", "IME_VISIBLE", "IME_INVISIBLE", "BACK_DISPOSITION_MIN", "BACK_DISPOSITION_MAX", "mImm", "mPrivOps", "mTheme", "mInflater", "mThemeAttrs", "mRootView", "mWindow", "mInitialized", "mViewsCreated", "mDecorViewVisible", "mDecorViewWasVisible", "mInShowWindow", "mCanPreRender", "mIsPreRendered", "mWindowVisible", "mFullscreenArea", "mExtractFrame", "mCandidatesFrame", "mInputFrame", "mToken", "mInputBinding", "mInputConnection", "mInputStarted", "mInputViewStarted", "mCandidatesViewStarted", "mStartedInputConnection", "mInputEditorInfo", "mShowInputFlags", "mShowInputRequested", "mLastShowInputRequested", "mCandidatesVisibility", "mCurCompletions", "mFullscreenApplied", "mIsFullscreen", "mExtractView", "mExtractViewHidden", "mExtractEditText", "mExtractAccessories", "mExtractAction", "mExtractedText", "mExtractedToken", "mInputView", "mIsInputViewShown", "mStatusIcon", "mBackDisposition", "mLock", "mNotifyUserActionSent", "mTmpInsets", "mTmpLocation", "mInlineSuggestionSessionController", "mAutomotiveHideNavBarForKeyboard", "mIsAutomotive", "mCurShowInputToken", "mCurHideInputToken", "mInsetsComputer", "mActionClickListener", "mSettingsObserver", "MOVEMENT_DOWN", "MOVEMENT_UP" ],
+  "methodNames" : [ "public InlineSuggestionsRequest onCreateInlineSuggestionsRequest(@NonNull Bundle uiExtras)", "public boolean onInlineSuggestionsResponse(@NonNull InlineSuggestionsResponse response)", "private IBinder getHostInputToken()", "private void notifyImeHidden()", "private void removeImeSurface()", "private void setImeWindowStatus(int visibilityFlags, int backDisposition)", "private void setImeExclusionRect(int visibleTopInsets)", "public void setTheme(int theme)", "public boolean enableHardwareAcceleration()", "public void onCreate()", "public void onInitializeInterface()", " void initialize()", " void initViews()", "public void onDestroy()", "public void onConfigurationChanged(Configuration newConfig)", "private void resetStateForNewConfiguration()", "public AbstractInputMethodImpl onCreateInputMethodInterface()", "public AbstractInputMethodSessionImpl onCreateInputMethodSessionInterface()", "public LayoutInflater getLayoutInflater()", "public Dialog getWindow()", "public void setBackDisposition(@BackDispositionMode int disposition)", "public int getBackDisposition()", "public int getMaxWidth()", "public InputBinding getCurrentInputBinding()", "public InputConnection getCurrentInputConnection()", "public final boolean switchToPreviousInputMethod()", "public final boolean switchToNextInputMethod(boolean onlyCurrentIme)", "public final boolean shouldOfferSwitchingToNextInputMethod()", "public boolean getCurrentInputStarted()", "public EditorInfo getCurrentInputEditorInfo()", "private void reportFullscreenMode()", "public void updateFullscreenMode()", "public void onConfigureWindow(Window win, boolean isFullscreen, boolean isCandidatesOnly)", "public boolean isFullscreenMode()", "public boolean onEvaluateFullscreenMode()", "public void setExtractViewShown(boolean shown)", "public boolean isExtractViewShown()", " void updateExtractFrameVisibility()", "public void onComputeInsets(Insets outInsets)", "public void updateInputViewShown()", "public boolean isShowInputRequested()", "public boolean isInputViewShown()", "public boolean onEvaluateInputViewShown()", "public void setCandidatesViewShown(boolean shown)", " void updateCandidatesVisibility(boolean shown)", "public int getCandidatesHiddenVisibility()", "public void showStatusIcon(@DrawableRes int iconResId)", "public void hideStatusIcon()", "public void switchInputMethod(String id)", "public final void switchInputMethod(String id, InputMethodSubtype subtype)", "public void setExtractView(View view)", "public void setCandidatesView(View view)", "public void setInputView(View view)", "public View onCreateExtractTextView()", "public View onCreateCandidatesView()", "public View onCreateInputView()", "public void onStartInputView(EditorInfo info, boolean restarting)", "public void onFinishInputView(boolean finishingInput)", "public void onStartCandidatesView(EditorInfo info, boolean restarting)", "public void onFinishCandidatesView(boolean finishingInput)", "public boolean onShowInputRequested(int flags, boolean configChange)", "private boolean dispatchOnShowInputRequested(int flags, boolean configChange)", "public void showWindow(boolean showInput)", "private void maybeNotifyPreRendered()", "private boolean prepareWindow(boolean showInput)", "private void startViews(boolean doShowInput)", "private void onPreRenderedWindowVisibilityChanged(boolean setVisible)", "private void applyVisibilityInInsetsConsumerIfNecessary(boolean setVisible)", "private boolean isVisibilityAppliedUsingInsetsConsumer()", "private void finishViews(boolean finishingInput)", "private void doHideWindow()", "public void hideWindow()", "public void onWindowShown()", "public void onWindowHidden()", "public void onBindInput()", "public void onUnbindInput()", "public void onStartInput(EditorInfo attribute, boolean restarting)", " void doFinishInput()", " void doStartInput(InputConnection ic, EditorInfo attribute, boolean restarting)", "public void onFinishInput()", "public void onDisplayCompletions(CompletionInfo[] completions)", "public void onUpdateExtractedText(int token, ExtractedText text)", "public void onUpdateSelection(int oldSelStart, int oldSelEnd, int newSelStart, int newSelEnd, int candidatesStart, int candidatesEnd)", "public void onViewClicked(boolean focusChanged)", "public void onUpdateCursor(Rect newCursor)", "public void onUpdateCursorAnchorInfo(CursorAnchorInfo cursorAnchorInfo)", "public void requestHideSelf(int flags)", "public final void requestShowSelf(int flags)", "private boolean handleBack(boolean doIt)", "private ExtractEditText getExtractEditTextIfVisible()", "public boolean onKeyDown(int keyCode, KeyEvent event)", "public boolean onKeyLongPress(int keyCode, KeyEvent event)", "public boolean onKeyMultiple(int keyCode, int count, KeyEvent event)", "public boolean onKeyUp(int keyCode, KeyEvent event)", "public boolean onTrackballEvent(MotionEvent event)", "public boolean onGenericMotionEvent(MotionEvent event)", "public void onAppPrivateCommand(String action, Bundle data)", "private void onToggleSoftInput(int showFlags, int hideFlags)", " void reportExtractedMovement(int keyCode, int count)", " boolean doMovementKey(int keyCode, KeyEvent event, int count)", "public void sendDownUpKeyEvents(int keyEventCode)", "public boolean sendDefaultEditorAction(boolean fromEnterKey)", "public void sendKeyChar(char charCode)", "public void onExtractedSelectionChanged(int start, int end)", "public void onExtractedDeleteText(int start, int end)", "public void onExtractedReplaceText(int start, int end, CharSequence text)", "public void onExtractedSetSpan(Object span, int start, int end, int flags)", "public void onExtractedTextClicked()", "public void onExtractedCursorMovement(int dx, int dy)", "public boolean onExtractTextContextMenuItem(int id)", "public CharSequence getTextForImeAction(int imeOptions)", "private int getIconForImeAction(int imeOptions)", "public void onUpdateExtractingVisibility(EditorInfo ei)", "public void onUpdateExtractingViews(EditorInfo ei)", "public void onExtractingInputChanged(EditorInfo ei)", " void startExtractingText(boolean inputChanged)", "private void dispatchOnCurrentInputMethodSubtypeChanged(InputMethodSubtype newSubtype)", "protected void onCurrentInputMethodSubtypeChanged(InputMethodSubtype newSubtype)", "public int getInputMethodWindowRecommendedHeight()", "public final void exposeContent(@NonNull InputContentInfo inputContentInfo, @NonNull InputConnection inputConnection)", "public final void notifyUserActionIfNecessary()", "private void exposeContentInternal(@NonNull InputContentInfo inputContentInfo, @NonNull EditorInfo editorInfo)", "private int mapToImeWindowStatus()", "private boolean isAutomotive()", "protected void dump(FileDescriptor fd, PrintWriter fout, String[] args)" ]
+}

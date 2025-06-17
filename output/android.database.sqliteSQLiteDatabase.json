@@ -1,0 +1,650 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/database/sqlite/SQLiteDatabase.java",
+  "packageName" : "android.database.sqlite",
+  "className" : "SQLiteDatabase",
+  "comment" : "\n * Exposes methods to manage a SQLite database.\n *\n * <p>\n * SQLiteDatabase has methods to create, delete, execute SQL commands, and\n * perform other common database management tasks.\n * </p><p>\n * See the Notepad sample application in the SDK for an example of creating\n * and managing a database.\n * </p><p>\n * Database names must be unique within an application, not across all applications.\n * </p>\n *\n * <h3>Localized Collation - ORDER BY</h3>\n * <p>\n * In addition to SQLite's default <code>BINARY</code> collator, Android supplies\n * two more, <code>LOCALIZED</code>, which changes with the system's current locale,\n * and <code>UNICODE</code>, which is the Unicode Collation Algorithm and not tailored\n * to the current locale.\n * </p>\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_DB_CORRUPT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_CLOSE_IDLE_CONNECTIONS",
+    "type" : "boolean",
+    "comment" : " By default idle connections are not closed",
+    "links" : [ ]
+  }, {
+    "name" : "sActiveDatabases",
+    "type" : "WeakHashMap<SQLiteDatabase, Object>",
+    "comment" : " INVARIANT: Guarded by sActiveDatabases.",
+    "links" : [ ]
+  }, {
+    "name" : "mThreadSession",
+    "type" : "ThreadLocal<SQLiteSession>",
+    "comment" : " INVARIANT: Immutable.",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorFactory",
+    "type" : "CursorFactory",
+    "comment" : " INVARIANT: Immutable.",
+    "links" : [ ]
+  }, {
+    "name" : "mErrorHandler",
+    "type" : "DatabaseErrorHandler",
+    "comment" : " INVARIANT: Immutable.",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : " do the required SQL work.",
+    "links" : [ ]
+  }, {
+    "name" : "mCloseGuardLocked",
+    "type" : "CloseGuard",
+    "comment" : " INVARIANT: Guarded by mLock.",
+    "links" : [ ]
+  }, {
+    "name" : "mConfigurationLocked",
+    "type" : "SQLiteDatabaseConfiguration",
+    "comment" : " INVARIANT: Guarded by mLock.",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionPoolLocked",
+    "type" : "SQLiteConnectionPool",
+    "comment" : " INVARIANT: Guarded by mLock.",
+    "links" : [ ]
+  }, {
+    "name" : "mHasAttachedDbsLocked",
+    "type" : "boolean",
+    "comment" : " INVARIANT: Guarded by mLock.",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_ROLLBACK",
+    "type" : "int",
+    "comment" : "\n     * When a constraint violation occurs, an immediate ROLLBACK occurs,\n     * thus ending the current transaction, and the command aborts with a\n     * return code of SQLITE_CONSTRAINT. If no transaction is active\n     * (other than the implied transaction that is created on every command)\n     * then this algorithm works the same as ABORT.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_ABORT",
+    "type" : "int",
+    "comment" : "\n     * When a constraint violation occurs,no ROLLBACK is executed\n     * so changes from prior commands within the same transaction\n     * are preserved. This is the default behavior.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_FAIL",
+    "type" : "int",
+    "comment" : "\n     * When a constraint violation occurs, the command aborts with a return\n     * code SQLITE_CONSTRAINT. But any changes to the database that\n     * the command made prior to encountering the constraint violation\n     * are preserved and are not backed out.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_IGNORE",
+    "type" : "int",
+    "comment" : "\n     * When a constraint violation occurs, the one row that contains\n     * the constraint violation is not inserted or changed.\n     * But the command continues executing normally. Other rows before and\n     * after the row that contained the constraint violation continue to be\n     * inserted or updated normally. No error is returned.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_REPLACE",
+    "type" : "int",
+    "comment" : "\n     * When a UNIQUE constraint violation occurs, the pre-existing rows that\n     * are causing the constraint violation are removed prior to inserting\n     * or updating the current row. Thus the insert or update always occurs.\n     * The command continues executing normally. No error is returned.\n     * If a NOT NULL constraint violation occurs, the NULL value is replaced\n     * by the default value for that column. If the column has no default\n     * value, then the ABORT algorithm is used. If a CHECK constraint\n     * violation occurs then the IGNORE algorithm is used. When this conflict\n     * resolution strategy deletes rows in order to satisfy a constraint,\n     * it does not invoke delete triggers on those rows.\n     * This behavior might change in a future release.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_NONE",
+    "type" : "int",
+    "comment" : "\n     * Use the following when no conflict action is specified.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFLICT_VALUES",
+    "type" : "String[]",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "SQLITE_MAX_LIKE_PATTERN_LENGTH",
+    "type" : "int",
+    "comment" : "\n     * Maximum Length Of A LIKE Or GLOB Pattern\n     * The pattern matching algorithm used in the default LIKE and GLOB implementation\n     * of SQLite can exhibit O(N^2) performance (where N is the number of characters in\n     * the pattern) for certain pathological cases. To avoid denial-of-service attacks\n     * the length of the LIKE or GLOB pattern is limited to SQLITE_MAX_LIKE_PATTERN_LENGTH bytes.\n     * The default value of this limit is 50000. A modern workstation can evaluate\n     * even a pathological LIKE or GLOB pattern of 50000 bytes relatively quickly.\n     * The denial of service problem only comes into play when the pattern length gets\n     * into millions of bytes. Nevertheless, since most useful LIKE or GLOB patterns\n     * are at most a few dozen bytes in length, paranoid application developers may\n     * want to reduce this parameter to something in the range of a few hundred\n     * if they know that external users are able to generate arbitrary patterns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OPEN_READWRITE",
+    "type" : "int",
+    "comment" : " update native code if changing",
+    "links" : [ ]
+  }, {
+    "name" : "OPEN_READONLY",
+    "type" : "int",
+    "comment" : " update native code if changing",
+    "links" : [ ]
+  }, {
+    "name" : "OPEN_READ_MASK",
+    "type" : "int",
+    "comment" : " update native code if changing",
+    "links" : [ ]
+  }, {
+    "name" : "NO_LOCALIZED_COLLATORS",
+    "type" : "int",
+    "comment" : " update native code if changing",
+    "links" : [ ]
+  }, {
+    "name" : "CREATE_IF_NECESSARY",
+    "type" : "int",
+    "comment" : " update native code if changing",
+    "links" : [ ]
+  }, {
+    "name" : "ENABLE_WRITE_AHEAD_LOGGING",
+    "type" : "int",
+    "comment" : "\n     * Open flag: Flag for {@link #openDatabase} to open the database file with\n     * write-ahead logging enabled by default.  Using this flag is more efficient\n     * than calling {@link #enableWriteAheadLogging}.\n     *\n     * Write-ahead logging cannot be used with read-only databases so the value of\n     * this flag is ignored if the database is opened read-only.\n     *\n     * @see #enableWriteAheadLogging\n     ",
+    "links" : [ "#openDatabase", "#enableWriteAheadLogging" ]
+  }, {
+    "name" : "ENABLE_LEGACY_COMPATIBILITY_WAL",
+    "type" : "int",
+    "comment" : "\n     * Open flag: Flag for {@link #openDatabase} to enable the legacy Compatibility WAL when opening\n     * database.\n     *\n     * @hide\n     ",
+    "links" : [ "#openDatabase" ]
+  }, {
+    "name" : "MAX_SQL_CACHE_SIZE",
+    "type" : "int",
+    "comment" : "\n     * Absolute max value that can be set by {@link #setMaxSqlCacheSize(int)}.\n     *\n     * Each prepared-statement is between 1K - 6K, depending on the complexity of the\n     * SQL statement & schema.  A large SQL cache may use a significant amount of memory.\n     ",
+    "links" : [ "#setMaxSqlCacheSize" ]
+  } ],
+  "methods" : [ {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onAllReferencesReleased()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispose(boolean finalized)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int releaseMemory()",
+    "returnType" : "int",
+    "comment" : "\n     * Attempts to release memory that SQLite holds but does not require to\n     * operate properly. Typically this memory will come from the page cache.\n     *\n     * @return the number of bytes actually released\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLockingEnabled(boolean lockingEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Control whether or not the SQLiteDatabase is made thread-safe by using locks\n     * around critical sections. This is pretty expensive, so if you know that your\n     * DB will only be used by a single thread then you should set this to false.\n     * The default is true.\n     * @param lockingEnabled set to true to enable locks, false otherwise\n     *\n     * @deprecated This method now does nothing.  Do not use.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " String getLabel()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets a label to use when describing the database in log messages.\n     * @return The label.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void onCorruption()",
+    "returnType" : "void",
+    "comment" : "\n     * Sends a corruption message to the database error handler.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " SQLiteSession getThreadSession()",
+    "returnType" : "SQLiteSession",
+    "comment" : "\n     * Gets the {@link SQLiteSession} that belongs to this thread for this database.\n     * Once a thread has obtained a session, it will continue to obtain the same\n     * session even after the database has been closed (although the session will not\n     * be usable).  However, a thread that does not already have a session cannot\n     * obtain one after the database has been closed.\n     *\n     * The idea is that threads that have active connections to the database may still\n     * have work to complete even after the call to {@link #close}.  Active database\n     * connections are not actually disposed until they are released by the threads\n     * that own them.\n     *\n     * @return The session, never null.\n     *\n     * @throws IllegalStateException if the thread does not yet have a session and\n     * the database is not open.\n     ",
+    "links" : [ "SQLiteSession", "#close" ]
+  }, {
+    "name" : " SQLiteSession createSession()",
+    "returnType" : "SQLiteSession",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " int getThreadDefaultConnectionFlags(boolean readOnly)",
+    "returnType" : "int",
+    "comment" : "\n     * Gets default connection flags that are appropriate for this thread, taking into\n     * account whether the thread is acting on behalf of the UI.\n     *\n     * @param readOnly True if the connection should be read-only.\n     * @return The connection flags.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isMainThread()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginTransaction()",
+    "returnType" : "void",
+    "comment" : "\n     * Begins a transaction in EXCLUSIVE mode.\n     * <p>\n     * Transactions can be nested.\n     * When the outer transaction is ended all of\n     * the work done in that transaction and all of the nested transactions will be committed or\n     * rolled back. The changes will be rolled back if any transaction is ended without being\n     * marked as clean (by calling setTransactionSuccessful). Otherwise they will be committed.\n     * </p>\n     * <p>Here is the standard idiom for transactions:\n     *\n     * <pre>\n     *   db.beginTransaction();\n     *   try {\n     *     ...\n     *     db.setTransactionSuccessful();\n     *   } finally {\n     *     db.endTransaction();\n     *   }\n     * </pre>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginTransactionNonExclusive()",
+    "returnType" : "void",
+    "comment" : "\n     * Begins a transaction in IMMEDIATE mode. Transactions can be nested. When\n     * the outer transaction is ended all of the work done in that transaction\n     * and all of the nested transactions will be committed or rolled back. The\n     * changes will be rolled back if any transaction is ended without being\n     * marked as clean (by calling setTransactionSuccessful). Otherwise they\n     * will be committed.\n     * <p>\n     * Here is the standard idiom for transactions:\n     *\n     * <pre>\n     *   db.beginTransactionNonExclusive();\n     *   try {\n     *     ...\n     *     db.setTransactionSuccessful();\n     *   } finally {\n     *     db.endTransaction();\n     *   }\n     * </pre>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginTransactionWithListener(SQLiteTransactionListener transactionListener)",
+    "returnType" : "void",
+    "comment" : "\n     * Begins a transaction in EXCLUSIVE mode.\n     * <p>\n     * Transactions can be nested.\n     * When the outer transaction is ended all of\n     * the work done in that transaction and all of the nested transactions will be committed or\n     * rolled back. The changes will be rolled back if any transaction is ended without being\n     * marked as clean (by calling setTransactionSuccessful). Otherwise they will be committed.\n     * </p>\n     * <p>Here is the standard idiom for transactions:\n     *\n     * <pre>\n     *   db.beginTransactionWithListener(listener);\n     *   try {\n     *     ...\n     *     db.setTransactionSuccessful();\n     *   } finally {\n     *     db.endTransaction();\n     *   }\n     * </pre>\n     *\n     * @param transactionListener listener that should be notified when the transaction begins,\n     * commits, or is rolled back, either explicitly or by a call to\n     * {@link #yieldIfContendedSafely}.\n     ",
+    "links" : [ "#yieldIfContendedSafely" ]
+  }, {
+    "name" : "public void beginTransactionWithListenerNonExclusive(SQLiteTransactionListener transactionListener)",
+    "returnType" : "void",
+    "comment" : "\n     * Begins a transaction in IMMEDIATE mode. Transactions can be nested. When\n     * the outer transaction is ended all of the work done in that transaction\n     * and all of the nested transactions will be committed or rolled back. The\n     * changes will be rolled back if any transaction is ended without being\n     * marked as clean (by calling setTransactionSuccessful). Otherwise they\n     * will be committed.\n     * <p>\n     * Here is the standard idiom for transactions:\n     *\n     * <pre>\n     *   db.beginTransactionWithListenerNonExclusive(listener);\n     *   try {\n     *     ...\n     *     db.setTransactionSuccessful();\n     *   } finally {\n     *     db.endTransaction();\n     *   }\n     * </pre>\n     *\n     * @param transactionListener listener that should be notified when the\n     *            transaction begins, commits, or is rolled back, either\n     *            explicitly or by a call to {@link #yieldIfContendedSafely}.\n     ",
+    "links" : [ "#yieldIfContendedSafely" ]
+  }, {
+    "name" : "private void beginTransaction(SQLiteTransactionListener transactionListener, boolean exclusive)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void endTransaction()",
+    "returnType" : "void",
+    "comment" : "\n     * End a transaction. See beginTransaction for notes about how to use this and when transactions\n     * are committed and rolled back.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTransactionSuccessful()",
+    "returnType" : "void",
+    "comment" : "\n     * Marks the current transaction as successful. Do not do any more database work between\n     * calling this and calling endTransaction. Do as little non-database work as possible in that\n     * situation too. If any errors are encountered between this and endTransaction the transaction\n     * will still be committed.\n     *\n     * @throws IllegalStateException if the current thread is not in a transaction or the\n     * transaction is already marked as successful.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean inTransaction()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the current thread has a transaction pending.\n     *\n     * @return True if the current thread is in a transaction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isDbLockedByCurrentThread()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the current thread is holding an active connection to the database.\n     * <p>\n     * The name of this method comes from a time when having an active connection\n     * to the database meant that the thread was holding an actual lock on the\n     * database.  Nowadays, there is no longer a true \"database lock\" although threads\n     * may block if they cannot acquire a database connection to perform a\n     * particular operation.\n     * </p>\n     *\n     * @return True if the current thread is holding an active connection to the database.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isDbLockedByOtherThreads()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Always returns false.\n     * <p>\n     * There is no longer the concept of a database lock, so this method always returns false.\n     * </p>\n     *\n     * @return False.\n     * @deprecated Always returns false.  Do not use this method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean yieldIfContended()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Temporarily end the transaction to let other threads run. The transaction is assumed to be\n     * successful so far. Do not call setTransactionSuccessful before calling this. When this\n     * returns a new transaction will have been created but not marked as successful.\n     * @return true if the transaction was yielded\n     * @deprecated if the db is locked more than once (because of nested transactions) then the lock\n     *   will not be yielded. Use yieldIfContendedSafely instead.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean yieldIfContendedSafely()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Temporarily end the transaction to let other threads run. The transaction is assumed to be\n     * successful so far. Do not call setTransactionSuccessful before calling this. When this\n     * returns a new transaction will have been created but not marked as successful. This assumes\n     * that there are no nested transactions (beginTransaction has only been called once) and will\n     * throw an exception if that is not the case.\n     * @return true if the transaction was yielded\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean yieldIfContendedSafely(long sleepAfterYieldDelay)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Temporarily end the transaction to let other threads run. The transaction is assumed to be\n     * successful so far. Do not call setTransactionSuccessful before calling this. When this\n     * returns a new transaction will have been created but not marked as successful. This assumes\n     * that there are no nested transactions (beginTransaction has only been called once) and will\n     * throw an exception if that is not the case.\n     * @param sleepAfterYieldDelay if > 0, sleep this long before starting a new transaction if\n     *   the lock was actually yielded. This will allow other background threads to make some\n     *   more progress than they would if we started the transaction immediately.\n     * @return true if the transaction was yielded\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean yieldIfContendedHelper(boolean throwIfUnsafe, long sleepAfterYieldDelay)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Map<String, String> getSyncedTables()",
+    "returnType" : "Map<String, String>",
+    "comment" : "\n     * Deprecated.\n     * @deprecated This method no longer serves any useful purpose and has been deprecated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteDatabase openDatabase(@NonNull String path, @Nullable CursorFactory factory, @DatabaseOpenFlags int flags)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Open the database according to the flags {@link #OPEN_READWRITE}\n     * {@link #OPEN_READONLY} {@link #CREATE_IF_NECESSARY} and/or {@link #NO_LOCALIZED_COLLATORS}.\n     *\n     * <p>Sets the locale of the database to the  the system's current locale.\n     * Call {@link #setLocale} if you would like something else.</p>\n     *\n     * @param path to database file to open and/or create\n     * @param factory an optional factory class that is called to instantiate a\n     *            cursor when query is called, or null for default\n     * @param flags to control database access mode\n     * @return the newly opened database\n     * @throws SQLiteException if the database cannot be opened\n     ",
+    "links" : [ "#OPEN_READWRITE", "#OPEN_READONLY", "#CREATE_IF_NECESSARY", "#NO_LOCALIZED_COLLATORS", "#setLocale" ]
+  }, {
+    "name" : "public static SQLiteDatabase openDatabase(@NonNull File path, @NonNull OpenParams openParams)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Open the database according to the specified {@link OpenParams parameters}\n     *\n     * @param path path to database file to open and/or create.\n     * <p><strong>Important:</strong> The file should be constructed either from an absolute path or\n     * by using {@link android.content.Context#getDatabasePath(String)}.\n     * @param openParams configuration parameters that are used for opening {@link SQLiteDatabase}\n     * @return the newly opened database\n     * @throws SQLiteException if the database cannot be opened\n     ",
+    "links" : [ "OpenParams", "android.content.Context#getDatabasePath", "SQLiteDatabase" ]
+  }, {
+    "name" : "private static SQLiteDatabase openDatabase(@NonNull String path, @NonNull OpenParams openParams)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteDatabase openDatabase(@NonNull String path, @Nullable CursorFactory factory, @DatabaseOpenFlags int flags, @Nullable DatabaseErrorHandler errorHandler)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Open the database according to the flags {@link #OPEN_READWRITE}\n     * {@link #OPEN_READONLY} {@link #CREATE_IF_NECESSARY} and/or {@link #NO_LOCALIZED_COLLATORS}.\n     *\n     * <p>Sets the locale of the database to the  the system's current locale.\n     * Call {@link #setLocale} if you would like something else.</p>\n     *\n     * <p>Accepts input param: a concrete instance of {@link DatabaseErrorHandler} to be\n     * used to handle corruption when sqlite reports database corruption.</p>\n     *\n     * @param path to database file to open and/or create\n     * @param factory an optional factory class that is called to instantiate a\n     *            cursor when query is called, or null for default\n     * @param flags to control database access mode\n     * @param errorHandler the {@link DatabaseErrorHandler} obj to be used to handle corruption\n     * when sqlite reports database corruption\n     * @return the newly opened database\n     * @throws SQLiteException if the database cannot be opened\n     ",
+    "links" : [ "#OPEN_READWRITE", "#OPEN_READONLY", "#CREATE_IF_NECESSARY", "#NO_LOCALIZED_COLLATORS", "#setLocale", "DatabaseErrorHandler", "DatabaseErrorHandler" ]
+  }, {
+    "name" : "public static SQLiteDatabase openOrCreateDatabase(@NonNull File file, @Nullable CursorFactory factory)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Equivalent to openDatabase(file.getPath(), factory, CREATE_IF_NECESSARY).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteDatabase openOrCreateDatabase(@NonNull String path, @Nullable CursorFactory factory)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteDatabase openOrCreateDatabase(@NonNull String path, @Nullable CursorFactory factory, @Nullable DatabaseErrorHandler errorHandler)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Equivalent to openDatabase(path, factory, CREATE_IF_NECESSARY, errorHandler).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean deleteDatabase(@NonNull File file)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Deletes a database including its journal file and other auxiliary files\n     * that may have been created by the database engine.\n     *\n     * @param file The database file path.\n     * @return True if the database was successfully deleted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean deleteDatabase(@NonNull File file, boolean removeCheckFile)",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reopenReadWrite()",
+    "returnType" : "void",
+    "comment" : "\n     * Reopens the database in read-write mode.\n     * If the database is already read-write, does nothing.\n     *\n     * @throws SQLiteException if the database could not be reopened as requested, in which\n     * case it remains open in read only mode.\n     * @throws IllegalStateException if the database is not open.\n     *\n     * @see #isReadOnly()\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void open()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void openInner()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteDatabase create(@Nullable CursorFactory factory)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Create a memory backed SQLite database.  Its contents will be destroyed\n     * when the database is closed.\n     *\n     * <p>Sets the locale of the database to the  the system's current locale.\n     * Call {@link #setLocale} if you would like something else.</p>\n     *\n     * @param factory an optional factory class that is called to instantiate a\n     *            cursor when query is called\n     * @return a SQLiteDatabase instance\n     * @throws SQLiteException if the database cannot be created\n     ",
+    "links" : [ "#setLocale" ]
+  }, {
+    "name" : "public static SQLiteDatabase createInMemory(@NonNull OpenParams openParams)",
+    "returnType" : "SQLiteDatabase",
+    "comment" : "\n     * Create a memory backed SQLite database.  Its contents will be destroyed\n     * when the database is closed.\n     *\n     * <p>Sets the locale of the database to the  the system's current locale.\n     * Call {@link #setLocale} if you would like something else.</p>\n     * @param openParams configuration parameters that are used for opening SQLiteDatabase\n     * @return a SQLiteDatabase instance\n     * @throws SQLException if the database cannot be created\n     ",
+    "links" : [ "#setLocale" ]
+  }, {
+    "name" : "public void setCustomScalarFunction(@NonNull String functionName, @NonNull UnaryOperator<String> scalarFunction) throws SQLiteException",
+    "returnType" : "void",
+    "comment" : "\n     * Register a custom scalar function that can be called from SQL\n     * expressions.\n     * <p>\n     * For example, registering a custom scalar function named {@code REVERSE}\n     * could be used in a query like\n     * {@code SELECT REVERSE(name) FROM employees}.\n     * <p>\n     * When attempting to register multiple functions with the same function\n     * name, SQLite will replace any previously defined functions with the\n     * latest definition, regardless of what function type they are. SQLite does\n     * not support unregistering functions.\n     *\n     * @param functionName Case-insensitive name to register this function\n     *            under, limited to 255 UTF-8 bytes in length.\n     * @param scalarFunction Functional interface that will be invoked when the\n     *            function name is used by a SQL statement. The argument values\n     *            from the SQL statement are passed to the functional interface,\n     *            and the return values from the functional interface are\n     *            returned back into the SQL statement.\n     * @throws SQLiteException if the custom function could not be registered.\n     * @see #setCustomAggregateFunction(String, BinaryOperator)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCustomAggregateFunction(@NonNull String functionName, @NonNull BinaryOperator<String> aggregateFunction) throws SQLiteException",
+    "returnType" : "void",
+    "comment" : "\n     * Register a custom aggregate function that can be called from SQL\n     * expressions.\n     * <p>\n     * For example, registering a custom aggregation function named\n     * {@code LONGEST} could be used in a query like\n     * {@code SELECT LONGEST(name) FROM employees}.\n     * <p>\n     * The implementation of this method follows the reduction flow outlined in\n     * {@link java.util.stream.Stream#reduce(BinaryOperator)}, and the custom\n     * aggregation function is expected to be an associative accumulation\n     * function, as defined by that class.\n     * <p>\n     * When attempting to register multiple functions with the same function\n     * name, SQLite will replace any previously defined functions with the\n     * latest definition, regardless of what function type they are. SQLite does\n     * not support unregistering functions.\n     *\n     * @param functionName Case-insensitive name to register this function\n     *            under, limited to 255 UTF-8 bytes in length.\n     * @param aggregateFunction Functional interface that will be invoked when\n     *            the function name is used by a SQL statement. The argument\n     *            values from the SQL statement are passed to the functional\n     *            interface, and the return values from the functional interface\n     *            are returned back into the SQL statement.\n     * @throws SQLiteException if the custom function could not be registered.\n     * @see #setCustomScalarFunction(String, UnaryOperator)\n     ",
+    "links" : [ "java.util.stream.Stream#reduce" ]
+  }, {
+    "name" : "public void execPerConnectionSQL(@NonNull String sql, @Nullable Object[] bindArgs) throws SQLException",
+    "returnType" : "void",
+    "comment" : "\n     * Execute the given SQL statement on all connections to this database.\n     * <p>\n     * This statement will be immediately executed on all existing connections,\n     * and will be automatically executed on all future connections.\n     * <p>\n     * Some example usages are changes like {@code PRAGMA trusted_schema=OFF} or\n     * functions like {@code SELECT icu_load_collation()}. If you execute these\n     * statements using {@link #execSQL} then they will only apply to a single\n     * database connection; using this method will ensure that they are\n     * uniformly applied to all current and future connections.\n     *\n     * @param sql The SQL statement to be executed. Multiple statements\n     *            separated by semicolons are not supported.\n     * @param bindArgs The arguments that should be bound to the SQL statement.\n     ",
+    "links" : [ "#execSQL" ]
+  }, {
+    "name" : "public int getVersion()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the database version.\n     *\n     * @return the database version\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setVersion(int version)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the database version.\n     *\n     * @param version the new database version\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getMaximumSize()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the maximum size the database may grow to.\n     *\n     * @return the new maximum database size\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long setMaximumSize(long numBytes)",
+    "returnType" : "long",
+    "comment" : "\n     * Sets the maximum size the database will grow to. The maximum size cannot\n     * be set below the current size.\n     *\n     * @param numBytes the maximum database size, in bytes\n     * @return the new maximum database size\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getPageSize()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the current database page size, in bytes.\n     *\n     * @return the database page size, in bytes\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPageSize(long numBytes)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the database page size. The page size must be a power of two. This\n     * method does not work if any data has been written to the database file,\n     * and must be called right after the database has been created.\n     *\n     * @param numBytes the database page size, in bytes\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void markTableSyncable(String table, String deletedTable)",
+    "returnType" : "void",
+    "comment" : "\n     * Mark this table as syncable. When an update occurs in this table the\n     * _sync_dirty field will be set to ensure proper syncing operation.\n     *\n     * @param table the table to mark as syncable\n     * @param deletedTable The deleted table that corresponds to the\n     *          syncable table\n     * @deprecated This method no longer serves any useful purpose and has been deprecated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void markTableSyncable(String table, String foreignKey, String updateTable)",
+    "returnType" : "void",
+    "comment" : "\n     * Mark this table as syncable, with the _sync_dirty residing in another\n     * table. When an update occurs in this table the _sync_dirty field of the\n     * row in updateTable with the _id in foreignKey will be set to\n     * ensure proper syncing operation.\n     *\n     * @param table an update on this table will trigger a sync time removal\n     * @param foreignKey this is the column in table whose value is an _id in\n     *          updateTable\n     * @param updateTable this is the table that will have its _sync_dirty\n     * @deprecated This method no longer serves any useful purpose and has been deprecated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String findEditTable(String tables)",
+    "returnType" : "String",
+    "comment" : "\n     * Finds the name of the first table, which is editable.\n     *\n     * @param tables a list of tables\n     * @return the first table listed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public SQLiteStatement compileStatement(String sql) throws SQLException",
+    "returnType" : "SQLiteStatement",
+    "comment" : "\n     * Compiles an SQL statement into a reusable pre-compiled statement object.\n     * The parameters are identical to {@link #execSQL(String)}. You may put ?s in the\n     * statement and fill in those values with {@link SQLiteProgram#bindString}\n     * and {@link SQLiteProgram#bindLong} each time you want to run the\n     * statement. Statements may not return result sets larger than 1x1.\n     *<p>\n     * No two threads should be using the same {@link SQLiteStatement} at the same time.\n     *\n     * @param sql The raw SQL statement, may contain ? for unknown values to be\n     *            bound later.\n     * @return A pre-compiled {@link SQLiteStatement} object. Note that\n     * {@link SQLiteStatement}s are not synchronized, see the documentation for more details.\n     ",
+    "links" : [ "#execSQL", "SQLiteProgram#bindString", "SQLiteProgram#bindLong", "SQLiteStatement", "SQLiteStatement", "SQLiteStatement" ]
+  }, {
+    "name" : "public Cursor query(boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given URL, returning a {@link Cursor} over the result set.\n     *\n     * @param distinct true if you want each row to be unique, false otherwise.\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @param limit Limits the number of rows returned by the query,\n     *            formatted as LIMIT clause. Passing null denotes no LIMIT clause.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor query(boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given URL, returning a {@link Cursor} over the result set.\n     *\n     * @param distinct true if you want each row to be unique, false otherwise.\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @param limit Limits the number of rows returned by the query,\n     *            formatted as LIMIT clause. Passing null denotes no LIMIT clause.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * If the operation is canceled, then {@link OperationCanceledException} will be thrown\n     * when the query is executed.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "OperationCanceledException", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor queryWithFactory(CursorFactory cursorFactory, boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given URL, returning a {@link Cursor} over the result set.\n     *\n     * @param cursorFactory the cursor factory to use, or null for the default factory\n     * @param distinct true if you want each row to be unique, false otherwise.\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @param limit Limits the number of rows returned by the query,\n     *            formatted as LIMIT clause. Passing null denotes no LIMIT clause.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor queryWithFactory(CursorFactory cursorFactory, boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given URL, returning a {@link Cursor} over the result set.\n     *\n     * @param cursorFactory the cursor factory to use, or null for the default factory\n     * @param distinct true if you want each row to be unique, false otherwise.\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @param limit Limits the number of rows returned by the query,\n     *            formatted as LIMIT clause. Passing null denotes no LIMIT clause.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * If the operation is canceled, then {@link OperationCanceledException} will be thrown\n     * when the query is executed.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "OperationCanceledException", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given table, returning a {@link Cursor} over the result set.\n     *\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Query the given table, returning a {@link Cursor} over the result set.\n     *\n     * @param table The table name to compile the query against.\n     * @param columns A list of which columns to return. Passing null will\n     *            return all columns, which is discouraged to prevent reading\n     *            data from storage that isn't going to be used.\n     * @param selection A filter declaring which rows to return, formatted as an\n     *            SQL WHERE clause (excluding the WHERE itself). Passing null\n     *            will return all rows for the given table.\n     * @param selectionArgs You may include ?s in selection, which will be\n     *         replaced by the values from selectionArgs, in order that they\n     *         appear in the selection. The values will be bound as Strings.\n     * @param groupBy A filter declaring how to group rows, formatted as an SQL\n     *            GROUP BY clause (excluding the GROUP BY itself). Passing null\n     *            will cause the rows to not be grouped.\n     * @param having A filter declare which row groups to include in the cursor,\n     *            if row grouping is being used, formatted as an SQL HAVING\n     *            clause (excluding the HAVING itself). Passing null will cause\n     *            all row groups to be included, and is required when row\n     *            grouping is not being used.\n     * @param orderBy How to order the rows, formatted as an SQL ORDER BY clause\n     *            (excluding the ORDER BY itself). Passing null will use the\n     *            default sort order, which may be unordered.\n     * @param limit Limits the number of rows returned by the query,\n     *            formatted as LIMIT clause. Passing null denotes no LIMIT clause.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     * @see Cursor\n     ",
+    "links" : [ "Cursor", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor rawQuery(String sql, String[] selectionArgs)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Runs the provided SQL and returns a {@link Cursor} over the result set.\n     *\n     * @param sql the SQL query. The SQL string must not be ; terminated\n     * @param selectionArgs You may include ?s in where clause in the query,\n     *     which will be replaced by the values from selectionArgs. The\n     *     values will be bound as Strings.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     ",
+    "links" : [ "Cursor", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor rawQuery(String sql, String[] selectionArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Runs the provided SQL and returns a {@link Cursor} over the result set.\n     *\n     * @param sql the SQL query. The SQL string must not be ; terminated\n     * @param selectionArgs You may include ?s in where clause in the query,\n     *     which will be replaced by the values from selectionArgs. The\n     *     values will be bound as Strings.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * If the operation is canceled, then {@link OperationCanceledException} will be thrown\n     * when the query is executed.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     ",
+    "links" : [ "Cursor", "OperationCanceledException", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor rawQueryWithFactory(CursorFactory cursorFactory, String sql, String[] selectionArgs, String editTable)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Runs the provided SQL and returns a cursor over the result set.\n     *\n     * @param cursorFactory the cursor factory to use, or null for the default factory\n     * @param sql the SQL query. The SQL string must not be ; terminated\n     * @param selectionArgs You may include ?s in where clause in the query,\n     *     which will be replaced by the values from selectionArgs. The\n     *     values will be bound as Strings.\n     * @param editTable the name of the first table, which is editable\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     ",
+    "links" : [ "Cursor", "Cursor" ]
+  }, {
+    "name" : "public Cursor rawQueryWithFactory(CursorFactory cursorFactory, String sql, String[] selectionArgs, String editTable, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Runs the provided SQL and returns a cursor over the result set.\n     *\n     * @param cursorFactory the cursor factory to use, or null for the default factory\n     * @param sql the SQL query. The SQL string must not be ; terminated\n     * @param selectionArgs You may include ?s in where clause in the query,\n     *     which will be replaced by the values from selectionArgs. The\n     *     values will be bound as Strings.\n     * @param editTable the name of the first table, which is editable\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * If the operation is canceled, then {@link OperationCanceledException} will be thrown\n     * when the query is executed.\n     * @return A {@link Cursor} object, which is positioned before the first entry. Note that\n     * {@link Cursor}s are not synchronized, see the documentation for more details.\n     ",
+    "links" : [ "OperationCanceledException", "Cursor", "Cursor" ]
+  }, {
+    "name" : "public long insert(String table, String nullColumnHack, ContentValues values)",
+    "returnType" : "long",
+    "comment" : "\n     * Convenience method for inserting a row into the database.\n     *\n     * @param table the table to insert the row into\n     * @param nullColumnHack optional; may be <code>null</code>.\n     *            SQL doesn't allow inserting a completely empty row without\n     *            naming at least one column name.  If your provided <code>values</code> is\n     *            empty, no column names are known and an empty row can't be inserted.\n     *            If not set to null, the <code>nullColumnHack</code> parameter\n     *            provides the name of nullable column name to explicitly insert a NULL into\n     *            in the case where your <code>values</code> is empty.\n     * @param values this map contains the initial column values for the\n     *            row. The keys should be the column names and the values the\n     *            column values\n     * @return the row ID of the newly inserted row, or -1 if an error occurred\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long insertOrThrow(String table, String nullColumnHack, ContentValues values) throws SQLException",
+    "returnType" : "long",
+    "comment" : "\n     * Convenience method for inserting a row into the database.\n     *\n     * @param table the table to insert the row into\n     * @param nullColumnHack optional; may be <code>null</code>.\n     *            SQL doesn't allow inserting a completely empty row without\n     *            naming at least one column name.  If your provided <code>values</code> is\n     *            empty, no column names are known and an empty row can't be inserted.\n     *            If not set to null, the <code>nullColumnHack</code> parameter\n     *            provides the name of nullable column name to explicitly insert a NULL into\n     *            in the case where your <code>values</code> is empty.\n     * @param values this map contains the initial column values for the\n     *            row. The keys should be the column names and the values the\n     *            column values\n     * @throws SQLException\n     * @return the row ID of the newly inserted row, or -1 if an error occurred\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long replace(String table, String nullColumnHack, ContentValues initialValues)",
+    "returnType" : "long",
+    "comment" : "\n     * Convenience method for replacing a row in the database.\n     * Inserts a new row if a row does not already exist.\n     *\n     * @param table the table in which to replace the row\n     * @param nullColumnHack optional; may be <code>null</code>.\n     *            SQL doesn't allow inserting a completely empty row without\n     *            naming at least one column name.  If your provided <code>initialValues</code> is\n     *            empty, no column names are known and an empty row can't be inserted.\n     *            If not set to null, the <code>nullColumnHack</code> parameter\n     *            provides the name of nullable column name to explicitly insert a NULL into\n     *            in the case where your <code>initialValues</code> is empty.\n     * @param initialValues this map contains the initial column values for\n     *   the row. The keys should be the column names and the values the column values.\n     * @return the row ID of the newly inserted row, or -1 if an error occurred\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long replaceOrThrow(String table, String nullColumnHack, ContentValues initialValues) throws SQLException",
+    "returnType" : "long",
+    "comment" : "\n     * Convenience method for replacing a row in the database.\n     * Inserts a new row if a row does not already exist.\n     *\n     * @param table the table in which to replace the row\n     * @param nullColumnHack optional; may be <code>null</code>.\n     *            SQL doesn't allow inserting a completely empty row without\n     *            naming at least one column name.  If your provided <code>initialValues</code> is\n     *            empty, no column names are known and an empty row can't be inserted.\n     *            If not set to null, the <code>nullColumnHack</code> parameter\n     *            provides the name of nullable column name to explicitly insert a NULL into\n     *            in the case where your <code>initialValues</code> is empty.\n     * @param initialValues this map contains the initial column values for\n     *   the row. The keys should be the column names and the values the column values.\n     * @throws SQLException\n     * @return the row ID of the newly inserted row, or -1 if an error occurred\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long insertWithOnConflict(String table, String nullColumnHack, ContentValues initialValues, int conflictAlgorithm)",
+    "returnType" : "long",
+    "comment" : "\n     * General method for inserting a row into the database.\n     *\n     * @param table the table to insert the row into\n     * @param nullColumnHack optional; may be <code>null</code>.\n     *            SQL doesn't allow inserting a completely empty row without\n     *            naming at least one column name.  If your provided <code>initialValues</code> is\n     *            empty, no column names are known and an empty row can't be inserted.\n     *            If not set to null, the <code>nullColumnHack</code> parameter\n     *            provides the name of nullable column name to explicitly insert a NULL into\n     *            in the case where your <code>initialValues</code> is empty.\n     * @param initialValues this map contains the initial column values for the\n     *            row. The keys should be the column names and the values the\n     *            column values\n     * @param conflictAlgorithm for insert conflict resolver\n     * @return the row ID of the newly inserted row OR <code>-1</code> if either the\n     *            input parameter <code>conflictAlgorithm</code> = {@link #CONFLICT_IGNORE}\n     *            or an error occurred.\n     ",
+    "links" : [ "#CONFLICT_IGNORE" ]
+  }, {
+    "name" : "public int delete(String table, String whereClause, String[] whereArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * Convenience method for deleting rows in the database.\n     *\n     * @param table the table to delete from\n     * @param whereClause the optional WHERE clause to apply when deleting.\n     *            Passing null will delete all rows.\n     * @param whereArgs You may include ?s in the where clause, which\n     *            will be replaced by the values from whereArgs. The values\n     *            will be bound as Strings.\n     * @return the number of rows affected if a whereClause is passed in, 0\n     *         otherwise. To remove all rows and get a count pass \"1\" as the\n     *         whereClause.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int update(String table, ContentValues values, String whereClause, String[] whereArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * Convenience method for updating rows in the database.\n     *\n     * @param table the table to update in\n     * @param values a map from column names to new column values. null is a\n     *            valid value that will be translated to NULL.\n     * @param whereClause the optional WHERE clause to apply when updating.\n     *            Passing null will update all rows.\n     * @param whereArgs You may include ?s in the where clause, which\n     *            will be replaced by the values from whereArgs. The values\n     *            will be bound as Strings.\n     * @return the number of rows affected\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int updateWithOnConflict(String table, ContentValues values, String whereClause, String[] whereArgs, int conflictAlgorithm)",
+    "returnType" : "int",
+    "comment" : "\n     * Convenience method for updating rows in the database.\n     *\n     * @param table the table to update in\n     * @param values a map from column names to new column values. null is a\n     *            valid value that will be translated to NULL.\n     * @param whereClause the optional WHERE clause to apply when updating.\n     *            Passing null will update all rows.\n     * @param whereArgs You may include ?s in the where clause, which\n     *            will be replaced by the values from whereArgs. The values\n     *            will be bound as Strings.\n     * @param conflictAlgorithm for update conflict resolver\n     * @return the number of rows affected\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void execSQL(String sql) throws SQLException",
+    "returnType" : "void",
+    "comment" : "\n     * Execute a single SQL statement that is NOT a SELECT\n     * or any other SQL statement that returns data.\n     * <p>\n     * It has no means to return any data (such as the number of affected rows).\n     * Instead, you're encouraged to use {@link #insert(String, String, ContentValues)},\n     * {@link #update(String, ContentValues, String, String[])}, et al, when possible.\n     * </p>\n     * <p>\n     * When using {@link #enableWriteAheadLogging()}, journal_mode is\n     * automatically managed by this class. So, do not set journal_mode\n     * using \"PRAGMA journal_mode'<value>\" statement if your app is using\n     * {@link #enableWriteAheadLogging()}\n     * </p>\n     * <p>\n     * Note that {@code PRAGMA} values which apply on a per-connection basis\n     * should <em>not</em> be configured using this method; you should instead\n     * use {@link #execPerConnectionSQL} to ensure that they are uniformly\n     * applied to all current and future connections.\n     * </p>\n     *\n     * @param sql the SQL statement to be executed. Multiple statements separated by semicolons are\n     * not supported.\n     * @throws SQLException if the SQL string is invalid\n     ",
+    "links" : [ "#insert", "#update", "#enableWriteAheadLogging", "#enableWriteAheadLogging", "#execPerConnectionSQL" ]
+  }, {
+    "name" : "public void execSQL(String sql, Object[] bindArgs) throws SQLException",
+    "returnType" : "void",
+    "comment" : "\n     * Execute a single SQL statement that is NOT a SELECT/INSERT/UPDATE/DELETE.\n     * <p>\n     * For INSERT statements, use any of the following instead.\n     * <ul>\n     *   <li>{@link #insert(String, String, ContentValues)}</li>\n     *   <li>{@link #insertOrThrow(String, String, ContentValues)}</li>\n     *   <li>{@link #insertWithOnConflict(String, String, ContentValues, int)}</li>\n     * </ul>\n     * <p>\n     * For UPDATE statements, use any of the following instead.\n     * <ul>\n     *   <li>{@link #update(String, ContentValues, String, String[])}</li>\n     *   <li>{@link #updateWithOnConflict(String, ContentValues, String, String[], int)}</li>\n     * </ul>\n     * <p>\n     * For DELETE statements, use any of the following instead.\n     * <ul>\n     *   <li>{@link #delete(String, String, String[])}</li>\n     * </ul>\n     * <p>\n     * For example, the following are good candidates for using this method:\n     * <ul>\n     *   <li>ALTER TABLE</li>\n     *   <li>CREATE or DROP table / trigger / view / index / virtual table</li>\n     *   <li>REINDEX</li>\n     *   <li>RELEASE</li>\n     *   <li>SAVEPOINT</li>\n     *   <li>PRAGMA that returns no data</li>\n     * </ul>\n     * </p>\n     * <p>\n     * When using {@link #enableWriteAheadLogging()}, journal_mode is\n     * automatically managed by this class. So, do not set journal_mode\n     * using \"PRAGMA journal_mode'<value>\" statement if your app is using\n     * {@link #enableWriteAheadLogging()}\n     * </p>\n     * <p>\n     * Note that {@code PRAGMA} values which apply on a per-connection basis\n     * should <em>not</em> be configured using this method; you should instead\n     * use {@link #execPerConnectionSQL} to ensure that they are uniformly\n     * applied to all current and future connections.\n     * </p>\n     *\n     * @param sql the SQL statement to be executed. Multiple statements separated by semicolons are\n     * not supported.\n     * @param bindArgs only byte[], String, Long and Double are supported in bindArgs.\n     * @throws SQLException if the SQL string is invalid\n     ",
+    "links" : [ "#insert", "#insertOrThrow", "#insertWithOnConflict", "#update", "#updateWithOnConflict", "#delete", "#enableWriteAheadLogging", "#enableWriteAheadLogging", "#execPerConnectionSQL" ]
+  }, {
+    "name" : "public int executeSql(String sql, Object[] bindArgs) throws SQLException",
+    "returnType" : "int",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public void validateSql(@NonNull String sql, @Nullable CancellationSignal cancellationSignal)",
+    "returnType" : "void",
+    "comment" : "\n     * Verifies that a SQL SELECT statement is valid by compiling it.\n     * If the SQL statement is not valid, this method will throw a {@link SQLiteException}.\n     *\n     * @param sql SQL to be validated\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * If the operation is canceled, then {@link OperationCanceledException} will be thrown\n     * when the query is executed.\n     * @throws SQLiteException if {@code sql} is invalid\n     ",
+    "links" : [ "SQLiteException", "OperationCanceledException" ]
+  }, {
+    "name" : "public boolean isReadOnly()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the database is opened as read only.\n     *\n     * @return True if database is opened as read only.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isReadOnlyLocked()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInMemoryDatabase()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the database is in-memory db.\n     *\n     * @return True if the database is in-memory.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isOpen()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the database is currently open.\n     *\n     * @return True if the database is currently open (has not been closed).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean needUpgrade(int newVersion)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the new version code is greater than the current database version.\n     *\n     * @param newVersion The new version code.\n     * @return True if the new version code is greater than the current database version.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getPath()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets the path to the database file.\n     *\n     * @return The path to the database file.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLocale(Locale locale)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the locale for this database.  Does nothing if this database has\n     * the {@link #NO_LOCALIZED_COLLATORS} flag set or was opened read only.\n     *\n     * @param locale The new locale.\n     *\n     * @throws SQLException if the locale could not be set.  The most common reason\n     * for this is that there is no collator available for the locale you requested.\n     * In this case the database remains unchanged.\n     ",
+    "links" : [ "#NO_LOCALIZED_COLLATORS" ]
+  }, {
+    "name" : "public void setMaxSqlCacheSize(int cacheSize)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the maximum size of the prepared-statement cache for this database.\n     * (size of the cache = number of compiled-sql-statements stored in the cache).\n     *<p>\n     * Maximum cache size can ONLY be increased from its current size (default = 10).\n     * If this method is called with smaller size than the current maximum value,\n     * then IllegalStateException is thrown.\n     *<p>\n     * This method is thread-safe.\n     *\n     * @param cacheSize the size of the cache. can be (0 to {@link #MAX_SQL_CACHE_SIZE})\n     * @throws IllegalStateException if input cacheSize > {@link #MAX_SQL_CACHE_SIZE}.\n     ",
+    "links" : [ "#MAX_SQL_CACHE_SIZE", "#MAX_SQL_CACHE_SIZE" ]
+  }, {
+    "name" : "public void setForeignKeyConstraintsEnabled(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets whether foreign key constraints are enabled for the database.\n     * <p>\n     * By default, foreign key constraints are not enforced by the database.\n     * This method allows an application to enable foreign key constraints.\n     * It must be called each time the database is opened to ensure that foreign\n     * key constraints are enabled for the session.\n     * </p><p>\n     * A good time to call this method is right after calling {@link #openOrCreateDatabase}\n     * or in the {@link SQLiteOpenHelper#onConfigure} callback.\n     * </p><p>\n     * When foreign key constraints are disabled, the database does not check whether\n     * changes to the database will violate foreign key constraints.  Likewise, when\n     * foreign key constraints are disabled, the database will not execute cascade\n     * delete or update triggers.  As a result, it is possible for the database\n     * state to become inconsistent.  To perform a database integrity check,\n     * call {@link #isDatabaseIntegrityOk}.\n     * </p><p>\n     * This method must not be called while a transaction is in progress.\n     * </p><p>\n     * See also <a href=\"http://sqlite.org/foreignkeys.html\">SQLite Foreign Key Constraints</a>\n     * for more details about foreign key constraint support.\n     * </p>\n     *\n     * @param enable True to enable foreign key constraints, false to disable them.\n     *\n     * @throws IllegalStateException if the are transactions is in progress\n     * when this method is called.\n     ",
+    "links" : [ "#openOrCreateDatabase", "SQLiteOpenHelper#onConfigure", "#isDatabaseIntegrityOk" ]
+  }, {
+    "name" : "public boolean enableWriteAheadLogging()",
+    "returnType" : "boolean",
+    "comment" : "\n     * This method enables parallel execution of queries from multiple threads on the\n     * same database.  It does this by opening multiple connections to the database\n     * and using a different database connection for each query.  The database\n     * journal mode is also changed to enable writes to proceed concurrently with reads.\n     * <p>\n     * When write-ahead logging is not enabled (the default), it is not possible for\n     * reads and writes to occur on the database at the same time.  Before modifying the\n     * database, the writer implicitly acquires an exclusive lock on the database which\n     * prevents readers from accessing the database until the write is completed.\n     * </p><p>\n     * In contrast, when write-ahead logging is enabled (by calling this method), write\n     * operations occur in a separate log file which allows reads to proceed concurrently.\n     * While a write is in progress, readers on other threads will perceive the state\n     * of the database as it was before the write began.  When the write completes, readers\n     * on other threads will then perceive the new state of the database.\n     * </p><p>\n     * It is a good idea to enable write-ahead logging whenever a database will be\n     * concurrently accessed and modified by multiple threads at the same time.\n     * However, write-ahead logging uses significantly more memory than ordinary\n     * journaling because there are multiple connections to the same database.\n     * So if a database will only be used by a single thread, or if optimizing\n     * concurrency is not very important, then write-ahead logging should be disabled.\n     * </p><p>\n     * After calling this method, execution of queries in parallel is enabled as long as\n     * the database remains open.  To disable execution of queries in parallel, either\n     * call {@link #disableWriteAheadLogging} or close the database and reopen it.\n     * </p><p>\n     * The maximum number of connections used to execute queries in parallel is\n     * dependent upon the device memory and possibly other properties.\n     * </p><p>\n     * If a query is part of a transaction, then it is executed on the same database handle the\n     * transaction was begun.\n     * </p><p>\n     * Writers should use {@link #beginTransactionNonExclusive()} or\n     * {@link #beginTransactionWithListenerNonExclusive(SQLiteTransactionListener)}\n     * to start a transaction.  Non-exclusive mode allows database file to be in readable\n     * by other threads executing queries.\n     * </p><p>\n     * If the database has any attached databases, then execution of queries in parallel is NOT\n     * possible.  Likewise, write-ahead logging is not supported for read-only databases\n     * or memory databases.  In such cases, {@link #enableWriteAheadLogging} returns false.\n     * </p><p>\n     * The best way to enable write-ahead logging is to pass the\n     * {@link #ENABLE_WRITE_AHEAD_LOGGING} flag to {@link #openDatabase}.  This is\n     * more efficient than calling {@link #enableWriteAheadLogging}.\n     * <code><pre>\n     *     SQLiteDatabase db = SQLiteDatabase.openDatabase(\"db_filename\", cursorFactory,\n     *             SQLiteDatabase.CREATE_IF_NECESSARY | SQLiteDatabase.ENABLE_WRITE_AHEAD_LOGGING,\n     *             myDatabaseErrorHandler);\n     * </pre></code>\n     * </p><p>\n     * Another way to enable write-ahead logging is to call {@link #enableWriteAheadLogging}\n     * after opening the database.\n     * <code><pre>\n     *     SQLiteDatabase db = SQLiteDatabase.openDatabase(\"db_filename\", cursorFactory,\n     *             SQLiteDatabase.CREATE_IF_NECESSARY, myDatabaseErrorHandler);\n     *     db.enableWriteAheadLogging();\n     * </pre></code>\n     * </p><p>\n     * See also <a href=\"http://sqlite.org/wal.html\">SQLite Write-Ahead Logging</a> for\n     * more details about how write-ahead logging works.\n     * </p>\n     *\n     * @return True if write-ahead logging is enabled.\n     *\n     * @throws IllegalStateException if there are transactions in progress at the\n     * time this method is called.  WAL mode can only be changed when there are no\n     * transactions in progress.\n     *\n     * @see #ENABLE_WRITE_AHEAD_LOGGING\n     * @see #disableWriteAheadLogging\n     ",
+    "links" : [ "#disableWriteAheadLogging", "#beginTransactionNonExclusive", "#beginTransactionWithListenerNonExclusive", "#enableWriteAheadLogging", "#ENABLE_WRITE_AHEAD_LOGGING", "#openDatabase", "#enableWriteAheadLogging", "#enableWriteAheadLogging" ]
+  }, {
+    "name" : "public void disableWriteAheadLogging()",
+    "returnType" : "void",
+    "comment" : "\n     * This method disables the features enabled by {@link #enableWriteAheadLogging()}.\n     *\n     * @throws IllegalStateException if there are transactions in progress at the\n     * time this method is called.  WAL mode can only be changed when there are no\n     * transactions in progress.\n     *\n     * @see #enableWriteAheadLogging\n     ",
+    "links" : [ "#enableWriteAheadLogging" ]
+  }, {
+    "name" : "public boolean isWriteAheadLoggingEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if write-ahead logging has been enabled for this database.\n     *\n     * @return True if write-ahead logging has been enabled for this database.\n     *\n     * @see #enableWriteAheadLogging\n     * @see #ENABLE_WRITE_AHEAD_LOGGING\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static ArrayList<DbStats> getDbStats()",
+    "returnType" : "ArrayList<DbStats>",
+    "comment" : "\n     * Collect statistics about all open databases in the current process.\n     * Used by bug report.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void collectDbStats(ArrayList<DbStats> dbStatsList)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static ArrayList<SQLiteDatabase> getActiveDatabases()",
+    "returnType" : "ArrayList<SQLiteDatabase>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static void dumpAll(Printer printer, boolean verbose, boolean isSystem)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump detailed information about all open databases in the current process.\n     * Used by bug report.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dump(Printer printer, boolean verbose, boolean isSystem, ArraySet directories)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void dumpDatabaseDirectory(Printer pw, File dir, boolean isSystem)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public List<Pair<String, String>> getAttachedDbs()",
+    "returnType" : "List<Pair<String, String>>",
+    "comment" : "\n     * Returns list of full pathnames of all attached databases including the main database\n     * by executing 'pragma database_list' on the database.\n     *\n     * @return ArrayList of pairs of (database name, database file path) or null if the database\n     * is not open.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isDatabaseIntegrityOk()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Runs 'pragma integrity_check' on the given database (and all the attached databases)\n     * and returns true if the given database (and all its attached databases) pass integrity_check,\n     * false otherwise.\n     *<p>\n     * If the result is false, then this method logs the errors reported by the integrity_check\n     * command execution.\n     *<p>\n     * Note that 'pragma integrity_check' on a database can take a long time.\n     *\n     * @return true if the given database (and all its attached databases) pass integrity_check,\n     * false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void throwIfNotOpenLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void wipeDetected(String filename, String reason)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getFileTimestamps(String path)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : " static void wtfAsSystemServer(String tag, String message, Throwable stacktrace)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "EVENT_DB_CORRUPT", "DEBUG_CLOSE_IDLE_CONNECTIONS", "sActiveDatabases", "mThreadSession", "mCursorFactory", "mErrorHandler", "mLock", "mCloseGuardLocked", "mConfigurationLocked", "mConnectionPoolLocked", "mHasAttachedDbsLocked", "CONFLICT_ROLLBACK", "CONFLICT_ABORT", "CONFLICT_FAIL", "CONFLICT_IGNORE", "CONFLICT_REPLACE", "CONFLICT_NONE", "CONFLICT_VALUES", "SQLITE_MAX_LIKE_PATTERN_LENGTH", "OPEN_READWRITE", "OPEN_READONLY", "OPEN_READ_MASK", "NO_LOCALIZED_COLLATORS", "CREATE_IF_NECESSARY", "ENABLE_WRITE_AHEAD_LOGGING", "ENABLE_LEGACY_COMPATIBILITY_WAL", "MAX_SQL_CACHE_SIZE" ],
+  "methodNames" : [ "protected void finalize() throws Throwable", "protected void onAllReferencesReleased()", "private void dispose(boolean finalized)", "public static int releaseMemory()", "public void setLockingEnabled(boolean lockingEnabled)", " String getLabel()", " void onCorruption()", " SQLiteSession getThreadSession()", " SQLiteSession createSession()", " int getThreadDefaultConnectionFlags(boolean readOnly)", "private static boolean isMainThread()", "public void beginTransaction()", "public void beginTransactionNonExclusive()", "public void beginTransactionWithListener(SQLiteTransactionListener transactionListener)", "public void beginTransactionWithListenerNonExclusive(SQLiteTransactionListener transactionListener)", "private void beginTransaction(SQLiteTransactionListener transactionListener, boolean exclusive)", "public void endTransaction()", "public void setTransactionSuccessful()", "public boolean inTransaction()", "public boolean isDbLockedByCurrentThread()", "public boolean isDbLockedByOtherThreads()", "public boolean yieldIfContended()", "public boolean yieldIfContendedSafely()", "public boolean yieldIfContendedSafely(long sleepAfterYieldDelay)", "private boolean yieldIfContendedHelper(boolean throwIfUnsafe, long sleepAfterYieldDelay)", "public Map<String, String> getSyncedTables()", "public static SQLiteDatabase openDatabase(@NonNull String path, @Nullable CursorFactory factory, @DatabaseOpenFlags int flags)", "public static SQLiteDatabase openDatabase(@NonNull File path, @NonNull OpenParams openParams)", "private static SQLiteDatabase openDatabase(@NonNull String path, @NonNull OpenParams openParams)", "public static SQLiteDatabase openDatabase(@NonNull String path, @Nullable CursorFactory factory, @DatabaseOpenFlags int flags, @Nullable DatabaseErrorHandler errorHandler)", "public static SQLiteDatabase openOrCreateDatabase(@NonNull File file, @Nullable CursorFactory factory)", "public static SQLiteDatabase openOrCreateDatabase(@NonNull String path, @Nullable CursorFactory factory)", "public static SQLiteDatabase openOrCreateDatabase(@NonNull String path, @Nullable CursorFactory factory, @Nullable DatabaseErrorHandler errorHandler)", "public static boolean deleteDatabase(@NonNull File file)", "public static boolean deleteDatabase(@NonNull File file, boolean removeCheckFile)", "public void reopenReadWrite()", "private void open()", "private void openInner()", "public static SQLiteDatabase create(@Nullable CursorFactory factory)", "public static SQLiteDatabase createInMemory(@NonNull OpenParams openParams)", "public void setCustomScalarFunction(@NonNull String functionName, @NonNull UnaryOperator<String> scalarFunction) throws SQLiteException", "public void setCustomAggregateFunction(@NonNull String functionName, @NonNull BinaryOperator<String> aggregateFunction) throws SQLiteException", "public void execPerConnectionSQL(@NonNull String sql, @Nullable Object[] bindArgs) throws SQLException", "public int getVersion()", "public void setVersion(int version)", "public long getMaximumSize()", "public long setMaximumSize(long numBytes)", "public long getPageSize()", "public void setPageSize(long numBytes)", "public void markTableSyncable(String table, String deletedTable)", "public void markTableSyncable(String table, String foreignKey, String updateTable)", "public static String findEditTable(String tables)", "public SQLiteStatement compileStatement(String sql) throws SQLException", "public Cursor query(boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)", "public Cursor query(boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit, CancellationSignal cancellationSignal)", "public Cursor queryWithFactory(CursorFactory cursorFactory, boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)", "public Cursor queryWithFactory(CursorFactory cursorFactory, boolean distinct, String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit, CancellationSignal cancellationSignal)", "public Cursor query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy)", "public Cursor query(String table, String[] columns, String selection, String[] selectionArgs, String groupBy, String having, String orderBy, String limit)", "public Cursor rawQuery(String sql, String[] selectionArgs)", "public Cursor rawQuery(String sql, String[] selectionArgs, CancellationSignal cancellationSignal)", "public Cursor rawQueryWithFactory(CursorFactory cursorFactory, String sql, String[] selectionArgs, String editTable)", "public Cursor rawQueryWithFactory(CursorFactory cursorFactory, String sql, String[] selectionArgs, String editTable, CancellationSignal cancellationSignal)", "public long insert(String table, String nullColumnHack, ContentValues values)", "public long insertOrThrow(String table, String nullColumnHack, ContentValues values) throws SQLException", "public long replace(String table, String nullColumnHack, ContentValues initialValues)", "public long replaceOrThrow(String table, String nullColumnHack, ContentValues initialValues) throws SQLException", "public long insertWithOnConflict(String table, String nullColumnHack, ContentValues initialValues, int conflictAlgorithm)", "public int delete(String table, String whereClause, String[] whereArgs)", "public int update(String table, ContentValues values, String whereClause, String[] whereArgs)", "public int updateWithOnConflict(String table, ContentValues values, String whereClause, String[] whereArgs, int conflictAlgorithm)", "public void execSQL(String sql) throws SQLException", "public void execSQL(String sql, Object[] bindArgs) throws SQLException", "public int executeSql(String sql, Object[] bindArgs) throws SQLException", "public void validateSql(@NonNull String sql, @Nullable CancellationSignal cancellationSignal)", "public boolean isReadOnly()", "private boolean isReadOnlyLocked()", "public boolean isInMemoryDatabase()", "public boolean isOpen()", "public boolean needUpgrade(int newVersion)", "public final String getPath()", "public void setLocale(Locale locale)", "public void setMaxSqlCacheSize(int cacheSize)", "public void setForeignKeyConstraintsEnabled(boolean enable)", "public boolean enableWriteAheadLogging()", "public void disableWriteAheadLogging()", "public boolean isWriteAheadLoggingEnabled()", " static ArrayList<DbStats> getDbStats()", "private void collectDbStats(ArrayList<DbStats> dbStatsList)", "private static ArrayList<SQLiteDatabase> getActiveDatabases()", " static void dumpAll(Printer printer, boolean verbose, boolean isSystem)", "private void dump(Printer printer, boolean verbose, boolean isSystem, ArraySet directories)", "private static void dumpDatabaseDirectory(Printer pw, File dir, boolean isSystem)", "public List<Pair<String, String>> getAttachedDbs()", "public boolean isDatabaseIntegrityOk()", "public String toString()", "private void throwIfNotOpenLocked()", "public static void wipeDetected(String filename, String reason)", "public static String getFileTimestamps(String path)", " static void wtfAsSystemServer(String tag, String message, Throwable stacktrace)" ]
+}

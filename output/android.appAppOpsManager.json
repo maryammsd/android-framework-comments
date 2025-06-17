@@ -1,0 +1,2135 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/AppOpsManager.java",
+  "packageName" : "android.app",
+  "className" : "AppOpsManager",
+  "comment" : "\n * App-ops are used for two purposes: Access control and tracking.\n *\n * <p>App-ops cover a wide variety of functionality from helping with runtime permissions access\n * control and tracking to battery consumption tracking.\n *\n * <h2>Access control</h2>\n *\n * <p>App-ops can either be controlled for each uid or for each package. Which one is used depends\n * on the API provider maintaining this app-op. For any security or privacy related app-op the\n * provider needs to control the app-op for per uid as all security and privacy is based on uid in\n * Android.\n *\n * <p>To control access the app-op can be set to a mode to:\n * <dl>\n *     <dt>{@link #MODE_DEFAULT}\n *     <dd>Default behavior, might differ from app-op or app-op\n *     <dt>{@link #MODE_ALLOWED}\n *     <dd>Allow the access\n *     <dt>{@link #MODE_IGNORED}\n *     <dd>Don't allow the access, i.e. don't perform the requested action or return no or dummy\n *     data\n *     <dt>{@link #MODE_ERRORED}\n *     <dd>Throw a {@link SecurityException} on access. This can be suppressed by using a\n *     {@code ...noThrow} method to check the mode\n * </dl>\n *\n * <p>API providers need to check the mode returned by {@link #noteOp} if they are are allowing\n * access to operations gated by the app-op. {@link #unsafeCheckOp} should be used to check the\n * mode if no access is granted. E.g. this can be used for displaying app-op state in the UI or\n * when checking the state before later calling {@link #noteOp} anyway.\n *\n * <p>If an operation refers to a time span (e.g. a audio-recording session) the API provider\n * should use {@link #startOp} and {@link #finishOp} instead of {@link #noteOp}.\n *\n * <h3>Runtime permissions and app-ops</h3>\n *\n * <p>Each platform defined runtime permission (beside background modifiers) has an associated app\n * op which is used for tracking but also to allow for silent failures. I.e. if the runtime\n * permission is denied the caller gets a {@link SecurityException}, but if the permission is\n * granted and the app-op is {@link #MODE_IGNORED} then the callers gets dummy behavior, e.g.\n * location callbacks would not happen.\n *\n * <h3>App-op permissions</h3>\n *\n * <p>App-ops permissions are platform defined permissions that can be overridden. The security\n * check for app-op permissions should by {@link #MODE_DEFAULT default} check the permission grant\n * state. If the app-op state is set to {@link #MODE_ALLOWED} or {@link #MODE_IGNORED} the app-op\n * state should be checked instead of the permission grant state.\n *\n * <p>This functionality allows to grant access by default to apps fulfilling the requirements for\n * a certain permission level. Still the behavior can be overridden when needed.\n *\n * <h2>Tracking</h2>\n *\n * <p>App-ops track many important events, including all accesses to runtime permission protected\n * APIs. This is done by tracking when an app-op was {@link #noteOp noted} or\n * {@link #startOp started}. The tracked data can only be read by system components.\n *\n * <p><b>Only {@link #noteOp}/{@link #startOp} are tracked; {@link #unsafeCheckOp} is not tracked.\n * Hence it is important to eventually call {@link #noteOp} or {@link #startOp} when providing\n * access to protected operations or data.</b>\n *\n * <p>Some apps are forwarding access to other apps. E.g. an app might get the location from the\n * system's location provider and then send the location further to a 3rd app. In this case the\n * app passing on the data needs to call {@link #noteProxyOp} to signal the access proxying. This\n * might also make sense inside of a single app if the access is forwarded between two parts of\n * the tagged with different attribution tags.\n *\n * <p>An app can register an {@link OnOpNotedCallback} to get informed about what accesses the\n * system is tracking for it. As each runtime permission has an associated app-op this API is\n * particularly useful for an app that want to find unexpected private data accesses.\n ",
+  "variables" : [ {
+    "name" : "CALL_BACK_ON_CHANGED_LISTENER_WITH_SWITCHED_OP_CHANGE",
+    "type" : "long",
+    "comment" : "\n     * This is a subtle behavior change to {@link #startWatchingMode}.\n     *\n     * Before this change the system called back for the switched op. After the change the system\n     * will call back for the actually requested op or all switched ops if no op is specified.\n     *\n     * @hide\n     ",
+    "links" : [ "#startWatchingMode" ]
+  }, {
+    "name" : "MAX_UNFORWARDED_OPS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IAppOpsService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sService",
+    "type" : "IAppOpsService",
+    "comment" : "\n     * Service for the application context, to be used by static methods via\n     * {@link #getService()}\n     ",
+    "links" : [ "#getService" ]
+  }, {
+    "name" : "mModeWatchers",
+    "type" : "ArrayMap<OnOpChangedListener, IAppOpsCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActiveWatchers",
+    "type" : "ArrayMap<OnOpActiveChangedListener, IAppOpsActiveCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStartedWatchers",
+    "type" : "ArrayMap<OnOpStartedListener, IAppOpsStartedCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNotedWatchers",
+    "type" : "ArrayMap<OnOpNotedListener, IAppOpsNotedCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sOnOpNotedCallback",
+    "type" : "OnOpNotedCallback",
+    "comment" : " Current {@link OnOpNotedCallback}. Change via {@link #setOnOpNotedCallback} ",
+    "links" : [ "OnOpNotedCallback", "#setOnOpNotedCallback" ]
+  }, {
+    "name" : "sUnforwardedOps",
+    "type" : "ArrayList<AsyncNotedAppOp>",
+    "comment" : "\n     * Sync note-ops collected from {@link #readAndLogNotedAppops(Parcel)} that have not been\n     * delivered to a callback yet.\n     *\n     * Similar to {@link com.android.server.appop.AppOpsService#mUnforwardedAsyncNotedOps} for\n     * {@link COLLECT_ASYNC}. Used in situation when AppOpsManager asks to collect stacktrace with\n     * {@link #sMessageCollector}, which forces {@link COLLECT_SYNC} mode.\n     ",
+    "links" : [ "#readAndLogNotedAppops", "com.android.server.appop.AppOpsService#mUnforwardedAsyncNotedOps", "COLLECT_ASYNC", "#sMessageCollector", "COLLECT_SYNC" ]
+  }, {
+    "name" : "sMessageCollector",
+    "type" : "OnOpNotedCallback",
+    "comment" : "\n     * Additional collector that collect accesses and forwards a few of them them via\n     * {@link IAppOpsService#reportRuntimeAppOpAccessMessageAndGetConfig}.\n     ",
+    "links" : [ "IAppOpsService#reportRuntimeAppOpAccessMessageAndGetConfig" ]
+  }, {
+    "name" : "sClientId",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_TOP_STATE_SETTLE_TIME",
+    "type" : "String",
+    "comment" : "\n     * How many seconds we want for a drop in uid state from top to settle before applying it.\n     *\n     * <>Set a parameter to {@link android.provider.Settings.Global#APP_OPS_CONSTANTS}\n     *\n     * @hide\n     ",
+    "links" : [ "android.provider.Settings.Global#APP_OPS_CONSTANTS" ]
+  }, {
+    "name" : "KEY_FG_SERVICE_STATE_SETTLE_TIME",
+    "type" : "String",
+    "comment" : "\n     * How many second we want for a drop in uid state from foreground to settle before applying it.\n     *\n     * <>Set a parameter to {@link android.provider.Settings.Global#APP_OPS_CONSTANTS}\n     *\n     * @hide\n     ",
+    "links" : [ "android.provider.Settings.Global#APP_OPS_CONSTANTS" ]
+  }, {
+    "name" : "KEY_BG_STATE_SETTLE_TIME",
+    "type" : "String",
+    "comment" : "\n     * How many seconds we want for a drop in uid state from background to settle before applying\n     * it.\n     *\n     * <>Set a parameter to {@link android.provider.Settings.Global#APP_OPS_CONSTANTS}\n     *\n     * @hide\n     ",
+    "links" : [ "android.provider.Settings.Global#APP_OPS_CONSTANTS" ]
+  }, {
+    "name" : "HISTORICAL_MODE_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Mode in which app op history is completely disabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HISTORICAL_MODE_ENABLED_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * Mode in which app op history is enabled and app ops performed by apps would\n     * be tracked. This is the mode in which the feature is completely enabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HISTORICAL_MODE_ENABLED_PASSIVE",
+    "type" : "int",
+    "comment" : "\n     * Mode in which app op history is enabled but app ops performed by apps would\n     * not be tracked and the only way to add ops to the history is via explicit calls\n     * to dedicated APIs. This mode is useful for testing to allow full control of\n     * the historical content.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MODE_ALLOWED",
+    "type" : "int",
+    "comment" : "\n     * Result from {@link #checkOp}, {@link #noteOp}, {@link #startOp}: the given caller is\n     * allowed to perform the given operation.\n     ",
+    "links" : [ "#checkOp", "#noteOp", "#startOp" ]
+  }, {
+    "name" : "MODE_IGNORED",
+    "type" : "int",
+    "comment" : "\n     * Result from {@link #checkOp}, {@link #noteOp}, {@link #startOp}: the given caller is\n     * not allowed to perform the given operation, and this attempt should\n     * <em>silently fail</em> (it should not cause the app to crash).\n     ",
+    "links" : [ "#checkOp", "#noteOp", "#startOp" ]
+  }, {
+    "name" : "MODE_ERRORED",
+    "type" : "int",
+    "comment" : "\n     * Result from {@link #checkOpNoThrow}, {@link #noteOpNoThrow}, {@link #startOpNoThrow}: the\n     * given caller is not allowed to perform the given operation, and this attempt should\n     * cause it to have a fatal error, typically a {@link SecurityException}.\n     ",
+    "links" : [ "#checkOpNoThrow", "#noteOpNoThrow", "#startOpNoThrow", "SecurityException" ]
+  }, {
+    "name" : "MODE_DEFAULT",
+    "type" : "int",
+    "comment" : "\n     * Result from {@link #checkOp}, {@link #noteOp}, {@link #startOp}: the given caller should\n     * use its default security check.  This mode is not normally used; it should only be used\n     * with appop permissions, and callers must explicitly check for it and deal with it.\n     ",
+    "links" : [ "#checkOp", "#noteOp", "#startOp" ]
+  }, {
+    "name" : "MODE_FOREGROUND",
+    "type" : "int",
+    "comment" : "\n     * Special mode that means \"allow only when app is in foreground.\"  This is <b>not</b>\n     * returned from {@link #unsafeCheckOp}, {@link #noteOp}, {@link #startOp}.  Rather,\n     * {@link #unsafeCheckOp} will always return {@link #MODE_ALLOWED} (because it is always\n     * possible for it to be ultimately allowed, depending on the app's background state),\n     * and {@link #noteOp} and {@link #startOp} will return {@link #MODE_ALLOWED} when the app\n     * being checked is currently in the foreground, otherwise {@link #MODE_IGNORED}.\n     *\n     * <p>The only place you will this normally see this value is through\n     * {@link #unsafeCheckOpRaw}, which returns the actual raw mode of the op.  Note that because\n     * you can't know the current state of the app being checked (and it can change at any\n     * point), you can only treat the result here as an indication that it will vary between\n     * {@link #MODE_ALLOWED} and {@link #MODE_IGNORED} depending on changes in the background\n     * state of the app.  You thus must always use {@link #noteOp} or {@link #startOp} to do\n     * the actual check for access to the op.</p>\n     ",
+    "links" : [ "#unsafeCheckOp", "#noteOp", "#startOp", "#unsafeCheckOp", "#MODE_ALLOWED", "#noteOp", "#startOp", "#MODE_ALLOWED", "#MODE_IGNORED", "#unsafeCheckOpRaw", "#MODE_ALLOWED", "#MODE_IGNORED", "#noteOp", "#startOp" ]
+  }, {
+    "name" : "WATCH_FOREGROUND_CHANGES",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #startWatchingMode(String, String, int, OnOpChangedListener)}:\n     * Also get reports if the foreground state of an op's uid changes.  This only works\n     * when watching a particular op, not when watching a package.\n     ",
+    "links" : [ "#startWatchingMode" ]
+  }, {
+    "name" : "CALL_BACK_ON_SWITCHED_OP",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #startWatchingMode} that causes the callback to happen on the switch-op\n     * instead the op the callback was registered. (This simulates pre-R behavior).\n     *\n     * @hide\n     ",
+    "links" : [ "#startWatchingMode" ]
+  }, {
+    "name" : "NOTE_OP_COLLECTION_ENABLED",
+    "type" : "boolean",
+    "comment" : "\n     * Flag to determine whether we should log noteOp/startOp calls to make sure they\n     * are correctly used\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MODE_NAMES",
+    "type" : "String[]",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_PERSISTENT",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is a foreground persistent app. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_TOP",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is top foreground app. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_FOREGROUND_SERVICE_LOCATION",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is running a foreground service of location type.\n     * The lower the UID state the more important the UID is for the user.\n     * This uid state is a counterpart to PROCESS_STATE_FOREGROUND_SERVICE_LOCATION which has been\n     * deprecated.\n     * @hide\n     * @deprecated\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_FOREGROUND_SERVICE",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is running a foreground service. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_FOREGROUND",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is a foreground app. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_MAX_LAST_NON_RESTRICTED",
+    "type" : "int",
+    "comment" : "\n     * The max, which is min priority, UID state for which any app op\n     * would be considered as performed in the foreground.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_BACKGROUND",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is a background app. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_CACHED",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID is a cached app. The lower the UID\n     * state the more important the UID is for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_PRIORITY_UID_STATE",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID state with the highest priority.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_PRIORITY_UID_STATE",
+    "type" : "int",
+    "comment" : "\n     * Uid state: The UID state with the lowest priority.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATES",
+    "type" : "int[]",
+    "comment" : " @hide Note: Keep these sorted ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAG_SELF",
+    "type" : "int",
+    "comment" : "\n     * Flag: non proxy operations. These are operations\n     * performed on behalf of the app itself and not on behalf of\n     * another one.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAG_TRUSTED_PROXY",
+    "type" : "int",
+    "comment" : "\n     * Flag: trusted proxy operations. These are operations\n     * performed on behalf of another app by a trusted app.\n     * Which is work a trusted app blames on another app.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAG_UNTRUSTED_PROXY",
+    "type" : "int",
+    "comment" : "\n     * Flag: untrusted proxy operations. These are operations\n     * performed on behalf of another app by an untrusted app.\n     * Which is work an untrusted app blames on another app.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAG_TRUSTED_PROXIED",
+    "type" : "int",
+    "comment" : "\n     * Flag: trusted proxied operations. These are operations\n     * performed by a trusted other app on behalf of an app.\n     * Which is work an app was blamed for by a trusted app.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAG_UNTRUSTED_PROXIED",
+    "type" : "int",
+    "comment" : "\n     * Flag: untrusted proxied operations. These are operations\n     * performed by an untrusted other app on behalf of an app.\n     * Which is work an app was blamed for by an untrusted app.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FLAGS_ALL",
+    "type" : "int",
+    "comment" : "\n     * Flags: all operations. These include operations matched\n     * by {@link #OP_FLAG_SELF}, {@link #OP_FLAG_TRUSTED_PROXIED},\n     * {@link #OP_FLAG_UNTRUSTED_PROXIED}, {@link #OP_FLAG_TRUSTED_PROXIED},\n     * {@link #OP_FLAG_UNTRUSTED_PROXIED}.\n     *\n     * @hide\n     ",
+    "links" : [ "#OP_FLAG_SELF", "#OP_FLAG_TRUSTED_PROXIED", "#OP_FLAG_UNTRUSTED_PROXIED", "#OP_FLAG_TRUSTED_PROXIED", "#OP_FLAG_UNTRUSTED_PROXIED" ]
+  }, {
+    "name" : "OP_FLAGS_ALL_TRUSTED",
+    "type" : "int",
+    "comment" : "\n     * Flags: all trusted operations which is ones either the app did {@link #OP_FLAG_SELF},\n     * or it was blamed for by a trusted app {@link #OP_FLAG_TRUSTED_PROXIED}, or ones the\n     * app if untrusted blamed on other apps {@link #OP_FLAG_UNTRUSTED_PROXY}.\n     *\n     * @hide\n     ",
+    "links" : [ "#OP_FLAG_SELF", "#OP_FLAG_TRUSTED_PROXIED", "#OP_FLAG_UNTRUSTED_PROXY" ]
+  }, {
+    "name" : "SAMPLING_STRATEGY_DEFAULT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SAMPLING_STRATEGY_UNIFORM",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SAMPLING_STRATEGY_RARELY_USED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SAMPLING_STRATEGY_BOOT_TIME_SAMPLING",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "UID_STATE_OFFSET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FLAGS_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "OP_NONE",
+    "type" : "int",
+    "comment" : " @hide No operation specified. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_COARSE_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Access to coarse location information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_FINE_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Access to fine location information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_GPS",
+    "type" : "int",
+    "comment" : " @hide Causing GPS to run. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_VIBRATE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_CONTACTS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_CONTACTS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_CALL_LOG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_CALL_LOG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_CALENDAR",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_CALENDAR",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WIFI_SCAN",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_POST_NOTIFICATION",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_NEIGHBORING_CELLS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_CALL_PHONE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RECEIVE_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RECEIVE_EMERGECY_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RECEIVE_MMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RECEIVE_WAP_PUSH",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_SEND_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_ICC_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_ICC_SMS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_SETTINGS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_SYSTEM_ALERT_WINDOW",
+    "type" : "int",
+    "comment" : " @hide Required to draw on top of other apps. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACCESS_NOTIFICATIONS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_CAMERA",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RECORD_AUDIO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_PLAY_AUDIO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_CLIPBOARD",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_CLIPBOARD",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_TAKE_MEDIA_BUTTONS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_TAKE_AUDIO_FOCUS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_MASTER_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_VOICE_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_RING_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_MEDIA_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_ALARM_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_NOTIFICATION_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_BLUETOOTH_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WAKE_LOCK",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_MONITOR_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Continually monitoring location data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_MONITOR_HIGH_POWER_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Continually monitoring location data with a relatively high power request. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_GET_USAGE_STATS",
+    "type" : "int",
+    "comment" : " @hide Retrieve current usage stats via {@link UsageStatsManager}. ",
+    "links" : [ "UsageStatsManager" ]
+  }, {
+    "name" : "OP_MUTE_MICROPHONE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_TOAST_WINDOW",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_PROJECT_MEDIA",
+    "type" : "int",
+    "comment" : " @hide Capture the device's display contents and/or audio ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACTIVATE_VPN",
+    "type" : "int",
+    "comment" : "\n     * Start (without additional user intervention) a VPN connection, as used by {@link\n     * android.net.VpnService} along with as Platform VPN connections, as used by {@link\n     * android.net.VpnManager}\n     *\n     * <p>This appop is granted to apps that have already been given user consent to start\n     * VpnService based VPN connections. As this is a superset of OP_ACTIVATE_PLATFORM_VPN, this\n     * appop also allows the starting of Platform VPNs.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_WALLPAPER",
+    "type" : "int",
+    "comment" : " @hide Access the WallpaperManagerAPI to write wallpapers. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ASSIST_STRUCTURE",
+    "type" : "int",
+    "comment" : " @hide Received the assist structure from an app. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ASSIST_SCREENSHOT",
+    "type" : "int",
+    "comment" : " @hide Received a screenshot from assist. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_PHONE_STATE",
+    "type" : "int",
+    "comment" : " @hide Read the phone state. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ADD_VOICEMAIL",
+    "type" : "int",
+    "comment" : " @hide Add voicemail messages to the voicemail content provider. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_USE_SIP",
+    "type" : "int",
+    "comment" : " @hide Access APIs for SIP calling over VOIP or WiFi. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_PROCESS_OUTGOING_CALLS",
+    "type" : "int",
+    "comment" : " @hide Intercept outgoing calls. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_USE_FINGERPRINT",
+    "type" : "int",
+    "comment" : " @hide User the fingerprint API. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_BODY_SENSORS",
+    "type" : "int",
+    "comment" : " @hide Access to body sensors such as heart rate, etc. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_CELL_BROADCASTS",
+    "type" : "int",
+    "comment" : " @hide Read previously received cell broadcast messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_MOCK_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Inject mock location into the system. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_EXTERNAL_STORAGE",
+    "type" : "int",
+    "comment" : " @hide Read external storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_EXTERNAL_STORAGE",
+    "type" : "int",
+    "comment" : " @hide Write external storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_TURN_SCREEN_ON",
+    "type" : "int",
+    "comment" : " @hide Turned on the screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_GET_ACCOUNTS",
+    "type" : "int",
+    "comment" : " @hide Get device accounts. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RUN_IN_BACKGROUND",
+    "type" : "int",
+    "comment" : " @hide Control whether an application is allowed to run in the background. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUDIO_ACCESSIBILITY_VOLUME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_PHONE_NUMBERS",
+    "type" : "int",
+    "comment" : " @hide Read the phone number. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_REQUEST_INSTALL_PACKAGES",
+    "type" : "int",
+    "comment" : " @hide Request package installs through package installer ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_PICTURE_IN_PICTURE",
+    "type" : "int",
+    "comment" : " @hide Enter picture-in-picture. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_INSTANT_APP_START_FOREGROUND",
+    "type" : "int",
+    "comment" : " @hide Instant app start foreground service. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ANSWER_PHONE_CALLS",
+    "type" : "int",
+    "comment" : " @hide Answer incoming phone calls ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_RUN_ANY_IN_BACKGROUND",
+    "type" : "int",
+    "comment" : " @hide Run jobs when in background ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_CHANGE_WIFI_STATE",
+    "type" : "int",
+    "comment" : " @hide Change Wi-Fi connectivity state ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_REQUEST_DELETE_PACKAGES",
+    "type" : "int",
+    "comment" : " @hide Request package deletion through package installer ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_BIND_ACCESSIBILITY_SERVICE",
+    "type" : "int",
+    "comment" : " @hide Bind an accessibility service. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACCEPT_HANDOVER",
+    "type" : "int",
+    "comment" : " @hide Continue handover of a call from another app ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_MANAGE_IPSEC_TUNNELS",
+    "type" : "int",
+    "comment" : " @hide Create and Manage IPsec Tunnels ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_START_FOREGROUND",
+    "type" : "int",
+    "comment" : " @hide Any app start foreground service. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_BLUETOOTH_SCAN",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_USE_BIOMETRIC",
+    "type" : "int",
+    "comment" : " @hide Use the BiometricPrompt/BiometricManager APIs. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACTIVITY_RECOGNITION",
+    "type" : "int",
+    "comment" : " @hide Physical activity recognition. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_SMS_FINANCIAL_TRANSACTIONS",
+    "type" : "int",
+    "comment" : " @hide Financial app sms read. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_MEDIA_AUDIO",
+    "type" : "int",
+    "comment" : " @hide Read media of audio type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_MEDIA_AUDIO",
+    "type" : "int",
+    "comment" : " @hide Write media of audio type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_MEDIA_VIDEO",
+    "type" : "int",
+    "comment" : " @hide Read media of video type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_MEDIA_VIDEO",
+    "type" : "int",
+    "comment" : " @hide Write media of video type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_MEDIA_IMAGES",
+    "type" : "int",
+    "comment" : " @hide Read media of image type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_WRITE_MEDIA_IMAGES",
+    "type" : "int",
+    "comment" : " @hide Write media of image type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_LEGACY_STORAGE",
+    "type" : "int",
+    "comment" : " @hide Has a legacy (non-isolated) view of storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACCESS_ACCESSIBILITY",
+    "type" : "int",
+    "comment" : " @hide Accessing accessibility features ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_READ_DEVICE_IDENTIFIERS",
+    "type" : "int",
+    "comment" : " @hide Read the device identifiers (IMEI / MEID, IMSI, SIM / Build serial) ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACCESS_MEDIA_LOCATION",
+    "type" : "int",
+    "comment" : " @hide Read location metadata from media ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_QUERY_ALL_PACKAGES",
+    "type" : "int",
+    "comment" : " @hide Query all apps on device, regardless of declarations in the calling app manifest ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_MANAGE_EXTERNAL_STORAGE",
+    "type" : "int",
+    "comment" : " @hide Access all external storage ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_INTERACT_ACROSS_PROFILES",
+    "type" : "int",
+    "comment" : " @hide Communicate cross-profile within the same profile group. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_ACTIVATE_PLATFORM_VPN",
+    "type" : "int",
+    "comment" : "\n     * Start (without additional user intervention) a Platform VPN connection, as used by {@link\n     * android.net.VpnManager}\n     *\n     * <p>This appop is granted to apps that have already been given user consent to start Platform\n     * VPN connections. This appop is insufficient to start VpnService based VPNs; OP_ACTIVATE_VPN\n     * is needed for that.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_LOADER_USAGE_STATS",
+    "type" : "int",
+    "comment" : " @hide Controls whether or not read logs are available for incremental installations. ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_DEPRECATED_1",
+    "type" : "int",
+    "comment" : " App op deprecated/removed.",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED",
+    "type" : "int",
+    "comment" : " @hide Auto-revoke app permissions if app is unused for an extended period ",
+    "links" : [ ]
+  }, {
+    "name" : "OP_AUTO_REVOKE_MANAGED_BY_INSTALLER",
+    "type" : "int",
+    "comment" : "\n     * Whether {@link #OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED} is allowed to be changed by\n     * the installer\n     *\n     * @hide\n     ",
+    "links" : [ "#OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED" ]
+  }, {
+    "name" : "OP_NO_ISOLATED_STORAGE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "_NUM_OP",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_COARSE_LOCATION",
+    "type" : "String",
+    "comment" : " Access to coarse location information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_FINE_LOCATION",
+    "type" : "String",
+    "comment" : " Access to fine location information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MONITOR_LOCATION",
+    "type" : "String",
+    "comment" : " Continually monitoring location data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MONITOR_HIGH_POWER_LOCATION",
+    "type" : "String",
+    "comment" : " Continually monitoring location data with a relatively high power request. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_GET_USAGE_STATS",
+    "type" : "String",
+    "comment" : " Access to {@link android.app.usage.UsageStatsManager}. ",
+    "links" : [ "android.app.usage.UsageStatsManager" ]
+  }, {
+    "name" : "OPSTR_ACTIVATE_VPN",
+    "type" : "String",
+    "comment" : " Activate a VPN connection without user intervention. @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_CONTACTS",
+    "type" : "String",
+    "comment" : " Allows an application to read the user's contacts data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_CONTACTS",
+    "type" : "String",
+    "comment" : " Allows an application to write to the user's contacts data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_CALL_LOG",
+    "type" : "String",
+    "comment" : " Allows an application to read the user's call log. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_CALL_LOG",
+    "type" : "String",
+    "comment" : " Allows an application to write to the user's call log. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_CALENDAR",
+    "type" : "String",
+    "comment" : " Allows an application to read the user's calendar data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_CALENDAR",
+    "type" : "String",
+    "comment" : " Allows an application to write to the user's calendar data. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_CALL_PHONE",
+    "type" : "String",
+    "comment" : " Allows an application to initiate a phone call. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_SMS",
+    "type" : "String",
+    "comment" : " Allows an application to read SMS messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RECEIVE_SMS",
+    "type" : "String",
+    "comment" : " Allows an application to receive SMS messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RECEIVE_MMS",
+    "type" : "String",
+    "comment" : " Allows an application to receive MMS messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RECEIVE_WAP_PUSH",
+    "type" : "String",
+    "comment" : " Allows an application to receive WAP push messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_SEND_SMS",
+    "type" : "String",
+    "comment" : " Allows an application to send SMS messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_CAMERA",
+    "type" : "String",
+    "comment" : " Required to be able to access the camera device. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RECORD_AUDIO",
+    "type" : "String",
+    "comment" : " Required to be able to access the microphone device. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_PHONE_STATE",
+    "type" : "String",
+    "comment" : " Required to access phone state related information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ADD_VOICEMAIL",
+    "type" : "String",
+    "comment" : " Required to access phone state related information. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_USE_SIP",
+    "type" : "String",
+    "comment" : " Access APIs for SIP calling over VOIP or WiFi ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_PROCESS_OUTGOING_CALLS",
+    "type" : "String",
+    "comment" : " Access APIs for diverting outgoing calls ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_USE_FINGERPRINT",
+    "type" : "String",
+    "comment" : " Use the fingerprint API. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_BODY_SENSORS",
+    "type" : "String",
+    "comment" : " Access to body sensors such as heart rate, etc. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_CELL_BROADCASTS",
+    "type" : "String",
+    "comment" : " Read previously received cell broadcast messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MOCK_LOCATION",
+    "type" : "String",
+    "comment" : " Inject mock location into the system. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_EXTERNAL_STORAGE",
+    "type" : "String",
+    "comment" : " Read external storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_EXTERNAL_STORAGE",
+    "type" : "String",
+    "comment" : " Write external storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_SYSTEM_ALERT_WINDOW",
+    "type" : "String",
+    "comment" : " Required to draw on top of other apps. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_SETTINGS",
+    "type" : "String",
+    "comment" : " Required to write/modify/update system settings. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_GET_ACCOUNTS",
+    "type" : "String",
+    "comment" : " @hide Get device accounts. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_PHONE_NUMBERS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_PICTURE_IN_PICTURE",
+    "type" : "String",
+    "comment" : " Access to picture-in-picture. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_INSTANT_APP_START_FOREGROUND",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ANSWER_PHONE_CALLS",
+    "type" : "String",
+    "comment" : " Answer incoming phone calls ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACCEPT_HANDOVER",
+    "type" : "String",
+    "comment" : "\n     * Accept call handover\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_GPS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_VIBRATE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WIFI_SCAN",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_POST_NOTIFICATION",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_NEIGHBORING_CELLS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_SMS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RECEIVE_EMERGENCY_BROADCAST",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_ICC_SMS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_ICC_SMS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACCESS_NOTIFICATIONS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_PLAY_AUDIO",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_CLIPBOARD",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_CLIPBOARD",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_TAKE_MEDIA_BUTTONS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_TAKE_AUDIO_FOCUS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_MASTER_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_VOICE_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_RING_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_MEDIA_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_ALARM_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_NOTIFICATION_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_BLUETOOTH_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WAKE_LOCK",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MUTE_MICROPHONE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_TOAST_WINDOW",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_PROJECT_MEDIA",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_WALLPAPER",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ASSIST_STRUCTURE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ASSIST_SCREENSHOT",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_TURN_SCREEN_ON",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RUN_IN_BACKGROUND",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUDIO_ACCESSIBILITY_VOLUME",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_REQUEST_INSTALL_PACKAGES",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_RUN_ANY_IN_BACKGROUND",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_CHANGE_WIFI_STATE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_REQUEST_DELETE_PACKAGES",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_BIND_ACCESSIBILITY_SERVICE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MANAGE_IPSEC_TUNNELS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_START_FOREGROUND",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_BLUETOOTH_SCAN",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_USE_BIOMETRIC",
+    "type" : "String",
+    "comment" : " @hide Use the BiometricPrompt/BiometricManager APIs. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACTIVITY_RECOGNITION",
+    "type" : "String",
+    "comment" : " @hide Recognize physical activity. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_SMS_FINANCIAL_TRANSACTIONS",
+    "type" : "String",
+    "comment" : " @hide Financial app read sms. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_MEDIA_AUDIO",
+    "type" : "String",
+    "comment" : " @hide Read media of audio type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_MEDIA_AUDIO",
+    "type" : "String",
+    "comment" : " @hide Write media of audio type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_MEDIA_VIDEO",
+    "type" : "String",
+    "comment" : " @hide Read media of video type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_MEDIA_VIDEO",
+    "type" : "String",
+    "comment" : " @hide Write media of video type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_MEDIA_IMAGES",
+    "type" : "String",
+    "comment" : " @hide Read media of image type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_WRITE_MEDIA_IMAGES",
+    "type" : "String",
+    "comment" : " @hide Write media of image type. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_LEGACY_STORAGE",
+    "type" : "String",
+    "comment" : " @hide Has a legacy (non-isolated) view of storage. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACCESS_MEDIA_LOCATION",
+    "type" : "String",
+    "comment" : " @hide Read location metadata from media ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACCESS_ACCESSIBILITY",
+    "type" : "String",
+    "comment" : " @hide Interact with accessibility. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_READ_DEVICE_IDENTIFIERS",
+    "type" : "String",
+    "comment" : " @hide Read device identifiers ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_QUERY_ALL_PACKAGES",
+    "type" : "String",
+    "comment" : " @hide Query all packages on device ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_MANAGE_EXTERNAL_STORAGE",
+    "type" : "String",
+    "comment" : " @hide Access all external storage ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED",
+    "type" : "String",
+    "comment" : " @hide Auto-revoke app permissions if app is unused for an extended period ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER",
+    "type" : "String",
+    "comment" : " @hide Auto-revoke app permissions if app is unused for an extended period ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_INTERACT_ACROSS_PROFILES",
+    "type" : "String",
+    "comment" : " @hide Communicate cross-profile within the same profile group. ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_ACTIVATE_PLATFORM_VPN",
+    "type" : "String",
+    "comment" : " @hide Start Platform VPN without user intervention ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_LOADER_USAGE_STATS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OPSTR_NO_ISOLATED_STORAGE",
+    "type" : "String",
+    "comment" : "\n     * AppOp granted to apps that we are started via {@code am instrument -e --no-isolated-storage}\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOULD_COLLECT_NOTE_OP_NOT_INITIALIZED",
+    "type" : "byte",
+    "comment" : " {@link #sAppOpsToNote} not initialized yet for this op ",
+    "links" : [ "#sAppOpsToNote" ]
+  }, {
+    "name" : "SHOULD_NOT_COLLECT_NOTE_OP",
+    "type" : "byte",
+    "comment" : " Should not collect noting of this app-op in {@link #sAppOpsToNote} ",
+    "links" : [ "#sAppOpsToNote" ]
+  }, {
+    "name" : "SHOULD_COLLECT_NOTE_OP",
+    "type" : "byte",
+    "comment" : " Should collect noting of this app-op in {@link #sAppOpsToNote} ",
+    "links" : [ "#sAppOpsToNote" ]
+  }, {
+    "name" : "RUNTIME_AND_APPOP_PERMISSIONS_OPS",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sOpToSwitch",
+    "type" : "int[]",
+    "comment" : "\n     * This maps each operation to the operation that serves as the\n     * switch to determine whether it is allowed.  Generally this is\n     * a 1:1 mapping, but for some things (like location) that have\n     * multiple low-level operations being tracked that should be\n     * presented to the user as one switch then this can be used to\n     * make them all controlled by the same single operation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpToString",
+    "type" : "String[]",
+    "comment" : "\n     * This maps each operation to the public string constant for it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpNames",
+    "type" : "String[]",
+    "comment" : "\n     * This provides a simple name for each operation to be used\n     * in debug output.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpPerms",
+    "type" : "String[]",
+    "comment" : "\n     * This optionally maps a permission to an operation.  If there\n     * is no permission associated with an operation, it is null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpRestrictions",
+    "type" : "String[]",
+    "comment" : "\n     * Specifies whether an Op should be restricted by a user restriction.\n     * Each Op should be filled with a restriction string from UserManager or\n     * null to specify it is not affected by any user restriction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpAllowSystemRestrictionBypass",
+    "type" : "RestrictionBypass[]",
+    "comment" : "\n     * In which cases should an app be allowed to bypass the {@link #setUserRestriction user\n     * restriction} for a certain app-op.\n     ",
+    "links" : [ "#setUserRestriction" ]
+  }, {
+    "name" : "sOpDefaultMode",
+    "type" : "int[]",
+    "comment" : "\n     * This specifies the default mode for each operation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpDisableReset",
+    "type" : "boolean[]",
+    "comment" : "\n     * This specifies whether each option is allowed to be reset\n     * when resetting all app preferences.  Disable reset for\n     * app ops that are under strong control of some part of the\n     * system (such as OP_WRITE_SMS, which should be allowed only\n     * for whichever app is selected as the current SMS app).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sOpStrToOp",
+    "type" : "HashMap<String, Integer>",
+    "comment" : "\n     * Mapping from an app op name to the app op code.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sPermToOp",
+    "type" : "HashMap<String, Integer>",
+    "comment" : "\n     * Mapping from a permission to the corresponding app op.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sBinderThreadCallingUid",
+    "type" : "ThreadLocal<Integer>",
+    "comment" : "\n     * Set to the uid of the caller if this thread is currently executing a two-way binder\n     * transaction. Not set if this thread is currently not executing a two way binder transaction.\n     *\n     * @see #startNotedAppOpsCollection\n     * @see #getNotedOpCollectionMode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sAppOpsNotedInThisBinderTransaction",
+    "type" : "ThreadLocal<ArrayMap<String, long[]>>",
+    "comment" : "\n     * If a thread is currently executing a two-way binder transaction, this stores the op-codes of\n     * the app-ops that were noted during this transaction.\n     *\n     * @see #getNotedOpCollectionMode\n     * @see #collectNotedOpSync\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sAppOpsToNote",
+    "type" : "byte[]",
+    "comment" : " Whether noting for an appop should be collected ",
+    "links" : [ ]
+  }, {
+    "name" : "sConfig",
+    "type" : "MessageSamplingConfig",
+    "comment" : " Config used to control app ops access messages sampling ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_HISTORICAL_OPS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_LOGGING_ENABLE_PROP",
+    "type" : "String",
+    "comment" : " System properties for debug logging of noteOp call sites ",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_LOGGING_PACKAGES_PROP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_LOGGING_OPS_PROP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_LOGGING_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FILTER_BY_UID",
+    "type" : "int",
+    "comment" : "\n     * Filter historical appop request by uid.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FILTER_BY_PACKAGE_NAME",
+    "type" : "int",
+    "comment" : "\n     * Filter historical appop request by package name.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FILTER_BY_ATTRIBUTION_TAG",
+    "type" : "int",
+    "comment" : "\n     * Filter historical appop request by attribution tag.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FILTER_BY_OP_NAMES",
+    "type" : "int",
+    "comment" : "\n     * Filter historical appop request by op names.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DONT_COLLECT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "COLLECT_SELF",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "COLLECT_SYNC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "COLLECT_ASYNC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static int resolveFirstUnrestrictedUidState(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * Resolves the first unrestricted state given an app op.\n     * @param op The op to resolve.\n     * @return The last restricted UID state.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int resolveLastRestrictedUidState(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * Resolves the last restricted state given an app op.\n     * @param op The op to resolve.\n     * @return The last restricted UID state.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getUidStateName(@UidState int uidState)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final String getFlagName(@OpFlags int flag)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String keyToString(@DataBucketKey long key)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long makeKey(@UidState int uidState, @OpFlags int flags)",
+    "returnType" : "long",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int extractUidStateFromKey(@DataBucketKey long key)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int extractFlagsFromKey(@DataBucketKey long key)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String flagsToString(@OpFlags int flags)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int opToSwitch(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieve the op switch that controls the given operation.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String opToName(int op)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve a non-localized name for the operation, for debugging output.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String opToPublicName(int op)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve a non-localized public name for the operation.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int strDebugOpToOp(String op)",
+    "returnType" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String opToPermission(int op)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the permission associated with an operation, or null if there is not one.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String opToPermission(@NonNull String op)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the permission associated with an operation, or null if there is not one.\n     *\n     * @param op The operation name.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String opToRestriction(int op)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the user restriction associated with an operation, or null if there is not one.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int permissionToOpCode(String permission)",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieve the app op code for a permission, or null if there is not one.\n     * This API is intended to be used for mapping runtime or appop permissions\n     * to the corresponding app op.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static RestrictionBypass opAllowSystemBypassRestriction(int op)",
+    "returnType" : "RestrictionBypass",
+    "comment" : "\n     * Retrieve whether the op allows to bypass the user restriction.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int opToDefaultMode(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieve the default mode for the operation.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int opToDefaultMode(@NonNull String appOp)",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieve the default mode for the app op.\n     *\n     * @param appOp The app op name\n     *\n     * @return the default mode for the app op\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String modeToName(@Mode int mode)",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the human readable mode.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean opAllowsReset(int op)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Retrieve whether the op allows itself to be reset.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String toReceiverId(@NonNull Object obj)",
+    "returnType" : "String",
+    "comment" : " TODO: this should probably be @SystemApi as well",
+    "links" : [ ]
+  }, {
+    "name" : "public static String toReceiverId(@NonNull PendingIntent pendingIntent)",
+    "returnType" : "String",
+    "comment" : " TODO: this should probably be @SystemApi as well",
+    "links" : [ ]
+  }, {
+    "name" : "private static long sumForFlagsInStates(@Nullable LongSparseLongArray counts, @UidState int beginUidState, @UidState int endUidState, @OpFlags int flags)",
+    "returnType" : "long",
+    "comment" : "\n     * Computes the sum of the counts for the given flags in between the begin and\n     * end UID states.\n     *\n     * @param counts The data array.\n     * @param beginUidState The beginning UID state (inclusive).\n     * @param endUidState The end UID state (inclusive).\n     * @param flags The UID flags.\n     * @return The sum.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<AppOpsManager.PackageOps> getPackagesForOps(@Nullable String[] ops)",
+    "returnType" : "List<AppOpsManager.PackageOps>",
+    "comment" : "\n     * Retrieve current operation state for all applications.\n     *\n     * The mode of the ops returned are set for the package but may not reflect their effective\n     * state due to UID policy or because it's controlled by a different master op.\n     *\n     * Use {@link #unsafeCheckOp(String, int, String)}} or\n     * {@link #noteOp(String, int, String, String, String)} if the effective mode is needed.\n     *\n     * @param ops The set of operations you are interested in, or null if you want all of them.\n     * @hide\n     ",
+    "links" : [ "#unsafeCheckOp", "#noteOp" ]
+  }, {
+    "name" : "public List<AppOpsManager.PackageOps> getPackagesForOps(int[] ops)",
+    "returnType" : "List<AppOpsManager.PackageOps>",
+    "comment" : "\n     * Retrieve current operation state for all applications.\n     *\n     * The mode of the ops returned are set for the package but may not reflect their effective\n     * state due to UID policy or because it's controlled by a different master op.\n     *\n     * Use {@link #unsafeCheckOp(String, int, String)}} or\n     * {@link #noteOp(String, int, String, String, String)} if the effective mode is needed.\n     *\n     * @param ops The set of operations you are interested in, or null if you want all of them.\n     * @hide\n     ",
+    "links" : [ "#unsafeCheckOp", "#noteOp" ]
+  }, {
+    "name" : "public List<PackageOps> getOpsForPackage(int uid, @NonNull String packageName, @Nullable int[] ops)",
+    "returnType" : "List<PackageOps>",
+    "comment" : "\n     * Retrieve current operation state for one application.\n     *\n     * The mode of the ops returned are set for the package but may not reflect their effective\n     * state due to UID policy or because it's controlled by a different master op.\n     *\n     * Use {@link #unsafeCheckOp(String, int, String)}} or\n     * {@link #noteOp(String, int, String, String, String)} if the effective mode is needed.\n     *\n     * @param uid The uid of the application of interest.\n     * @param packageName The name of the application of interest.\n     * @param ops The set of operations you are interested in, or null if you want all of them.\n     *\n     * @deprecated The int op codes are not stable and you should use the string based op\n     * names which are stable and namespaced. Use\n     * {@link #getOpsForPackage(int, String, String...)})}.\n     *\n     * @hide\n     * @removed\n     ",
+    "links" : [ "#unsafeCheckOp", "#noteOp", "#getOpsForPackage" ]
+  }, {
+    "name" : "public List<AppOpsManager.PackageOps> getOpsForPackage(int uid, @NonNull String packageName, @Nullable String... ops)",
+    "returnType" : "List<AppOpsManager.PackageOps>",
+    "comment" : "\n     * Retrieve current operation state for one application. The UID and the\n     * package must match.\n     *\n     * The mode of the ops returned are set for the package but may not reflect their effective\n     * state due to UID policy or because it's controlled by a different master op.\n     *\n     * Use {@link #unsafeCheckOp(String, int, String)}} or\n     * {@link #noteOp(String, int, String, String, String)} if the effective mode is needed.\n     *\n     * @param uid The uid of the application of interest.\n     * @param packageName The name of the application of interest.\n     * @param ops The set of operations you are interested in, or null if you want all of them.\n     *\n     * @hide\n     ",
+    "links" : [ "#unsafeCheckOp", "#noteOp" ]
+  }, {
+    "name" : "public void getHistoricalOps(@NonNull HistoricalOpsRequest request, @NonNull Executor executor, @NonNull Consumer<HistoricalOps> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Retrieve historical app op stats for a period.\n     *\n     * @param request A request object describing the data being queried for.\n     * @param executor Executor on which to run the callback. If <code>null</code>\n     *     the callback is executed on the default executor running on the main thread.\n     * @param callback Callback on which to deliver the result.\n     *\n     * @throws IllegalArgumentException If any of the argument contracts is violated.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getHistoricalOpsFromDiskRaw(@NonNull HistoricalOpsRequest request, @Nullable Executor executor, @NonNull Consumer<HistoricalOps> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Retrieve historical app op stats for a period.\n     *  <p>\n     *  This method queries only the on disk state and the returned ops are raw,\n     *  which is their times are relative to the history start as opposed to the\n     *  epoch start.\n     *\n     * @param request A request object describing the data being queried for.\n     * @param executor Executor on which to run the callback. If <code>null</code>\n     *     the callback is executed on the default executor running on the main thread.\n     * @param callback Callback on which to deliver the result.\n     *\n     * @throws IllegalArgumentException If any of the argument contracts is violated.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reloadNonHistoricalState()",
+    "returnType" : "void",
+    "comment" : "\n     * Reloads the non historical state to allow testing the read/write path.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUidMode(int code, int uid, @Mode int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets given app op in the specified mode for app ops in the UID.\n     * This applies to all apps currently in the UID or installed in\n     * this UID in the future.\n     *\n     * @param code The app op.\n     * @param uid The UID for which to set the app.\n     * @param mode The app op mode to set.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUidMode(@NonNull String appOp, int uid, @Mode int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets given app op in the specified mode for app ops in the UID.\n     * This applies to all apps currently in the UID or installed in\n     * this UID in the future.\n     *\n     * @param appOp The app op.\n     * @param uid The UID for which to set the app.\n     * @param mode The app op mode to set.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUserRestriction(int code, boolean restricted, IBinder token)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUserRestriction(int code, boolean restricted, IBinder token, String[] exceptionPackages)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUserRestrictionForUser(int code, boolean restricted, IBinder token, String[] exceptionPackages, int userId)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMode(int code, int uid, String packageName, @Mode int mode)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMode(@NonNull String op, int uid, @Nullable String packageName, @Mode int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the operating mode for the given op in the given app package.  You must pass\n     * in both the uid and name of the application whose mode is being modified; if these\n     * do not match, the modification will not be applied.\n     *\n     * @param op The operation to modify.  One of the OPSTR_* constants.\n     * @param uid The user id of the application whose mode will be changed.\n     * @param packageName The name of the application package name whose mode will\n     * be changed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRestriction(int code, @AttributeUsage int usage, @Mode int mode, String[] exceptionPackages)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a non-persisted restriction on an audio operation at a stream-level.\n     * Restrictions are temporary additional constraints imposed on top of the persisted rules\n     * defined by {@link #setMode}.\n     *\n     * @param code The operation to restrict.\n     * @param usage The {@link android.media.AudioAttributes} usage value.\n     * @param mode The restriction mode (MODE_IGNORED,MODE_ERRORED) or MODE_ALLOWED to unrestrict.\n     * @param exceptionPackages Optional list of packages to exclude from the restriction.\n     * @hide\n     ",
+    "links" : [ "#setMode", "android.media.AudioAttributes" ]
+  }, {
+    "name" : "public void resetAllModes()",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String permissionToOp(@NonNull String permission)",
+    "returnType" : "String",
+    "comment" : "\n     * Gets the app-op name associated with a given permission.\n     *\n     * <p>The app-op name is one of the public constants defined\n     * in this class such as {@link #OPSTR_COARSE_LOCATION}.\n     * This API is intended to be used for mapping runtime\n     * permissions to the corresponding app-op.\n     *\n     * @param permission The permission.\n     * @return The app-op associated with the permission or {@code null}.\n     ",
+    "links" : [ "#OPSTR_COARSE_LOCATION" ]
+  }, {
+    "name" : "public void startWatchingMode(@NonNull String op, @Nullable String packageName, @NonNull final OnOpChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Monitor for changes to the operating mode for the given op in the given app package.\n     * You can watch op changes only for your UID.\n     *\n     * @param op The operation to monitor, one of OPSTR_*.\n     * @param packageName The name of the application to monitor.\n     * @param callback Where to report changes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startWatchingMode(@NonNull String op, @Nullable String packageName, int flags, @NonNull final OnOpChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Monitor for changes to the operating mode for the given op in the given app package.\n     * You can watch op changes only for your UID.\n     *\n     * @param op The operation to monitor, one of OPSTR_*.\n     * @param packageName The name of the application to monitor.\n     * @param flags Option flags: any combination of {@link #WATCH_FOREGROUND_CHANGES} or 0.\n     * @param callback Where to report changes.\n     ",
+    "links" : [ "#WATCH_FOREGROUND_CHANGES" ]
+  }, {
+    "name" : "public void startWatchingMode(int op, String packageName, final OnOpChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Monitor for changes to the operating mode for the given op in the given app package.\n     *\n     * <p> If you don't hold the {@link android.Manifest.permission#WATCH_APPOPS} permission\n     * you can watch changes only for your UID.\n     *\n     * @param op The operation to monitor, one of OP_*.\n     * @param packageName The name of the application to monitor.\n     * @param callback Where to report changes.\n     * @hide\n     ",
+    "links" : [ "android.Manifest.permission#WATCH_APPOPS" ]
+  }, {
+    "name" : "public void startWatchingMode(int op, String packageName, int flags, final OnOpChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Monitor for changes to the operating mode for the given op in the given app package.\n     *\n     * <p> If you don't hold the {@link android.Manifest.permission#WATCH_APPOPS} permission\n     * you can watch changes only for your UID.\n     *\n     * @param op The operation to monitor, one of OP_*.\n     * @param packageName The name of the application to monitor.\n     * @param flags Option flags: any combination of {@link #WATCH_FOREGROUND_CHANGES} or 0.\n     * @param callback Where to report changes.\n     * @hide\n     ",
+    "links" : [ "android.Manifest.permission#WATCH_APPOPS", "#WATCH_FOREGROUND_CHANGES" ]
+  }, {
+    "name" : "public void stopWatchingMode(@NonNull OnOpChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop monitoring that was previously started with {@link #startWatchingMode}.  All\n     * monitoring associated with this callback will be removed.\n     ",
+    "links" : [ "#startWatchingMode" ]
+  }, {
+    "name" : "public void startWatchingActive(@NonNull int[] ops, @NonNull OnOpActiveChangedListener callback)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startWatchingActive(@NonNull String[] ops, @CallbackExecutor @NonNull Executor executor, @NonNull OnOpActiveChangedListener callback)",
+    "returnType" : "void",
+    "comment" : " @RequiresPermission(value=Manifest.permission.WATCH_APPOPS, conditional=true)",
+    "links" : [ ]
+  }, {
+    "name" : "public void stopWatchingActive(@NonNull OnOpActiveChangedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop watching for changes to the active state of an app-op. An app-op may be\n     * long running and it has a clear start and stop delimiters. Unregistering a\n     * non-registered callback has no effect.\n     *\n     * @see #startWatchingActive\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startWatchingStarted(@NonNull int[] ops, @NonNull OnOpStartedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Start watching for started app-ops.\n     * An app-op may be long running and it has a clear start delimiter.\n     * If an op start is attempted by any package, you will get a callback.\n     * To change the watched ops for a registered callback you need to unregister and register it\n     * again.\n     *\n     * <p> If you don't hold the {@code android.Manifest.permission#WATCH_APPOPS} permission\n     * you can watch changes only for your UID.\n     *\n     * @param ops The operations to watch.\n     * @param callback Where to report changes.\n     *\n     * @see #stopWatchingStarted(OnOpStartedListener)\n     * @see #startWatchingActive(int[], OnOpActiveChangedListener)\n     * @see #startWatchingNoted(int[], OnOpNotedListener)\n     * @see #startOp(int, int, String, boolean, String, String)\n     * @see #finishOp(int, int, String, String)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void stopWatchingStarted(@NonNull OnOpStartedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop watching for started app-ops.\n     * An app-op may be long running and it has a clear start delimiter.\n     * Henceforth, if an op start is attempted by any package, you will not get a callback.\n     * Unregistering a non-registered callback has no effect.\n     *\n     * @see #startWatchingStarted(int[], OnOpStartedListener)\n     * @see #startOp(int, int, String, boolean, String, String)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startWatchingNoted(@NonNull int[] ops, @NonNull OnOpNotedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Start watching for noted app ops. An app op may be immediate or long running.\n     * Immediate ops are noted while long running ones are started and stopped. This\n     * method allows registering a listener to be notified when an app op is noted. If\n     * an op is being noted by any package you will get a callback. To change the\n     * watched ops for a registered callback you need to unregister and register it again.\n     *\n     * <p> If you don't hold the {@link android.Manifest.permission#WATCH_APPOPS} permission\n     * you can watch changes only for your UID.\n     *\n     * @param ops The ops to watch.\n     * @param callback Where to report changes.\n     *\n     * @see #startWatchingActive(int[], OnOpActiveChangedListener)\n     * @see #startWatchingStarted(int[], OnOpStartedListener)\n     * @see #stopWatchingNoted(OnOpNotedListener)\n     * @see #noteOp(String, int, String, String, String)\n     *\n     * @hide\n     ",
+    "links" : [ "android.Manifest.permission#WATCH_APPOPS" ]
+  }, {
+    "name" : "public void stopWatchingNoted(@NonNull OnOpNotedListener callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop watching for noted app ops. An app op may be immediate or long running.\n     * Unregistering a non-registered callback has no effect.\n     *\n     * @see #startWatchingNoted(int[], OnOpNotedListener)\n     * @see #noteOp(String, int, String, String, String)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String buildSecurityExceptionMsg(int op, int uid, String packageName)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int strOpToOp(@NonNull String op)",
+    "returnType" : "int",
+    "comment" : "\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int unsafeCheckOp(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Do a quick check for whether an application might be able to perform an operation.\n     * This is <em>not</em> a security check; you must use {@link #noteOp(String, int, String,\n     * String, String)} or {@link #startOp(String, int, String, String, String)} for your actual\n     * security checks, which also ensure that the given uid and package name are consistent. This\n     * function can just be used for a quick check to see if an operation has been disabled for the\n     * application, as an early reject of some work.  This does not modify the time stamp or other\n     * data about the operation.\n     *\n     * <p>Important things this will not do (which you need to ultimate use\n     * {@link #noteOp(String, int, String, String, String)} or\n     * {@link #startOp(String, int, String, String, String)} to cover):</p>\n     * <ul>\n     *     <li>Verifying the uid and package are consistent, so callers can't spoof\n     *     their identity.</li>\n     *     <li>Taking into account the current foreground/background state of the\n     *     app; apps whose mode varies by this state will always be reported\n     *     as {@link #MODE_ALLOWED}.</li>\n     * </ul>\n     *\n     * @param op The operation to check.  One of the OPSTR_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     * @throws SecurityException If the app has been configured to crash on this op.\n     ",
+    "links" : [ "#noteOp", "#startOp", "#noteOp", "#startOp", "#MODE_ALLOWED", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int checkOp(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Renamed to {@link #unsafeCheckOp(String, int, String)}.\n     ",
+    "links" : [ "#unsafeCheckOp" ]
+  }, {
+    "name" : "public int unsafeCheckOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #checkOp} but instead of throwing a {@link SecurityException} it\n     * returns {@link #MODE_ERRORED}.\n     ",
+    "links" : [ "#checkOp", "SecurityException", "#MODE_ERRORED" ]
+  }, {
+    "name" : "public int checkOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Renamed to {@link #unsafeCheckOpNoThrow(String, int, String)}.\n     ",
+    "links" : [ "#unsafeCheckOpNoThrow" ]
+  }, {
+    "name" : "public int unsafeCheckOpRaw(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #checkOp} but returns the <em>raw</em> mode associated with the op.\n     * Does not throw a security exception, does not translate {@link #MODE_FOREGROUND}.\n     ",
+    "links" : [ "#checkOp", "#MODE_FOREGROUND" ]
+  }, {
+    "name" : "public int unsafeCheckOpRawNoThrow(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #unsafeCheckOpNoThrow(String, int, String)} but returns the <em>raw</em>\n     * mode associated with the op. Does not throw a security exception, does not translate\n     * {@link #MODE_FOREGROUND}.\n     ",
+    "links" : [ "#unsafeCheckOpNoThrow", "#MODE_FOREGROUND" ]
+  }, {
+    "name" : "public int unsafeCheckOpRawNoThrow(int op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the <em>raw</em> mode associated with the op.\n     * Does not throw a security exception, does not translate {@link #MODE_FOREGROUND}.\n     * @hide\n     ",
+    "links" : [ "#MODE_FOREGROUND" ]
+  }, {
+    "name" : "public int noteOp(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteOp(String, int, String, String, String)} instead\n     ",
+    "links" : [ "#noteOp" ]
+  }, {
+    "name" : "public int noteOp(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteOp(String, int, String, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#noteOp" ]
+  }, {
+    "name" : "public int noteOp(int op, int uid, @Nullable String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteOp(String, int, String, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#noteOp" ]
+  }, {
+    "name" : "public int noteOp(@NonNull String op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Make note of an application performing an operation.  Note that you must pass\n     * in both the uid and name of the application to be checked; this function will verify\n     * that these two match, and if not, return {@link #MODE_IGNORED}.  If this call\n     * succeeds, the last execution time of the operation for this app will be updated to\n     * the current time.\n     *\n     * <p>If this is a check that is not preceding the protected operation, use\n     * {@link #unsafeCheckOp} instead.\n     *\n     * @param op The operation to note.  One of the OPSTR_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or {@code\n     * null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @throws SecurityException If the app has been configured to crash on this op.\n     ",
+    "links" : [ "#MODE_IGNORED", "#unsafeCheckOp", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteOp(int op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Make note of an application performing an operation.  Note that you must pass\n     * in both the uid and name of the application to be checked; this function will verify\n     * that these two match, and if not, return {@link #MODE_IGNORED}.  If this call\n     * succeeds, the last execution time of the operation for this app will be updated to\n     * the current time.\n     *\n     * <p>If this is a check that is not preceding the protected operation, use\n     * {@link #unsafeCheckOp} instead.\n     *\n     * @param op The operation to note.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or {@code\n     * null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @throws SecurityException If the app has been configured to crash on this op.\n     *\n     * @hide\n     ",
+    "links" : [ "#MODE_IGNORED", "#unsafeCheckOp", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteOpNoThrow(String, int, String, String, String)} instead\n     ",
+    "links" : [ "#noteOpNoThrow" ]
+  }, {
+    "name" : "public int noteOpNoThrow(int op, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteOpNoThrow(int, int, String, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#noteOpNoThrow" ]
+  }, {
+    "name" : "public int noteOpNoThrow(@NonNull String op, int uid, @NonNull String packageName, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #noteOp(String, int, String, String, String)} but instead of throwing a\n     * {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * @param op The operation to note.  One of the OPSTR_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or {@code\n     * null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     ",
+    "links" : [ "#noteOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteOpNoThrow(int op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #noteOp(String, int, String, String, String)} but instead of throwing a\n     * {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * @param op The operation to note.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or {@code\n     * null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @hide\n     ",
+    "links" : [ "#noteOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteProxyOp(@NonNull String op, @NonNull String proxiedPackageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteProxyOp(String, String, int, String, String)} instead\n     ",
+    "links" : [ "#noteProxyOp" ]
+  }, {
+    "name" : "public int noteProxyOp(int op, @Nullable String proxiedPackageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteProxyOp(String, String, int, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#noteProxyOp" ]
+  }, {
+    "name" : "public int noteProxyOp(int op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Make note of an application performing an operation on behalf of another application when\n     * handling an IPC. This function will verify that the calling uid and proxied package name\n     * match, and if not, return {@link #MODE_IGNORED}. If this call succeeds, the last execution\n     * time of the operation for the proxied app and your app will be updated to the current time.\n     *\n     * @param op The operation to note. One of the OP_* constants.\n     * @param proxiedPackageName The name of the application calling into the proxy application.\n     * @param proxiedUid The uid of the proxied application\n     * @param proxiedAttributionTag The proxied {@link Context#createAttributionContext\n     * attribution tag} or {@code null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or {@link #MODE_IGNORED}\n     * if it is not allowed and should be silently ignored (without causing the app to crash).\n     *\n     * @throws SecurityException If the proxy or proxied app has been configured to crash on this\n     * op.\n     *\n     * @hide\n     ",
+    "links" : [ "#MODE_IGNORED", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteProxyOp(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Make note of an application performing an operation on behalf of another application when\n     * handling an IPC. This function will verify that the calling uid and proxied package name\n     * match, and if not, return {@link #MODE_IGNORED}. If this call succeeds, the last execution\n     * time of the operation for the proxied app and your app will be updated to the current time.\n     *\n     * @param op The operation to note. One of the OPSTR_* constants.\n     * @param proxiedPackageName The name of the application calling into the proxy application.\n     * @param proxiedUid The uid of the proxied application\n     * @param proxiedAttributionTag The proxied {@link Context#createAttributionContext\n     * attribution tag} or {@code null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or {@link #MODE_IGNORED}\n     * if it is not allowed and should be silently ignored (without causing the app to crash).\n     *\n     * @throws SecurityException If the proxy or proxied app has been configured to crash on this\n     * op.\n     ",
+    "links" : [ "#MODE_IGNORED", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int noteProxyOpNoThrow(@NonNull String op, @NonNull String proxiedPackageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteProxyOpNoThrow(String, String, int, String, String)} instead\n     ",
+    "links" : [ "#noteProxyOpNoThrow" ]
+  }, {
+    "name" : "public int noteProxyOpNoThrow(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #noteProxyOpNoThrow(String, String, int, String, String)} instead\n     ",
+    "links" : [ "#noteProxyOpNoThrow" ]
+  }, {
+    "name" : "public int noteProxyOpNoThrow(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #noteProxyOp(String, String, int, String, String)} but instead\n     * of throwing a {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * <p>This API requires package with the {@code proxiedPackageName} to belong to\n     * {@code proxiedUid}.\n     *\n     * @param op The op to note\n     * @param proxiedPackageName The package to note the op for\n     * @param proxiedUid The uid the package belongs to\n     * @param proxiedAttributionTag The proxied {@link Context#createAttributionContext\n     * attribution tag} or {@code null} for default attribution\n     * @param message A message describing the reason the op was noted\n     ",
+    "links" : [ "#noteProxyOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext" ]
+  }, {
+    "name" : "public int noteProxyOpNoThrow(int op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #noteProxyOp(int, String, int, String, String)} but instead\n     * of throwing a {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * @param op The op to note\n     * @param proxiedPackageName The package to note the op for or {@code null} if the op should be\n     *                           noted for the \"android\" package\n     * @param proxiedUid The uid the package belongs to\n     * @param proxiedAttributionTag The proxied {@link Context#createAttributionContext\n     * attribution tag} or {@code null} for default attribution\n     * @param message A message describing the reason the op was noted\n     *\n     * @hide\n     ",
+    "links" : [ "#noteProxyOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext" ]
+  }, {
+    "name" : "public int checkOp(int op, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Do a quick check for whether an application might be able to perform an operation.\n     * This is <em>not</em> a security check; you must use {@link #noteOp(String, int, String,\n     * String, String)} or {@link #startOp(int, int, String, boolean, String, String)} for your\n     * actual security checks, which also ensure that the given uid and package name are consistent.\n     * This function can just be used for a quick check to see if an operation has been disabled for\n     * the application, as an early reject of some work.  This does not modify the time stamp or\n     * other data about the operation.\n     *\n     * <p>Important things this will not do (which you need to ultimate use\n     * {@link #noteOp(String, int, String, String, String)} or\n     * {@link #startOp(int, int, String, boolean, String, String)} to cover):</p>\n     * <ul>\n     *     <li>Verifying the uid and package are consistent, so callers can't spoof\n     *     their identity.</li>\n     *     <li>Taking into account the current foreground/background state of the\n     *     app; apps whose mode varies by this state will always be reported\n     *     as {@link #MODE_ALLOWED}.</li>\n     * </ul>\n     *\n     * @param op The operation to check.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     * @throws SecurityException If the app has been configured to crash on this op.\n     * @hide\n     ",
+    "links" : [ "#noteOp", "#startOp", "#noteOp", "#startOp", "#MODE_ALLOWED", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int checkOpNoThrow(int op, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #checkOp} but instead of throwing a {@link SecurityException} it\n     * returns {@link #MODE_ERRORED}.\n     * @hide\n     ",
+    "links" : [ "#checkOp", "SecurityException", "#MODE_ERRORED" ]
+  }, {
+    "name" : "public void checkPackage(int uid, @NonNull String packageName)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link PackageManager#getPackageUid} instead\n     ",
+    "links" : [ "PackageManager#getPackageUid" ]
+  }, {
+    "name" : "public int checkAudioOp(int op, int stream, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #checkOp} but at a stream-level for audio operations.\n     * @hide\n     ",
+    "links" : [ "#checkOp" ]
+  }, {
+    "name" : "public int checkAudioOpNoThrow(int op, int stream, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #checkAudioOp} but instead of throwing a {@link SecurityException} it\n     * returns {@link #MODE_ERRORED}.\n     * @hide\n     ",
+    "links" : [ "#checkAudioOp", "SecurityException", "#MODE_ERRORED" ]
+  }, {
+    "name" : "public static IBinder getToken(IAppOpsService service)",
+    "returnType" : "IBinder",
+    "comment" : "\n     * @deprecated Use own local {@link android.os.Binder#Binder()}\n     *\n     * @hide\n     ",
+    "links" : [ "android.os.Binder#Binder" ]
+  }, {
+    "name" : "public static IBinder getClientId()",
+    "returnType" : "IBinder",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static IAppOpsService getService()",
+    "returnType" : "IAppOpsService",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public int startOp(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated use {@link #startOp(String, int, String, String, String)} instead\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public int startOp(int op)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #startOp(int, int, String, boolean, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public int startOp(int op, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #startOp(int, int, String, boolean, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public int startOp(int op, int uid, String packageName, boolean startIfModeDefault)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #startOp(int, int, String, boolean, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public int startOp(@NonNull String op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Report that an application has started executing a long-running operation.\n     *\n     * @param op The operation to start.  One of the OPSTR_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or\n     * {@code null} for default attribution\n     * @param message Description why op was started\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @throws SecurityException If the app has been configured to crash on this op or\n     * the package is not in the passed in UID.\n     ",
+    "links" : [ "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int startOp(int op, int uid, @Nullable String packageName, boolean startIfModeDefault, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Report that an application has started executing a long-running operation.\n     *\n     * @param op The operation to start.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or\n     * {@code null} for default attribution\n     * @param startIfModeDefault Whether to start if mode is {@link #MODE_DEFAULT}.\n     * @param message Description why op was started\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @throws SecurityException If the app has been configured to crash on this op or\n     * the package is not in the passed in UID.\n     *\n     * @hide\n     ",
+    "links" : [ "Context#createAttributionContext", "#MODE_DEFAULT", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int startOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated use {@link #startOpNoThrow(String, int, String, String, String)} instead\n     ",
+    "links" : [ "#startOpNoThrow" ]
+  }, {
+    "name" : "public int startOpNoThrow(int op, int uid, String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #startOpNoThrow(int, int, String, boolean, String, String} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#startOpNoThrow" ]
+  }, {
+    "name" : "public int startOpNoThrow(int op, int uid, String packageName, boolean startIfModeDefault)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use {@link #startOpNoThrow(int, int, String, boolean, String, String} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#startOpNoThrow" ]
+  }, {
+    "name" : "public int startOpNoThrow(@NonNull String op, int uid, @NonNull String packageName, @NonNull String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #startOp(String, int, String, String, String)} but instead of throwing a\n     * {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * @param op The operation to start.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or\n     * {@code null} for default attribution\n     * @param message Description why op was started\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     ",
+    "links" : [ "#startOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public int startOpNoThrow(int op, int uid, @NonNull String packageName, boolean startIfModeDefault, @Nullable String attributionTag, @Nullable String message)",
+    "returnType" : "int",
+    "comment" : "\n     * Like {@link #startOp(int, int, String, boolean, String, String)} but instead of throwing a\n     * {@link SecurityException} it returns {@link #MODE_ERRORED}.\n     *\n     * @param op The operation to start.  One of the OP_* constants.\n     * @param uid The user id of the application attempting to perform the operation.\n     * @param packageName The name of the application attempting to perform the operation.\n     * @param attributionTag The {@link Context#createAttributionContext attribution tag} or\n     * {@code null} for default attribution\n     * @param startIfModeDefault Whether to start if mode is {@link #MODE_DEFAULT}.\n     * @param message Description why op was started\n     *\n     * @return Returns {@link #MODE_ALLOWED} if the operation is allowed, or\n     * {@link #MODE_IGNORED} if it is not allowed and should be silently ignored (without\n     * causing the app to crash).\n     *\n     * @hide\n     ",
+    "links" : [ "#startOp", "SecurityException", "#MODE_ERRORED", "Context#createAttributionContext", "#MODE_DEFAULT", "#MODE_ALLOWED", "#MODE_IGNORED" ]
+  }, {
+    "name" : "public void finishOp(int op)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link #finishOp(String, int, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#finishOp" ]
+  }, {
+    "name" : "public void finishOp(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link #finishOp(String, int, String, String)} instead\n     ",
+    "links" : [ "#finishOp" ]
+  }, {
+    "name" : "public void finishOp(@NonNull String op, int uid, @NonNull String packageName, @Nullable String attributionTag)",
+    "returnType" : "void",
+    "comment" : "\n     * Report that an application is no longer performing an operation that had previously\n     * been started with {@link #startOp(String, int, String, String, String)}.  There is no\n     * validation of input or result; the parameters supplied here must be the exact same ones\n     * previously passed in when starting the operation.\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public void finishOp(int op, int uid, @NonNull String packageName)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link #finishOp(int, int, String, String)} instead\n     *\n     * @hide\n     ",
+    "links" : [ "#finishOp" ]
+  }, {
+    "name" : "public void finishOp(int op, int uid, @NonNull String packageName, @Nullable String attributionTag)",
+    "returnType" : "void",
+    "comment" : "\n     * Report that an application is no longer performing an operation that had previously\n     * been started with {@link #startOp(int, int, String, boolean, String, String)}. There is no\n     * validation of input or result; the parameters supplied here must be the exact same ones\n     * previously passed in when starting the operation.\n     *\n     * @hide\n     ",
+    "links" : [ "#startOp" ]
+  }, {
+    "name" : "public boolean isOpActive(@NonNull String op, int uid, @NonNull String packageName)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks whether the given op for a package is active, i.e. did someone call {@link #startOp}\n     * without {@link #finishOp} yet.\n     * <p>\n     * If you don't hold the {@code android.Manifest.permission#WATCH_APPOPS}\n     * permission you can query only for your UID.\n     *\n     * @see #finishOp(String, int, String, String)\n     * @see #startOp(String, int, String, String, String)\n     ",
+    "links" : [ "#startOp", "#finishOp" ]
+  }, {
+    "name" : "public static void startNotedAppOpsCollection(int callingUid)",
+    "returnType" : "void",
+    "comment" : "\n     * Start collection of noted appops on this thread.\n     *\n     * <p>Called at the beginning of a two way binder transaction.\n     *\n     * @see #finishNotedAppOpsCollection()\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PausedNotedAppOpsCollection pauseNotedAppOpsCollection()",
+    "returnType" : "PausedNotedAppOpsCollection",
+    "comment" : "\n     * Temporarily suspend collection of noted app-ops when binder-thread calls into the other\n     * process. During such a call there might be call-backs coming back on the same thread which\n     * should not be accounted to the current collection.\n     *\n     * @return a state needed to resume the collection\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void resumeNotedAppOpsCollection(@Nullable PausedNotedAppOpsCollection prevCollection)",
+    "returnType" : "void",
+    "comment" : "\n     * Resume a collection paused via {@link #pauseNotedAppOpsCollection}.\n     *\n     * @param prevCollection The state of the previous collection\n     *\n     * @hide\n     ",
+    "links" : [ "#pauseNotedAppOpsCollection" ]
+  }, {
+    "name" : "public static void finishNotedAppOpsCollection()",
+    "returnType" : "void",
+    "comment" : "\n     * Finish collection of noted appops on this thread.\n     *\n     * <p>Called at the end of a two way binder transaction.\n     *\n     * @see #startNotedAppOpsCollection(int)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void collectNotedOpForSelf(int op, @Nullable String attributionTag)",
+    "returnType" : "void",
+    "comment" : "\n     * Collect a noted op for the current process.\n     *\n     * @param op The noted op\n     * @param attributionTag The attribution tag the op is noted for\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void collectNotedOpSync(int op, @Nullable String attributionTag)",
+    "returnType" : "void",
+    "comment" : "\n     * Collect a noted op when inside of a two-way binder call.\n     *\n     * <p> Delivered to caller via {@link #prefixParcelWithAppOpsIfNeeded}\n     *\n     * @param op The noted op\n     * @param attributionTag The attribution tag the op is noted for\n     ",
+    "links" : [ "#prefixParcelWithAppOpsIfNeeded" ]
+  }, {
+    "name" : "private int getNotedOpCollectionMode(int uid, @Nullable String packageName, int op)",
+    "returnType" : "int",
+    "comment" : "\n     * Mark an app-op as noted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void prefixParcelWithAppOpsIfNeeded(@NonNull Parcel p)",
+    "returnType" : "void",
+    "comment" : "\n     * Append app-ops noted in the current two-way binder transaction to parcel.\n     *\n     * <p>This is called on the callee side of a two way binder transaction just before the\n     * transaction returns.\n     *\n     * @param p the parcel to append the noted app-ops to\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void readAndLogNotedAppops(@NonNull Parcel p)",
+    "returnType" : "void",
+    "comment" : "\n     * Read app-ops noted during a two-way binder transaction from parcel.\n     *\n     * <p>This is called on the calling side of a two way binder transaction just after the\n     * transaction returns.\n     *\n     * @param p The parcel to read from\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnOpNotedCallback(@Nullable @CallbackExecutor Executor asyncExecutor, @Nullable OnOpNotedCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a new {@link OnOpNotedCallback}.\n     *\n     * <p>There can only ever be one collector per process. If there currently is another callback\n     * set, this will fail.\n     *\n     * @param asyncExecutor executor to execute {@link OnOpNotedCallback#onAsyncNoted} on, {@code\n     * null} to unset\n     * @param callback listener to set, {@code null} to unset\n     *\n     * @throws IllegalStateException If another callback is already registered\n     ",
+    "links" : [ "OnOpNotedCallback", "OnOpNotedCallback#onAsyncNoted" ]
+  }, {
+    "name" : "public void setNotedAppOpsCollector(@Nullable AppOpsCollector collector)",
+    "returnType" : "void",
+    "comment" : "\n     * Will be removed before R ships, leave it just to not break apps immediately.\n     *\n     * @removed\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isListeningForOpNoted()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return {@code true} iff the process currently is currently collecting noted appops.\n     *\n     * @see #setOnOpNotedCallback\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isCollectingStackTraces()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return {@code true} iff the process is currently sampled for stacktrace collection.\n     *\n     * @see #setOnOpNotedCallback\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getFormattedStackTrace()",
+    "returnType" : "String",
+    "comment" : "\n     * Generate a stack trace used for noted app-ops logging.\n     *\n     * <p>This strips away the first few and last few stack trace elements as they are not\n     * interesting to apps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isOperationActive(int code, int uid, String packageName)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks whether the given op for a UID and package is active.\n     *\n     * <p> If you don't hold the {@link android.Manifest.permission#WATCH_APPOPS} permission\n     * you can query only for your UID.\n     *\n     * @see #startWatchingActive(int[], OnOpActiveChangedListener)\n     * @see #stopWatchingMode(OnOpChangedListener)\n     * @see #finishOp(int, int, String, String)\n     * @see #startOp(int, int, String, boolean, String, String)\n     *\n     * @hide ",
+    "links" : [ "android.Manifest.permission#WATCH_APPOPS" ]
+  }, {
+    "name" : "public void setHistoryParameters(@HistoricalMode int mode, long baseSnapshotInterval, int compressionStep)",
+    "returnType" : "void",
+    "comment" : "\n     * Configures the app ops persistence for testing.\n     *\n     * @param mode The mode in which the historical registry operates.\n     * @param baseSnapshotInterval The base interval on which we would be persisting a snapshot of\n     *   the historical data. The history is recursive where every subsequent step encompasses\n     *   {@code compressionStep} longer interval with {@code compressionStep} distance between\n     *    snapshots.\n     * @param compressionStep The compression step in every iteration.\n     *\n     * @see #HISTORICAL_MODE_DISABLED\n     * @see #HISTORICAL_MODE_ENABLED_ACTIVE\n     * @see #HISTORICAL_MODE_ENABLED_PASSIVE\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void offsetHistory(long offsetMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Offsets the history by the given duration.\n     *\n     * @param offsetMillis The offset duration.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addHistoricalOps(@NonNull HistoricalOps ops)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds ops to the history directly. This could be useful for testing especially\n     * when the historical registry operates in {@link #HISTORICAL_MODE_ENABLED_PASSIVE}\n     * mode.\n     *\n     * @param ops The ops to add to the history.\n     *\n     * @see #setHistoryParameters(int, long, int)\n     * @see #HISTORICAL_MODE_ENABLED_PASSIVE\n     *\n     * @hide\n     ",
+    "links" : [ "#HISTORICAL_MODE_ENABLED_PASSIVE" ]
+  }, {
+    "name" : "public void resetHistoryParameters()",
+    "returnType" : "void",
+    "comment" : "\n     * Resets the app ops persistence for testing.\n     *\n     * @see #setHistoryParameters(int, long, int)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearHistory()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears all app ops history.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void rebootHistory(long offlineDurationMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Reboots the ops history.\n     *\n     * @param offlineDurationMillis The duration to wait between\n     * tearing down and initializing the history. Must be greater\n     * than or equal to zero.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RuntimeAppOpAccessMessage collectRuntimeAppOpAccessMessage()",
+    "returnType" : "RuntimeAppOpAccessMessage",
+    "comment" : "\n     * Pulls current AppOps access report and picks package and op to watch for next access report\n     * Returns null if no reports were collected since last call. There is no guarantee of report\n     * collection, hence this method should be called periodically even if no report was collected\n     * to pick different package and op to watch.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String[] getOpStrs()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Returns all supported operation names.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getNumOps()",
+    "returnType" : "int",
+    "comment" : "\n     * @return number of App ops\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static NoteOpEvent getLastEvent(@Nullable LongSparseArray<NoteOpEvent> events, @UidState int beginUidState, @UidState int endUidState, @OpFlags int flags)",
+    "returnType" : "NoteOpEvent",
+    "comment" : "\n     * Gets the last of the event.\n     *\n     * @param events The events\n     * @param flags The UID flags\n     * @param beginUidState The maximum UID state (inclusive)\n     * @param endUidState The minimum UID state (inclusive)\n     *\n     * @return The last event of {@code null}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean equalsLongSparseLongArray(@Nullable LongSparseLongArray a, @Nullable LongSparseLongArray b)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void writeLongSparseLongArrayToParcel(@Nullable LongSparseLongArray array, @NonNull Parcel parcel)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static LongSparseLongArray readLongSparseLongArrayFromParcel(@NonNull Parcel parcel)",
+    "returnType" : "LongSparseLongArray",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static LongSparseArray<Object> collectKeys(@Nullable LongSparseLongArray array, @Nullable LongSparseArray<Object> result)",
+    "returnType" : "LongSparseArray<Object>",
+    "comment" : "\n     * Collects the keys from an array to the result creating the result if needed.\n     *\n     * @param array The array whose keys to collect.\n     * @param result The optional result store collected keys.\n     * @return The result collected keys array.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String uidStateToString(@UidState int uidState)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int parseHistoricalMode(@NonNull String mode)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String historicalModeToString(@HistoricalMode int mode)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getSystemAlertWindowDefault()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int leftCircularDistance(int from, int to, int size)",
+    "returnType" : "int",
+    "comment" : "\n     * Calculate left circular distance for two numbers modulo size.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void collectNoteOpCallsForValidation(int op)",
+    "returnType" : "void",
+    "comment" : "\n     * Helper method for noteOp, startOp and noteProxyOp to call AppOpsService to collect/log\n     * stack traces\n     *\n     * <p> For each call, the stacktrace op code, package name and long version code will be\n     * passed along where it will be logged/collected\n     *\n     * @param op The operation to note\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "CALL_BACK_ON_CHANGED_LISTENER_WITH_SWITCHED_OP_CHANGE", "MAX_UNFORWARDED_OPS", "mContext", "mService", "sService", "mModeWatchers", "mActiveWatchers", "mStartedWatchers", "mNotedWatchers", "sLock", "sOnOpNotedCallback", "sUnforwardedOps", "sMessageCollector", "sClientId", "KEY_TOP_STATE_SETTLE_TIME", "KEY_FG_SERVICE_STATE_SETTLE_TIME", "KEY_BG_STATE_SETTLE_TIME", "HISTORICAL_MODE_DISABLED", "HISTORICAL_MODE_ENABLED_ACTIVE", "HISTORICAL_MODE_ENABLED_PASSIVE", "MODE_ALLOWED", "MODE_IGNORED", "MODE_ERRORED", "MODE_DEFAULT", "MODE_FOREGROUND", "WATCH_FOREGROUND_CHANGES", "CALL_BACK_ON_SWITCHED_OP", "NOTE_OP_COLLECTION_ENABLED", "MODE_NAMES", "UID_STATE_PERSISTENT", "UID_STATE_TOP", "UID_STATE_FOREGROUND_SERVICE_LOCATION", "UID_STATE_FOREGROUND_SERVICE", "UID_STATE_FOREGROUND", "UID_STATE_MAX_LAST_NON_RESTRICTED", "UID_STATE_BACKGROUND", "UID_STATE_CACHED", "MAX_PRIORITY_UID_STATE", "MIN_PRIORITY_UID_STATE", "UID_STATES", "OP_FLAG_SELF", "OP_FLAG_TRUSTED_PROXY", "OP_FLAG_UNTRUSTED_PROXY", "OP_FLAG_TRUSTED_PROXIED", "OP_FLAG_UNTRUSTED_PROXIED", "OP_FLAGS_ALL", "OP_FLAGS_ALL_TRUSTED", "SAMPLING_STRATEGY_DEFAULT", "SAMPLING_STRATEGY_UNIFORM", "SAMPLING_STRATEGY_RARELY_USED", "SAMPLING_STRATEGY_BOOT_TIME_SAMPLING", "UID_STATE_OFFSET", "FLAGS_MASK", "OP_NONE", "OP_COARSE_LOCATION", "OP_FINE_LOCATION", "OP_GPS", "OP_VIBRATE", "OP_READ_CONTACTS", "OP_WRITE_CONTACTS", "OP_READ_CALL_LOG", "OP_WRITE_CALL_LOG", "OP_READ_CALENDAR", "OP_WRITE_CALENDAR", "OP_WIFI_SCAN", "OP_POST_NOTIFICATION", "OP_NEIGHBORING_CELLS", "OP_CALL_PHONE", "OP_READ_SMS", "OP_WRITE_SMS", "OP_RECEIVE_SMS", "OP_RECEIVE_EMERGECY_SMS", "OP_RECEIVE_MMS", "OP_RECEIVE_WAP_PUSH", "OP_SEND_SMS", "OP_READ_ICC_SMS", "OP_WRITE_ICC_SMS", "OP_WRITE_SETTINGS", "OP_SYSTEM_ALERT_WINDOW", "OP_ACCESS_NOTIFICATIONS", "OP_CAMERA", "OP_RECORD_AUDIO", "OP_PLAY_AUDIO", "OP_READ_CLIPBOARD", "OP_WRITE_CLIPBOARD", "OP_TAKE_MEDIA_BUTTONS", "OP_TAKE_AUDIO_FOCUS", "OP_AUDIO_MASTER_VOLUME", "OP_AUDIO_VOICE_VOLUME", "OP_AUDIO_RING_VOLUME", "OP_AUDIO_MEDIA_VOLUME", "OP_AUDIO_ALARM_VOLUME", "OP_AUDIO_NOTIFICATION_VOLUME", "OP_AUDIO_BLUETOOTH_VOLUME", "OP_WAKE_LOCK", "OP_MONITOR_LOCATION", "OP_MONITOR_HIGH_POWER_LOCATION", "OP_GET_USAGE_STATS", "OP_MUTE_MICROPHONE", "OP_TOAST_WINDOW", "OP_PROJECT_MEDIA", "OP_ACTIVATE_VPN", "OP_WRITE_WALLPAPER", "OP_ASSIST_STRUCTURE", "OP_ASSIST_SCREENSHOT", "OP_READ_PHONE_STATE", "OP_ADD_VOICEMAIL", "OP_USE_SIP", "OP_PROCESS_OUTGOING_CALLS", "OP_USE_FINGERPRINT", "OP_BODY_SENSORS", "OP_READ_CELL_BROADCASTS", "OP_MOCK_LOCATION", "OP_READ_EXTERNAL_STORAGE", "OP_WRITE_EXTERNAL_STORAGE", "OP_TURN_SCREEN_ON", "OP_GET_ACCOUNTS", "OP_RUN_IN_BACKGROUND", "OP_AUDIO_ACCESSIBILITY_VOLUME", "OP_READ_PHONE_NUMBERS", "OP_REQUEST_INSTALL_PACKAGES", "OP_PICTURE_IN_PICTURE", "OP_INSTANT_APP_START_FOREGROUND", "OP_ANSWER_PHONE_CALLS", "OP_RUN_ANY_IN_BACKGROUND", "OP_CHANGE_WIFI_STATE", "OP_REQUEST_DELETE_PACKAGES", "OP_BIND_ACCESSIBILITY_SERVICE", "OP_ACCEPT_HANDOVER", "OP_MANAGE_IPSEC_TUNNELS", "OP_START_FOREGROUND", "OP_BLUETOOTH_SCAN", "OP_USE_BIOMETRIC", "OP_ACTIVITY_RECOGNITION", "OP_SMS_FINANCIAL_TRANSACTIONS", "OP_READ_MEDIA_AUDIO", "OP_WRITE_MEDIA_AUDIO", "OP_READ_MEDIA_VIDEO", "OP_WRITE_MEDIA_VIDEO", "OP_READ_MEDIA_IMAGES", "OP_WRITE_MEDIA_IMAGES", "OP_LEGACY_STORAGE", "OP_ACCESS_ACCESSIBILITY", "OP_READ_DEVICE_IDENTIFIERS", "OP_ACCESS_MEDIA_LOCATION", "OP_QUERY_ALL_PACKAGES", "OP_MANAGE_EXTERNAL_STORAGE", "OP_INTERACT_ACROSS_PROFILES", "OP_ACTIVATE_PLATFORM_VPN", "OP_LOADER_USAGE_STATS", "OP_DEPRECATED_1", "OP_AUTO_REVOKE_PERMISSIONS_IF_UNUSED", "OP_AUTO_REVOKE_MANAGED_BY_INSTALLER", "OP_NO_ISOLATED_STORAGE", "_NUM_OP", "OPSTR_COARSE_LOCATION", "OPSTR_FINE_LOCATION", "OPSTR_MONITOR_LOCATION", "OPSTR_MONITOR_HIGH_POWER_LOCATION", "OPSTR_GET_USAGE_STATS", "OPSTR_ACTIVATE_VPN", "OPSTR_READ_CONTACTS", "OPSTR_WRITE_CONTACTS", "OPSTR_READ_CALL_LOG", "OPSTR_WRITE_CALL_LOG", "OPSTR_READ_CALENDAR", "OPSTR_WRITE_CALENDAR", "OPSTR_CALL_PHONE", "OPSTR_READ_SMS", "OPSTR_RECEIVE_SMS", "OPSTR_RECEIVE_MMS", "OPSTR_RECEIVE_WAP_PUSH", "OPSTR_SEND_SMS", "OPSTR_CAMERA", "OPSTR_RECORD_AUDIO", "OPSTR_READ_PHONE_STATE", "OPSTR_ADD_VOICEMAIL", "OPSTR_USE_SIP", "OPSTR_PROCESS_OUTGOING_CALLS", "OPSTR_USE_FINGERPRINT", "OPSTR_BODY_SENSORS", "OPSTR_READ_CELL_BROADCASTS", "OPSTR_MOCK_LOCATION", "OPSTR_READ_EXTERNAL_STORAGE", "OPSTR_WRITE_EXTERNAL_STORAGE", "OPSTR_SYSTEM_ALERT_WINDOW", "OPSTR_WRITE_SETTINGS", "OPSTR_GET_ACCOUNTS", "OPSTR_READ_PHONE_NUMBERS", "OPSTR_PICTURE_IN_PICTURE", "OPSTR_INSTANT_APP_START_FOREGROUND", "OPSTR_ANSWER_PHONE_CALLS", "OPSTR_ACCEPT_HANDOVER", "OPSTR_GPS", "OPSTR_VIBRATE", "OPSTR_WIFI_SCAN", "OPSTR_POST_NOTIFICATION", "OPSTR_NEIGHBORING_CELLS", "OPSTR_WRITE_SMS", "OPSTR_RECEIVE_EMERGENCY_BROADCAST", "OPSTR_READ_ICC_SMS", "OPSTR_WRITE_ICC_SMS", "OPSTR_ACCESS_NOTIFICATIONS", "OPSTR_PLAY_AUDIO", "OPSTR_READ_CLIPBOARD", "OPSTR_WRITE_CLIPBOARD", "OPSTR_TAKE_MEDIA_BUTTONS", "OPSTR_TAKE_AUDIO_FOCUS", "OPSTR_AUDIO_MASTER_VOLUME", "OPSTR_AUDIO_VOICE_VOLUME", "OPSTR_AUDIO_RING_VOLUME", "OPSTR_AUDIO_MEDIA_VOLUME", "OPSTR_AUDIO_ALARM_VOLUME", "OPSTR_AUDIO_NOTIFICATION_VOLUME", "OPSTR_AUDIO_BLUETOOTH_VOLUME", "OPSTR_WAKE_LOCK", "OPSTR_MUTE_MICROPHONE", "OPSTR_TOAST_WINDOW", "OPSTR_PROJECT_MEDIA", "OPSTR_WRITE_WALLPAPER", "OPSTR_ASSIST_STRUCTURE", "OPSTR_ASSIST_SCREENSHOT", "OPSTR_TURN_SCREEN_ON", "OPSTR_RUN_IN_BACKGROUND", "OPSTR_AUDIO_ACCESSIBILITY_VOLUME", "OPSTR_REQUEST_INSTALL_PACKAGES", "OPSTR_RUN_ANY_IN_BACKGROUND", "OPSTR_CHANGE_WIFI_STATE", "OPSTR_REQUEST_DELETE_PACKAGES", "OPSTR_BIND_ACCESSIBILITY_SERVICE", "OPSTR_MANAGE_IPSEC_TUNNELS", "OPSTR_START_FOREGROUND", "OPSTR_BLUETOOTH_SCAN", "OPSTR_USE_BIOMETRIC", "OPSTR_ACTIVITY_RECOGNITION", "OPSTR_SMS_FINANCIAL_TRANSACTIONS", "OPSTR_READ_MEDIA_AUDIO", "OPSTR_WRITE_MEDIA_AUDIO", "OPSTR_READ_MEDIA_VIDEO", "OPSTR_WRITE_MEDIA_VIDEO", "OPSTR_READ_MEDIA_IMAGES", "OPSTR_WRITE_MEDIA_IMAGES", "OPSTR_LEGACY_STORAGE", "OPSTR_ACCESS_MEDIA_LOCATION", "OPSTR_ACCESS_ACCESSIBILITY", "OPSTR_READ_DEVICE_IDENTIFIERS", "OPSTR_QUERY_ALL_PACKAGES", "OPSTR_MANAGE_EXTERNAL_STORAGE", "OPSTR_AUTO_REVOKE_PERMISSIONS_IF_UNUSED", "OPSTR_AUTO_REVOKE_MANAGED_BY_INSTALLER", "OPSTR_INTERACT_ACROSS_PROFILES", "OPSTR_ACTIVATE_PLATFORM_VPN", "OPSTR_LOADER_USAGE_STATS", "OPSTR_NO_ISOLATED_STORAGE", "SHOULD_COLLECT_NOTE_OP_NOT_INITIALIZED", "SHOULD_NOT_COLLECT_NOTE_OP", "SHOULD_COLLECT_NOTE_OP", "RUNTIME_AND_APPOP_PERMISSIONS_OPS", "sOpToSwitch", "sOpToString", "sOpNames", "sOpPerms", "sOpRestrictions", "sOpAllowSystemRestrictionBypass", "sOpDefaultMode", "sOpDisableReset", "sOpStrToOp", "sPermToOp", "sBinderThreadCallingUid", "sAppOpsNotedInThisBinderTransaction", "sAppOpsToNote", "sConfig", "KEY_HISTORICAL_OPS", "DEBUG_LOGGING_ENABLE_PROP", "DEBUG_LOGGING_PACKAGES_PROP", "DEBUG_LOGGING_OPS_PROP", "DEBUG_LOGGING_TAG", "FILTER_BY_UID", "FILTER_BY_PACKAGE_NAME", "FILTER_BY_ATTRIBUTION_TAG", "FILTER_BY_OP_NAMES", "DONT_COLLECT", "COLLECT_SELF", "COLLECT_SYNC", "COLLECT_ASYNC" ],
+  "methodNames" : [ "public static int resolveFirstUnrestrictedUidState(int op)", "public static int resolveLastRestrictedUidState(int op)", "public static String getUidStateName(@UidState int uidState)", "public static final String getFlagName(@OpFlags int flag)", "public static String keyToString(@DataBucketKey long key)", "public static long makeKey(@UidState int uidState, @OpFlags int flags)", "public static int extractUidStateFromKey(@DataBucketKey long key)", "public static int extractFlagsFromKey(@DataBucketKey long key)", "public static String flagsToString(@OpFlags int flags)", "public static int opToSwitch(int op)", "public static String opToName(int op)", "public static String opToPublicName(int op)", "public static int strDebugOpToOp(String op)", "public static String opToPermission(int op)", "public static String opToPermission(@NonNull String op)", "public static String opToRestriction(int op)", "public static int permissionToOpCode(String permission)", "public static RestrictionBypass opAllowSystemBypassRestriction(int op)", "public static int opToDefaultMode(int op)", "public static int opToDefaultMode(@NonNull String appOp)", "public static String modeToName(@Mode int mode)", "public static boolean opAllowsReset(int op)", "public static String toReceiverId(@NonNull Object obj)", "public static String toReceiverId(@NonNull PendingIntent pendingIntent)", "private static long sumForFlagsInStates(@Nullable LongSparseLongArray counts, @UidState int beginUidState, @UidState int endUidState, @OpFlags int flags)", "public List<AppOpsManager.PackageOps> getPackagesForOps(@Nullable String[] ops)", "public List<AppOpsManager.PackageOps> getPackagesForOps(int[] ops)", "public List<PackageOps> getOpsForPackage(int uid, @NonNull String packageName, @Nullable int[] ops)", "public List<AppOpsManager.PackageOps> getOpsForPackage(int uid, @NonNull String packageName, @Nullable String... ops)", "public void getHistoricalOps(@NonNull HistoricalOpsRequest request, @NonNull Executor executor, @NonNull Consumer<HistoricalOps> callback)", "public void getHistoricalOpsFromDiskRaw(@NonNull HistoricalOpsRequest request, @Nullable Executor executor, @NonNull Consumer<HistoricalOps> callback)", "public void reloadNonHistoricalState()", "public void setUidMode(int code, int uid, @Mode int mode)", "public void setUidMode(@NonNull String appOp, int uid, @Mode int mode)", "public void setUserRestriction(int code, boolean restricted, IBinder token)", "public void setUserRestriction(int code, boolean restricted, IBinder token, String[] exceptionPackages)", "public void setUserRestrictionForUser(int code, boolean restricted, IBinder token, String[] exceptionPackages, int userId)", "public void setMode(int code, int uid, String packageName, @Mode int mode)", "public void setMode(@NonNull String op, int uid, @Nullable String packageName, @Mode int mode)", "public void setRestriction(int code, @AttributeUsage int usage, @Mode int mode, String[] exceptionPackages)", "public void resetAllModes()", "public static String permissionToOp(@NonNull String permission)", "public void startWatchingMode(@NonNull String op, @Nullable String packageName, @NonNull final OnOpChangedListener callback)", "public void startWatchingMode(@NonNull String op, @Nullable String packageName, int flags, @NonNull final OnOpChangedListener callback)", "public void startWatchingMode(int op, String packageName, final OnOpChangedListener callback)", "public void startWatchingMode(int op, String packageName, int flags, final OnOpChangedListener callback)", "public void stopWatchingMode(@NonNull OnOpChangedListener callback)", "public void startWatchingActive(@NonNull int[] ops, @NonNull OnOpActiveChangedListener callback)", "public void startWatchingActive(@NonNull String[] ops, @CallbackExecutor @NonNull Executor executor, @NonNull OnOpActiveChangedListener callback)", "public void stopWatchingActive(@NonNull OnOpActiveChangedListener callback)", "public void startWatchingStarted(@NonNull int[] ops, @NonNull OnOpStartedListener callback)", "public void stopWatchingStarted(@NonNull OnOpStartedListener callback)", "public void startWatchingNoted(@NonNull int[] ops, @NonNull OnOpNotedListener callback)", "public void stopWatchingNoted(@NonNull OnOpNotedListener callback)", "private String buildSecurityExceptionMsg(int op, int uid, String packageName)", "public static int strOpToOp(@NonNull String op)", "public int unsafeCheckOp(@NonNull String op, int uid, @NonNull String packageName)", "public int checkOp(@NonNull String op, int uid, @NonNull String packageName)", "public int unsafeCheckOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)", "public int checkOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)", "public int unsafeCheckOpRaw(@NonNull String op, int uid, @NonNull String packageName)", "public int unsafeCheckOpRawNoThrow(@NonNull String op, int uid, @NonNull String packageName)", "public int unsafeCheckOpRawNoThrow(int op, int uid, @NonNull String packageName)", "public int noteOp(@NonNull String op, int uid, @NonNull String packageName)", "public int noteOp(int op)", "public int noteOp(int op, int uid, @Nullable String packageName)", "public int noteOp(@NonNull String op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)", "public int noteOp(int op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)", "public int noteOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)", "public int noteOpNoThrow(int op, int uid, String packageName)", "public int noteOpNoThrow(@NonNull String op, int uid, @NonNull String packageName, @Nullable String attributionTag, @Nullable String message)", "public int noteOpNoThrow(int op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)", "public int noteProxyOp(@NonNull String op, @NonNull String proxiedPackageName)", "public int noteProxyOp(int op, @Nullable String proxiedPackageName)", "public int noteProxyOp(int op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)", "public int noteProxyOp(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)", "public int noteProxyOpNoThrow(@NonNull String op, @NonNull String proxiedPackageName)", "public int noteProxyOpNoThrow(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid)", "public int noteProxyOpNoThrow(@NonNull String op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)", "public int noteProxyOpNoThrow(int op, @Nullable String proxiedPackageName, int proxiedUid, @Nullable String proxiedAttributionTag, @Nullable String message)", "public int checkOp(int op, int uid, String packageName)", "public int checkOpNoThrow(int op, int uid, String packageName)", "public void checkPackage(int uid, @NonNull String packageName)", "public int checkAudioOp(int op, int stream, int uid, String packageName)", "public int checkAudioOpNoThrow(int op, int stream, int uid, String packageName)", "public static IBinder getToken(IAppOpsService service)", "public static IBinder getClientId()", "private static IAppOpsService getService()", "public int startOp(@NonNull String op, int uid, @NonNull String packageName)", "public int startOp(int op)", "public int startOp(int op, int uid, String packageName)", "public int startOp(int op, int uid, String packageName, boolean startIfModeDefault)", "public int startOp(@NonNull String op, int uid, @Nullable String packageName, @Nullable String attributionTag, @Nullable String message)", "public int startOp(int op, int uid, @Nullable String packageName, boolean startIfModeDefault, @Nullable String attributionTag, @Nullable String message)", "public int startOpNoThrow(@NonNull String op, int uid, @NonNull String packageName)", "public int startOpNoThrow(int op, int uid, String packageName)", "public int startOpNoThrow(int op, int uid, String packageName, boolean startIfModeDefault)", "public int startOpNoThrow(@NonNull String op, int uid, @NonNull String packageName, @NonNull String attributionTag, @Nullable String message)", "public int startOpNoThrow(int op, int uid, @NonNull String packageName, boolean startIfModeDefault, @Nullable String attributionTag, @Nullable String message)", "public void finishOp(int op)", "public void finishOp(@NonNull String op, int uid, @NonNull String packageName)", "public void finishOp(@NonNull String op, int uid, @NonNull String packageName, @Nullable String attributionTag)", "public void finishOp(int op, int uid, @NonNull String packageName)", "public void finishOp(int op, int uid, @NonNull String packageName, @Nullable String attributionTag)", "public boolean isOpActive(@NonNull String op, int uid, @NonNull String packageName)", "public static void startNotedAppOpsCollection(int callingUid)", "public static PausedNotedAppOpsCollection pauseNotedAppOpsCollection()", "public static void resumeNotedAppOpsCollection(@Nullable PausedNotedAppOpsCollection prevCollection)", "public static void finishNotedAppOpsCollection()", "private void collectNotedOpForSelf(int op, @Nullable String attributionTag)", "private void collectNotedOpSync(int op, @Nullable String attributionTag)", "private int getNotedOpCollectionMode(int uid, @Nullable String packageName, int op)", "public static void prefixParcelWithAppOpsIfNeeded(@NonNull Parcel p)", "public static void readAndLogNotedAppops(@NonNull Parcel p)", "public void setOnOpNotedCallback(@Nullable @CallbackExecutor Executor asyncExecutor, @Nullable OnOpNotedCallback callback)", "public void setNotedAppOpsCollector(@Nullable AppOpsCollector collector)", "public static boolean isListeningForOpNoted()", "private static boolean isCollectingStackTraces()", "private static String getFormattedStackTrace()", "public boolean isOperationActive(int code, int uid, String packageName)", "public void setHistoryParameters(@HistoricalMode int mode, long baseSnapshotInterval, int compressionStep)", "public void offsetHistory(long offsetMillis)", "public void addHistoricalOps(@NonNull HistoricalOps ops)", "public void resetHistoryParameters()", "public void clearHistory()", "public void rebootHistory(long offlineDurationMillis)", "public RuntimeAppOpAccessMessage collectRuntimeAppOpAccessMessage()", "public static String[] getOpStrs()", "public static int getNumOps()", "private static NoteOpEvent getLastEvent(@Nullable LongSparseArray<NoteOpEvent> events, @UidState int beginUidState, @UidState int endUidState, @OpFlags int flags)", "private static boolean equalsLongSparseLongArray(@Nullable LongSparseLongArray a, @Nullable LongSparseLongArray b)", "private static void writeLongSparseLongArrayToParcel(@Nullable LongSparseLongArray array, @NonNull Parcel parcel)", "private static LongSparseLongArray readLongSparseLongArrayFromParcel(@NonNull Parcel parcel)", "private static LongSparseArray<Object> collectKeys(@Nullable LongSparseLongArray array, @Nullable LongSparseArray<Object> result)", "public static String uidStateToString(@UidState int uidState)", "public static int parseHistoricalMode(@NonNull String mode)", "public static String historicalModeToString(@HistoricalMode int mode)", "private static int getSystemAlertWindowDefault()", "public static int leftCircularDistance(int from, int to, int size)", "private void collectNoteOpCallsForValidation(int op)" ]
+}

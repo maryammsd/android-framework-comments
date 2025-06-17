@@ -1,0 +1,655 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/graphics/HardwareRenderer.java",
+  "packageName" : "android.graphics",
+  "className" : "HardwareRenderer",
+  "comment" : "\n * <p>Creates an instance of a hardware-accelerated renderer. This is used to render a scene built\n * from {@link RenderNode}'s to an output {@link android.view.Surface}. There can be as many\n * HardwareRenderer instances as desired.</p>\n *\n * <h3>Resources & lifecycle</h3>\n *\n * <p>All HardwareRenderer instances share a common render thread. The render thread contains\n * the GPU context & resources necessary to do GPU-accelerated rendering. As such, the first\n * HardwareRenderer created comes with the cost of also creating the associated GPU contexts,\n * however each incremental HardwareRenderer thereafter is fairly cheap. The expected usage\n * is to have a HardwareRenderer instance for every active {@link Surface}. For example\n * when an Activity shows a Dialog the system internally will use 2 hardware renderers, both\n * of which may be drawing at the same time.</p>\n *\n * <p>NOTE: Due to the shared, cooperative nature of the render thread it is critical that\n * any {@link Surface} used must have a prompt, reliable consuming side. System-provided\n * consumers such as {@link android.view.SurfaceView},\n * {@link android.view.Window#takeSurface(SurfaceHolder.Callback2)},\n * or {@link android.view.TextureView} all fit this requirement. However if custom consumers\n * are used such as when using {@link SurfaceTexture} or {@link android.media.ImageReader}\n * it is the app's responsibility to ensure that they consume updates promptly and rapidly.\n * Failure to do so will cause the render thread to stall on that surface, blocking all\n * HardwareRenderer instances.</p>\n ",
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC_OK",
+    "type" : "int",
+    "comment" : "\n     * Nothing interesting to report. Sync & draw kicked off\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC_REDRAW_REQUESTED",
+    "type" : "int",
+    "comment" : "\n     * The renderer is requesting a redraw. This can occur if there's an animation that's running\n     * in the RenderNode tree and the hardware renderer is unable to self-animate.\n     *\n     * <p>If this is returned from syncAndDraw the expectation is that syncAndDraw\n     * will be called again on the next vsync signal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC_LOST_SURFACE_REWARD_IF_FOUND",
+    "type" : "int",
+    "comment" : "\n     * The hardware renderer no longer has a valid {@link android.view.Surface} to render to.\n     * This can happen if {@link Surface#release()} was called. The user should no longer\n     * attempt to call syncAndDraw until a new surface has been provided by calling\n     * setSurface.\n     *\n     * <p>Spoiler: the reward is GPU-accelerated drawing, better find that Surface!\n     ",
+    "links" : [ "android.view.Surface", "Surface#release" ]
+  }, {
+    "name" : "SYNC_CONTEXT_IS_STOPPED",
+    "type" : "int",
+    "comment" : "\n     * The hardware renderer has been set to a \"stopped\" state. If this is returned then the\n     * rendering content has been synced, however a frame was not produced.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC_FRAME_DROPPED",
+    "type" : "int",
+    "comment" : "\n     * The content was synced but the renderer has declined to produce a frame in this vsync\n     * interval. This can happen if a frame was already drawn in this vsync or if the renderer\n     * is outrunning the frame consumer. The renderer will internally re-schedule itself\n     * to render a frame in the next vsync signal, so the caller does not need to do anything\n     * in response to this signal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_DUMP_FRAMESTATS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_DUMP_RESET",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_DUMP_ALL",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CACHE_PATH_SHADERS",
+    "type" : "String",
+    "comment" : "\n     * Name of the file that holds the shaders cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CACHE_PATH_SKIASHADERS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeProxy",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRootNode",
+    "type" : "RenderNode",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "mOpaque",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mForceDark",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsWideGamut",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRenderRequest",
+    "type" : "FrameRenderRequest",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void destroy()",
+    "returnType" : "void",
+    "comment" : "\n     * Destroys the rendering context of this HardwareRenderer. This destroys the resources\n     * associated with this renderer and releases the currently set {@link Surface}. This must\n     * be called when this HardwareRenderer is no longer needed.\n     *\n     * <p>The renderer may be restored from this state by setting a new {@link Surface}, setting\n     * new rendering content with {@link #setContentRoot(RenderNode)}, and resuming\n     * rendering by issuing a new {@link FrameRenderRequest}.\n     *\n     * <p>It is recommended to call this in response to callbacks such as\n     * {@link android.view.SurfaceHolder.Callback#surfaceDestroyed(SurfaceHolder)}.\n     *\n     * <p>Note that if there are any outstanding frame commit callbacks they may never being\n     * invoked if the frame was deferred to a later vsync.\n     ",
+    "links" : [ "Surface", "Surface", "#setContentRoot", "FrameRenderRequest", "android.view.SurfaceHolder.Callback#surfaceDestroyed" ]
+  }, {
+    "name" : "public void setName(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets a name for this renderer. This is used to identify this renderer instance\n     * when reporting debug information such as the per-window frame time metrics\n     * reported by 'adb shell dumpsys gfxinfo [package] framestats'\n     *\n     * @param name The debug name to use for this HardwareRenderer instance\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLightSourceGeometry(float lightX, float lightY, float lightZ, float lightRadius)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the center of the light source. The light source point controls the directionality\n     * and shape of shadows rendered by RenderNode Z & elevation.\n     *\n     * <p>The platform's recommendation is to set lightX to 'displayWidth / 2f - windowLeft', set\n     * lightY to 0 - windowTop, lightZ set to 600dp, and lightRadius to 800dp.\n     *\n     * <p>The light source should be setup both as part of initial configuration, and whenever\n     * the window moves to ensure the light source stays anchored in display space instead\n     * of in window space.\n     *\n     * <p>This must be set at least once along with {@link #setLightSourceAlpha(float, float)}\n     * before shadows will work.\n     *\n     * @param lightX      The X position of the light source\n     * @param lightY      The Y position of the light source\n     * @param lightZ      The Z position of the light source. Must be >= 0.\n     * @param lightRadius The radius of the light source. Smaller radius will have sharper edges,\n     *                    larger radius will have softer shadows.\n     ",
+    "links" : [ "#setLightSourceAlpha" ]
+  }, {
+    "name" : "public void setLightSourceAlpha(@FloatRange(from = 0.0f, to = 1.0f) float ambientShadowAlpha, @FloatRange(from = 0.0f, to = 1.0f) float spotShadowAlpha)",
+    "returnType" : "void",
+    "comment" : "\n     * Configures the ambient & spot shadow alphas. This is the alpha used when the shadow\n     * has max alpha, and ramps down from the values provided to zero.\n     *\n     * <p>These values are typically provided by the current theme, see\n     * {@link android.R.attr#spotShadowAlpha} and {@link android.R.attr#ambientShadowAlpha}.\n     *\n     * <p>This must be set at least once along with\n     * {@link #setLightSourceGeometry(float, float, float, float)} before shadows will work.\n     *\n     * @param ambientShadowAlpha The alpha for the ambient shadow. If unsure, a reasonable default\n     *                           is 0.039f.\n     * @param spotShadowAlpha    The alpha for the spot shadow. If unsure, a reasonable default is\n     *                           0.19f.\n     ",
+    "links" : [ "android.R.attr#spotShadowAlpha", "android.R.attr#ambientShadowAlpha", "#setLightSourceGeometry" ]
+  }, {
+    "name" : "public void setContentRoot(@Nullable RenderNode content)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the content root to render. It is not necessary to call this whenever the content\n     * recording changes. Any mutations to the RenderNode content, or any of the RenderNode's\n     * contained within the content node, will be applied whenever a new {@link FrameRenderRequest}\n     * is issued via {@link #createRenderRequest()} and {@link FrameRenderRequest#syncAndDraw()}.\n     *\n     * @param content The content to set as the root RenderNode. If null the content root is removed\n     *                and the renderer will draw nothing.\n     ",
+    "links" : [ "FrameRenderRequest", "#createRenderRequest", "FrameRenderRequest#syncAndDraw" ]
+  }, {
+    "name" : "public void setSurface(@Nullable Surface surface)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>The surface to render into. The surface is assumed to be associated with the display and\n     * as such is still driven by vsync signals such as those from\n     * {@link android.view.Choreographer} and that it has a native refresh rate matching that of\n     * the display's (typically 60hz).</p>\n     *\n     * <p>NOTE: Due to the shared, cooperative nature of the render thread it is critical that\n     * any {@link Surface} used must have a prompt, reliable consuming side. System-provided\n     * consumers such as {@link android.view.SurfaceView},\n     * {@link android.view.Window#takeSurface(SurfaceHolder.Callback2)},\n     * or {@link android.view.TextureView} all fit this requirement. However if custom consumers\n     * are used such as when using {@link SurfaceTexture} or {@link android.media.ImageReader}\n     * it is the app's responsibility to ensure that they consume updates promptly and rapidly.\n     * Failure to do so will cause the render thread to stall on that surface, blocking all\n     * HardwareRenderer instances.</p>\n     *\n     * @param surface The surface to render into. If null then rendering will be stopped. If\n     *                non-null then {@link Surface#isValid()} must be true.\n     ",
+    "links" : [ "android.view.Choreographer", "Surface", "android.view.SurfaceView", "android.view.Window#takeSurface", "android.view.TextureView", "SurfaceTexture", "android.media.ImageReader", "Surface#isValid" ]
+  }, {
+    "name" : "public void setSurface(@Nullable Surface surface, boolean discardBuffer)",
+    "returnType" : "void",
+    "comment" : "\n     * See {@link #setSurface(Surface)}\n     *\n     * @hide\n     * @param discardBuffer determines whether the surface will attempt to preserve its contents\n     *                      between frames.  If set to true the renderer will attempt to preserve\n     *                      the contents of the buffer between frames if the implementation allows\n     *                      it.  If set to false no attempt will be made to preserve the buffer's\n     *                      contents between frames.\n     ",
+    "links" : [ "#setSurface" ]
+  }, {
+    "name" : "public FrameRenderRequest createRenderRequest()",
+    "returnType" : "FrameRenderRequest",
+    "comment" : "\n     * Returns a {@link FrameRenderRequest} that can be used to render a new frame. This is used\n     * to synchronize the RenderNode content provided by {@link #setContentRoot(RenderNode)} with\n     * the RenderThread and then renders a single frame to the Surface set with\n     * {@link #setSurface(Surface)}.\n     *\n     * @return An instance of {@link FrameRenderRequest}. The instance may be reused for every\n     * frame, so the caller should not hold onto it for longer than a single render request.\n     ",
+    "links" : [ "FrameRenderRequest", "#setContentRoot", "#setSurface", "FrameRenderRequest" ]
+  }, {
+    "name" : "public int syncAndDrawFrame(@NonNull FrameInfo frameInfo)",
+    "returnType" : "int",
+    "comment" : "\n     * Syncs the RenderNode tree to the render thread and requests a frame to be drawn.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean pause()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Suspends any current rendering into the surface but do not do any destruction. This\n     * is useful to temporarily suspend using the active Surface in order to do any Surface\n     * mutations necessary.\n     *\n     * <p>Any subsequent draws will override the pause, resuming normal operation.\n     *\n     * @return true if there was an outstanding render request, false otherwise. If this is true\n     * the caller should ensure that {@link #createRenderRequest()}\n     * and {@link FrameRenderRequest#syncAndDraw()} is called at the soonest\n     * possible time to resume normal operation.\n     *\n     * TODO Should this be exposed? ViewRootImpl needs it because it destroys the old\n     * Surface before getting a new one. However things like SurfaceView will ensure that\n     * the old surface remains un-destroyed until after a new frame has been produced with\n     * the new surface.\n     * @hide\n     ",
+    "links" : [ "#createRenderRequest", "FrameRenderRequest#syncAndDraw" ]
+  }, {
+    "name" : "public void setStopped(boolean stopped)",
+    "returnType" : "void",
+    "comment" : "\n     * Hard stops rendering into the surface. If the renderer is stopped it will\n     * block any attempt to render. Calls to {@link FrameRenderRequest#syncAndDraw()} will\n     * still sync over the latest rendering content, however they will not render and instead\n     * {@link #SYNC_CONTEXT_IS_STOPPED} will be returned.\n     *\n     * <p>If false is passed then rendering will resume as normal. Any pending rendering requests\n     * will produce a new frame at the next vsync signal.\n     *\n     * <p>This is useful in combination with lifecycle events such as {@link Activity#onStop()}\n     * and {@link Activity#onStart()}.\n     *\n     * @param stopped true to stop all rendering, false to resume\n     * @hide\n     ",
+    "links" : [ "FrameRenderRequest#syncAndDraw", "#SYNC_CONTEXT_IS_STOPPED", "Activity#onStop", "Activity#onStart" ]
+  }, {
+    "name" : "public void stop()",
+    "returnType" : "void",
+    "comment" : "\n     * Hard stops rendering into the surface. If the renderer is stopped it will\n     * block any attempt to render. Calls to {@link FrameRenderRequest#syncAndDraw()} will\n     * still sync over the latest rendering content, however they will not render and instead\n     * {@link #SYNC_CONTEXT_IS_STOPPED} will be returned.\n     *\n     * <p>This is useful in combination with lifecycle events such as {@link Activity#onStop()}.\n     * See {@link #start()} for resuming rendering.\n     ",
+    "links" : [ "FrameRenderRequest#syncAndDraw", "#SYNC_CONTEXT_IS_STOPPED", "Activity#onStop", "#start" ]
+  }, {
+    "name" : "public void start()",
+    "returnType" : "void",
+    "comment" : "\n     * Resumes rendering into the surface. Any pending rendering requests\n     * will produce a new frame at the next vsync signal.\n     *\n     * <p>This is useful in combination with lifecycle events such as {@link Activity#onStart()}.\n     * See {@link #stop()} for stopping rendering.\n     ",
+    "links" : [ "Activity#onStart", "#stop" ]
+  }, {
+    "name" : "public void clearContent()",
+    "returnType" : "void",
+    "comment" : "\n     * Destroys all the display lists associated with the current rendering content.\n     * This includes releasing a reference to the current content root RenderNode. It will\n     * therefore be necessary to call {@link #setContentRoot(RenderNode)} in order to resume\n     * rendering after calling this, along with re-recording the display lists for the\n     * RenderNode tree.\n     *\n     * <p>It is recommended, but not necessary, to use this in combination with lifecycle events\n     * such as {@link Activity#onStop()} and {@link Activity#onStart()} or in response to\n     * {@link android.content.ComponentCallbacks2#onTrimMemory(int)} signals such as\n     * {@link android.content.ComponentCallbacks2#TRIM_MEMORY_UI_HIDDEN}\n     *\n     * See also {@link #stop()}.\n     ",
+    "links" : [ "#setContentRoot", "Activity#onStop", "Activity#onStart", "android.content.ComponentCallbacks2#onTrimMemory", "android.content.ComponentCallbacks2#TRIM_MEMORY_UI_HIDDEN", "#stop" ]
+  }, {
+    "name" : "public boolean setForceDark(boolean enable)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Whether or not the force-dark feature should be used for this renderer.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void allocateBuffers()",
+    "returnType" : "void",
+    "comment" : "\n     * Allocate buffers ahead of time to avoid allocation delays during rendering.\n     *\n     * <p>Typically a Surface will allocate buffers lazily. This is usually fine and reduces the\n     * memory usage of Surfaces that render rarely or never hit triple buffering. However\n     * for UI it can result in a slight bit of jank on first launch. This hint will\n     * tell the HardwareRenderer that now is a good time to allocate the 3 buffers\n     * necessary for typical rendering.\n     *\n     * <p>Must be called after a {@link Surface} has been set.\n     *\n     * TODO: Figure out if we even need/want this. Should HWUI just be doing this in response\n     * to setSurface anyway? Vulkan swapchain makes this murky, so delay making it public\n     * @hide\n     ",
+    "links" : [ "Surface" ]
+  }, {
+    "name" : "public void notifyFramePending()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies the hardware renderer that a call to {@link FrameRenderRequest#syncAndDraw()} will\n     * be coming soon. This is used to help schedule when RenderThread-driven animations will\n     * happen as the renderer wants to avoid producing more than one frame per vsync signal.\n     ",
+    "links" : [ "FrameRenderRequest#syncAndDraw" ]
+  }, {
+    "name" : "public void setOpaque(boolean opaque)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the HardwareRenderer's opacity. Will take effect on the next frame produced.\n     *\n     * <p>If the renderer is set to opaque it is the app's responsibility to ensure that the\n     * content renders to every pixel of the Surface, otherwise corruption may result. Note that\n     * this includes ensuring that the first draw of any given pixel does not attempt to blend\n     * against the destination. If this is false then the hardware renderer will clear to\n     * transparent at the start of every frame.\n     *\n     * @param opaque true if the content rendered is opaque, false if the renderer should clear\n     *               to transparent before rendering\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isOpaque()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Whether or not the renderer is set to be opaque. See {@link #setOpaque(boolean)}\n     *\n     * @return true if the renderer is opaque, false otherwise\n     ",
+    "links" : [ "#setOpaque" ]
+  }, {
+    "name" : "public void setFrameCompleteCallback(FrameCompleteCallback callback)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addObserver(HardwareRendererObserver observer)",
+    "returnType" : "void",
+    "comment" : "\n     * TODO: Public API this?\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeObserver(HardwareRendererObserver observer)",
+    "returnType" : "void",
+    "comment" : "\n     * TODO: Public API this?\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWideGamut(boolean wideGamut)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable/disable wide gamut rendering on this renderer. Whether or not the actual rendering\n     * will be wide gamut depends on the hardware support for such rendering.\n     *\n     * @param wideGamut true if this renderer should render in wide gamut, false if it should\n     *                  render in sRGB\n     *                  TODO: Figure out color...\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fence()",
+    "returnType" : "void",
+    "comment" : "\n     * Blocks until all previously queued work has completed.\n     *\n     * TODO: Only used for draw finished listeners, but the FrameCompleteCallback does that\n     * better\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerAnimatingRenderNode(RenderNode animator)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerVectorDrawableAnimator(NativeVectorDrawableAnimator animator)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void stopDrawing()",
+    "returnType" : "void",
+    "comment" : "\n     * Prevents any further drawing until {@link FrameRenderRequest#syncAndDraw()} is called.\n     * This is a signal that the contents of the RenderNode tree are no longer safe to play back.\n     * In practice this usually means that there are Functor pointers in the\n     * display list that are no longer valid.\n     *\n     * TODO: Can we get webview off of this?\n     *\n     * @hide\n     ",
+    "links" : [ "FrameRenderRequest#syncAndDraw" ]
+  }, {
+    "name" : "public TextureLayer createTextureLayer()",
+    "returnType" : "TextureLayer",
+    "comment" : "\n     * Creates a new hardware layer. A hardware layer built by calling this\n     * method will be treated as a texture layer, instead of as a render target.\n     *\n     * @return A hardware layer\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void detachSurfaceTexture(long hardwareLayer)",
+    "returnType" : "void",
+    "comment" : "\n     * Detaches the layer's surface texture from the GL context and releases\n     * the texture id\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void buildLayer(RenderNode node)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean copyLayerInto(final TextureLayer layer, final Bitmap bitmap)",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushLayerUpdate(TextureLayer layer)",
+    "returnType" : "void",
+    "comment" : "\n     * Indicates that the specified hardware layer needs to be updated\n     * as soon as possible.\n     *\n     * @param layer The hardware layer that needs an update\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onLayerDestroyed(TextureLayer layer)",
+    "returnType" : "void",
+    "comment" : "\n     * Tells the HardwareRenderer that the layer is destroyed. The renderer\n     * should remove the layer from any update queues.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFrameCallback(FrameDrawingCallback callback)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addRenderNode(RenderNode node, boolean placeFront)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a rendernode to the renderer which can be drawn and changed asynchronously to the\n     * rendernode of the UI thread.\n     *\n     * @param node       The node to add.\n     * @param placeFront If true, the render node will be placed in front of the content node,\n     *                   otherwise behind the content node.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeRenderNode(RenderNode node)",
+    "returnType" : "void",
+    "comment" : "\n     * Only especially added render nodes can be removed.\n     *\n     * @param node The node which was added via addRenderNode which should get removed again.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void drawRenderNode(RenderNode node)",
+    "returnType" : "void",
+    "comment" : "\n     * Draws a particular render node. If the node is not the content node, only the additional\n     * nodes will get drawn and the content remains untouched.\n     *\n     * @param node The node to be drawn.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean loadSystemProperties()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Loads system properties used by the renderer. This method is invoked\n     * whenever system properties are modified. Implementations can use this\n     * to trigger live updates of the renderer based on properties.\n     *\n     * @return True if a property has changed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dumpProfileInfo(FileDescriptor fd, @DumpFlags int dumpFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContentDrawBounds(int left, int top, int right, int bottom)",
+    "returnType" : "void",
+    "comment" : "\n     * To avoid unnecessary overdrawing of the main content all additionally passed render nodes\n     * will be prevented to overdraw this area. It will be synchronized with the draw call.\n     * This should be updated in the content view's draw call.\n     *\n     * @param left   The left side of the protected bounds.\n     * @param top    The top side of the protected bounds.\n     * @param right  The right side of the protected bounds.\n     * @param bottom The bottom side of the protected bounds.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPictureCaptureCallback(@Nullable PictureCapturedCallback callback)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWideGamut()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : " static void invokePictureCapturedCallback(long picturePtr, PictureCapturedCallback callback)",
+    "returnType" : "void",
+    "comment" : " called by native ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void validateAlpha(float alpha, String argumentName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void validatePositive(float f, String argumentName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void validateFinite(float f, String argumentName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void invokeFunctor(long functor, boolean waitForCompletion)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setFPSDivisor(int divisor)",
+    "returnType" : "void",
+    "comment" : "\n     * b/68769804: For low FPS experiments.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setContextPriority(int priority)",
+    "returnType" : "void",
+    "comment" : "\n     * Changes the OpenGL context priority if IMG_context_priority extension is available. Must be\n     * called before any OpenGL context is created.\n     *\n     * @param priority The priority to use. Must be one of EGL_CONTEXT_PRIORITY_* values.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setHighContrastText(boolean highContrastText)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets whether or not high contrast text rendering is enabled. The setting is global\n     * but only affects content rendered after the change is made.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setIsolatedProcess(boolean isIsolated)",
+    "returnType" : "void",
+    "comment" : "\n     * If set RenderThread will avoid doing any IPC using instead a fake vsync & DisplayInfo source\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setDebuggingEnabled(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * If set extra graphics debugging abilities will be enabled such as dumping skp\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int copySurfaceInto(Surface surface, Rect srcRect, Bitmap bitmap)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Bitmap createHardwareBitmap(RenderNode node, int width, int height)",
+    "returnType" : "Bitmap",
+    "comment" : "\n     * Creates a {@link android.graphics.Bitmap.Config#HARDWARE} bitmap from the given\n     * RenderNode. Note that the RenderNode should be created as a root node (so x/y of 0,0), and\n     * not the RenderNode from a View.\n     *\n     * @hide\n     *",
+    "links" : [ "android.graphics.Bitmap.Config#HARDWARE" ]
+  }, {
+    "name" : "public static void trimMemory(int level)",
+    "returnType" : "void",
+    "comment" : "\n     * Invoke this method when the system is running out of memory. This\n     * method will attempt to recover as much memory as possible, based on\n     * the specified hint.\n     *\n     * @param level Hint about the amount of memory that should be trimmed,\n     *              see {@link android.content.ComponentCallbacks}\n     * @hide\n     ",
+    "links" : [ "android.content.ComponentCallbacks" ]
+  }, {
+    "name" : "public static void overrideProperty(@NonNull String name, @NonNull String value)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setupDiskCache(File cacheDir)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the directory to use as a persistent storage for threaded rendering\n     * resources.\n     *\n     * @param cacheDir A directory the current process can write to\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setPackageName(String packageName)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static native void disableVsync()",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static native void preload()",
+    "returnType" : "void",
+    "comment" : "\n     * Start render thread and initialize EGL or Vulkan.\n     *\n     * Initializing EGL involves loading and initializing the graphics driver. Some drivers take\n     * several 10s of milliseconds to do this, so doing it on-demand when an app tries to render\n     * its first frame adds directly to user-visible app launch latency.\n     *\n     * Should only be called after GraphicsEnvironment.chooseDriver().\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static native void setupShadersDiskCache(String cacheFile, String skiaCacheFile)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRotateProcessStatsBuffer()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetProcessStatsBuffer(int fd)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetRenderThreadTid(long nativeProxy)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nCreateRootRenderNode()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nCreateProxy(boolean translucent, boolean isWideGamut, long rootRenderNode)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDeleteProxy(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nLoadSystemProperties(long nativeProxy)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetName(long nativeProxy, String name)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetSurface(long nativeProxy, Surface window, boolean discardBuffer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nPause(long nativeProxy)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetStopped(long nativeProxy, boolean stopped)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetLightGeometry(long nativeProxy, float lightX, float lightY, float lightZ, float lightRadius)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetLightAlpha(long nativeProxy, float ambientShadowAlpha, float spotShadowAlpha)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetOpaque(long nativeProxy, boolean opaque)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetWideGamut(long nativeProxy, boolean wideGamut)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nSyncAndDrawFrame(long nativeProxy, long[] frameInfo, int size)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDestroy(long nativeProxy, long rootRenderNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRegisterAnimatingRenderNode(long rootRenderNode, long animatingNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRegisterVectorDrawableAnimator(long rootRenderNode, long animator)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nInvokeFunctor(long functor, boolean waitForCompletion)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nCreateTextureLayer(long nativeProxy)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nBuildLayer(long nativeProxy, long node)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nCopyLayerInto(long nativeProxy, long layer, long bitmapHandle)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nPushLayerUpdate(long nativeProxy, long layer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nCancelLayerUpdate(long nativeProxy, long layer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDetachSurfaceTexture(long nativeProxy, long layer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDestroyHardwareResources(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nTrimMemory(int level)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nOverrideProperty(String name, String value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nFence(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nStopDrawing(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nNotifyFramePending(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDumpProfileInfo(long nativeProxy, FileDescriptor fd, @DumpFlags int dumpFlags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nAddRenderNode(long nativeProxy, long rootRenderNode, boolean placeFront)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRemoveRenderNode(long nativeProxy, long rootRenderNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nDrawRenderNode(long nativeProxy, long rootRenderNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetContentDrawBounds(long nativeProxy, int left, int top, int right, int bottom)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetPictureCaptureCallback(long nativeProxy, PictureCapturedCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetFrameCallback(long nativeProxy, FrameDrawingCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetFrameCompleteCallback(long nativeProxy, FrameCompleteCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nAddObserver(long nativeProxy, long nativeObserver)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRemoveObserver(long nativeProxy, long nativeObserver)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nCopySurfaceInto(Surface surface, int srcLeft, int srcTop, int srcRight, int srcBottom, long bitmapHandle)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native Bitmap nCreateHardwareBitmap(long renderNode, int width, int height)",
+    "returnType" : "Bitmap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetHighContrastText(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nHackySetRTAnimationsEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : " For temporary experimentation b/66945974",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetDebuggingEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetIsolatedProcess(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetContextPriority(int priority)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nAllocateBuffers(long nativeProxy)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetForceDark(long nativeProxy, boolean enabled)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "LOG_TAG", "SYNC_OK", "SYNC_REDRAW_REQUESTED", "SYNC_LOST_SURFACE_REWARD_IF_FOUND", "SYNC_CONTEXT_IS_STOPPED", "SYNC_FRAME_DROPPED", "FLAG_DUMP_FRAMESTATS", "FLAG_DUMP_RESET", "FLAG_DUMP_ALL", "CACHE_PATH_SHADERS", "CACHE_PATH_SKIASHADERS", "mNativeProxy", "mRootNode", "mOpaque", "mForceDark", "mIsWideGamut", "mRenderRequest" ],
+  "methodNames" : [ "public void destroy()", "public void setName(@NonNull String name)", "public void setLightSourceGeometry(float lightX, float lightY, float lightZ, float lightRadius)", "public void setLightSourceAlpha(@FloatRange(from = 0.0f, to = 1.0f) float ambientShadowAlpha, @FloatRange(from = 0.0f, to = 1.0f) float spotShadowAlpha)", "public void setContentRoot(@Nullable RenderNode content)", "public void setSurface(@Nullable Surface surface)", "public void setSurface(@Nullable Surface surface, boolean discardBuffer)", "public FrameRenderRequest createRenderRequest()", "public int syncAndDrawFrame(@NonNull FrameInfo frameInfo)", "public boolean pause()", "public void setStopped(boolean stopped)", "public void stop()", "public void start()", "public void clearContent()", "public boolean setForceDark(boolean enable)", "public void allocateBuffers()", "public void notifyFramePending()", "public void setOpaque(boolean opaque)", "public boolean isOpaque()", "public void setFrameCompleteCallback(FrameCompleteCallback callback)", "public void addObserver(HardwareRendererObserver observer)", "public void removeObserver(HardwareRendererObserver observer)", "public void setWideGamut(boolean wideGamut)", "public void fence()", "public void registerAnimatingRenderNode(RenderNode animator)", "public void registerVectorDrawableAnimator(NativeVectorDrawableAnimator animator)", "public void stopDrawing()", "public TextureLayer createTextureLayer()", "public void detachSurfaceTexture(long hardwareLayer)", "public void buildLayer(RenderNode node)", "public boolean copyLayerInto(final TextureLayer layer, final Bitmap bitmap)", "public void pushLayerUpdate(TextureLayer layer)", "public void onLayerDestroyed(TextureLayer layer)", "public void setFrameCallback(FrameDrawingCallback callback)", "public void addRenderNode(RenderNode node, boolean placeFront)", "public void removeRenderNode(RenderNode node)", "public void drawRenderNode(RenderNode node)", "public boolean loadSystemProperties()", "public void dumpProfileInfo(FileDescriptor fd, @DumpFlags int dumpFlags)", "public void setContentDrawBounds(int left, int top, int right, int bottom)", "public void setPictureCaptureCallback(@Nullable PictureCapturedCallback callback)", "public boolean isWideGamut()", " static void invokePictureCapturedCallback(long picturePtr, PictureCapturedCallback callback)", "private static void validateAlpha(float alpha, String argumentName)", "private static void validatePositive(float f, String argumentName)", "private static void validateFinite(float f, String argumentName)", "public static void invokeFunctor(long functor, boolean waitForCompletion)", "public static void setFPSDivisor(int divisor)", "public static void setContextPriority(int priority)", "public static void setHighContrastText(boolean highContrastText)", "public static void setIsolatedProcess(boolean isIsolated)", "public static void setDebuggingEnabled(boolean enable)", "public static int copySurfaceInto(Surface surface, Rect srcRect, Bitmap bitmap)", "public static Bitmap createHardwareBitmap(RenderNode node, int width, int height)", "public static void trimMemory(int level)", "public static void overrideProperty(@NonNull String name, @NonNull String value)", "public static void setupDiskCache(File cacheDir)", "public static void setPackageName(String packageName)", "public static native void disableVsync()", "public static native void preload()", "protected static native void setupShadersDiskCache(String cacheFile, String skiaCacheFile)", "private static native void nRotateProcessStatsBuffer()", "private static native void nSetProcessStatsBuffer(int fd)", "private static native int nGetRenderThreadTid(long nativeProxy)", "private static native long nCreateRootRenderNode()", "private static native long nCreateProxy(boolean translucent, boolean isWideGamut, long rootRenderNode)", "private static native void nDeleteProxy(long nativeProxy)", "private static native boolean nLoadSystemProperties(long nativeProxy)", "private static native void nSetName(long nativeProxy, String name)", "private static native void nSetSurface(long nativeProxy, Surface window, boolean discardBuffer)", "private static native boolean nPause(long nativeProxy)", "private static native void nSetStopped(long nativeProxy, boolean stopped)", "private static native void nSetLightGeometry(long nativeProxy, float lightX, float lightY, float lightZ, float lightRadius)", "private static native void nSetLightAlpha(long nativeProxy, float ambientShadowAlpha, float spotShadowAlpha)", "private static native void nSetOpaque(long nativeProxy, boolean opaque)", "private static native void nSetWideGamut(long nativeProxy, boolean wideGamut)", "private static native int nSyncAndDrawFrame(long nativeProxy, long[] frameInfo, int size)", "private static native void nDestroy(long nativeProxy, long rootRenderNode)", "private static native void nRegisterAnimatingRenderNode(long rootRenderNode, long animatingNode)", "private static native void nRegisterVectorDrawableAnimator(long rootRenderNode, long animator)", "private static native void nInvokeFunctor(long functor, boolean waitForCompletion)", "private static native long nCreateTextureLayer(long nativeProxy)", "private static native void nBuildLayer(long nativeProxy, long node)", "private static native boolean nCopyLayerInto(long nativeProxy, long layer, long bitmapHandle)", "private static native void nPushLayerUpdate(long nativeProxy, long layer)", "private static native void nCancelLayerUpdate(long nativeProxy, long layer)", "private static native void nDetachSurfaceTexture(long nativeProxy, long layer)", "private static native void nDestroyHardwareResources(long nativeProxy)", "private static native void nTrimMemory(int level)", "private static native void nOverrideProperty(String name, String value)", "private static native void nFence(long nativeProxy)", "private static native void nStopDrawing(long nativeProxy)", "private static native void nNotifyFramePending(long nativeProxy)", "private static native void nDumpProfileInfo(long nativeProxy, FileDescriptor fd, @DumpFlags int dumpFlags)", "private static native void nAddRenderNode(long nativeProxy, long rootRenderNode, boolean placeFront)", "private static native void nRemoveRenderNode(long nativeProxy, long rootRenderNode)", "private static native void nDrawRenderNode(long nativeProxy, long rootRenderNode)", "private static native void nSetContentDrawBounds(long nativeProxy, int left, int top, int right, int bottom)", "private static native void nSetPictureCaptureCallback(long nativeProxy, PictureCapturedCallback callback)", "private static native void nSetFrameCallback(long nativeProxy, FrameDrawingCallback callback)", "private static native void nSetFrameCompleteCallback(long nativeProxy, FrameCompleteCallback callback)", "private static native void nAddObserver(long nativeProxy, long nativeObserver)", "private static native void nRemoveObserver(long nativeProxy, long nativeObserver)", "private static native int nCopySurfaceInto(Surface surface, int srcLeft, int srcTop, int srcRight, int srcBottom, long bitmapHandle)", "private static native Bitmap nCreateHardwareBitmap(long renderNode, int width, int height)", "private static native void nSetHighContrastText(boolean enabled)", "private static native void nHackySetRTAnimationsEnabled(boolean enabled)", "private static native void nSetDebuggingEnabled(boolean enabled)", "private static native void nSetIsolatedProcess(boolean enabled)", "private static native void nSetContextPriority(int priority)", "private static native void nAllocateBuffers(long nativeProxy)", "private static native void nSetForceDark(long nativeProxy, boolean enabled)" ]
+}

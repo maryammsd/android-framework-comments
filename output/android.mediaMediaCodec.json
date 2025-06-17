@@ -1,0 +1,750 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/MediaCodec.java",
+  "packageName" : "android.media",
+  "className" : "MediaCodec",
+  "comment" : "\n MediaCodec class can be used to access low-level media codecs, i.e. encoder/decoder components.\n It is part of the Android low-level multimedia support infrastructure (normally used together\n with {@link MediaExtractor}, {@link MediaSync}, {@link MediaMuxer}, {@link MediaCrypto},\n {@link MediaDrm}, {@link Image}, {@link Surface}, and {@link AudioTrack}.)\n <p>\n <center><object style=\"width: 540px; height: 205px;\" type=\"image/svg+xml\"\n   data=\"../../../images/media/mediacodec_buffers.svg\"><img\n   src=\"../../../images/media/mediacodec_buffers.png\" style=\"width: 540px; height: 205px\"\n   alt=\"MediaCodec buffer flow diagram\"></object></center>\n <p>\n In broad terms, a codec processes input data to generate output data. It processes data\n asynchronously and uses a set of input and output buffers. At a simplistic level, you request\n (or receive) an empty input buffer, fill it up with data and send it to the codec for\n processing. The codec uses up the data and transforms it into one of its empty output buffers.\n Finally, you request (or receive) a filled output buffer, consume its contents and release it\n back to the codec.\n\n <h3>Data Types</h3>\n <p>\n Codecs operate on three kinds of data: compressed data, raw audio data and raw video data.\n All three kinds of data can be processed using {@link ByteBuffer ByteBuffers}, but you should use\n a {@link Surface} for raw video data to improve codec performance. Surface uses native video\n buffers without mapping or copying them to ByteBuffers; thus, it is much more efficient.\n You normally cannot access the raw video data when using a Surface, but you can use the\n {@link ImageReader} class to access unsecured decoded (raw) video frames. This may still be more\n efficient than using ByteBuffers, as some native buffers may be mapped into {@linkplain\n ByteBuffer#isDirect direct} ByteBuffers. When using ByteBuffer mode, you can access raw video\n frames using the {@link Image} class and {@link #getInputImage getInput}/{@link #getOutputImage\n OutputImage(int)}.\n\n <h4>Compressed Buffers</h4>\n <p>\n Input buffers (for decoders) and output buffers (for encoders) contain compressed data according\n to the {@linkplain MediaFormat#KEY_MIME format's type}. For video types this is normally a single\n compressed video frame. For audio data this is normally a single access unit (an encoded audio\n segment typically containing a few milliseconds of audio as dictated by the format type), but\n this requirement is slightly relaxed in that a buffer may contain multiple encoded access units\n of audio. In either case, buffers do not start or end on arbitrary byte boundaries, but rather on\n frame/access unit boundaries unless they are flagged with {@link #BUFFER_FLAG_PARTIAL_FRAME}.\n\n <h4>Raw Audio Buffers</h4>\n <p>\n Raw audio buffers contain entire frames of PCM audio data, which is one sample for each channel\n in channel order. Each PCM audio sample is either a 16 bit signed integer or a float,\n in native byte order.\n Raw audio buffers in the float PCM encoding are only possible\n if the MediaFormat's {@linkplain MediaFormat#KEY_PCM_ENCODING}\n is set to {@linkplain AudioFormat#ENCODING_PCM_FLOAT} during MediaCodec\n {@link #configure configure(&hellip;)}\n and confirmed by {@link #getOutputFormat} for decoders\n or {@link #getInputFormat} for encoders.\n A sample method to check for float PCM in the MediaFormat is as follows:\n\n <pre class=prettyprint>\n static boolean isPcmFloat(MediaFormat format) {\n   return format.getInteger(MediaFormat.KEY_PCM_ENCODING, AudioFormat.ENCODING_PCM_16BIT)\n       == AudioFormat.ENCODING_PCM_FLOAT;\n }</pre>\n\n In order to extract, in a short array,\n one channel of a buffer containing 16 bit signed integer audio data,\n the following code may be used:\n\n <pre class=prettyprint>\n // Assumes the buffer PCM encoding is 16 bit.\n short[] getSamplesForChannel(MediaCodec codec, int bufferId, int channelIx) {\n   ByteBuffer outputBuffer = codec.getOutputBuffer(bufferId);\n   MediaFormat format = codec.getOutputFormat(bufferId);\n   ShortBuffer samples = outputBuffer.order(ByteOrder.nativeOrder()).asShortBuffer();\n   int numChannels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT);\n   if (channelIx &lt; 0 || channelIx &gt;= numChannels) {\n     return null;\n   }\n   short[] res = new short[samples.remaining() / numChannels];\n   for (int i = 0; i &lt; res.length; ++i) {\n     res[i] = samples.get(i * numChannels + channelIx);\n   }\n   return res;\n }</pre>\n\n <h4>Raw Video Buffers</h4>\n <p>\n In ByteBuffer mode video buffers are laid out according to their {@linkplain\n MediaFormat#KEY_COLOR_FORMAT color format}. You can get the supported color formats as an array\n from {@link #getCodecInfo}{@code .}{@link MediaCodecInfo#getCapabilitiesForType\n getCapabilitiesForType(&hellip;)}{@code .}{@link CodecCapabilities#colorFormats colorFormats}.\n Video codecs may support three kinds of color formats:\n <ul>\n <li><strong>native raw video format:</strong> This is marked by {@link\n CodecCapabilities#COLOR_FormatSurface} and it can be used with an input or output Surface.</li>\n <li><strong>flexible YUV buffers</strong> (such as {@link\n CodecCapabilities#COLOR_FormatYUV420Flexible}): These can be used with an input/output Surface,\n as well as in ByteBuffer mode, by using {@link #getInputImage getInput}/{@link #getOutputImage\n OutputImage(int)}.</li>\n <li><strong>other, specific formats:</strong> These are normally only supported in ByteBuffer\n mode. Some color formats are vendor specific. Others are defined in {@link CodecCapabilities}.\n For color formats that are equivalent to a flexible format, you can still use {@link\n #getInputImage getInput}/{@link #getOutputImage OutputImage(int)}.</li>\n </ul>\n <p>\n All video codecs support flexible YUV 4:2:0 buffers since {@link\n android.os.Build.VERSION_CODES#LOLLIPOP_MR1}.\n\n <h4>Accessing Raw Video ByteBuffers on Older Devices</h4>\n <p>\n Prior to {@link android.os.Build.VERSION_CODES#LOLLIPOP} and {@link Image} support, you need to\n use the {@link MediaFormat#KEY_STRIDE} and {@link MediaFormat#KEY_SLICE_HEIGHT} output format\n values to understand the layout of the raw output buffers.\n <p class=note>\n Note that on some devices the slice-height is advertised as 0. This could mean either that the\n slice-height is the same as the frame height, or that the slice-height is the frame height\n aligned to some value (usually a power of 2). Unfortunately, there is no standard and simple way\n to tell the actual slice height in this case. Furthermore, the vertical stride of the {@code U}\n plane in planar formats is also not specified or defined, though usually it is half of the slice\n height.\n <p>\n The {@link MediaFormat#KEY_WIDTH} and {@link MediaFormat#KEY_HEIGHT} keys specify the size of the\n video frames; however, for most encondings the video (picture) only occupies a portion of the\n video frame. This is represented by the 'crop rectangle'.\n <p>\n You need to use the following keys to get the crop rectangle of raw output images from the\n {@linkplain #getOutputFormat output format}. If these keys are not present, the video occupies the\n entire video frame.The crop rectangle is understood in the context of the output frame\n <em>before</em> applying any {@linkplain MediaFormat#KEY_ROTATION rotation}.\n <table style=\"width: 0%\">\n  <thead>\n   <tr>\n    <th>Format Key</th>\n    <th>Type</th>\n    <th>Description</th>\n   </tr>\n  </thead>\n  <tbody>\n   <tr>\n    <td>{@code \"crop-left\"}</td>\n    <td>Integer</td>\n    <td>The left-coordinate (x) of the crop rectangle</td>\n   </tr><tr>\n    <td>{@code \"crop-top\"}</td>\n    <td>Integer</td>\n    <td>The top-coordinate (y) of the crop rectangle</td>\n   </tr><tr>\n    <td>{@code \"crop-right\"}</td>\n    <td>Integer</td>\n    <td>The right-coordinate (x) <strong>MINUS 1</strong> of the crop rectangle</td>\n   </tr><tr>\n    <td>{@code \"crop-bottom\"}</td>\n    <td>Integer</td>\n    <td>The bottom-coordinate (y) <strong>MINUS 1</strong> of the crop rectangle</td>\n   </tr><tr>\n    <td colspan=3>\n     The right and bottom coordinates can be understood as the coordinates of the right-most\n     valid column/bottom-most valid row of the cropped output image.\n    </td>\n   </tr>\n  </tbody>\n </table>\n <p>\n The size of the video frame (before rotation) can be calculated as such:\n <pre class=prettyprint>\n MediaFormat format = decoder.getOutputFormat(&hellip;);\n int width = format.getInteger(MediaFormat.KEY_WIDTH);\n if (format.containsKey(\"crop-left\") && format.containsKey(\"crop-right\")) {\n     width = format.getInteger(\"crop-right\") + 1 - format.getInteger(\"crop-left\");\n }\n int height = format.getInteger(MediaFormat.KEY_HEIGHT);\n if (format.containsKey(\"crop-top\") && format.containsKey(\"crop-bottom\")) {\n     height = format.getInteger(\"crop-bottom\") + 1 - format.getInteger(\"crop-top\");\n }\n </pre>\n <p class=note>\n Also note that the meaning of {@link BufferInfo#offset BufferInfo.offset} was not consistent across\n devices. On some devices the offset pointed to the top-left pixel of the crop rectangle, while on\n most devices it pointed to the top-left pixel of the entire frame.\n\n <h3>States</h3>\n <p>\n During its life a codec conceptually exists in one of three states: Stopped, Executing or\n Released. The Stopped collective state is actually the conglomeration of three states:\n Uninitialized, Configured and Error, whereas the Executing state conceptually progresses through\n three sub-states: Flushed, Running and End-of-Stream.\n <p>\n <center><object style=\"width: 516px; height: 353px;\" type=\"image/svg+xml\"\n   data=\"../../../images/media/mediacodec_states.svg\"><img\n   src=\"../../../images/media/mediacodec_states.png\" style=\"width: 519px; height: 356px\"\n   alt=\"MediaCodec state diagram\"></object></center>\n <p>\n When you create a codec using one of the factory methods, the codec is in the Uninitialized\n state. First, you need to configure it via {@link #configure configure(&hellip;)}, which brings\n it to the Configured state, then call {@link #start} to move it to the Executing state. In this\n state you can process data through the buffer queue manipulation described above.\n <p>\n The Executing state has three sub-states: Flushed, Running and End-of-Stream. Immediately after\n {@link #start} the codec is in the Flushed sub-state, where it holds all the buffers. As soon\n as the first input buffer is dequeued, the codec moves to the Running sub-state, where it spends\n most of its life. When you queue an input buffer with the {@linkplain #BUFFER_FLAG_END_OF_STREAM\n end-of-stream marker}, the codec transitions to the End-of-Stream sub-state. In this state the\n codec no longer accepts further input buffers, but still generates output buffers until the\n end-of-stream is reached on the output. You can move back to the Flushed sub-state at any time\n while in the Executing state using {@link #flush}.\n <p>\n Call {@link #stop} to return the codec to the Uninitialized state, whereupon it may be configured\n again. When you are done using a codec, you must release it by calling {@link #release}.\n <p>\n On rare occasions the codec may encounter an error and move to the Error state. This is\n communicated using an invalid return value from a queuing operation, or sometimes via an\n exception. Call {@link #reset} to make the codec usable again. You can call it from any state to\n move the codec back to the Uninitialized state. Otherwise, call {@link #release} to move to the\n terminal Released state.\n\n <h3>Creation</h3>\n <p>\n Use {@link MediaCodecList} to create a MediaCodec for a specific {@link MediaFormat}. When\n decoding a file or a stream, you can get the desired format from {@link\n MediaExtractor#getTrackFormat MediaExtractor.getTrackFormat}. Inject any specific features that\n you want to add using {@link MediaFormat#setFeatureEnabled MediaFormat.setFeatureEnabled}, then\n call {@link MediaCodecList#findDecoderForFormat MediaCodecList.findDecoderForFormat} to get the\n name of a codec that can handle that specific media format. Finally, create the codec using\n {@link #createByCodecName}.\n <p class=note>\n <strong>Note:</strong> On {@link android.os.Build.VERSION_CODES#LOLLIPOP}, the format to\n {@code MediaCodecList.findDecoder}/{@code EncoderForFormat} must not contain a {@linkplain\n MediaFormat#KEY_FRAME_RATE frame rate}. Use\n <code class=prettyprint>format.setString(MediaFormat.KEY_FRAME_RATE, null)</code>\n to clear any existing frame rate setting in the format.\n <p>\n You can also create the preferred codec for a specific MIME type using {@link\n #createDecoderByType createDecoder}/{@link #createEncoderByType EncoderByType(String)}.\n This, however, cannot be used to inject features, and may create a codec that cannot handle the\n specific desired media format.\n\n <h4>Creating secure decoders</h4>\n <p>\n On versions {@link android.os.Build.VERSION_CODES#KITKAT_WATCH} and earlier, secure codecs might\n not be listed in {@link MediaCodecList}, but may still be available on the system. Secure codecs\n that exist can be instantiated by name only, by appending {@code \".secure\"} to the name of a\n regular codec (the name of all secure codecs must end in {@code \".secure\"}.) {@link\n #createByCodecName} will throw an {@code IOException} if the codec is not present on the system.\n <p>\n From {@link android.os.Build.VERSION_CODES#LOLLIPOP} onwards, you should use the {@link\n CodecCapabilities#FEATURE_SecurePlayback} feature in the media format to create a secure decoder.\n\n <h3>Initialization</h3>\n <p>\n After creating the codec, you can set a callback using {@link #setCallback setCallback} if you\n want to process data asynchronously. Then, {@linkplain #configure configure} the codec using the\n specific media format. This is when you can specify the output {@link Surface} for video\n producers &ndash; codecs that generate raw video data (e.g. video decoders). This is also when\n you can set the decryption parameters for secure codecs (see {@link MediaCrypto}). Finally, since\n some codecs can operate in multiple modes, you must specify whether you want it to work as a\n decoder or an encoder.\n <p>\n Since {@link android.os.Build.VERSION_CODES#LOLLIPOP}, you can query the resulting input and\n output format in the Configured state. You can use this to verify the resulting configuration,\n e.g. color formats, before starting the codec.\n <p>\n If you want to process raw input video buffers natively with a video consumer &ndash; a codec\n that processes raw video input, such as a video encoder &ndash; create a destination Surface for\n your input data using {@link #createInputSurface} after configuration. Alternately, set up the\n codec to use a previously created {@linkplain #createPersistentInputSurface persistent input\n surface} by calling {@link #setInputSurface}.\n\n <h4 id=CSD><a name=\"CSD\"></a>Codec-specific Data</h4>\n <p>\n Some formats, notably AAC audio and MPEG4, H.264 and H.265 video formats require the actual data\n to be prefixed by a number of buffers containing setup data, or codec specific data. When\n processing such compressed formats, this data must be submitted to the codec after {@link\n #start} and before any frame data. Such data must be marked using the flag {@link\n #BUFFER_FLAG_CODEC_CONFIG} in a call to {@link #queueInputBuffer queueInputBuffer}.\n <p>\n Codec-specific data can also be included in the format passed to {@link #configure configure} in\n ByteBuffer entries with keys \"csd-0\", \"csd-1\", etc. These keys are always included in the track\n {@link MediaFormat} obtained from the {@link MediaExtractor#getTrackFormat MediaExtractor}.\n Codec-specific data in the format is automatically submitted to the codec upon {@link #start};\n you <strong>MUST NOT</strong> submit this data explicitly. If the format did not contain codec\n specific data, you can choose to submit it using the specified number of buffers in the correct\n order, according to the format requirements. In case of H.264 AVC, you can also concatenate all\n codec-specific data and submit it as a single codec-config buffer.\n <p>\n Android uses the following codec-specific data buffers. These are also required to be set in\n the track format for proper {@link MediaMuxer} track configuration. Each parameter set and the\n codec-specific-data sections marked with (<sup>*</sup>) must start with a start code of\n {@code \"\\x00\\x00\\x00\\x01\"}.\n <p>\n <style>td.NA { background: #ccc; } .mid > tr > td { vertical-align: middle; }</style>\n <table>\n  <thead>\n   <th>Format</th>\n   <th>CSD buffer #0</th>\n   <th>CSD buffer #1</th>\n   <th>CSD buffer #2</th>\n  </thead>\n  <tbody class=mid>\n   <tr>\n    <td>AAC</td>\n    <td>Decoder-specific information from ESDS<sup>*</sup></td>\n    <td class=NA>Not Used</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>VORBIS</td>\n    <td>Identification header</td>\n    <td>Setup header</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>OPUS</td>\n    <td>Identification header</td>\n    <td>Pre-skip in nanosecs<br>\n        (unsigned 64-bit {@linkplain ByteOrder#nativeOrder native-order} integer.)<br>\n        This overrides the pre-skip value in the identification header.</td>\n    <td>Seek Pre-roll in nanosecs<br>\n        (unsigned 64-bit {@linkplain ByteOrder#nativeOrder native-order} integer.)</td>\n   </tr>\n   <tr>\n    <td>FLAC</td>\n    <td>\"fLaC\", the FLAC stream marker in ASCII,<br>\n        followed by the STREAMINFO block (the mandatory metadata block),<br>\n        optionally followed by any number of other metadata blocks</td>\n    <td class=NA>Not Used</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>MPEG-4</td>\n    <td>Decoder-specific information from ESDS<sup>*</sup></td>\n    <td class=NA>Not Used</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>H.264 AVC</td>\n    <td>SPS (Sequence Parameter Sets<sup>*</sup>)</td>\n    <td>PPS (Picture Parameter Sets<sup>*</sup>)</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>H.265 HEVC</td>\n    <td>VPS (Video Parameter Sets<sup>*</sup>) +<br>\n     SPS (Sequence Parameter Sets<sup>*</sup>) +<br>\n     PPS (Picture Parameter Sets<sup>*</sup>)</td>\n    <td class=NA>Not Used</td>\n    <td class=NA>Not Used</td>\n   </tr>\n   <tr>\n    <td>VP9</td>\n    <td>VP9 <a href=\"http://wiki.webmproject.org/vp9-codecprivate\">CodecPrivate</a> Data\n        (optional)</td>\n    <td class=NA>Not Used</td>\n    <td class=NA>Not Used</td>\n   </tr>\n  </tbody>\n </table>\n\n <p class=note>\n <strong>Note:</strong> care must be taken if the codec is flushed immediately or shortly\n after start, before any output buffer or output format change has been returned, as the codec\n specific data may be lost during the flush. You must resubmit the data using buffers marked with\n {@link #BUFFER_FLAG_CODEC_CONFIG} after such flush to ensure proper codec operation.\n <p>\n Encoders (or codecs that generate compressed data) will create and return the codec specific data\n before any valid output buffer in output buffers marked with the {@linkplain\n #BUFFER_FLAG_CODEC_CONFIG codec-config flag}. Buffers containing codec-specific-data have no\n meaningful timestamps.\n\n <h3>Data Processing</h3>\n <p>\n Each codec maintains a set of input and output buffers that are referred to by a buffer-ID in\n API calls. After a successful call to {@link #start} the client \"owns\" neither input nor output\n buffers. In synchronous mode, call {@link #dequeueInputBuffer dequeueInput}/{@link\n #dequeueOutputBuffer OutputBuffer(&hellip;)} to obtain (get ownership of) an input or output\n buffer from the codec. In asynchronous mode, you will automatically receive available buffers via\n the {@link Callback#onInputBufferAvailable MediaCodec.Callback.onInput}/{@link\n Callback#onOutputBufferAvailable OutputBufferAvailable(&hellip;)} callbacks.\n <p>\n Upon obtaining an input buffer, fill it with data and submit it to the codec using {@link\n #queueInputBuffer queueInputBuffer} &ndash; or {@link #queueSecureInputBuffer\n queueSecureInputBuffer} if using decryption. Do not submit multiple input buffers with the same\n timestamp (unless it is <a href=\"#CSD\">codec-specific data</a> marked as such).\n <p>\n The codec in turn will return a read-only output buffer via the {@link\n Callback#onOutputBufferAvailable onOutputBufferAvailable} callback in asynchronous mode, or in\n response to a {@link #dequeueOutputBuffer dequeueOutputBuffer} call in synchronous mode. After the\n output buffer has been processed, call one of the {@link #releaseOutputBuffer\n releaseOutputBuffer} methods to return the buffer to the codec.\n <p>\n While you are not required to resubmit/release buffers immediately to the codec, holding onto\n input and/or output buffers may stall the codec, and this behavior is device dependent.\n <strong>Specifically, it is possible that a codec may hold off on generating output buffers until\n <em>all</em> outstanding buffers have been released/resubmitted.</strong> Therefore, try to\n hold onto to available buffers as little as possible.\n <p>\n Depending on the API version, you can process data in three ways:\n <table>\n  <thead>\n   <tr>\n    <th>Processing Mode</th>\n    <th>API version <= 20<br>Jelly Bean/KitKat</th>\n    <th>API version >= 21<br>Lollipop and later</th>\n   </tr>\n  </thead>\n  <tbody>\n   <tr>\n    <td>Synchronous API using buffer arrays</td>\n    <td>Supported</td>\n    <td>Deprecated</td>\n   </tr>\n   <tr>\n    <td>Synchronous API using buffers</td>\n    <td class=NA>Not Available</td>\n    <td>Supported</td>\n   </tr>\n   <tr>\n    <td>Asynchronous API using buffers</td>\n    <td class=NA>Not Available</td>\n    <td>Supported</td>\n   </tr>\n  </tbody>\n </table>\n\n <h4>Asynchronous Processing using Buffers</h4>\n <p>\n Since {@link android.os.Build.VERSION_CODES#LOLLIPOP}, the preferred method is to process data\n asynchronously by setting a callback before calling {@link #configure configure}. Asynchronous\n mode changes the state transitions slightly, because you must call {@link #start} after {@link\n #flush} to transition the codec to the Running sub-state and start receiving input buffers.\n Similarly, upon an initial call to {@code start} the codec will move directly to the Running\n sub-state and start passing available input buffers via the callback.\n <p>\n <center><object style=\"width: 516px; height: 353px;\" type=\"image/svg+xml\"\n   data=\"../../../images/media/mediacodec_async_states.svg\"><img\n   src=\"../../../images/media/mediacodec_async_states.png\" style=\"width: 516px; height: 353px\"\n   alt=\"MediaCodec state diagram for asynchronous operation\"></object></center>\n <p>\n MediaCodec is typically used like this in asynchronous mode:\n <pre class=prettyprint>\n MediaCodec codec = MediaCodec.createByCodecName(name);\n MediaFormat mOutputFormat; // member variable\n codec.setCallback(new MediaCodec.Callback() {\n   {@literal @Override}\n   void onInputBufferAvailable(MediaCodec mc, int inputBufferId) {\n     ByteBuffer inputBuffer = codec.getInputBuffer(inputBufferId);\n     // fill inputBuffer with valid data\n     &hellip;\n     codec.queueInputBuffer(inputBufferId, &hellip;);\n   }\n\n   {@literal @Override}\n   void onOutputBufferAvailable(MediaCodec mc, int outputBufferId, &hellip;) {\n     ByteBuffer outputBuffer = codec.getOutputBuffer(outputBufferId);\n     MediaFormat bufferFormat = codec.getOutputFormat(outputBufferId); // option A\n     // bufferFormat is equivalent to mOutputFormat\n     // outputBuffer is ready to be processed or rendered.\n     &hellip;\n     codec.releaseOutputBuffer(outputBufferId, &hellip;);\n   }\n\n   {@literal @Override}\n   void onOutputFormatChanged(MediaCodec mc, MediaFormat format) {\n     // Subsequent data will conform to new format.\n     // Can ignore if using getOutputFormat(outputBufferId)\n     mOutputFormat = format; // option B\n   }\n\n   {@literal @Override}\n   void onError(&hellip;) {\n     &hellip;\n   }\n });\n codec.configure(format, &hellip;);\n mOutputFormat = codec.getOutputFormat(); // option B\n codec.start();\n // wait for processing to complete\n codec.stop();\n codec.release();</pre>\n\n <h4>Synchronous Processing using Buffers</h4>\n <p>\n Since {@link android.os.Build.VERSION_CODES#LOLLIPOP}, you should retrieve input and output\n buffers using {@link #getInputBuffer getInput}/{@link #getOutputBuffer OutputBuffer(int)} and/or\n {@link #getInputImage getInput}/{@link #getOutputImage OutputImage(int)} even when using the\n codec in synchronous mode. This allows certain optimizations by the framework, e.g. when\n processing dynamic content. This optimization is disabled if you call {@link #getInputBuffers\n getInput}/{@link #getOutputBuffers OutputBuffers()}.\n\n <p class=note>\n <strong>Note:</strong> do not mix the methods of using buffers and buffer arrays at the same\n time. Specifically, only call {@code getInput}/{@code OutputBuffers} directly after {@link\n #start} or after having dequeued an output buffer ID with the value of {@link\n #INFO_OUTPUT_FORMAT_CHANGED}.\n <p>\n MediaCodec is typically used like this in synchronous mode:\n <pre>\n MediaCodec codec = MediaCodec.createByCodecName(name);\n codec.configure(format, &hellip;);\n MediaFormat outputFormat = codec.getOutputFormat(); // option B\n codec.start();\n for (;;) {\n   int inputBufferId = codec.dequeueInputBuffer(timeoutUs);\n   if (inputBufferId &gt;= 0) {\n     ByteBuffer inputBuffer = codec.getInputBuffer(&hellip;);\n     // fill inputBuffer with valid data\n     &hellip;\n     codec.queueInputBuffer(inputBufferId, &hellip;);\n   }\n   int outputBufferId = codec.dequeueOutputBuffer(&hellip;);\n   if (outputBufferId &gt;= 0) {\n     ByteBuffer outputBuffer = codec.getOutputBuffer(outputBufferId);\n     MediaFormat bufferFormat = codec.getOutputFormat(outputBufferId); // option A\n     // bufferFormat is identical to outputFormat\n     // outputBuffer is ready to be processed or rendered.\n     &hellip;\n     codec.releaseOutputBuffer(outputBufferId, &hellip;);\n   } else if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {\n     // Subsequent data will conform to new format.\n     // Can ignore if using getOutputFormat(outputBufferId)\n     outputFormat = codec.getOutputFormat(); // option B\n   }\n }\n codec.stop();\n codec.release();</pre>\n\n <h4>Synchronous Processing using Buffer Arrays (deprecated)</h4>\n <p>\n In versions {@link android.os.Build.VERSION_CODES#KITKAT_WATCH} and before, the set of input and\n output buffers are represented by the {@code ByteBuffer[]} arrays. After a successful call to\n {@link #start}, retrieve the buffer arrays using {@link #getInputBuffers getInput}/{@link\n #getOutputBuffers OutputBuffers()}. Use the buffer ID-s as indices into these arrays (when\n non-negative), as demonstrated in the sample below. Note that there is no inherent correlation\n between the size of the arrays and the number of input and output buffers used by the system,\n although the array size provides an upper bound.\n <pre>\n MediaCodec codec = MediaCodec.createByCodecName(name);\n codec.configure(format, &hellip;);\n codec.start();\n ByteBuffer[] inputBuffers = codec.getInputBuffers();\n ByteBuffer[] outputBuffers = codec.getOutputBuffers();\n for (;;) {\n   int inputBufferId = codec.dequeueInputBuffer(&hellip;);\n   if (inputBufferId &gt;= 0) {\n     // fill inputBuffers[inputBufferId] with valid data\n     &hellip;\n     codec.queueInputBuffer(inputBufferId, &hellip;);\n   }\n   int outputBufferId = codec.dequeueOutputBuffer(&hellip;);\n   if (outputBufferId &gt;= 0) {\n     // outputBuffers[outputBufferId] is ready to be processed or rendered.\n     &hellip;\n     codec.releaseOutputBuffer(outputBufferId, &hellip;);\n   } else if (outputBufferId == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {\n     outputBuffers = codec.getOutputBuffers();\n   } else if (outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {\n     // Subsequent data will conform to new format.\n     MediaFormat format = codec.getOutputFormat();\n   }\n }\n codec.stop();\n codec.release();</pre>\n\n <h4>End-of-stream Handling</h4>\n <p>\n When you reach the end of the input data, you must signal it to the codec by specifying the\n {@link #BUFFER_FLAG_END_OF_STREAM} flag in the call to {@link #queueInputBuffer\n queueInputBuffer}. You can do this on the last valid input buffer, or by submitting an additional\n empty input buffer with the end-of-stream flag set. If using an empty buffer, the timestamp will\n be ignored.\n <p>\n The codec will continue to return output buffers until it eventually signals the end of the\n output stream by specifying the same end-of-stream flag in the {@link BufferInfo} set in {@link\n #dequeueOutputBuffer dequeueOutputBuffer} or returned via {@link Callback#onOutputBufferAvailable\n onOutputBufferAvailable}. This can be set on the last valid output buffer, or on an empty buffer\n after the last valid output buffer. The timestamp of such empty buffer should be ignored.\n <p>\n Do not submit additional input buffers after signaling the end of the input stream, unless the\n codec has been flushed, or stopped and restarted.\n\n <h4>Using an Output Surface</h4>\n <p>\n The data processing is nearly identical to the ByteBuffer mode when using an output {@link\n Surface}; however, the output buffers will not be accessible, and are represented as {@code null}\n values. E.g. {@link #getOutputBuffer getOutputBuffer}/{@link #getOutputImage Image(int)} will\n return {@code null} and {@link #getOutputBuffers} will return an array containing only {@code\n null}-s.\n <p>\n When using an output Surface, you can select whether or not to render each output buffer on the\n surface. You have three choices:\n <ul>\n <li><strong>Do not render the buffer:</strong> Call {@link #releaseOutputBuffer(int, boolean)\n releaseOutputBuffer(bufferId, false)}.</li>\n <li><strong>Render the buffer with the default timestamp:</strong> Call {@link\n #releaseOutputBuffer(int, boolean) releaseOutputBuffer(bufferId, true)}.</li>\n <li><strong>Render the buffer with a specific timestamp:</strong> Call {@link\n #releaseOutputBuffer(int, long) releaseOutputBuffer(bufferId, timestamp)}.</li>\n </ul>\n <p>\n Since {@link android.os.Build.VERSION_CODES#M}, the default timestamp is the {@linkplain\n BufferInfo#presentationTimeUs presentation timestamp} of the buffer (converted to nanoseconds).\n It was not defined prior to that.\n <p>\n Also since {@link android.os.Build.VERSION_CODES#M}, you can change the output Surface\n dynamically using {@link #setOutputSurface setOutputSurface}.\n <p>\n When rendering output to a Surface, the Surface may be configured to drop excessive frames (that\n are not consumed by the Surface in a timely manner). Or it may be configured to not drop excessive\n frames. In the latter mode if the Surface is not consuming output frames fast enough, it will\n eventually block the decoder. Prior to {@link android.os.Build.VERSION_CODES#Q} the exact behavior\n was undefined, with the exception that View surfaces (SurfaceView or TextureView) always dropped\n excessive frames. Since {@link android.os.Build.VERSION_CODES#Q} the default behavior is to drop\n excessive frames. Applications can opt out of this behavior for non-View surfaces (such as\n ImageReader or SurfaceTexture) by targeting SDK {@link android.os.Build.VERSION_CODES#Q} and\n setting the key {@code \"allow-frame-drop\"} to {@code 0} in their configure format.\n\n <h4>Transformations When Rendering onto Surface</h4>\n\n If the codec is configured into Surface mode, any crop rectangle, {@linkplain\n MediaFormat#KEY_ROTATION rotation} and {@linkplain #setVideoScalingMode video scaling\n mode} will be automatically applied with one exception:\n <p class=note>\n Prior to the {@link android.os.Build.VERSION_CODES#M} release, software decoders may not\n have applied the rotation when being rendered onto a Surface. Unfortunately, there is no standard\n and simple way to identify software decoders, or if they apply the rotation other than by trying\n it out.\n <p>\n There are also some caveats.\n <p class=note>\n Note that the pixel aspect ratio is not considered when displaying the output onto the\n Surface. This means that if you are using {@link #VIDEO_SCALING_MODE_SCALE_TO_FIT} mode, you\n must position the output Surface so that it has the proper final display aspect ratio. Conversely,\n you can only use {@link #VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING} mode for content with\n square pixels (pixel aspect ratio or 1:1).\n <p class=note>\n Note also that as of {@link android.os.Build.VERSION_CODES#N} release, {@link\n #VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING} mode may not work correctly for videos rotated\n by 90 or 270 degrees.\n <p class=note>\n When setting the video scaling mode, note that it must be reset after each time the output\n buffers change. Since the {@link #INFO_OUTPUT_BUFFERS_CHANGED} event is deprecated, you can\n do this after each time the output format changes.\n\n <h4>Using an Input Surface</h4>\n <p>\n When using an input Surface, there are no accessible input buffers, as buffers are automatically\n passed from the input surface to the codec. Calling {@link #dequeueInputBuffer\n dequeueInputBuffer} will throw an {@code IllegalStateException}, and {@link #getInputBuffers}\n returns a bogus {@code ByteBuffer[]} array that <strong>MUST NOT</strong> be written into.\n <p>\n Call {@link #signalEndOfInputStream} to signal end-of-stream. The input surface will stop\n submitting data to the codec immediately after this call.\n <p>\n\n <h3>Seeking &amp; Adaptive Playback Support</h3>\n <p>\n Video decoders (and in general codecs that consume compressed video data) behave differently\n regarding seek and format change whether or not they support and are configured for adaptive\n playback. You can check if a decoder supports {@linkplain\n CodecCapabilities#FEATURE_AdaptivePlayback adaptive playback} via {@link\n CodecCapabilities#isFeatureSupported CodecCapabilities.isFeatureSupported(String)}. Adaptive\n playback support for video decoders is only activated if you configure the codec to decode onto a\n {@link Surface}.\n\n <h4 id=KeyFrames><a name=\"KeyFrames\"></a>Stream Boundary and Key Frames</h4>\n <p>\n It is important that the input data after {@link #start} or {@link #flush} starts at a suitable\n stream boundary: the first frame must a key frame. A <em>key frame</em> can be decoded\n completely on its own (for most codecs this means an I-frame), and no frames that are to be\n displayed after a key frame refer to frames before the key frame.\n <p>\n The following table summarizes suitable key frames for various video formats.\n <table>\n  <thead>\n   <tr>\n    <th>Format</th>\n    <th>Suitable key frame</th>\n   </tr>\n  </thead>\n  <tbody class=mid>\n   <tr>\n    <td>VP9/VP8</td>\n    <td>a suitable intraframe where no subsequent frames refer to frames prior to this frame.<br>\n      <i>(There is no specific name for such key frame.)</i></td>\n   </tr>\n   <tr>\n    <td>H.265 HEVC</td>\n    <td>IDR or CRA</td>\n   </tr>\n   <tr>\n    <td>H.264 AVC</td>\n    <td>IDR</td>\n   </tr>\n   <tr>\n    <td>MPEG-4<br>H.263<br>MPEG-2</td>\n    <td>a suitable I-frame where no subsequent frames refer to frames prior to this frame.<br>\n      <i>(There is no specific name for such key frame.)</td>\n   </tr>\n  </tbody>\n </table>\n\n <h4>For decoders that do not support adaptive playback (including when not decoding onto a\n Surface)</h4>\n <p>\n In order to start decoding data that is not adjacent to previously submitted data (i.e. after a\n seek) you <strong>MUST</strong> flush the decoder. Since all output buffers are immediately\n revoked at the point of the flush, you may want to first signal then wait for the end-of-stream\n before you call {@code flush}. It is important that the input data after a flush starts at a\n suitable stream boundary/key frame.\n <p class=note>\n <strong>Note:</strong> the format of the data submitted after a flush must not change; {@link\n #flush} does not support format discontinuities; for that, a full {@link #stop} - {@link\n #configure configure(&hellip;)} - {@link #start} cycle is necessary.\n\n <p class=note>\n <strong>Also note:</strong> if you flush the codec too soon after {@link #start} &ndash;\n generally, before the first output buffer or output format change is received &ndash; you\n will need to resubmit the codec-specific-data to the codec. See the <a\n href=\"#CSD\">codec-specific-data section</a> for more info.\n\n <h4>For decoders that support and are configured for adaptive playback</h4>\n <p>\n In order to start decoding data that is not adjacent to previously submitted data (i.e. after a\n seek) it is <em>not necessary</em> to flush the decoder; however, input data after the\n discontinuity must start at a suitable stream boundary/key frame.\n <p>\n For some video formats - namely H.264, H.265, VP8 and VP9 - it is also possible to change the\n picture size or configuration mid-stream. To do this you must package the entire new\n codec-specific configuration data together with the key frame into a single buffer (including\n any start codes), and submit it as a <strong>regular</strong> input buffer.\n <p>\n You will receive an {@link #INFO_OUTPUT_FORMAT_CHANGED} return value from {@link\n #dequeueOutputBuffer dequeueOutputBuffer} or a {@link Callback#onOutputBufferAvailable\n onOutputFormatChanged} callback just after the picture-size change takes place and before any\n frames with the new size have been returned.\n <p class=note>\n <strong>Note:</strong> just as the case for codec-specific data, be careful when calling\n {@link #flush} shortly after you have changed the picture size. If you have not received\n confirmation of the picture size change, you will need to repeat the request for the new picture\n size.\n\n <h3>Error handling</h3>\n <p>\n The factory methods {@link #createByCodecName createByCodecName} and {@link #createDecoderByType\n createDecoder}/{@link #createEncoderByType EncoderByType} throw {@code IOException} on failure\n which you must catch or declare to pass up. MediaCodec methods throw {@code\n IllegalStateException} when the method is called from a codec state that does not allow it; this\n is typically due to incorrect application API usage. Methods involving secure buffers may throw\n {@link CryptoException}, which has further error information obtainable from {@link\n CryptoException#getErrorCode}.\n <p>\n Internal codec errors result in a {@link CodecException}, which may be due to media content\n corruption, hardware failure, resource exhaustion, and so forth, even when the application is\n correctly using the API. The recommended action when receiving a {@code CodecException}\n can be determined by calling {@link CodecException#isRecoverable} and {@link\n CodecException#isTransient}:\n <ul>\n <li><strong>recoverable errors:</strong> If {@code isRecoverable()} returns true, then call\n {@link #stop}, {@link #configure configure(&hellip;)}, and {@link #start} to recover.</li>\n <li><strong>transient errors:</strong> If {@code isTransient()} returns true, then resources are\n temporarily unavailable and the method may be retried at a later time.</li>\n <li><strong>fatal errors:</strong> If both {@code isRecoverable()} and {@code isTransient()}\n return false, then the {@code CodecException} is fatal and the codec must be {@linkplain #reset\n reset} or {@linkplain #release released}.</li>\n </ul>\n <p>\n Both {@code isRecoverable()} and {@code isTransient()} do not return true at the same time.\n\n <h2 id=History><a name=\"History\"></a>Valid API Calls and API History</h2>\n <p>\n This sections summarizes the valid API calls in each state and the API history of the MediaCodec\n class. For API version numbers, see {@link android.os.Build.VERSION_CODES}.\n\n <style>\n .api > tr > th, .api > tr > td { text-align: center; padding: 4px 4px; }\n .api > tr > th     { vertical-align: bottom; }\n .api > tr > td     { vertical-align: middle; }\n .sml > tr > th, .sml > tr > td { text-align: center; padding: 2px 4px; }\n .fn { text-align: left; }\n .fn > code > a { font: 14px/19px Roboto Condensed, sans-serif; }\n .deg45 {\n   white-space: nowrap; background: none; border: none; vertical-align: bottom;\n   width: 30px; height: 83px;\n }\n .deg45 > div {\n   transform: skew(-45deg, 0deg) translate(1px, -67px);\n   transform-origin: bottom left 0;\n   width: 30px; height: 20px;\n }\n .deg45 > div > div { border: 1px solid #ddd; background: #999; height: 90px; width: 42px; }\n .deg45 > div > div > div { transform: skew(45deg, 0deg) translate(-55px, 55px) rotate(-45deg); }\n </style>\n\n <table align=\"right\" style=\"width: 0%\">\n  <thead>\n   <tr><th>Symbol</th><th>Meaning</th></tr>\n  </thead>\n  <tbody class=sml>\n   <tr><td>&#9679;</td><td>Supported</td></tr>\n   <tr><td>&#8277;</td><td>Semantics changed</td></tr>\n   <tr><td>&#9675;</td><td>Experimental support</td></tr>\n   <tr><td>[ ]</td><td>Deprecated</td></tr>\n   <tr><td>&#9099;</td><td>Restricted to surface input mode</td></tr>\n   <tr><td>&#9094;</td><td>Restricted to surface output mode</td></tr>\n   <tr><td>&#9639;</td><td>Restricted to ByteBuffer input mode</td></tr>\n   <tr><td>&#8617;</td><td>Restricted to synchronous mode</td></tr>\n   <tr><td>&#8644;</td><td>Restricted to asynchronous mode</td></tr>\n   <tr><td>( )</td><td>Can be called, but shouldn't</td></tr>\n  </tbody>\n </table>\n\n <table style=\"width: 100%;\">\n  <thead class=api>\n   <tr>\n    <th class=deg45><div><div style=\"background:#4285f4\"><div>Uninitialized</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#f4b400\"><div>Configured</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#e67c73\"><div>Flushed</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#0f9d58\"><div>Running</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#f7cb4d\"><div>End of Stream</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#db4437\"><div>Error</div></div></div></th>\n    <th class=deg45><div><div style=\"background:#666\"><div>Released</div></div></div></th>\n    <th></th>\n    <th colspan=\"8\">SDK Version</th>\n   </tr>\n   <tr>\n    <th colspan=\"7\">State</th>\n    <th>Method</th>\n    <th>16</th>\n    <th>17</th>\n    <th>18</th>\n    <th>19</th>\n    <th>20</th>\n    <th>21</th>\n    <th>22</th>\n    <th>23</th>\n   </tr>\n  </thead>\n  <tbody class=api>\n   <tr>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td class=fn>{@link #createByCodecName createByCodecName}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td class=fn>{@link #createDecoderByType createDecoderByType}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td class=fn>{@link #createEncoderByType createEncoderByType}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td class=fn>{@link #createPersistentInputSurface createPersistentInputSurface}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #configure configure}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>18+</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #createInputSurface createInputSurface}</td>\n    <td></td>\n    <td></td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>(16+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #dequeueInputBuffer dequeueInputBuffer}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9639;</td>\n    <td>&#9639;</td>\n    <td>&#9639;</td>\n    <td>&#8277;&#9639;&#8617;</td>\n    <td>&#9639;&#8617;</td>\n    <td>&#9639;&#8617;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #dequeueOutputBuffer dequeueOutputBuffer}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;&#8617;</td>\n    <td>&#8617;</td>\n    <td>&#8617;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #flush flush}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>-</td>\n    <td class=fn>{@link #getCodecInfo getCodecInfo}</td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>(21+)</td>\n    <td>21+</td>\n    <td>(21+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getInputBuffer getInputBuffer}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>(16+)</td>\n    <td>(16+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getInputBuffers getInputBuffers}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>[&#8277;&#8617;]</td>\n    <td>[&#8617;]</td>\n    <td>[&#8617;]</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>21+</td>\n    <td>(21+)</td>\n    <td>(21+)</td>\n    <td>(21+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getInputFormat getInputFormat}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>(21+)</td>\n    <td>21+</td>\n    <td>(21+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getInputImage getInputImage}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9675;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>-</td>\n    <td class=fn>{@link #getName getName}</td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>(21+)</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getOutputBuffer getOutputBuffer}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getOutputBuffers getOutputBuffers}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>[&#8277;&#8617;]</td>\n    <td>[&#8617;]</td>\n    <td>[&#8617;]</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>21+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getOutputFormat()}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>(21+)</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getOutputFormat(int)}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>(21+)</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #getOutputImage getOutputImage}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9675;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>(16+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #queueInputBuffer queueInputBuffer}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>(16+)</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #queueSecureInputBuffer queueSecureInputBuffer}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td class=fn>{@link #release release}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #releaseOutputBuffer(int, boolean)}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #releaseOutputBuffer(int, long)}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n   </tr>\n   <tr>\n    <td>21+</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>21+</td>\n    <td>-</td>\n    <td class=fn>{@link #reset reset}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>21+</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #setCallback(Callback) setCallback}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>{@link #setCallback(Callback, Handler) &#8277;}</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>23+</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #setInputSurface setInputSurface}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9099;</td>\n   </tr>\n   <tr>\n    <td>23+</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>(23+)</td>\n    <td>(23+)</td>\n    <td class=fn>{@link #setOnFrameRenderedListener setOnFrameRenderedListener}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9675; &#9094;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>23+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #setOutputSurface setOutputSurface}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9094;</td>\n   </tr>\n   <tr>\n    <td>19+</td>\n    <td>19+</td>\n    <td>19+</td>\n    <td>19+</td>\n    <td>19+</td>\n    <td>(19+)</td>\n    <td>-</td>\n    <td class=fn>{@link #setParameters setParameters}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>(16+)</td>\n    <td>(16+)</td>\n    <td>16+</td>\n    <td>(16+)</td>\n    <td>(16+)</td>\n    <td>-</td>\n    <td class=fn>{@link #setVideoScalingMode setVideoScalingMode}</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n    <td>&#9094;</td>\n   </tr>\n   <tr>\n    <td>(29+)</td>\n    <td>29+</td>\n    <td>29+</td>\n    <td>29+</td>\n    <td>(29+)</td>\n    <td>(29+)</td>\n    <td>-</td>\n    <td class=fn>{@link #setAudioPresentation setAudioPresentation}</td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n    <td></td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>18+</td>\n    <td>18+</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #signalEndOfInputStream signalEndOfInputStream}</td>\n    <td></td>\n    <td></td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n    <td>&#9099;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>16+</td>\n    <td>21+(&#8644;)</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #start start}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#8277;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n   <tr>\n    <td>-</td>\n    <td>-</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>16+</td>\n    <td>-</td>\n    <td>-</td>\n    <td class=fn>{@link #stop stop}</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n    <td>&#9679;</td>\n   </tr>\n  </tbody>\n </table>\n ",
+  "variables" : [ {
+    "name" : "BUFFER_FLAG_SYNC_FRAME",
+    "type" : "int",
+    "comment" : "\n     * This indicates that the (encoded) buffer marked as such contains\n     * the data for a key frame.\n     *\n     * @deprecated Use {@link #BUFFER_FLAG_KEY_FRAME} instead.\n     ",
+    "links" : [ "#BUFFER_FLAG_KEY_FRAME" ]
+  }, {
+    "name" : "BUFFER_FLAG_KEY_FRAME",
+    "type" : "int",
+    "comment" : "\n     * This indicates that the (encoded) buffer marked as such contains\n     * the data for a key frame.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "BUFFER_FLAG_CODEC_CONFIG",
+    "type" : "int",
+    "comment" : "\n     * This indicated that the buffer marked as such contains codec\n     * initialization / codec specific data instead of media data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "BUFFER_FLAG_END_OF_STREAM",
+    "type" : "int",
+    "comment" : "\n     * This signals the end of stream, i.e. no buffers will be available\n     * after this, unless of course, {@link #flush} follows.\n     ",
+    "links" : [ "#flush" ]
+  }, {
+    "name" : "BUFFER_FLAG_PARTIAL_FRAME",
+    "type" : "int",
+    "comment" : "\n     * This indicates that the buffer only contains part of a frame,\n     * and the decoder should batch the data until a buffer without\n     * this flag appears before decoding the frame.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "BUFFER_FLAG_MUXER_DATA",
+    "type" : "int",
+    "comment" : "\n     * This indicates that the buffer contains non-media data for the\n     * muxer to process.\n     *\n     * All muxer data should start with a FOURCC header that determines the type of data.\n     *\n     * For example, when it contains Exif data sent to a MediaMuxer track of\n     * {@link MediaFormat#MIMETYPE_IMAGE_ANDROID_HEIC} type, the data must start with\n     * Exif header (\"Exif\\0\\0\"), followed by the TIFF header (See JEITA CP-3451C Section 4.5.2.)\n     *\n     * @hide\n     ",
+    "links" : [ "MediaFormat#MIMETYPE_IMAGE_ANDROID_HEIC" ]
+  }, {
+    "name" : "mEventHandler",
+    "type" : "EventHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOnFrameRenderedHandler",
+    "type" : "EventHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallbackHandler",
+    "type" : "EventHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallback",
+    "type" : "Callback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOnFrameRenderedListener",
+    "type" : "OnFrameRenderedListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListenerLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCodecInfo",
+    "type" : "MediaCodecInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCodecInfoLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCrypto",
+    "type" : "MediaCrypto",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_CALLBACK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_SET_CALLBACK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_FRAME_RENDERED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CB_INPUT_AVAILABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CB_OUTPUT_AVAILABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CB_ERROR",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CB_OUTPUT_FORMAT_CHANGE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHasSurface",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNameAtCreation",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CONFIGURE_FLAG_ENCODE",
+    "type" : "int",
+    "comment" : "\n     * If this codec is to be used as an encoder, pass this flag.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONFIGURE_FLAG_USE_BLOCK_MODEL",
+    "type" : "int",
+    "comment" : "\n     * If this codec is to be used with {@link LinearBlock} and/or {@link\n     * HardwareBuffer}, pass this flag.\n     * <p>\n     * When this flag is set, the following APIs throw {@link IncompatibleWithBlockModelException}.\n     * <ul>\n     * <li>{@link #getInputBuffer}\n     * <li>{@link #getInputImage}\n     * <li>{@link #getInputBuffers}\n     * <li>{@link #getOutputBuffer}\n     * <li>{@link #getOutputImage}\n     * <li>{@link #getOutputBuffers}\n     * <li>{@link #queueInputBuffer}\n     * <li>{@link #queueSecureInputBuffer}\n     * <li>{@link #dequeueInputBuffer}\n     * <li>{@link #dequeueOutputBuffer}\n     * </ul>\n     ",
+    "links" : [ "LinearBlock", "IncompatibleWithBlockModelException", "#getInputBuffer", "#getInputImage", "#getInputBuffers", "#getOutputBuffer", "#getOutputImage", "#getOutputBuffers", "#queueInputBuffer", "#queueSecureInputBuffer", "#dequeueInputBuffer", "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "BUFFER_MODE_INVALID",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BUFFER_MODE_LEGACY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BUFFER_MODE_BLOCK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBufferMode",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CRYPTO_MODE_UNENCRYPTED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CRYPTO_MODE_AES_CTR",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CRYPTO_MODE_AES_CBC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mQueueRequests",
+    "type" : "ArrayList<QueueRequest>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "INFO_TRY_AGAIN_LATER",
+    "type" : "int",
+    "comment" : "\n     * If a non-negative timeout had been specified in the call\n     * to {@link #dequeueOutputBuffer}, indicates that the call timed out.\n     ",
+    "links" : [ "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "INFO_OUTPUT_FORMAT_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * The output format has changed, subsequent data will follow the new\n     * format. {@link #getOutputFormat()} returns the new format.  Note, that\n     * you can also use the new {@link #getOutputFormat(int)} method to\n     * get the format for a specific output buffer.  This frees you from\n     * having to track output format changes.\n     ",
+    "links" : [ "#getOutputFormat", "#getOutputFormat" ]
+  }, {
+    "name" : "INFO_OUTPUT_BUFFERS_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * The output buffers have changed, the client must refer to the new\n     * set of output buffers returned by {@link #getOutputBuffers} from\n     * this point on.\n     *\n     * <p>Additionally, this event signals that the video scaling mode\n     * may have been reset to the default.</p>\n     *\n     * @deprecated This return value can be ignored as {@link\n     * #getOutputBuffers} has been deprecated.  Client should\n     * request a current buffer using on of the get-buffer or\n     * get-image methods each time one has been dequeued.\n     ",
+    "links" : [ "#getOutputBuffers" ]
+  }, {
+    "name" : "mCachedInputBuffers",
+    "type" : "ByteBuffer[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCachedOutputBuffers",
+    "type" : "ByteBuffer[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDequeuedInputBuffers",
+    "type" : "BufferMap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDequeuedOutputBuffers",
+    "type" : "BufferMap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDequeuedOutputInfos",
+    "type" : "Map<Integer, BufferInfo>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBufferLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOutputFrames",
+    "type" : "ArrayList<OutputFrame>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VIDEO_SCALING_MODE_SCALE_TO_FIT",
+    "type" : "int",
+    "comment" : "\n     * The content is scaled to the surface dimensions\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING",
+    "type" : "int",
+    "comment" : "\n     * The content is scaled, maintaining its aspect ratio, the whole\n     * surface area is used, content may be cropped.\n     * <p class=note>\n     * This mode is only suitable for content with 1:1 pixel aspect ratio as you cannot\n     * configure the pixel aspect ratio for a {@link Surface}.\n     * <p class=note>\n     * As of {@link android.os.Build.VERSION_CODES#N} release, this mode may not work if\n     * the video is {@linkplain MediaFormat#KEY_ROTATION rotated} by 90 or 270 degrees.\n     ",
+    "links" : [ "Surface", "android.os.Build.VERSION_CODES#N" ]
+  }, {
+    "name" : "PARAMETER_KEY_VIDEO_BITRATE",
+    "type" : "String",
+    "comment" : "\n     * Change a video encoder's target bitrate on the fly. The value is an\n     * Integer object containing the new bitrate in bps.\n     *\n     * @see #setParameters(Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PARAMETER_KEY_SUSPEND",
+    "type" : "String",
+    "comment" : "\n     * Temporarily suspend/resume encoding of input data. While suspended\n     * input data is effectively discarded instead of being fed into the\n     * encoder. This parameter really only makes sense to use with an encoder\n     * in \"surface-input\" mode, as the client code has no control over the\n     * input-side of the encoder in that case.\n     * The value is an Integer object containing the value 1 to suspend\n     * or the value 0 to resume.\n     *\n     * @see #setParameters(Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PARAMETER_KEY_SUSPEND_TIME",
+    "type" : "String",
+    "comment" : "\n     * When {@link #PARAMETER_KEY_SUSPEND} is present, the client can also\n     * optionally use this key to specify the timestamp (in micro-second)\n     * at which the suspend/resume operation takes effect.\n     *\n     * Note that the specified timestamp must be greater than or equal to the\n     * timestamp of any previously queued suspend/resume operations.\n     *\n     * The value is a long int, indicating the timestamp to suspend/resume.\n     *\n     * @see #setParameters(Bundle)\n     ",
+    "links" : [ "#PARAMETER_KEY_SUSPEND" ]
+  }, {
+    "name" : "PARAMETER_KEY_OFFSET_TIME",
+    "type" : "String",
+    "comment" : "\n     * Specify an offset (in micro-second) to be added on top of the timestamps\n     * onward. A typical use case is to apply an adjust to the timestamps after\n     * a period of pause by the user.\n     *\n     * This parameter can only be used on an encoder in \"surface-input\" mode.\n     *\n     * The value is a long int, indicating the timestamp offset to be applied.\n     *\n     * @see #setParameters(Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PARAMETER_KEY_REQUEST_SYNC_FRAME",
+    "type" : "String",
+    "comment" : "\n     * Request that the encoder produce a sync frame \"soon\".\n     * Provide an Integer with the value 0.\n     *\n     * @see #setParameters(Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PARAMETER_KEY_HDR10_PLUS_INFO",
+    "type" : "String",
+    "comment" : "\n     * Set the HDR10+ metadata on the next queued input frame.\n     *\n     * Provide a byte array of data that's conforming to the\n     * user_data_registered_itu_t_t35() syntax of SEI message for ST 2094-40.\n     *<p>\n     * For decoders:\n     *<p>\n     * When a decoder is configured for one of the HDR10+ profiles that uses\n     * out-of-band metadata (such as {@link\n     * MediaCodecInfo.CodecProfileLevel#VP9Profile2HDR10Plus} or {@link\n     * MediaCodecInfo.CodecProfileLevel#VP9Profile3HDR10Plus}), this\n     * parameter sets the HDR10+ metadata on the next input buffer queued\n     * to the decoder. A decoder supporting these profiles must propagate\n     * the metadata to the format of the output buffer corresponding to this\n     * particular input buffer (under key {@link MediaFormat#KEY_HDR10_PLUS_INFO}).\n     * The metadata should be applied to that output buffer and the buffers\n     * following it (in display order), until the next output buffer (in\n     * display order) upon which an HDR10+ metadata is set.\n     *<p>\n     * This parameter shouldn't be set if the decoder is not configured for\n     * an HDR10+ profile that uses out-of-band metadata. In particular,\n     * it shouldn't be set for HDR10+ profiles that uses in-band metadata\n     * where the metadata is embedded in the input buffers, for example\n     * {@link MediaCodecInfo.CodecProfileLevel#HEVCProfileMain10HDR10Plus}.\n     *<p>\n     * For encoders:\n     *<p>\n     * When an encoder is configured for one of the HDR10+ profiles and the\n     * operates in byte buffer input mode (instead of surface input mode),\n     * this parameter sets the HDR10+ metadata on the next input buffer queued\n     * to the encoder. For the HDR10+ profiles that uses out-of-band metadata\n     * (such as {@link MediaCodecInfo.CodecProfileLevel#VP9Profile2HDR10Plus},\n     * or {@link MediaCodecInfo.CodecProfileLevel#VP9Profile3HDR10Plus}),\n     * the metadata must be propagated to the format of the output buffer\n     * corresponding to this particular input buffer (under key {@link\n     * MediaFormat#KEY_HDR10_PLUS_INFO}). For the HDR10+ profiles that uses\n     * in-band metadata (such as {@link\n     * MediaCodecInfo.CodecProfileLevel#HEVCProfileMain10HDR10Plus}), the\n     * metadata info must be embedded in the corresponding output buffer itself.\n     *<p>\n     * This parameter shouldn't be set if the encoder is not configured for\n     * an HDR10+ profile, or if it's operating in surface input mode.\n     *<p>\n     *\n     * @see MediaFormat#KEY_HDR10_PLUS_INFO\n     ",
+    "links" : [ "MediaFormat#KEY_HDR10_PLUS_INFO", "MediaCodecInfo.CodecProfileLevel#HEVCProfileMain10HDR10Plus", "MediaCodecInfo.CodecProfileLevel#VP9Profile2HDR10Plus", "MediaCodecInfo.CodecProfileLevel#VP9Profile3HDR10Plus" ]
+  }, {
+    "name" : "PARAMETER_KEY_LOW_LATENCY",
+    "type" : "String",
+    "comment" : "\n     * Enable/disable low latency decoding mode.\n     * When enabled, the decoder doesn't hold input and output data more than\n     * required by the codec standards.\n     * The value is an Integer object containing the value 1 to enable\n     * or the value 0 to disable.\n     *\n     * @see #setParameters(Bundle)\n     * @see MediaFormat#KEY_LOW_LATENCY\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContext",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContextLock",
+    "type" : "Lock",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static MediaCodec createDecoderByType(@NonNull String type) throws IOException",
+    "returnType" : "MediaCodec",
+    "comment" : "\n     * Instantiate the preferred decoder supporting input data of the given mime type.\n     *\n     * The following is a partial list of defined mime types and their semantics:\n     * <ul>\n     * <li>\"video/x-vnd.on2.vp8\" - VP8 video (i.e. video in .webm)\n     * <li>\"video/x-vnd.on2.vp9\" - VP9 video (i.e. video in .webm)\n     * <li>\"video/avc\" - H.264/AVC video\n     * <li>\"video/hevc\" - H.265/HEVC video\n     * <li>\"video/mp4v-es\" - MPEG4 video\n     * <li>\"video/3gpp\" - H.263 video\n     * <li>\"audio/3gpp\" - AMR narrowband audio\n     * <li>\"audio/amr-wb\" - AMR wideband audio\n     * <li>\"audio/mpeg\" - MPEG1/2 audio layer III\n     * <li>\"audio/mp4a-latm\" - AAC audio (note, this is raw AAC packets, not packaged in LATM!)\n     * <li>\"audio/vorbis\" - vorbis audio\n     * <li>\"audio/g711-alaw\" - G.711 alaw audio\n     * <li>\"audio/g711-mlaw\" - G.711 ulaw audio\n     * </ul>\n     *\n     * <strong>Note:</strong> It is preferred to use {@link MediaCodecList#findDecoderForFormat}\n     * and {@link #createByCodecName} to ensure that the resulting codec can handle a\n     * given format.\n     *\n     * @param type The mime type of the input data.\n     * @throws IOException if the codec cannot be created.\n     * @throws IllegalArgumentException if type is not a valid mime type.\n     * @throws NullPointerException if type is null.\n     ",
+    "links" : [ "MediaCodecList#findDecoderForFormat", "#createByCodecName" ]
+  }, {
+    "name" : "public static MediaCodec createEncoderByType(@NonNull String type) throws IOException",
+    "returnType" : "MediaCodec",
+    "comment" : "\n     * Instantiate the preferred encoder supporting output data of the given mime type.\n     *\n     * <strong>Note:</strong> It is preferred to use {@link MediaCodecList#findEncoderForFormat}\n     * and {@link #createByCodecName} to ensure that the resulting codec can handle a\n     * given format.\n     *\n     * @param type The desired mime type of the output data.\n     * @throws IOException if the codec cannot be created.\n     * @throws IllegalArgumentException if type is not a valid mime type.\n     * @throws NullPointerException if type is null.\n     ",
+    "links" : [ "MediaCodecList#findEncoderForFormat", "#createByCodecName" ]
+  }, {
+    "name" : "public static MediaCodec createByCodecName(@NonNull String name) throws IOException",
+    "returnType" : "MediaCodec",
+    "comment" : "\n     * If you know the exact name of the component you want to instantiate\n     * use this method to instantiate it. Use with caution.\n     * Likely to be used with information obtained from {@link android.media.MediaCodecList}\n     * @param name The name of the codec to be instantiated.\n     * @throws IOException if the codec cannot be created.\n     * @throws IllegalArgumentException if name is not valid.\n     * @throws NullPointerException if name is null.\n     ",
+    "links" : [ "android.media.MediaCodecList" ]
+  }, {
+    "name" : "protected void finalize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void reset()",
+    "returnType" : "void",
+    "comment" : "\n     * Returns the codec to its initial (Uninitialized) state.\n     *\n     * Call this if an {@link MediaCodec.CodecException#isRecoverable unrecoverable}\n     * error has occured to reset the codec to its initial state after creation.\n     *\n     * @throws CodecException if an unrecoverable error has occured and the codec\n     * could not be reset.\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ "MediaCodec.CodecException#isRecoverable" ]
+  }, {
+    "name" : "private final native void native_reset()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void release()",
+    "returnType" : "void",
+    "comment" : "\n     * Free up resources used by the codec instance.\n     *\n     * Make sure you call this when you're done to free up any opened\n     * component instance instead of relying on the garbage collector\n     * to do this for you at some point in the future.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_release()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void configure(@Nullable MediaFormat format, @Nullable Surface surface, @Nullable MediaCrypto crypto, @ConfigureFlag int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Configures a component.\n     *\n     * @param format The format of the input data (decoder) or the desired\n     *               format of the output data (encoder). Passing {@code null}\n     *               as {@code format} is equivalent to passing an\n     *               {@link MediaFormat#MediaFormat an empty mediaformat}.\n     * @param surface Specify a surface on which to render the output of this\n     *                decoder. Pass {@code null} as {@code surface} if the\n     *                codec does not generate raw video output (e.g. not a video\n     *                decoder) and/or if you want to configure the codec for\n     *                {@link ByteBuffer} output.\n     * @param crypto  Specify a crypto object to facilitate secure decryption\n     *                of the media data. Pass {@code null} as {@code crypto} for\n     *                non-secure codecs.\n     *                Please note that {@link MediaCodec} does NOT take ownership\n     *                of the {@link MediaCrypto} object; it is the application's\n     *                responsibility to properly cleanup the {@link MediaCrypto} object\n     *                when not in use.\n     * @param flags   Specify {@link #CONFIGURE_FLAG_ENCODE} to configure the\n     *                component as an encoder.\n     * @throws IllegalArgumentException if the surface has been released (or is invalid),\n     * or the format is unacceptable (e.g. missing a mandatory key),\n     * or the flags are not set properly\n     * (e.g. missing {@link #CONFIGURE_FLAG_ENCODE} for an encoder).\n     * @throws IllegalStateException if not in the Uninitialized state.\n     * @throws CryptoException upon DRM error.\n     * @throws CodecException upon codec error.\n     ",
+    "links" : [ "MediaFormat#MediaFormat", "ByteBuffer", "MediaCodec", "MediaCrypto", "MediaCrypto", "#CONFIGURE_FLAG_ENCODE", "#CONFIGURE_FLAG_ENCODE" ]
+  }, {
+    "name" : "public void configure(@Nullable MediaFormat format, @Nullable Surface surface, @ConfigureFlag int flags, @Nullable MediaDescrambler descrambler)",
+    "returnType" : "void",
+    "comment" : "\n     * Configure a component to be used with a descrambler.\n     * @param format The format of the input data (decoder) or the desired\n     *               format of the output data (encoder). Passing {@code null}\n     *               as {@code format} is equivalent to passing an\n     *               {@link MediaFormat#MediaFormat an empty mediaformat}.\n     * @param surface Specify a surface on which to render the output of this\n     *                decoder. Pass {@code null} as {@code surface} if the\n     *                codec does not generate raw video output (e.g. not a video\n     *                decoder) and/or if you want to configure the codec for\n     *                {@link ByteBuffer} output.\n     * @param flags   Specify {@link #CONFIGURE_FLAG_ENCODE} to configure the\n     *                component as an encoder.\n     * @param descrambler Specify a descrambler object to facilitate secure\n     *                descrambling of the media data, or null for non-secure codecs.\n     * @throws IllegalArgumentException if the surface has been released (or is invalid),\n     * or the format is unacceptable (e.g. missing a mandatory key),\n     * or the flags are not set properly\n     * (e.g. missing {@link #CONFIGURE_FLAG_ENCODE} for an encoder).\n     * @throws IllegalStateException if not in the Uninitialized state.\n     * @throws CryptoException upon DRM error.\n     * @throws CodecException upon codec error.\n     ",
+    "links" : [ "MediaFormat#MediaFormat", "ByteBuffer", "#CONFIGURE_FLAG_ENCODE", "#CONFIGURE_FLAG_ENCODE" ]
+  }, {
+    "name" : "private void configure(@Nullable MediaFormat format, @Nullable Surface surface, @Nullable MediaCrypto crypto, @Nullable IHwBinder descramblerBinder, @ConfigureFlag int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOutputSurface(@NonNull Surface surface)",
+    "returnType" : "void",
+    "comment" : "\n     *  Dynamically sets the output surface of a codec.\n     *  <p>\n     *  This can only be used if the codec was configured with an output surface.  The\n     *  new output surface should have a compatible usage type to the original output surface.\n     *  E.g. codecs may not support switching from a SurfaceTexture (GPU readable) output\n     *  to ImageReader (software readable) output.\n     *  @param surface the output surface to use. It must not be {@code null}.\n     *  @throws IllegalStateException if the codec does not support setting the output\n     *            surface in the current state.\n     *  @throws IllegalArgumentException if the new surface is not of a suitable type for the codec.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_setSurface(@NonNull Surface surface)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Surface createPersistentInputSurface()",
+    "returnType" : "Surface",
+    "comment" : "\n     * Create a persistent input surface that can be used with codecs that normally have an input\n     * surface, such as video encoders. A persistent input can be reused by subsequent\n     * {@link MediaCodec} or {@link MediaRecorder} instances, but can only be used by at\n     * most one codec or recorder instance concurrently.\n     * <p>\n     * The application is responsible for calling release() on the Surface when done.\n     *\n     * @return an input surface that can be used with {@link #setInputSurface}.\n     ",
+    "links" : [ "MediaCodec", "MediaRecorder", "#setInputSurface" ]
+  }, {
+    "name" : "public void setInputSurface(@NonNull Surface surface)",
+    "returnType" : "void",
+    "comment" : "\n     * Configures the codec (e.g. encoder) to use a persistent input surface in place of input\n     * buffers.  This may only be called after {@link #configure} and before {@link #start}, in\n     * lieu of {@link #createInputSurface}.\n     * @param surface a persistent input surface created by {@link #createPersistentInputSurface}\n     * @throws IllegalStateException if not in the Configured state or does not require an input\n     *           surface.\n     * @throws IllegalArgumentException if the surface was not created by\n     *           {@link #createPersistentInputSurface}.\n     ",
+    "links" : [ "#configure", "#start", "#createInputSurface", "#createPersistentInputSurface", "#createPersistentInputSurface" ]
+  }, {
+    "name" : "private static final native PersistentSurface native_createPersistentInputSurface()",
+    "returnType" : "PersistentSurface",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native void native_releasePersistentInputSurface(@NonNull Surface surface)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_setInputSurface(@NonNull Surface surface)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_setCallback(@Nullable Callback cb)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_configure(@Nullable String[] keys, @Nullable Object[] values, @Nullable Surface surface, @Nullable MediaCrypto crypto, @Nullable IHwBinder descramblerBinder, @ConfigureFlag int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final native Surface createInputSurface()",
+    "returnType" : "Surface",
+    "comment" : "\n     * Requests a Surface to use as the input to an encoder, in place of input buffers.  This\n     * may only be called after {@link #configure} and before {@link #start}.\n     * <p>\n     * The application is responsible for calling release() on the Surface when\n     * done.\n     * <p>\n     * The Surface must be rendered with a hardware-accelerated API, such as OpenGL ES.\n     * {@link android.view.Surface#lockCanvas(android.graphics.Rect)} may fail or produce\n     * unexpected results.\n     * @throws IllegalStateException if not in the Configured state.\n     ",
+    "links" : [ "#configure", "#start", "android.view.Surface#lockCanvas" ]
+  }, {
+    "name" : "public final void start()",
+    "returnType" : "void",
+    "comment" : "\n     * After successfully configuring the component, call {@code start}.\n     * <p>\n     * Call {@code start} also if the codec is configured in asynchronous mode,\n     * and it has just been flushed, to resume requesting input buffers.\n     * @throws IllegalStateException if not in the Configured state\n     *         or just after {@link #flush} for a codec that is configured\n     *         in asynchronous mode.\n     * @throws MediaCodec.CodecException upon codec error. Note that some codec errors\n     * for start may be attributed to future method calls.\n     ",
+    "links" : [ "#flush" ]
+  }, {
+    "name" : "private final native void native_start()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void stop()",
+    "returnType" : "void",
+    "comment" : "\n     * Finish the decode/encode session, note that the codec instance\n     * remains active and ready to be {@link #start}ed again.\n     * To ensure that it is available to other client call {@link #release}\n     * and don't just rely on garbage collection to eventually do this for you.\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ "#start", "#release" ]
+  }, {
+    "name" : "private final native void native_stop()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void flush()",
+    "returnType" : "void",
+    "comment" : "\n     * Flush both input and output ports of the component.\n     * <p>\n     * Upon return, all indices previously returned in calls to {@link #dequeueInputBuffer\n     * dequeueInputBuffer} and {@link #dequeueOutputBuffer dequeueOutputBuffer} &mdash; or obtained\n     * via {@link Callback#onInputBufferAvailable onInputBufferAvailable} or\n     * {@link Callback#onOutputBufferAvailable onOutputBufferAvailable} callbacks &mdash; become\n     * invalid, and all buffers are owned by the codec.\n     * <p>\n     * If the codec is configured in asynchronous mode, call {@link #start}\n     * after {@code flush} has returned to resume codec operations. The codec\n     * will not request input buffers until this has happened.\n     * <strong>Note, however, that there may still be outstanding {@code onOutputBufferAvailable}\n     * callbacks that were not handled prior to calling {@code flush}.\n     * The indices returned via these callbacks also become invalid upon calling {@code flush} and\n     * should be discarded.</strong>\n     * <p>\n     * If the codec is configured in synchronous mode, codec will resume\n     * automatically if it is configured with an input surface.  Otherwise, it\n     * will resume when {@link #dequeueInputBuffer dequeueInputBuffer} is called.\n     *\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#dequeueInputBuffer", "#dequeueOutputBuffer", "Callback#onInputBufferAvailable", "Callback#onOutputBufferAvailable", "#start", "#dequeueInputBuffer" ]
+  }, {
+    "name" : "private final native void native_flush()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void queueInputBuffer(int index, int offset, int size, long presentationTimeUs, int flags) throws CryptoException",
+    "returnType" : "void",
+    "comment" : "\n     * After filling a range of the input buffer at the specified index\n     * submit it to the component. Once an input buffer is queued to\n     * the codec, it MUST NOT be used until it is later retrieved by\n     * {@link #getInputBuffer} in response to a {@link #dequeueInputBuffer}\n     * return value or a {@link Callback#onInputBufferAvailable}\n     * callback.\n     * <p>\n     * Many decoders require the actual compressed data stream to be\n     * preceded by \"codec specific data\", i.e. setup data used to initialize\n     * the codec such as PPS/SPS in the case of AVC video or code tables\n     * in the case of vorbis audio.\n     * The class {@link android.media.MediaExtractor} provides codec\n     * specific data as part of\n     * the returned track format in entries named \"csd-0\", \"csd-1\" ...\n     * <p>\n     * These buffers can be submitted directly after {@link #start} or\n     * {@link #flush} by specifying the flag {@link\n     * #BUFFER_FLAG_CODEC_CONFIG}.  However, if you configure the\n     * codec with a {@link MediaFormat} containing these keys, they\n     * will be automatically submitted by MediaCodec directly after\n     * start.  Therefore, the use of {@link\n     * #BUFFER_FLAG_CODEC_CONFIG} flag is discouraged and is\n     * recommended only for advanced users.\n     * <p>\n     * To indicate that this is the final piece of input data (or rather that\n     * no more input data follows unless the decoder is subsequently flushed)\n     * specify the flag {@link #BUFFER_FLAG_END_OF_STREAM}.\n     * <p class=note>\n     * <strong>Note:</strong> Prior to {@link android.os.Build.VERSION_CODES#M},\n     * {@code presentationTimeUs} was not propagated to the frame timestamp of (rendered)\n     * Surface output buffers, and the resulting frame timestamp was undefined.\n     * Use {@link #releaseOutputBuffer(int, long)} to ensure a specific frame timestamp is set.\n     * Similarly, since frame timestamps can be used by the destination surface for rendering\n     * synchronization, <strong>care must be taken to normalize presentationTimeUs so as to not be\n     * mistaken for a system time. (See {@linkplain #releaseOutputBuffer(int, long)\n     * SurfaceView specifics}).</strong>\n     *\n     * @param index The index of a client-owned input buffer previously returned\n     *              in a call to {@link #dequeueInputBuffer}.\n     * @param offset The byte offset into the input buffer at which the data starts.\n     * @param size The number of bytes of valid input data.\n     * @param presentationTimeUs The presentation timestamp in microseconds for this\n     *                           buffer. This is normally the media time at which this\n     *                           buffer should be presented (rendered). When using an output\n     *                           surface, this will be propagated as the {@link\n     *                           SurfaceTexture#getTimestamp timestamp} for the frame (after\n     *                           conversion to nanoseconds).\n     * @param flags A bitmask of flags\n     *              {@link #BUFFER_FLAG_CODEC_CONFIG} and {@link #BUFFER_FLAG_END_OF_STREAM}.\n     *              While not prohibited, most codecs do not use the\n     *              {@link #BUFFER_FLAG_KEY_FRAME} flag for input buffers.\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     * @throws CryptoException if a crypto object has been specified in\n     *         {@link #configure}\n     ",
+    "links" : [ "#getInputBuffer", "#dequeueInputBuffer", "Callback#onInputBufferAvailable", "android.media.MediaExtractor", "#start", "#flush", "MediaFormat", "#BUFFER_FLAG_END_OF_STREAM", "android.os.Build.VERSION_CODES#M", "#releaseOutputBuffer", "#dequeueInputBuffer", "#BUFFER_FLAG_CODEC_CONFIG", "#BUFFER_FLAG_END_OF_STREAM", "#BUFFER_FLAG_KEY_FRAME", "#configure" ]
+  }, {
+    "name" : "private final native void native_queueInputBuffer(int index, int offset, int size, long presentationTimeUs, int flags) throws CryptoException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void queueSecureInputBuffer(int index, int offset, @NonNull CryptoInfo info, long presentationTimeUs, int flags) throws CryptoException",
+    "returnType" : "void",
+    "comment" : "\n     * Similar to {@link #queueInputBuffer queueInputBuffer} but submits a buffer that is\n     * potentially encrypted.\n     * <strong>Check out further notes at {@link #queueInputBuffer queueInputBuffer}.</strong>\n     *\n     * @param index The index of a client-owned input buffer previously returned\n     *              in a call to {@link #dequeueInputBuffer}.\n     * @param offset The byte offset into the input buffer at which the data starts.\n     * @param info Metadata required to facilitate decryption, the object can be\n     *             reused immediately after this call returns.\n     * @param presentationTimeUs The presentation timestamp in microseconds for this\n     *                           buffer. This is normally the media time at which this\n     *                           buffer should be presented (rendered).\n     * @param flags A bitmask of flags\n     *              {@link #BUFFER_FLAG_CODEC_CONFIG} and {@link #BUFFER_FLAG_END_OF_STREAM}.\n     *              While not prohibited, most codecs do not use the\n     *              {@link #BUFFER_FLAG_KEY_FRAME} flag for input buffers.\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     * @throws CryptoException if an error occurs while attempting to decrypt the buffer.\n     *              An error code associated with the exception helps identify the\n     *              reason for the failure.\n     ",
+    "links" : [ "#queueInputBuffer", "#queueInputBuffer", "#dequeueInputBuffer", "#BUFFER_FLAG_CODEC_CONFIG", "#BUFFER_FLAG_END_OF_STREAM", "#BUFFER_FLAG_KEY_FRAME" ]
+  }, {
+    "name" : "private final native void native_queueSecureInputBuffer(int index, int offset, @NonNull CryptoInfo info, long presentationTimeUs, int flags) throws CryptoException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int dequeueInputBuffer(long timeoutUs)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the index of an input buffer to be filled with valid data\n     * or -1 if no such buffer is currently available.\n     * This method will return immediately if timeoutUs == 0, wait indefinitely\n     * for the availability of an input buffer if timeoutUs &lt; 0 or wait up\n     * to \"timeoutUs\" microseconds if timeoutUs &gt; 0.\n     * @param timeoutUs The timeout in microseconds, a negative timeout indicates \"infinite\".\n     * @throws IllegalStateException if not in the Executing state,\n     *         or codec is configured in asynchronous mode.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final native int native_dequeueInputBuffer(long timeoutUs)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Image mapHardwareBuffer(@NonNull HardwareBuffer hardwareBuffer)",
+    "returnType" : "Image",
+    "comment" : "\n     * Map a {@link HardwareBuffer} object into {@link Image}, so that the content of the buffer is\n     * accessible. Depending on the usage and pixel format of the hardware buffer, it may not be\n     * mappable; this method returns null in that case.\n     *\n     * @param hardwareBuffer {@link HardwareBuffer} to map.\n     * @return Mapped {@link Image} object, or null if the buffer is not mappable.\n     ",
+    "links" : [ "HardwareBuffer", "Image", "HardwareBuffer", "Image" ]
+  }, {
+    "name" : "private static native Image native_mapHardwareBuffer(@NonNull HardwareBuffer hardwareBuffer)",
+    "returnType" : "Image",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void native_closeMediaImage(long context)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_queueLinearBlock(int index, @NonNull LinearBlock block, int offset, int size, @Nullable CryptoInfo cryptoInfo, long presentationTimeUs, int flags, @NonNull ArrayList<String> keys, @NonNull ArrayList<Object> values)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_queueHardwareBuffer(int index, @NonNull HardwareBuffer buffer, long presentationTimeUs, int flags, @NonNull ArrayList<String> keys, @NonNull ArrayList<Object> values)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public QueueRequest getQueueRequest(int index)",
+    "returnType" : "QueueRequest",
+    "comment" : "\n     * Return a {@link QueueRequest} object for an input slot index.\n     *\n     * @param index input slot index from\n     *              {@link Callback#onInputBufferAvailable}\n     * @return queue request object\n     * @throws IllegalStateException if not using block model\n     * @throws IllegalArgumentException if the input slot is not available or\n     *                                  the index is out of range\n     ",
+    "links" : [ "QueueRequest", "Callback#onInputBufferAvailable" ]
+  }, {
+    "name" : "public final int dequeueOutputBuffer(@NonNull BufferInfo info, long timeoutUs)",
+    "returnType" : "int",
+    "comment" : "\n     * Dequeue an output buffer, block at most \"timeoutUs\" microseconds.\n     * Returns the index of an output buffer that has been successfully\n     * decoded or one of the INFO_* constants.\n     * @param info Will be filled with buffer meta data.\n     * @param timeoutUs The timeout in microseconds, a negative timeout indicates \"infinite\".\n     * @throws IllegalStateException if not in the Executing state,\n     *         or codec is configured in asynchronous mode.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final native int native_dequeueOutputBuffer(@NonNull BufferInfo info, long timeoutUs)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void releaseOutputBuffer(int index, boolean render)",
+    "returnType" : "void",
+    "comment" : "\n     * If you are done with a buffer, use this call to return the buffer to the codec\n     * or to render it on the output surface. If you configured the codec with an\n     * output surface, setting {@code render} to {@code true} will first send the buffer\n     * to that output surface. The surface will release the buffer back to the codec once\n     * it is no longer used/displayed.\n     *\n     * Once an output buffer is released to the codec, it MUST NOT\n     * be used until it is later retrieved by {@link #getOutputBuffer} in response\n     * to a {@link #dequeueOutputBuffer} return value or a\n     * {@link Callback#onOutputBufferAvailable} callback.\n     *\n     * @param index The index of a client-owned output buffer previously returned\n     *              from a call to {@link #dequeueOutputBuffer}.\n     * @param render If a valid surface was specified when configuring the codec,\n     *               passing true renders this output buffer to the surface.\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#getOutputBuffer", "#dequeueOutputBuffer", "Callback#onOutputBufferAvailable", "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "public final void releaseOutputBuffer(int index, long renderTimestampNs)",
+    "returnType" : "void",
+    "comment" : "\n     * If you are done with a buffer, use this call to update its surface timestamp\n     * and return it to the codec to render it on the output surface. If you\n     * have not specified an output surface when configuring this video codec,\n     * this call will simply return the buffer to the codec.<p>\n     *\n     * The timestamp may have special meaning depending on the destination surface.\n     *\n     * <table>\n     * <tr><th>SurfaceView specifics</th></tr>\n     * <tr><td>\n     * If you render your buffer on a {@link android.view.SurfaceView},\n     * you can use the timestamp to render the buffer at a specific time (at the\n     * VSYNC at or after the buffer timestamp).  For this to work, the timestamp\n     * needs to be <i>reasonably close</i> to the current {@link System#nanoTime}.\n     * Currently, this is set as within one (1) second. A few notes:\n     *\n     * <ul>\n     * <li>the buffer will not be returned to the codec until the timestamp\n     * has passed and the buffer is no longer used by the {@link android.view.Surface}.\n     * <li>buffers are processed sequentially, so you may block subsequent buffers to\n     * be displayed on the {@link android.view.Surface}.  This is important if you\n     * want to react to user action, e.g. stop the video or seek.\n     * <li>if multiple buffers are sent to the {@link android.view.Surface} to be\n     * rendered at the same VSYNC, the last one will be shown, and the other ones\n     * will be dropped.\n     * <li>if the timestamp is <em>not</em> \"reasonably close\" to the current system\n     * time, the {@link android.view.Surface} will ignore the timestamp, and\n     * display the buffer at the earliest feasible time.  In this mode it will not\n     * drop frames.\n     * <li>for best performance and quality, call this method when you are about\n     * two VSYNCs' time before the desired render time.  For 60Hz displays, this is\n     * about 33 msec.\n     * </ul>\n     * </td></tr>\n     * </table>\n     *\n     * Once an output buffer is released to the codec, it MUST NOT\n     * be used until it is later retrieved by {@link #getOutputBuffer} in response\n     * to a {@link #dequeueOutputBuffer} return value or a\n     * {@link Callback#onOutputBufferAvailable} callback.\n     *\n     * @param index The index of a client-owned output buffer previously returned\n     *              from a call to {@link #dequeueOutputBuffer}.\n     * @param renderTimestampNs The timestamp to associate with this buffer when\n     *              it is sent to the Surface.\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "android.view.SurfaceView", "System#nanoTime", "android.view.Surface", "android.view.Surface", "android.view.Surface", "android.view.Surface", "#getOutputBuffer", "#dequeueOutputBuffer", "Callback#onOutputBufferAvailable", "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "private void releaseOutputBufferInternal(int index, boolean render, boolean updatePts, long renderTimestampNs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void releaseOutputBuffer(int index, boolean render, boolean updatePTS, long timeNs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final native void signalEndOfInputStream()",
+    "returnType" : "void",
+    "comment" : "\n     * Signals end-of-stream on input.  Equivalent to submitting an empty buffer with\n     * {@link #BUFFER_FLAG_END_OF_STREAM} set.  This may only be used with\n     * encoders receiving input from a Surface created by {@link #createInputSurface}.\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#BUFFER_FLAG_END_OF_STREAM", "#createInputSurface" ]
+  }, {
+    "name" : "public final MediaFormat getOutputFormat()",
+    "returnType" : "MediaFormat",
+    "comment" : "\n     * Call this after dequeueOutputBuffer signals a format change by returning\n     * {@link #INFO_OUTPUT_FORMAT_CHANGED}.\n     * You can also call this after {@link #configure} returns\n     * successfully to get the output format initially configured\n     * for the codec.  Do this to determine what optional\n     * configuration parameters were supported by the codec.\n     *\n     * @throws IllegalStateException if not in the Executing or\n     *                               Configured state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#INFO_OUTPUT_FORMAT_CHANGED", "#configure" ]
+  }, {
+    "name" : "public final MediaFormat getInputFormat()",
+    "returnType" : "MediaFormat",
+    "comment" : "\n     * Call this after {@link #configure} returns successfully to\n     * get the input format accepted by the codec. Do this to\n     * determine what optional configuration parameters were\n     * supported by the codec.\n     *\n     * @throws IllegalStateException if not in the Executing or\n     *                               Configured state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#configure" ]
+  }, {
+    "name" : "public final MediaFormat getOutputFormat(int index)",
+    "returnType" : "MediaFormat",
+    "comment" : "\n     * Returns the output format for a specific output buffer.\n     *\n     * @param index The index of a client-owned input buffer previously\n     *              returned from a call to {@link #dequeueInputBuffer}.\n     *\n     * @return the format for the output buffer, or null if the index\n     * is not a dequeued output buffer.\n     ",
+    "links" : [ "#dequeueInputBuffer" ]
+  }, {
+    "name" : "private final native Map<String, Object> getFormatNative(boolean input)",
+    "returnType" : "Map<String, Object>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native Map<String, Object> getOutputFormatNative(int index)",
+    "returnType" : "Map<String, Object>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void invalidateByteBuffer(@Nullable ByteBuffer[] buffers, int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void validateInputByteBuffer(@Nullable ByteBuffer[] buffers, int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void revalidateByteBuffer(@Nullable ByteBuffer[] buffers, int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void validateOutputByteBuffer(@Nullable ByteBuffer[] buffers, int index, @NonNull BufferInfo info)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void invalidateByteBuffers(@Nullable ByteBuffer[] buffers)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void freeByteBuffer(@Nullable ByteBuffer buffer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void freeByteBuffers(@Nullable ByteBuffer[] buffers)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void freeAllTrackedBuffers()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void cacheBuffers(boolean input)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ByteBuffer[] getInputBuffers()",
+    "returnType" : "ByteBuffer[]",
+    "comment" : "\n     * Retrieve the set of input buffers.  Call this after start()\n     * returns. After calling this method, any ByteBuffers\n     * previously returned by an earlier call to this method MUST no\n     * longer be used.\n     *\n     * @deprecated Use the new {@link #getInputBuffer} method instead\n     * each time an input buffer is dequeued.\n     *\n     * <b>Note:</b> As of API 21, dequeued input buffers are\n     * automatically {@link java.nio.Buffer#clear cleared}.\n     *\n     * <em>Do not use this method if using an input surface.</em>\n     *\n     * @throws IllegalStateException if not in the Executing state,\n     *         or codec is configured in asynchronous mode.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#getInputBuffer", "java.nio.Buffer#clear" ]
+  }, {
+    "name" : "public ByteBuffer[] getOutputBuffers()",
+    "returnType" : "ByteBuffer[]",
+    "comment" : "\n     * Retrieve the set of output buffers.  Call this after start()\n     * returns and whenever dequeueOutputBuffer signals an output\n     * buffer change by returning {@link\n     * #INFO_OUTPUT_BUFFERS_CHANGED}. After calling this method, any\n     * ByteBuffers previously returned by an earlier call to this\n     * method MUST no longer be used.\n     *\n     * @deprecated Use the new {@link #getOutputBuffer} method instead\n     * each time an output buffer is dequeued.  This method is not\n     * supported if codec is configured in asynchronous mode.\n     *\n     * <b>Note:</b> As of API 21, the position and limit of output\n     * buffers that are dequeued will be set to the valid data\n     * range.\n     *\n     * <em>Do not use this method if using an output surface.</em>\n     *\n     * @throws IllegalStateException if not in the Executing state,\n     *         or codec is configured in asynchronous mode.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#getOutputBuffer" ]
+  }, {
+    "name" : "public ByteBuffer getInputBuffer(int index)",
+    "returnType" : "ByteBuffer",
+    "comment" : "\n     * Returns a {@link java.nio.Buffer#clear cleared}, writable ByteBuffer\n     * object for a dequeued input buffer index to contain the input data.\n     *\n     * After calling this method any ByteBuffer or Image object\n     * previously returned for the same input index MUST no longer\n     * be used.\n     *\n     * @param index The index of a client-owned input buffer previously\n     *              returned from a call to {@link #dequeueInputBuffer},\n     *              or received via an onInputBufferAvailable callback.\n     *\n     * @return the input buffer, or null if the index is not a dequeued\n     * input buffer, or if the codec is configured for surface input.\n     *\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "java.nio.Buffer#clear", "#dequeueInputBuffer" ]
+  }, {
+    "name" : "public Image getInputImage(int index)",
+    "returnType" : "Image",
+    "comment" : "\n     * Returns a writable Image object for a dequeued input buffer\n     * index to contain the raw input video frame.\n     *\n     * After calling this method any ByteBuffer or Image object\n     * previously returned for the same input index MUST no longer\n     * be used.\n     *\n     * @param index The index of a client-owned input buffer previously\n     *              returned from a call to {@link #dequeueInputBuffer},\n     *              or received via an onInputBufferAvailable callback.\n     *\n     * @return the input image, or null if the index is not a\n     * dequeued input buffer, or not a ByteBuffer that contains a\n     * raw image.\n     *\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#dequeueInputBuffer" ]
+  }, {
+    "name" : "public ByteBuffer getOutputBuffer(int index)",
+    "returnType" : "ByteBuffer",
+    "comment" : "\n     * Returns a read-only ByteBuffer for a dequeued output buffer\n     * index. The position and limit of the returned buffer are set\n     * to the valid output data.\n     *\n     * After calling this method, any ByteBuffer or Image object\n     * previously returned for the same output index MUST no longer\n     * be used.\n     *\n     * @param index The index of a client-owned output buffer previously\n     *              returned from a call to {@link #dequeueOutputBuffer},\n     *              or received via an onOutputBufferAvailable callback.\n     *\n     * @return the output buffer, or null if the index is not a dequeued\n     * output buffer, or the codec is configured with an output surface.\n     *\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "public Image getOutputImage(int index)",
+    "returnType" : "Image",
+    "comment" : "\n     * Returns a read-only Image object for a dequeued output buffer\n     * index that contains the raw video frame.\n     *\n     * After calling this method, any ByteBuffer or Image object previously\n     * returned for the same output index MUST no longer be used.\n     *\n     * @param index The index of a client-owned output buffer previously\n     *              returned from a call to {@link #dequeueOutputBuffer},\n     *              or received via an onOutputBufferAvailable callback.\n     *\n     * @return the output image, or null if the index is not a\n     * dequeued output buffer, not a raw video frame, or if the codec\n     * was configured with an output surface.\n     *\n     * @throws IllegalStateException if not in the Executing state.\n     * @throws MediaCodec.CodecException upon codec error.\n     ",
+    "links" : [ "#dequeueOutputBuffer" ]
+  }, {
+    "name" : "public OutputFrame getOutputFrame(int index)",
+    "returnType" : "OutputFrame",
+    "comment" : "\n     * Returns an {@link OutputFrame} object.\n     *\n     * @param index output buffer index from\n     *              {@link Callback#onOutputBufferAvailable}\n     * @return {@link OutputFrame} object describing the output buffer\n     * @throws IllegalStateException if not using block model\n     * @throws IllegalArgumentException if the output buffer is not available or\n     *                                  the index is out of range\n     ",
+    "links" : [ "OutputFrame", "Callback#onOutputBufferAvailable", "OutputFrame" ]
+  }, {
+    "name" : "private native void native_getOutputFrame(OutputFrame frame, int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final native void setVideoScalingMode(@VideoScalingMode int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * If a surface has been specified in a previous call to {@link #configure}\n     * specifies the scaling mode to use. The default is \"scale to fit\".\n     * <p class=note>\n     * The scaling mode may be reset to the <strong>default</strong> each time an\n     * {@link #INFO_OUTPUT_BUFFERS_CHANGED} event is received from the codec; therefore, the client\n     * must call this method after every buffer change event (and before the first output buffer is\n     * released for rendering) to ensure consistent scaling mode.\n     * <p class=note>\n     * Since the {@link #INFO_OUTPUT_BUFFERS_CHANGED} event is deprecated, this can also be done\n     * after each {@link #INFO_OUTPUT_FORMAT_CHANGED} event.\n     *\n     * @throws IllegalArgumentException if mode is not recognized.\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ "#configure", "#INFO_OUTPUT_BUFFERS_CHANGED", "#INFO_OUTPUT_BUFFERS_CHANGED", "#INFO_OUTPUT_FORMAT_CHANGED" ]
+  }, {
+    "name" : "public void setAudioPresentation(@NonNull AudioPresentation presentation)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the audio presentation.\n     * @param presentation see {@link AudioPresentation}. In particular, id should be set.\n     ",
+    "links" : [ "AudioPresentation" ]
+  }, {
+    "name" : "private native void native_setAudioPresentation(int presentationId, int programId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getName()",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the codec name.\n     *\n     * If the codec was created by createDecoderByType or createEncoderByType, what component is\n     * chosen is not known beforehand. This method returns the name of the codec that was\n     * selected by the platform.\n     *\n     * <strong>Note:</strong> Implementations may provide multiple aliases (codec\n     * names) for the same underlying codec, any of which can be used to instantiate the same\n     * underlying codec in {@link MediaCodec#createByCodecName}. This method returns the\n     * name used to create the codec in this case.\n     *\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ "MediaCodec#createByCodecName" ]
+  }, {
+    "name" : "public final native String getCanonicalName()",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the underlying codec name.\n     *\n     * This method is similar to {@link #getName}, except that it returns the underlying component\n     * name even if an alias was used to create this MediaCodec object by name,\n     *\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ "#getName" ]
+  }, {
+    "name" : "public PersistableBundle getMetrics()",
+    "returnType" : "PersistableBundle",
+    "comment" : "\n     *  Return Metrics data about the current codec instance.\n     *\n     * @return a {@link PersistableBundle} containing the set of attributes and values\n     * available for the media being handled by this instance of MediaCodec\n     * The attributes are descibed in {@link MetricsConstants}.\n     *\n     * Additional vendor-specific fields may also be present in\n     * the return value.\n     ",
+    "links" : [ "PersistableBundle", "MetricsConstants" ]
+  }, {
+    "name" : "private native PersistableBundle native_getMetrics()",
+    "returnType" : "PersistableBundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setParameters(@Nullable Bundle params)",
+    "returnType" : "void",
+    "comment" : "\n     * Communicate additional parameter changes to the component instance.\n     * <b>Note:</b> Some of these parameter changes may silently fail to apply.\n     *\n     * @param params The bundle of parameters to set.\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCallback(@Nullable Callback cb, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets an asynchronous callback for actionable MediaCodec events.\n     *\n     * If the client intends to use the component in asynchronous mode,\n     * a valid callback should be provided before {@link #configure} is called.\n     *\n     * When asynchronous callback is enabled, the client should not call\n     * {@link #getInputBuffers}, {@link #getOutputBuffers},\n     * {@link #dequeueInputBuffer(long)} or {@link #dequeueOutputBuffer(BufferInfo, long)}.\n     * <p>\n     * Also, {@link #flush} behaves differently in asynchronous mode.  After calling\n     * {@code flush}, you must call {@link #start} to \"resume\" receiving input buffers,\n     * even if an input surface was created.\n     *\n     * @param cb The callback that will run.  Use {@code null} to clear a previously\n     *           set callback (before {@link #configure configure} is called and run\n     *           in synchronous mode).\n     * @param handler Callbacks will happen on the handler's thread. If {@code null},\n     *           callbacks are done on the default thread (the caller's thread or the\n     *           main thread.)\n     ",
+    "links" : [ "#configure", "#getInputBuffers", "#getOutputBuffers", "#dequeueInputBuffer", "#dequeueOutputBuffer", "#flush", "#start", "#configure" ]
+  }, {
+    "name" : "public void setCallback(@Nullable Callback cb)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets an asynchronous callback for actionable MediaCodec events on the default\n     * looper.\n     * <p>\n     * Same as {@link #setCallback(Callback, Handler)} with handler set to null.\n     * @param cb The callback that will run.  Use {@code null} to clear a previously\n     *           set callback (before {@link #configure configure} is called and run\n     *           in synchronous mode).\n     * @see #setCallback(Callback, Handler)\n     ",
+    "links" : [ "#setCallback", "#configure" ]
+  }, {
+    "name" : "public void setOnFrameRenderedListener(@Nullable OnFrameRenderedListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a callback to be invoked when an output frame is rendered on the output surface.\n     * <p>\n     * This method can be called in any codec state, but will only have an effect in the\n     * Executing state for codecs that render buffers to the output surface.\n     * <p>\n     * <strong>Note:</strong> This callback is for informational purposes only: to get precise\n     * render timing samples, and can be significantly delayed and batched. Some frames may have\n     * been rendered even if there was no callback generated.\n     *\n     * @param listener the callback that will be run\n     * @param handler the callback will be run on the handler's thread. If {@code null},\n     *           the callback will be run on the default thread, which is the looper\n     *           from which the codec was created, or a new thread if there was none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_enableOnFrameRenderedListener(boolean enable)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private EventHandler getEventHandlerOn(@Nullable Handler handler, @NonNull EventHandler lastHandler)",
+    "returnType" : "EventHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void postEventFromNative(int what, int arg1, int arg2, @Nullable Object obj)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void setParameters(@NonNull String[] keys, @NonNull Object[] values)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public MediaCodecInfo getCodecInfo()",
+    "returnType" : "MediaCodecInfo",
+    "comment" : "\n     * Get the codec info. If the codec was created by createDecoderByType\n     * or createEncoderByType, what component is chosen is not known beforehand,\n     * and thus the caller does not have the MediaCodecInfo.\n     * @throws IllegalStateException if in the Released state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final native MediaCodecInfo getOwnCodecInfo()",
+    "returnType" : "MediaCodecInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native ByteBuffer[] getBuffers(boolean input)",
+    "returnType" : "ByteBuffer[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native ByteBuffer getBuffer(boolean input, int index)",
+    "returnType" : "ByteBuffer",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native Image getImage(boolean input, int index)",
+    "returnType" : "Image",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native void native_init()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_setup(@NonNull String name, boolean nameIsType, boolean encoder)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_finalize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final long lockAndGetContext()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void setAndUnlockContext(long context)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "BUFFER_FLAG_SYNC_FRAME", "BUFFER_FLAG_KEY_FRAME", "BUFFER_FLAG_CODEC_CONFIG", "BUFFER_FLAG_END_OF_STREAM", "BUFFER_FLAG_PARTIAL_FRAME", "BUFFER_FLAG_MUXER_DATA", "mEventHandler", "mOnFrameRenderedHandler", "mCallbackHandler", "mCallback", "mOnFrameRenderedListener", "mListenerLock", "mCodecInfo", "mCodecInfoLock", "mCrypto", "EVENT_CALLBACK", "EVENT_SET_CALLBACK", "EVENT_FRAME_RENDERED", "CB_INPUT_AVAILABLE", "CB_OUTPUT_AVAILABLE", "CB_ERROR", "CB_OUTPUT_FORMAT_CHANGE", "mHasSurface", "mNameAtCreation", "CONFIGURE_FLAG_ENCODE", "CONFIGURE_FLAG_USE_BLOCK_MODEL", "BUFFER_MODE_INVALID", "BUFFER_MODE_LEGACY", "BUFFER_MODE_BLOCK", "mBufferMode", "CRYPTO_MODE_UNENCRYPTED", "CRYPTO_MODE_AES_CTR", "CRYPTO_MODE_AES_CBC", "mQueueRequests", "INFO_TRY_AGAIN_LATER", "INFO_OUTPUT_FORMAT_CHANGED", "INFO_OUTPUT_BUFFERS_CHANGED", "mCachedInputBuffers", "mCachedOutputBuffers", "mDequeuedInputBuffers", "mDequeuedOutputBuffers", "mDequeuedOutputInfos", "mBufferLock", "mOutputFrames", "VIDEO_SCALING_MODE_SCALE_TO_FIT", "VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING", "PARAMETER_KEY_VIDEO_BITRATE", "PARAMETER_KEY_SUSPEND", "PARAMETER_KEY_SUSPEND_TIME", "PARAMETER_KEY_OFFSET_TIME", "PARAMETER_KEY_REQUEST_SYNC_FRAME", "PARAMETER_KEY_HDR10_PLUS_INFO", "PARAMETER_KEY_LOW_LATENCY", "mNativeContext", "mNativeContextLock" ],
+  "methodNames" : [ "public static MediaCodec createDecoderByType(@NonNull String type) throws IOException", "public static MediaCodec createEncoderByType(@NonNull String type) throws IOException", "public static MediaCodec createByCodecName(@NonNull String name) throws IOException", "protected void finalize()", "public final void reset()", "private final native void native_reset()", "public final void release()", "private final native void native_release()", "public void configure(@Nullable MediaFormat format, @Nullable Surface surface, @Nullable MediaCrypto crypto, @ConfigureFlag int flags)", "public void configure(@Nullable MediaFormat format, @Nullable Surface surface, @ConfigureFlag int flags, @Nullable MediaDescrambler descrambler)", "private void configure(@Nullable MediaFormat format, @Nullable Surface surface, @Nullable MediaCrypto crypto, @Nullable IHwBinder descramblerBinder, @ConfigureFlag int flags)", "public void setOutputSurface(@NonNull Surface surface)", "private native void native_setSurface(@NonNull Surface surface)", "public static Surface createPersistentInputSurface()", "public void setInputSurface(@NonNull Surface surface)", "private static final native PersistentSurface native_createPersistentInputSurface()", "private static final native void native_releasePersistentInputSurface(@NonNull Surface surface)", "private final native void native_setInputSurface(@NonNull Surface surface)", "private final native void native_setCallback(@Nullable Callback cb)", "private final native void native_configure(@Nullable String[] keys, @Nullable Object[] values, @Nullable Surface surface, @Nullable MediaCrypto crypto, @Nullable IHwBinder descramblerBinder, @ConfigureFlag int flags)", "public final native Surface createInputSurface()", "public final void start()", "private final native void native_start()", "public final void stop()", "private final native void native_stop()", "public final void flush()", "private final native void native_flush()", "public final void queueInputBuffer(int index, int offset, int size, long presentationTimeUs, int flags) throws CryptoException", "private final native void native_queueInputBuffer(int index, int offset, int size, long presentationTimeUs, int flags) throws CryptoException", "public final void queueSecureInputBuffer(int index, int offset, @NonNull CryptoInfo info, long presentationTimeUs, int flags) throws CryptoException", "private final native void native_queueSecureInputBuffer(int index, int offset, @NonNull CryptoInfo info, long presentationTimeUs, int flags) throws CryptoException", "public final int dequeueInputBuffer(long timeoutUs)", "private final native int native_dequeueInputBuffer(long timeoutUs)", "public static Image mapHardwareBuffer(@NonNull HardwareBuffer hardwareBuffer)", "private static native Image native_mapHardwareBuffer(@NonNull HardwareBuffer hardwareBuffer)", "private static native void native_closeMediaImage(long context)", "private native void native_queueLinearBlock(int index, @NonNull LinearBlock block, int offset, int size, @Nullable CryptoInfo cryptoInfo, long presentationTimeUs, int flags, @NonNull ArrayList<String> keys, @NonNull ArrayList<Object> values)", "private native void native_queueHardwareBuffer(int index, @NonNull HardwareBuffer buffer, long presentationTimeUs, int flags, @NonNull ArrayList<String> keys, @NonNull ArrayList<Object> values)", "public QueueRequest getQueueRequest(int index)", "public final int dequeueOutputBuffer(@NonNull BufferInfo info, long timeoutUs)", "private final native int native_dequeueOutputBuffer(@NonNull BufferInfo info, long timeoutUs)", "public final void releaseOutputBuffer(int index, boolean render)", "public final void releaseOutputBuffer(int index, long renderTimestampNs)", "private void releaseOutputBufferInternal(int index, boolean render, boolean updatePts, long renderTimestampNs)", "private final native void releaseOutputBuffer(int index, boolean render, boolean updatePTS, long timeNs)", "public final native void signalEndOfInputStream()", "public final MediaFormat getOutputFormat()", "public final MediaFormat getInputFormat()", "public final MediaFormat getOutputFormat(int index)", "private final native Map<String, Object> getFormatNative(boolean input)", "private final native Map<String, Object> getOutputFormatNative(int index)", "private final void invalidateByteBuffer(@Nullable ByteBuffer[] buffers, int index)", "private final void validateInputByteBuffer(@Nullable ByteBuffer[] buffers, int index)", "private final void revalidateByteBuffer(@Nullable ByteBuffer[] buffers, int index)", "private final void validateOutputByteBuffer(@Nullable ByteBuffer[] buffers, int index, @NonNull BufferInfo info)", "private final void invalidateByteBuffers(@Nullable ByteBuffer[] buffers)", "private final void freeByteBuffer(@Nullable ByteBuffer buffer)", "private final void freeByteBuffers(@Nullable ByteBuffer[] buffers)", "private final void freeAllTrackedBuffers()", "private final void cacheBuffers(boolean input)", "public ByteBuffer[] getInputBuffers()", "public ByteBuffer[] getOutputBuffers()", "public ByteBuffer getInputBuffer(int index)", "public Image getInputImage(int index)", "public ByteBuffer getOutputBuffer(int index)", "public Image getOutputImage(int index)", "public OutputFrame getOutputFrame(int index)", "private native void native_getOutputFrame(OutputFrame frame, int index)", "public final native void setVideoScalingMode(@VideoScalingMode int mode)", "public void setAudioPresentation(@NonNull AudioPresentation presentation)", "private native void native_setAudioPresentation(int presentationId, int programId)", "public final String getName()", "public final native String getCanonicalName()", "public PersistableBundle getMetrics()", "private native PersistableBundle native_getMetrics()", "public final void setParameters(@Nullable Bundle params)", "public void setCallback(@Nullable Callback cb, @Nullable Handler handler)", "public void setCallback(@Nullable Callback cb)", "public void setOnFrameRenderedListener(@Nullable OnFrameRenderedListener listener, @Nullable Handler handler)", "private native void native_enableOnFrameRenderedListener(boolean enable)", "private EventHandler getEventHandlerOn(@Nullable Handler handler, @NonNull EventHandler lastHandler)", "private void postEventFromNative(int what, int arg1, int arg2, @Nullable Object obj)", "private final native void setParameters(@NonNull String[] keys, @NonNull Object[] values)", "public MediaCodecInfo getCodecInfo()", "private final native MediaCodecInfo getOwnCodecInfo()", "private final native ByteBuffer[] getBuffers(boolean input)", "private final native ByteBuffer getBuffer(boolean input, int index)", "private final native Image getImage(boolean input, int index)", "private static final native void native_init()", "private final native void native_setup(@NonNull String name, boolean nameIsType, boolean encoder)", "private final native void native_finalize()", "private final long lockAndGetContext()", "private final void setAndUnlockContext(long context)" ]
+}

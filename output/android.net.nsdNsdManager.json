@@ -1,0 +1,315 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/nsd/NsdManager.java",
+  "packageName" : "android.net.nsd",
+  "className" : "NsdManager",
+  "comment" : "\n * The Network Service Discovery Manager class provides the API to discover services\n * on a network. As an example, if device A and device B are connected over a Wi-Fi\n * network, a game registered on device A can be discovered by a game on device\n * B. Another example use case is an application discovering printers on the network.\n *\n * <p> The API currently supports DNS based service discovery and discovery is currently\n * limited to a local network over Multicast DNS. DNS service discovery is described at\n * http://files.dns-sd.org/draft-cheshire-dnsext-dns-sd.txt\n *\n * <p> The API is asynchronous, and responses to requests from an application are on listener\n * callbacks on a separate internal thread.\n *\n * <p> There are three main operations the API supports - registration, discovery and resolution.\n * <pre>\n *                          Application start\n *                                 |\n *                                 |\n *                                 |                  onServiceRegistered()\n *                     Register any local services  /\n *                      to be advertised with       \\\n *                       registerService()            onRegistrationFailed()\n *                                 |\n *                                 |\n *                          discoverServices()\n *                                 |\n *                      Maintain a list to track\n *                        discovered services\n *                                 |\n *                                 |--------->\n *                                 |          |\n *                                 |      onServiceFound()\n *                                 |          |\n *                                 |     add service to list\n *                                 |          |\n *                                 |<----------\n *                                 |\n *                                 |--------->\n *                                 |          |\n *                                 |      onServiceLost()\n *                                 |          |\n *                                 |   remove service from list\n *                                 |          |\n *                                 |<----------\n *                                 |\n *                                 |\n *                                 | Connect to a service\n *                                 | from list ?\n *                                 |\n *                          resolveService()\n *                                 |\n *                         onServiceResolved()\n *                                 |\n *                     Establish connection to service\n *                     with the host and port information\n *\n * </pre>\n * An application that needs to advertise itself over a network for other applications to\n * discover it can do so with a call to {@link #registerService}. If Example is a http based\n * application that can provide HTML data to peer services, it can register a name \"Example\"\n * with service type \"_http._tcp\". A successful registration is notified with a callback to\n * {@link RegistrationListener#onServiceRegistered} and a failure to register is notified\n * over {@link RegistrationListener#onRegistrationFailed}\n *\n * <p> A peer application looking for http services can initiate a discovery for \"_http._tcp\"\n * with a call to {@link #discoverServices}. A service found is notified with a callback\n * to {@link DiscoveryListener#onServiceFound} and a service lost is notified on\n * {@link DiscoveryListener#onServiceLost}.\n *\n * <p> Once the peer application discovers the \"Example\" http service, and either needs to read the\n * attributes of the service or wants to receive data from the \"Example\" application, it can\n * initiate a resolve with {@link #resolveService} to resolve the attributes, host, and port\n * details. A successful resolve is notified on {@link ResolveListener#onServiceResolved} and a\n * failure is notified on {@link ResolveListener#onResolveFailed}.\n *\n * Applications can reserve for a service type at\n * http://www.iana.org/form/ports-service. Existing services can be found at\n * http://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml\n *\n * {@see NsdServiceInfo}\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DBG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_NSD_STATE_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action to indicate whether network service discovery is\n     * enabled or disabled. An extra {@link #EXTRA_NSD_STATE} provides the state\n     * information as int.\n     *\n     * @see #EXTRA_NSD_STATE\n     ",
+    "links" : [ "#EXTRA_NSD_STATE" ]
+  }, {
+    "name" : "EXTRA_NSD_STATE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for an int that indicates whether network service discovery is enabled\n     * or disabled. Retrieve it with {@link android.content.Intent#getIntExtra(String,int)}.\n     *\n     * @see #NSD_STATE_DISABLED\n     * @see #NSD_STATE_ENABLED\n     ",
+    "links" : [ "android.content.Intent#getIntExtra" ]
+  }, {
+    "name" : "NSD_STATE_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Network service discovery is disabled\n     *\n     * @see #ACTION_NSD_STATE_CHANGED\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NSD_STATE_ENABLED",
+    "type" : "int",
+    "comment" : "\n     * Network service discovery is enabled\n     *\n     * @see #ACTION_NSD_STATE_CHANGED\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "BASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES_STARTED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_FOUND",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_LOST",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REGISTER_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REGISTER_SERVICE_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REGISTER_SERVICE_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "UNREGISTER_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "UNREGISTER_SERVICE_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "UNREGISTER_SERVICE_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESOLVE_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESOLVE_SERVICE_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESOLVE_SERVICE_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ENABLE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISABLE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "NATIVE_DAEMON_EVENT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "PROTOCOL_DNS_SD",
+    "type" : "int",
+    "comment" : " Dns based service discovery protocol ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_NAMES",
+    "type" : "SparseArray<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FIRST_LISTENER_KEY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "INsdManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListenerKey",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListenerMap",
+    "type" : "SparseArray",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mServiceMap",
+    "type" : "SparseArray<NsdServiceInfo>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMapLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAsyncChannel",
+    "type" : "AsyncChannel",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "ServiceHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnected",
+    "type" : "CountDownLatch",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FAILURE_INTERNAL_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Failures are passed with {@link RegistrationListener#onRegistrationFailed},\n     * {@link RegistrationListener#onUnregistrationFailed},\n     * {@link DiscoveryListener#onStartDiscoveryFailed},\n     * {@link DiscoveryListener#onStopDiscoveryFailed} or {@link ResolveListener#onResolveFailed}.\n     *\n     * Indicates that the operation failed due to an internal error.\n     ",
+    "links" : [ "RegistrationListener#onRegistrationFailed", "RegistrationListener#onUnregistrationFailed", "DiscoveryListener#onStartDiscoveryFailed", "DiscoveryListener#onStopDiscoveryFailed", "ResolveListener#onResolveFailed" ]
+  }, {
+    "name" : "FAILURE_ALREADY_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the operation failed because it is already active.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FAILURE_MAX_LIMIT",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the operation failed because the maximum outstanding\n     * requests from the applications have reached.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static String nameOf(int event)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disconnect()",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int nextListenerKey()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int putListener(Object listener, NsdServiceInfo s)",
+    "returnType" : "int",
+    "comment" : " Assert that the listener is not in the map, then add it and returns its key",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeListener(int key)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getListenerKey(Object listener)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getNsdServiceInfoType(NsdServiceInfo s)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void init()",
+    "returnType" : "void",
+    "comment" : "\n     * Initialize AsyncChannel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void fatal(String msg)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerService(NsdServiceInfo serviceInfo, int protocolType, RegistrationListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a service to be discovered by other services.\n     *\n     * <p> The function call immediately returns after sending a request to register service\n     * to the framework. The application is notified of a successful registration\n     * through the callback {@link RegistrationListener#onServiceRegistered} or a failure\n     * through {@link RegistrationListener#onRegistrationFailed}.\n     *\n     * <p> The application should call {@link #unregisterService} when the service\n     * registration is no longer required, and/or whenever the application is stopped.\n     *\n     * @param serviceInfo The service being registered\n     * @param protocolType The service discovery protocol\n     * @param listener The listener notifies of a successful registration and is used to\n     * unregister this service through a call on {@link #unregisterService}. Cannot be null.\n     * Cannot be in use for an active service registration.\n     ",
+    "links" : [ "RegistrationListener#onServiceRegistered", "RegistrationListener#onRegistrationFailed", "#unregisterService", "#unregisterService" ]
+  }, {
+    "name" : "public void unregisterService(RegistrationListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregister a service registered through {@link #registerService}. A successful\n     * unregister is notified to the application with a call to\n     * {@link RegistrationListener#onServiceUnregistered}.\n     *\n     * @param listener This should be the listener object that was passed to\n     * {@link #registerService}. It identifies the service that should be unregistered\n     * and notifies of a successful or unsuccessful unregistration via the listener\n     * callbacks.  In API versions 20 and above, the listener object may be used for\n     * another service registration once the callback has been called.  In API versions <= 19,\n     * there is no entirely reliable way to know when a listener may be re-used, and a new\n     * listener should be created for each service registration request.\n     ",
+    "links" : [ "#registerService", "RegistrationListener#onServiceUnregistered", "#registerService" ]
+  }, {
+    "name" : "public void discoverServices(String serviceType, int protocolType, DiscoveryListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Initiate service discovery to browse for instances of a service type. Service discovery\n     * consumes network bandwidth and will continue until the application calls\n     * {@link #stopServiceDiscovery}.\n     *\n     * <p> The function call immediately returns after sending a request to start service\n     * discovery to the framework. The application is notified of a success to initiate\n     * discovery through the callback {@link DiscoveryListener#onDiscoveryStarted} or a failure\n     * through {@link DiscoveryListener#onStartDiscoveryFailed}.\n     *\n     * <p> Upon successful start, application is notified when a service is found with\n     * {@link DiscoveryListener#onServiceFound} or when a service is lost with\n     * {@link DiscoveryListener#onServiceLost}.\n     *\n     * <p> Upon failure to start, service discovery is not active and application does\n     * not need to invoke {@link #stopServiceDiscovery}\n     *\n     * <p> The application should call {@link #stopServiceDiscovery} when discovery of this\n     * service type is no longer required, and/or whenever the application is paused or\n     * stopped.\n     *\n     * @param serviceType The service type being discovered. Examples include \"_http._tcp\" for\n     * http services or \"_ipp._tcp\" for printers\n     * @param protocolType The service discovery protocol\n     * @param listener  The listener notifies of a successful discovery and is used\n     * to stop discovery on this serviceType through a call on {@link #stopServiceDiscovery}.\n     * Cannot be null. Cannot be in use for an active service discovery.\n     ",
+    "links" : [ "#stopServiceDiscovery", "DiscoveryListener#onDiscoveryStarted", "DiscoveryListener#onStartDiscoveryFailed", "DiscoveryListener#onServiceFound", "DiscoveryListener#onServiceLost", "#stopServiceDiscovery", "#stopServiceDiscovery", "#stopServiceDiscovery" ]
+  }, {
+    "name" : "public void stopServiceDiscovery(DiscoveryListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop service discovery initiated with {@link #discoverServices}.  An active service\n     * discovery is notified to the application with {@link DiscoveryListener#onDiscoveryStarted}\n     * and it stays active until the application invokes a stop service discovery. A successful\n     * stop is notified to with a call to {@link DiscoveryListener#onDiscoveryStopped}.\n     *\n     * <p> Upon failure to stop service discovery, application is notified through\n     * {@link DiscoveryListener#onStopDiscoveryFailed}.\n     *\n     * @param listener This should be the listener object that was passed to {@link #discoverServices}.\n     * It identifies the discovery that should be stopped and notifies of a successful or\n     * unsuccessful stop.  In API versions 20 and above, the listener object may be used for\n     * another service discovery once the callback has been called.  In API versions <= 19,\n     * there is no entirely reliable way to know when a listener may be re-used, and a new\n     * listener should be created for each service discovery request.\n     ",
+    "links" : [ "#discoverServices", "DiscoveryListener#onDiscoveryStarted", "DiscoveryListener#onDiscoveryStopped", "DiscoveryListener#onStopDiscoveryFailed", "#discoverServices" ]
+  }, {
+    "name" : "public void resolveService(NsdServiceInfo serviceInfo, ResolveListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Resolve a discovered service. An application can resolve a service right before\n     * establishing a connection to fetch the IP and port details on which to setup\n     * the connection.\n     *\n     * @param serviceInfo service to be resolved\n     * @param listener to receive callback upon success or failure. Cannot be null.\n     * Cannot be in use for an active service resolution.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : " Internal use only @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private Messenger getMessenger()",
+    "returnType" : "Messenger",
+    "comment" : "\n     * Get a reference to NsdService handler. This is used to establish\n     * an AsyncChannel communication with the service\n     *\n     * @return Messenger pointing to the NsdService handler\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkListener(Object listener)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkProtocol(int protocolType)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkServiceInfo(NsdServiceInfo serviceInfo)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DBG", "ACTION_NSD_STATE_CHANGED", "EXTRA_NSD_STATE", "NSD_STATE_DISABLED", "NSD_STATE_ENABLED", "BASE", "DISCOVER_SERVICES", "DISCOVER_SERVICES_STARTED", "DISCOVER_SERVICES_FAILED", "SERVICE_FOUND", "SERVICE_LOST", "STOP_DISCOVERY", "STOP_DISCOVERY_FAILED", "STOP_DISCOVERY_SUCCEEDED", "REGISTER_SERVICE", "REGISTER_SERVICE_FAILED", "REGISTER_SERVICE_SUCCEEDED", "UNREGISTER_SERVICE", "UNREGISTER_SERVICE_FAILED", "UNREGISTER_SERVICE_SUCCEEDED", "RESOLVE_SERVICE", "RESOLVE_SERVICE_FAILED", "RESOLVE_SERVICE_SUCCEEDED", "ENABLE", "DISABLE", "NATIVE_DAEMON_EVENT", "PROTOCOL_DNS_SD", "EVENT_NAMES", "FIRST_LISTENER_KEY", "mService", "mContext", "mListenerKey", "mListenerMap", "mServiceMap", "mMapLock", "mAsyncChannel", "mHandler", "mConnected", "FAILURE_INTERNAL_ERROR", "FAILURE_ALREADY_ACTIVE", "FAILURE_MAX_LIMIT" ],
+  "methodNames" : [ "public static String nameOf(int event)", "public void disconnect()", "private int nextListenerKey()", "private int putListener(Object listener, NsdServiceInfo s)", "private void removeListener(int key)", "private int getListenerKey(Object listener)", "private static String getNsdServiceInfoType(NsdServiceInfo s)", "private void init()", "private static void fatal(String msg)", "public void registerService(NsdServiceInfo serviceInfo, int protocolType, RegistrationListener listener)", "public void unregisterService(RegistrationListener listener)", "public void discoverServices(String serviceType, int protocolType, DiscoveryListener listener)", "public void stopServiceDiscovery(DiscoveryListener listener)", "public void resolveService(NsdServiceInfo serviceInfo, ResolveListener listener)", "public void setEnabled(boolean enabled)", "private Messenger getMessenger()", "private static void checkListener(Object listener)", "private static void checkProtocol(int protocolType)", "private static void checkServiceInfo(NsdServiceInfo serviceInfo)" ]
+}

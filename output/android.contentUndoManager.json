@@ -1,0 +1,270 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/content/UndoManager.java",
+  "packageName" : "android.content",
+  "className" : "UndoManager",
+  "comment" : "\n * Top-level class for managing and interacting with the global undo state for\n * a document or application.  This class supports both undo and redo and has\n * helpers for merging undoable operations together as they are performed.\n *\n * <p>A single undoable operation is represented by {@link UndoOperation} which\n * apps implement to define their undo/redo behavior.  The UndoManager keeps\n * a stack of undo states; each state can have one or more undo operations\n * inside of it.</p>\n *\n * <p>Updates to the stack must be done inside of a {@link #beginUpdate}/{@link #endUpdate()}\n * pair.  During this time you can add new operations to the stack with\n * {@link #addOperation}, retrieve and modify existing operations with\n * {@link #getLastOperation}, control the label shown to the user for this operation\n * with {@link #setUndoLabel} and {@link #suggestUndoLabel}, etc.</p>\n *\n * <p>Every {link UndoOperation} is associated with an {@link UndoOwner}, which identifies\n * the data it belongs to.  The owner is used to indicate how operations are dependent\n * on each other -- operations with the same owner are dependent on others with the\n * same owner.  For example, you may have a document with multiple embedded objects.  If the\n * document itself and each embedded object use different owners, then you\n * can provide undo semantics appropriate to the user's context: while within\n * an embedded object, only edits to that object are seen and the user can\n * undo/redo them without needing to impact edits in other objects; while\n * within the larger document, all edits can be seen and the user must\n * undo/redo them as a single stream.</p>\n *\n * @hide\n ",
+  "variables" : [ {
+    "name" : "mOwners",
+    "type" : "ArrayMap<String, UndoOwner>",
+    "comment" : " The common case is a single undo owner (e.g. for a TextView), so default to that capacity.",
+    "links" : [ ]
+  }, {
+    "name" : "mUndos",
+    "type" : "ArrayList<UndoState>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRedos",
+    "type" : "ArrayList<UndoState>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUpdateCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistorySize",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWorking",
+    "type" : "UndoState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCommitId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInUndo",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMerged",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStateSeq",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNextSavedIdx",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStateOwners",
+    "type" : "UndoOwner[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MERGE_MODE_NONE",
+    "type" : "int",
+    "comment" : "\n     * Never merge with the last undo state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MERGE_MODE_UNIQUE",
+    "type" : "int",
+    "comment" : "\n     * Allow merge with the last undo state only if it contains\n     * operations with the caller's owner.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MERGE_MODE_ANY",
+    "type" : "int",
+    "comment" : "\n     * Always allow merge with the last undo state, if possible.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public UndoOwner getOwner(String tag, Object data)",
+    "returnType" : "UndoOwner",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void removeOwner(UndoOwner owner)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void saveInstanceState(Parcel p)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten the current undo state into a Parcel object, which can later be restored\n     * with {@link #restoreInstanceState(android.os.Parcel, java.lang.ClassLoader)}.\n     ",
+    "links" : [ "#restoreInstanceState" ]
+  }, {
+    "name" : " void saveOwner(UndoOwner owner, Parcel out)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void restoreInstanceState(Parcel p, ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "\n     * Restore an undo state previously created with {@link #saveInstanceState(Parcel)}.  This\n     * will restore the UndoManager's state to almost exactly what it was at the point it had\n     * been previously saved; the only information not restored is the data object\n     * associated with each {@link UndoOwner}, which requires separate calls to\n     * {@link #getOwner(String, Object)} to re-associate the owner with its data.\n     ",
+    "links" : [ "#saveInstanceState", "UndoOwner", "#getOwner" ]
+  }, {
+    "name" : " UndoOwner restoreOwner(Parcel in)",
+    "returnType" : "UndoOwner",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHistorySize(int size)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the maximum number of undo states that will be retained.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistorySize()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the current maximum number of undo states.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int undo(UndoOwner[] owners, int count)",
+    "returnType" : "int",
+    "comment" : "\n     * Perform undo of last/top <var>count</var> undo states.  The states impacted\n     * by this can be limited through <var>owners</var>.\n     * @param owners Optional set of owners that should be impacted.  If null, all\n     * undo states will be visible and available for undo.  If non-null, only those\n     * states that contain one of the owners specified here will be visible.\n     * @param count Number of undo states to pop.\n     * @return Returns the number of undo states that were actually popped.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int redo(UndoOwner[] owners, int count)",
+    "returnType" : "int",
+    "comment" : "\n     * Perform redo of last/top <var>count</var> undo states in the transient redo stack.\n     * The states impacted by this can be limited through <var>owners</var>.\n     * @param owners Optional set of owners that should be impacted.  If null, all\n     * undo states will be visible and available for undo.  If non-null, only those\n     * states that contain one of the owners specified here will be visible.\n     * @param count Number of undo states to pop.\n     * @return Returns the number of undo states that were actually redone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInUndo()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if we are currently inside of an undo/redo operation.  This is\n     * useful for editors to know whether they should be generating new undo state\n     * when they see edit operations happening.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int forgetUndos(UndoOwner[] owners, int count)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int forgetRedos(UndoOwner[] owners, int count)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int countUndos(UndoOwner[] owners)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of undo states on the undo stack.\n     * @param owners If non-null, only those states containing an operation with one of\n     * the owners supplied here will be counted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int countRedos(UndoOwner[] owners)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of redo states on the undo stack.\n     * @param owners If non-null, only those states containing an operation with one of\n     * the owners supplied here will be counted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CharSequence getUndoLabel(UndoOwner[] owners)",
+    "returnType" : "CharSequence",
+    "comment" : "\n     * Return the user-visible label for the top undo state on the stack.\n     * @param owners If non-null, will select the top-most undo state containing an\n     * operation with one of the owners supplied here.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CharSequence getRedoLabel(UndoOwner[] owners)",
+    "returnType" : "CharSequence",
+    "comment" : "\n     * Return the user-visible label for the top redo state on the stack.\n     * @param owners If non-null, will select the top-most undo state containing an\n     * operation with one of the owners supplied here.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginUpdate(CharSequence label)",
+    "returnType" : "void",
+    "comment" : "\n     * Start creating a new undo state.  Multiple calls to this function will nest until\n     * they are all matched by a later call to {@link #endUpdate}.\n     * @param label Optional user-visible label for this new undo state.\n     ",
+    "links" : [ "#endUpdate" ]
+  }, {
+    "name" : "private void createWorkingState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInUpdate()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if currently inside of a {@link #beginUpdate}.\n     ",
+    "links" : [ "#beginUpdate" ]
+  }, {
+    "name" : "public void setUndoLabel(CharSequence label)",
+    "returnType" : "void",
+    "comment" : "\n     * Forcibly set a new for the new undo state being built within a {@link #beginUpdate}.\n     * Any existing label will be replaced with this one.\n     ",
+    "links" : [ "#beginUpdate" ]
+  }, {
+    "name" : "public void suggestUndoLabel(CharSequence label)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a new for the new undo state being built within a {@link #beginUpdate}, but\n     * only if there is not a label currently set for it.\n     ",
+    "links" : [ "#beginUpdate" ]
+  }, {
+    "name" : "public int getUpdateNestingLevel()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of times {@link #beginUpdate} has been called without a matching\n     * {@link #endUpdate} call.\n     ",
+    "links" : [ "#beginUpdate", "#endUpdate" ]
+  }, {
+    "name" : "public boolean hasOperation(UndoOwner owner)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check whether there is an {@link UndoOperation} in the current {@link #beginUpdate}\n     * undo state.\n     * @param owner Optional owner of the operation to look for.  If null, will succeed\n     * if there is any operation; if non-null, will only succeed if there is an operation\n     * with the given owner.\n     * @return Returns true if there is a matching operation in the current undo state.\n     ",
+    "links" : [ "UndoOperation", "#beginUpdate" ]
+  }, {
+    "name" : "public UndoOperation<?> getLastOperation(int mergeMode)",
+    "returnType" : "UndoOperation<?>",
+    "comment" : "\n     * Return the most recent {@link UndoOperation} that was added to the update.\n     * @param mergeMode May be either {@link #MERGE_MODE_NONE} or {@link #MERGE_MODE_ANY}.\n     ",
+    "links" : [ "UndoOperation", "#MERGE_MODE_NONE", "#MERGE_MODE_ANY" ]
+  }, {
+    "name" : "public UndoOperation<?> getLastOperation(UndoOwner owner, int mergeMode)",
+    "returnType" : "UndoOperation<?>",
+    "comment" : "\n     * Return the most recent {@link UndoOperation} that was added to the update and\n     * has the given owner.\n     * @param owner Optional owner of last operation to retrieve.  If null, the last\n     * operation regardless of owner will be retrieved; if non-null, the last operation\n     * matching the given owner will be retrieved.\n     * @param mergeMode May be either {@link #MERGE_MODE_NONE}, {@link #MERGE_MODE_UNIQUE},\n     * or {@link #MERGE_MODE_ANY}.\n     ",
+    "links" : [ "UndoOperation", "#MERGE_MODE_NONE", "#MERGE_MODE_UNIQUE", "#MERGE_MODE_ANY" ]
+  }, {
+    "name" : "public T getLastOperation(Class<T> clazz, UndoOwner owner, int mergeMode)",
+    "returnType" : "T",
+    "comment" : "\n     * Return the most recent {@link UndoOperation} that was added to the update and\n     * has the given owner.\n     * @param clazz Optional class of the last operation to retrieve.  If null, the\n     * last operation regardless of class will be retrieved; if non-null, the last\n     * operation whose class is the same as the given class will be retrieved.\n     * @param owner Optional owner of last operation to retrieve.  If null, the last\n     * operation regardless of owner will be retrieved; if non-null, the last operation\n     * matching the given owner will be retrieved.\n     * @param mergeMode May be either {@link #MERGE_MODE_NONE}, {@link #MERGE_MODE_UNIQUE},\n     * or {@link #MERGE_MODE_ANY}.\n     ",
+    "links" : [ "UndoOperation", "#MERGE_MODE_NONE", "#MERGE_MODE_UNIQUE", "#MERGE_MODE_ANY" ]
+  }, {
+    "name" : "public void addOperation(UndoOperation<?> op, int mergeMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a new UndoOperation to the current update.\n     * @param op The new operation to add.\n     * @param mergeMode May be either {@link #MERGE_MODE_NONE}, {@link #MERGE_MODE_UNIQUE},\n     * or {@link #MERGE_MODE_ANY}.\n     ",
+    "links" : [ "#MERGE_MODE_NONE", "#MERGE_MODE_UNIQUE", "#MERGE_MODE_ANY" ]
+  }, {
+    "name" : "public void endUpdate()",
+    "returnType" : "void",
+    "comment" : "\n     * Finish the creation of an undo state, matching a previous call to\n     * {@link #beginUpdate}.\n     ",
+    "links" : [ "#beginUpdate" ]
+  }, {
+    "name" : "private void pushWorkingState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int commitState(UndoOwner owner)",
+    "returnType" : "int",
+    "comment" : "\n     * Commit the last finished undo state.  This undo state can no longer be\n     * modified with further {@link #MERGE_MODE_UNIQUE} or\n     * {@link #MERGE_MODE_ANY} merge modes.  If called while inside of an update,\n     * this will push any changes in the current update on to the undo stack\n     * and result with a fresh undo state, behaving as if {@link #endUpdate()}\n     * had been called enough to unwind the current update, then the last state\n     * committed, and {@link #beginUpdate} called to restore the update nesting.\n     * @param owner The optional owner to determine whether to perform the commit.\n     * If this is non-null, the commit will only execute if the current top undo\n     * state contains an operation with the given owner.\n     * @return Returns an integer identifier for the committed undo state, which\n     * can later be used to try to uncommit the state to perform further edits on it.\n     ",
+    "links" : [ "#MERGE_MODE_UNIQUE", "#MERGE_MODE_ANY", "#endUpdate", "#beginUpdate" ]
+  }, {
+    "name" : "public boolean uncommitState(int commitId, UndoOwner owner)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Attempt to undo a previous call to {@link #commitState}.  This will work\n     * if the undo state at the top of the stack has the given id, and has not been\n     * involved in an undo operation.  Otherwise false is returned.\n     * @param commitId The identifier for the state to be uncommitted, as returned\n     * by {@link #commitState}.\n     * @param owner Optional owner that must appear in the committed state.\n     * @return Returns true if the uncommit is successful, else false.\n     ",
+    "links" : [ "#commitState", "#commitState" ]
+  }, {
+    "name" : " UndoState getTopUndo(UndoOwner[] owners)",
+    "returnType" : "UndoState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " UndoState getTopRedo(UndoOwner[] owners)",
+    "returnType" : "UndoState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean matchOwners(UndoState state, UndoOwner[] owners)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " int findPrevState(ArrayList<UndoState> states, UndoOwner[] owners, int from)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " int findNextState(ArrayList<UndoState> states, UndoOwner[] owners, int from)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "mOwners", "mUndos", "mRedos", "mUpdateCount", "mHistorySize", "mWorking", "mCommitId", "mInUndo", "mMerged", "mStateSeq", "mNextSavedIdx", "mStateOwners", "MERGE_MODE_NONE", "MERGE_MODE_UNIQUE", "MERGE_MODE_ANY" ],
+  "methodNames" : [ "public UndoOwner getOwner(String tag, Object data)", " void removeOwner(UndoOwner owner)", "public void saveInstanceState(Parcel p)", " void saveOwner(UndoOwner owner, Parcel out)", "public void restoreInstanceState(Parcel p, ClassLoader loader)", " UndoOwner restoreOwner(Parcel in)", "public void setHistorySize(int size)", "public int getHistorySize()", "public int undo(UndoOwner[] owners, int count)", "public int redo(UndoOwner[] owners, int count)", "public boolean isInUndo()", "public int forgetUndos(UndoOwner[] owners, int count)", "public int forgetRedos(UndoOwner[] owners, int count)", "public int countUndos(UndoOwner[] owners)", "public int countRedos(UndoOwner[] owners)", "public CharSequence getUndoLabel(UndoOwner[] owners)", "public CharSequence getRedoLabel(UndoOwner[] owners)", "public void beginUpdate(CharSequence label)", "private void createWorkingState()", "public boolean isInUpdate()", "public void setUndoLabel(CharSequence label)", "public void suggestUndoLabel(CharSequence label)", "public int getUpdateNestingLevel()", "public boolean hasOperation(UndoOwner owner)", "public UndoOperation<?> getLastOperation(int mergeMode)", "public UndoOperation<?> getLastOperation(UndoOwner owner, int mergeMode)", "public T getLastOperation(Class<T> clazz, UndoOwner owner, int mergeMode)", "public void addOperation(UndoOperation<?> op, int mergeMode)", "public void endUpdate()", "private void pushWorkingState()", "public int commitState(UndoOwner owner)", "public boolean uncommitState(int commitId, UndoOwner owner)", " UndoState getTopUndo(UndoOwner[] owners)", " UndoState getTopRedo(UndoOwner[] owners)", " boolean matchOwners(UndoState state, UndoOwner[] owners)", " int findPrevState(ArrayList<UndoState> states, UndoOwner[] owners, int from)", " int findNextState(ArrayList<UndoState> states, UndoOwner[] owners, int from)" ]
+}

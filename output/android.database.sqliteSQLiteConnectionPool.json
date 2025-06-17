@@ -1,0 +1,310 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/database/sqlite/SQLiteConnectionPool.java",
+  "packageName" : "android.database.sqlite",
+  "className" : "SQLiteConnectionPool",
+  "comment" : "\n * Maintains a pool of active SQLite database connections.\n * <p>\n * At any given time, a connection is either owned by the pool, or it has been\n * acquired by a {@link SQLiteSession}.  When the {@link SQLiteSession} is\n * finished with the connection it is using, it must return the connection\n * back to the pool.\n * </p><p>\n * The pool holds strong references to the connections it owns.  However,\n * it only holds <em>weak references</em> to the connections that sessions\n * have acquired from it.  Using weak references in the latter case ensures\n * that the connection pool can detect when connections have been improperly\n * abandoned so that it can create new connections to replace them if needed.\n * </p><p>\n * The connection pool is thread-safe (but the connections themselves are not).\n * </p>\n *\n * <h2>Exception safety</h2>\n * <p>\n * This code attempts to maintain the invariant that opened connections are\n * always owned.  Unfortunately that means it needs to handle exceptions\n * all over to ensure that broken connections get cleaned up.  Most\n * operations invokving SQLite can throw {@link SQLiteException} or other\n * runtime exceptions.  This is a bit of a pain to deal with because the compiler\n * cannot help us catch missing exception handling code.\n * </p><p>\n * The general rule for this file: If we are making calls out to\n * {@link SQLiteConnection} then we must be prepared to handle any\n * runtime exceptions it might throw at us.  Note that out-of-memory\n * is an {@link Error}, not a {@link RuntimeException}.  We don't trouble ourselves\n * handling out of memory because it is hard to do anything at all sensible then\n * and most likely the VM is about to crash.\n * </p>\n *\n * @hide\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECTION_POOL_BUSY_MILLIS",
+    "type" : "long",
+    "comment" : " 30 seconds",
+    "links" : [ ]
+  }, {
+    "name" : "mCloseGuard",
+    "type" : "CloseGuard",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionLeaked",
+    "type" : "AtomicBoolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConfiguration",
+    "type" : "SQLiteDatabaseConfiguration",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMaxConnectionPoolSize",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsOpen",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNextConnectionId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionWaiterPool",
+    "type" : "ConnectionWaiter",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionWaiterQueue",
+    "type" : "ConnectionWaiter",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAvailableNonPrimaryConnections",
+    "type" : "ArrayList<SQLiteConnection>",
+    "comment" : " Strong references to all available connections.",
+    "links" : [ ]
+  }, {
+    "name" : "mAvailablePrimaryConnection",
+    "type" : "SQLiteConnection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIdleConnectionHandler",
+    "type" : "IdleConnectionHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTotalExecutionTimeCounter",
+    "type" : "AtomicLong",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAcquiredConnections",
+    "type" : "WeakHashMap<SQLiteConnection, AcquiredConnectionStatus>",
+    "comment" : " need to be updated in preparation for the next client.",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECTION_FLAG_READ_ONLY",
+    "type" : "int",
+    "comment" : "\n     * Connection flag: Read-only.\n     * <p>\n     * This flag indicates that the connection will only be used to\n     * perform read-only operations.\n     * </p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY",
+    "type" : "int",
+    "comment" : "\n     * Connection flag: Primary connection affinity.\n     * <p>\n     * This flag indicates that the primary connection is required.\n     * This flag helps support legacy applications that expect most data modifying\n     * operations to be serialized by locking the primary database connection.\n     * Setting this flag essentially implements the old \"db lock\" concept by preventing\n     * an operation from being performed until it can obtain exclusive access to\n     * the primary connection.\n     * </p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECTION_FLAG_INTERACTIVE",
+    "type" : "int",
+    "comment" : "\n     * Connection flag: Connection is being used interactively.\n     * <p>\n     * This flag indicates that the connection is needed by the UI thread.\n     * The connection pool can use this flag to elevate the priority\n     * of the database connection request.\n     * </p>\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static SQLiteConnectionPool open(SQLiteDatabaseConfiguration configuration)",
+    "returnType" : "SQLiteConnectionPool",
+    "comment" : "\n     * Opens a connection pool for the specified database.\n     *\n     * @param configuration The database configuration.\n     * @return The connection pool.\n     *\n     * @throws SQLiteException if a database error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void open()",
+    "returnType" : "void",
+    "comment" : " Might throw",
+    "links" : [ ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Closes the connection pool.\n     * <p>\n     * When the connection pool is closed, it will refuse all further requests\n     * to acquire connections.  All connections that are currently available in\n     * the pool are closed immediately.  Any connections that are still in use\n     * will be closed as soon as they are returned to the pool.\n     * </p>\n     *\n     * @throws IllegalStateException if the pool has been closed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispose(boolean finalized)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void reconfigure(SQLiteDatabaseConfiguration configuration)",
+    "returnType" : "void",
+    "comment" : "\n     * Reconfigures the database configuration of the connection pool and all of its\n     * connections.\n     * <p>\n     * Configuration changes are propagated down to connections immediately if\n     * they are available or as soon as they are released.  This includes changes\n     * that affect the size of the pool.\n     * </p>\n     *\n     * @param configuration The new configuration.\n     *\n     * @throws IllegalStateException if the pool has been closed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public SQLiteConnection acquireConnection(String sql, int connectionFlags, CancellationSignal cancellationSignal)",
+    "returnType" : "SQLiteConnection",
+    "comment" : "\n     * Acquires a connection from the pool.\n     * <p>\n     * The caller must call {@link #releaseConnection} to release the connection\n     * back to the pool when it is finished.  Failure to do so will result\n     * in much unpleasantness.\n     * </p>\n     *\n     * @param sql If not null, try to find a connection that already has\n     * the specified SQL statement in its prepared statement cache.\n     * @param connectionFlags The connection request flags.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The connection that was acquired, never null.\n     *\n     * @throws IllegalStateException if the pool has been closed.\n     * @throws SQLiteException if a database error occurs.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ "#releaseConnection" ]
+  }, {
+    "name" : "public void releaseConnection(SQLiteConnection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Releases a connection back to the pool.\n     * <p>\n     * It is ok to call this method after the pool has closed, to release\n     * connections that were still in use at the time of closure.\n     * </p>\n     *\n     * @param connection The connection to release.  Must not be null.\n     *\n     * @throws IllegalStateException if the connection was not acquired\n     * from this pool or if it has already been released.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean recycleConnectionLocked(SQLiteConnection connection, AcquiredConnectionStatus status)",
+    "returnType" : "boolean",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean shouldYieldConnection(SQLiteConnection connection, int connectionFlags)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the session should yield the connection due to\n     * contention over available database connections.\n     *\n     * @param connection The connection owned by the session.\n     * @param connectionFlags The connection request flags.\n     * @return True if the session should yield its connection.\n     *\n     * @throws IllegalStateException if the connection was not acquired\n     * from this pool or if it has already been released.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void collectDbStats(ArrayList<DbStats> dbStatsList)",
+    "returnType" : "void",
+    "comment" : "\n     * Collects statistics about database connection memory usage.\n     *\n     * @param dbStatsList The list to populate.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private SQLiteConnection openConnectionLocked(SQLiteDatabaseConfiguration configuration, boolean primaryConnection)",
+    "returnType" : "SQLiteConnection",
+    "comment" : " Might throw.",
+    "links" : [ ]
+  }, {
+    "name" : " void onConnectionLeaked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void onStatementExecuted(long executionTimeMs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeAvailableConnectionsAndLogExceptionsLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean closeAvailableConnectionLocked(int connectionId)",
+    "returnType" : "boolean",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeAvailableNonPrimaryConnectionsAndLogExceptionsLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : " void closeAvailableNonPrimaryConnectionsAndLogExceptions()",
+    "returnType" : "void",
+    "comment" : "\n     * Close non-primary connections that are not currently in use. This method is safe to use\n     * in finalize block as it doesn't throw RuntimeExceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeExcessConnectionsAndLogExceptionsLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeConnectionAndLogExceptionsLocked(SQLiteConnection connection)",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void discardAcquiredConnectionsLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void reconfigureAllConnectionsLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void markAcquiredConnectionsLocked(AcquiredConnectionStatus status)",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private SQLiteConnection waitForConnection(String sql, int connectionFlags, CancellationSignal cancellationSignal)",
+    "returnType" : "SQLiteConnection",
+    "comment" : " Might throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void cancelConnectionWaiterLocked(ConnectionWaiter waiter)",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void logConnectionPoolBusyLocked(long waitMillis, int connectionFlags)",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void wakeConnectionWaitersLocked()",
+    "returnType" : "void",
+    "comment" : " Can't throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private SQLiteConnection tryAcquirePrimaryConnectionLocked(int connectionFlags)",
+    "returnType" : "SQLiteConnection",
+    "comment" : " Might throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private SQLiteConnection tryAcquireNonPrimaryConnectionLocked(String sql, int connectionFlags)",
+    "returnType" : "SQLiteConnection",
+    "comment" : " Might throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private void finishAcquireConnectionLocked(SQLiteConnection connection, int connectionFlags)",
+    "returnType" : "void",
+    "comment" : " Might throw.",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isSessionBlockingImportantConnectionWaitersLocked(boolean holdingPrimaryConnection, int connectionFlags)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getPriority(int connectionFlags)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setMaxConnectionPoolSizeLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setupIdleConnectionHandler(Looper looper, long timeoutMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Set up the handler based on the provided looper and timeout.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void disableIdleConnectionHandler()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void throwIfClosedLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ConnectionWaiter obtainConnectionWaiterLocked(Thread thread, long startTime, int priority, boolean wantPrimaryConnection, String sql, int connectionFlags)",
+    "returnType" : "ConnectionWaiter",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void recycleConnectionWaiterLocked(ConnectionWaiter waiter)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(Printer printer, boolean verbose, ArraySet<String> directories)",
+    "returnType" : "void",
+    "comment" : "\n     * Dumps debugging information about this connection pool.\n     *\n     * @param printer The printer to receive the dump, not null.\n     * @param verbose True to dump more verbose information.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String getPath()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "CONNECTION_POOL_BUSY_MILLIS", "mCloseGuard", "mLock", "mConnectionLeaked", "mConfiguration", "mMaxConnectionPoolSize", "mIsOpen", "mNextConnectionId", "mConnectionWaiterPool", "mConnectionWaiterQueue", "mAvailableNonPrimaryConnections", "mAvailablePrimaryConnection", "mIdleConnectionHandler", "mTotalExecutionTimeCounter", "mAcquiredConnections", "CONNECTION_FLAG_READ_ONLY", "CONNECTION_FLAG_PRIMARY_CONNECTION_AFFINITY", "CONNECTION_FLAG_INTERACTIVE" ],
+  "methodNames" : [ "protected void finalize() throws Throwable", "public static SQLiteConnectionPool open(SQLiteDatabaseConfiguration configuration)", "private void open()", "public void close()", "private void dispose(boolean finalized)", "public void reconfigure(SQLiteDatabaseConfiguration configuration)", "public SQLiteConnection acquireConnection(String sql, int connectionFlags, CancellationSignal cancellationSignal)", "public void releaseConnection(SQLiteConnection connection)", "private boolean recycleConnectionLocked(SQLiteConnection connection, AcquiredConnectionStatus status)", "public boolean shouldYieldConnection(SQLiteConnection connection, int connectionFlags)", "public void collectDbStats(ArrayList<DbStats> dbStatsList)", "private SQLiteConnection openConnectionLocked(SQLiteDatabaseConfiguration configuration, boolean primaryConnection)", " void onConnectionLeaked()", " void onStatementExecuted(long executionTimeMs)", "private void closeAvailableConnectionsAndLogExceptionsLocked()", "private boolean closeAvailableConnectionLocked(int connectionId)", "private void closeAvailableNonPrimaryConnectionsAndLogExceptionsLocked()", " void closeAvailableNonPrimaryConnectionsAndLogExceptions()", "private void closeExcessConnectionsAndLogExceptionsLocked()", "private void closeConnectionAndLogExceptionsLocked(SQLiteConnection connection)", "private void discardAcquiredConnectionsLocked()", "private void reconfigureAllConnectionsLocked()", "private void markAcquiredConnectionsLocked(AcquiredConnectionStatus status)", "private SQLiteConnection waitForConnection(String sql, int connectionFlags, CancellationSignal cancellationSignal)", "private void cancelConnectionWaiterLocked(ConnectionWaiter waiter)", "private void logConnectionPoolBusyLocked(long waitMillis, int connectionFlags)", "private void wakeConnectionWaitersLocked()", "private SQLiteConnection tryAcquirePrimaryConnectionLocked(int connectionFlags)", "private SQLiteConnection tryAcquireNonPrimaryConnectionLocked(String sql, int connectionFlags)", "private void finishAcquireConnectionLocked(SQLiteConnection connection, int connectionFlags)", "private boolean isSessionBlockingImportantConnectionWaitersLocked(boolean holdingPrimaryConnection, int connectionFlags)", "private static int getPriority(int connectionFlags)", "private void setMaxConnectionPoolSizeLocked()", "public void setupIdleConnectionHandler(Looper looper, long timeoutMs)", " void disableIdleConnectionHandler()", "private void throwIfClosedLocked()", "private ConnectionWaiter obtainConnectionWaiterLocked(Thread thread, long startTime, int priority, boolean wantPrimaryConnection, String sql, int connectionFlags)", "private void recycleConnectionWaiterLocked(ConnectionWaiter waiter)", "public void dump(Printer printer, boolean verbose, ArraySet<String> directories)", "public String toString()", "public String getPath()" ]
+}

@@ -1,0 +1,645 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/MediaDrm.java",
+  "packageName" : "android.media",
+  "className" : "MediaDrm",
+  "comment" : "\n * MediaDrm can be used to obtain keys for decrypting protected media streams, in\n * conjunction with {@link android.media.MediaCrypto}.  The MediaDrm APIs\n * are designed to support the ISO/IEC 23001-7: Common Encryption standard, but\n * may also be used to implement other encryption schemes.\n * <p>\n * Encrypted content is prepared using an encryption server and stored in a content\n * library. The encrypted content is streamed or downloaded from the content library to\n * client devices via content servers.  Licenses to view the content are obtained from\n * a License Server.\n * <p>\n * <p><img src=\"../../../images/mediadrm_overview.png\"\n *      alt=\"MediaDrm Overview diagram\"\n *      border=\"0\" /></p>\n * <p>\n * Keys are requested from the license server using a key request. The key\n * response is delivered to the client app, which provides the response to the\n * MediaDrm API.\n * <p>\n * A Provisioning server may be required to distribute device-unique credentials to\n * the devices.\n * <p>\n * Enforcing requirements related to the number of devices that may play content\n * simultaneously can be performed either through key renewal or using the secure\n * stop methods.\n * <p>\n * The following sequence diagram shows the interactions between the objects\n * involved while playing back encrypted content:\n * <p>\n * <p><img src=\"../../../images/mediadrm_decryption_sequence.png\"\n *         alt=\"MediaDrm Overview diagram\"\n *         border=\"0\" /></p>\n * <p>\n * The app first constructs {@link android.media.MediaExtractor} and\n * {@link android.media.MediaCodec} objects. It accesses the DRM-scheme-identifying UUID,\n * typically from metadata in the content, and uses this UUID to construct an instance\n * of a MediaDrm object that is able to support the DRM scheme required by the content.\n * Crypto schemes are assigned 16 byte UUIDs.  The method {@link #isCryptoSchemeSupported}\n * can be used to query if a given scheme is supported on the device.\n * <p>\n * The app calls {@link #openSession} to generate a sessionId that will uniquely identify\n * the session in subsequent interactions. The app next uses the MediaDrm object to\n * obtain a key request message and send it to the license server, then provide\n * the server's response to the MediaDrm object.\n * <p>\n * Once the app has a sessionId, it can construct a MediaCrypto object from the UUID and\n * sessionId.  The MediaCrypto object is registered with the MediaCodec in the\n * {@link MediaCodec#configure} method to enable the codec to decrypt content.\n * <p>\n * When the app has constructed {@link android.media.MediaExtractor},\n * {@link android.media.MediaCodec} and {@link android.media.MediaCrypto} objects,\n * it proceeds to pull samples from the extractor and queue them into the decoder.  For\n * encrypted content, the samples returned from the extractor remain encrypted, they\n * are only decrypted when the samples are delivered to the decoder.\n * <p>\n * MediaDrm methods throw {@link android.media.MediaDrm.MediaDrmStateException}\n * when a method is called on a MediaDrm object that has had an unrecoverable failure\n * in the DRM plugin or security hardware.\n * {@link android.media.MediaDrm.MediaDrmStateException} extends\n * {@link java.lang.IllegalStateException} with the addition of a developer-readable\n * diagnostic information string associated with the exception.\n * <p>\n * In the event of a mediaserver process crash or restart while a MediaDrm object\n * is active, MediaDrm methods may throw {@link android.media.MediaDrmResetException}.\n * To recover, the app must release the MediaDrm object, then create and initialize\n * a new one.\n * <p>\n * As {@link android.media.MediaDrmResetException} and\n * {@link android.media.MediaDrm.MediaDrmStateException} both extend\n * {@link java.lang.IllegalStateException}, they should be in an earlier catch()\n * block than {@link java.lang.IllegalStateException} if handled separately.\n * <p>\n * <a name=\"Callbacks\"></a>\n * <h3>Callbacks</h3>\n * <p>Applications should register for informational events in order\n * to be informed of key state updates during playback or streaming.\n * Registration for these events is done via a call to\n * {@link #setOnEventListener}. In order to receive the respective\n * callback associated with this listener, applications are required to create\n * MediaDrm objects on a thread with its own Looper running (main UI\n * thread by default has a Looper running).\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClosed",
+    "type" : "AtomicBoolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCloseGuard",
+    "type" : "CloseGuard",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PERMISSION",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContext",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CERTIFICATE_TYPE_NONE",
+    "type" : "int",
+    "comment" : "\n     * Specify no certificate type\n     *\n     * @hide - not part of the public API at this time\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CERTIFICATE_TYPE_X509",
+    "type" : "int",
+    "comment" : "\n     * Specify X.509 certificate type\n     *\n     * @hide - not part of the public API at this time\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_PROVISION_REQUIRED",
+    "type" : "int",
+    "comment" : "\n     * This event type indicates that the app needs to request a certificate from\n     * the provisioning server.  The request message data is obtained using\n     * {@link #getProvisionRequest}\n     *\n     * @deprecated Handle provisioning via {@link android.media.NotProvisionedException}\n     * instead.\n     ",
+    "links" : [ "#getProvisionRequest", "android.media.NotProvisionedException" ]
+  }, {
+    "name" : "EVENT_KEY_REQUIRED",
+    "type" : "int",
+    "comment" : "\n     * This event type indicates that the app needs to request keys from a license\n     * server.  The request message data is obtained using {@link #getKeyRequest}.\n     ",
+    "links" : [ "#getKeyRequest" ]
+  }, {
+    "name" : "EVENT_KEY_EXPIRED",
+    "type" : "int",
+    "comment" : "\n     * This event type indicates that the licensed usage duration for keys in a session\n     * has expired.  The keys are no longer valid.\n     * @deprecated Use {@link OnKeyStatusChangeListener#onKeyStatusChange}\n     * and check for {@link MediaDrm.KeyStatus#STATUS_EXPIRED} in the {@link MediaDrm.KeyStatus}\n     * instead.\n     ",
+    "links" : [ "OnKeyStatusChangeListener#onKeyStatusChange", "MediaDrm.KeyStatus#STATUS_EXPIRED", "MediaDrm.KeyStatus" ]
+  }, {
+    "name" : "EVENT_VENDOR_DEFINED",
+    "type" : "int",
+    "comment" : "\n     * This event may indicate some specific vendor-defined condition, see your\n     * DRM provider documentation for details\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_SESSION_RECLAIMED",
+    "type" : "int",
+    "comment" : "\n     * This event indicates that a session opened by the app has been reclaimed by the resource\n     * manager.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DRM_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EXPIRATION_UPDATE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_STATUS_CHANGE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_LOST_STATE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListenerMap",
+    "type" : "Map<Integer, ListenerWithExecutor>",
+    "comment" : " ListenerWithExecutor is immutable so we shouldn't need further locks.",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_TYPE_STREAMING",
+    "type" : "int",
+    "comment" : "\n     * This key request type species that the keys will be for online use, they will\n     * not be saved to the device for subsequent use when the device is not connected\n     * to a network.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_TYPE_OFFLINE",
+    "type" : "int",
+    "comment" : "\n     * This key request type specifies that the keys will be for offline use, they\n     * will be saved to the device for use when the device is not connected to a network.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_TYPE_RELEASE",
+    "type" : "int",
+    "comment" : "\n     * This key request type specifies that previously saved offline keys should be released.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OFFLINE_LICENSE_STATE_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * Offline license state is unknown, an error occurred while trying\n     * to access it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OFFLINE_LICENSE_STATE_USABLE",
+    "type" : "int",
+    "comment" : "\n     * Offline license is usable, the keys may be used for decryption.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OFFLINE_LICENSE_STATE_RELEASED",
+    "type" : "int",
+    "comment" : "\n     * Offline license is released, the keys have been marked for\n     * release using {@link #getKeyRequest} with KEY_TYPE_RELEASE but\n     * the key response has not been received.\n     ",
+    "links" : [ "#getKeyRequest" ]
+  }, {
+    "name" : "HDCP_LEVEL_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * The DRM plugin did not report an HDCP level, or an error\n     * occurred accessing it\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_NONE",
+    "type" : "int",
+    "comment" : "\n     * HDCP is not supported on this device, content is unprotected\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_V1",
+    "type" : "int",
+    "comment" : "\n     * HDCP version 1.0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_V2",
+    "type" : "int",
+    "comment" : "\n     * HDCP version 2.0 Type 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_V2_1",
+    "type" : "int",
+    "comment" : "\n     * HDCP version 2.1 Type 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_V2_2",
+    "type" : "int",
+    "comment" : "\n     *  HDCP version 2.2 Type 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_V2_3",
+    "type" : "int",
+    "comment" : "\n     *  HDCP version 2.3 Type 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HDCP_NO_DIGITAL_OUTPUT",
+    "type" : "int",
+    "comment" : "\n     * No digital output, implicitly secure\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * The DRM plugin did not report a security level, or an error occurred\n     * accessing it\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_SW_SECURE_CRYPTO",
+    "type" : "int",
+    "comment" : "\n     * DRM key management uses software-based whitebox crypto.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_SW_SECURE_DECODE",
+    "type" : "int",
+    "comment" : "\n     * DRM key management and decoding use software-based whitebox crypto.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_HW_SECURE_CRYPTO",
+    "type" : "int",
+    "comment" : "\n     * DRM key management and crypto operations are performed within a hardware\n     * backed trusted execution environment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_HW_SECURE_DECODE",
+    "type" : "int",
+    "comment" : "\n     * DRM key management, crypto operations and decoding of content are\n     * performed within a hardware backed trusted execution environment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_HW_SECURE_ALL",
+    "type" : "int",
+    "comment" : "\n     * DRM key management, crypto operations, decoding of content and all\n     * handling of the media (compressed and uncompressed) is handled within a\n     * hardware backed trusted execution environment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECURITY_LEVEL_MAX",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the maximum security level supported by the device should\n     * be used when opening a session. This is the default security level\n     * selected when a session is opened.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_VENDOR",
+    "type" : "String",
+    "comment" : "\n     * String property name: identifies the maker of the DRM plugin\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_VERSION",
+    "type" : "String",
+    "comment" : "\n     * String property name: identifies the version of the DRM plugin\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_DESCRIPTION",
+    "type" : "String",
+    "comment" : "\n     * String property name: describes the DRM plugin\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_ALGORITHMS",
+    "type" : "String",
+    "comment" : "\n     * String property name: a comma-separated list of cipher and mac algorithms\n     * supported by CryptoSession.  The list may be empty if the DRM\n     * plugin does not support CryptoSession operations.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_DEVICE_UNIQUE_ID",
+    "type" : "String",
+    "comment" : "\n     * Byte array property name: the device unique identifier is established during\n     * device provisioning and provides a means of uniquely identifying each device.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Query if the given scheme identified by its UUID is supported on\n     * this device.\n     * @param uuid The UUID of the crypto scheme.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid, @NonNull String mimeType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Query if the given scheme identified by its UUID is supported on\n     * this device, and whether the DRM plugin is able to handle the\n     * media container format specified by mimeType.\n     * @param uuid The UUID of the crypto scheme.\n     * @param mimeType The MIME type of the media container, e.g. \"video/mp4\"\n     *   or \"video/webm\"\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid, @NonNull String mimeType, @SecurityLevel int securityLevel)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Query if the given scheme identified by its UUID is supported on\n     * this device, and whether the DRM plugin is able to handle the\n     * media container format specified by mimeType at the requested\n     * security level.\n     *\n     * @param uuid The UUID of the crypto scheme.\n     * @param mimeType The MIME type of the media container, e.g. \"video/mp4\"\n     *   or \"video/webm\"\n     * @param securityLevel the security level requested\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final List<UUID> getSupportedCryptoSchemes()",
+    "returnType" : "List<UUID>",
+    "comment" : "\n     * @return list of crypto schemes (as {@link UUID}s) for which\n     * {@link #isCryptoSchemeSupported(UUID)} returns true; each {@link UUID}\n     * can be used as input to create {@link MediaDrm} objects via {@link #MediaDrm(UUID)}.\n     ",
+    "links" : [ "UUID", "#isCryptoSchemeSupported", "UUID", "MediaDrm", "#MediaDrm" ]
+  }, {
+    "name" : "private static final byte[] getByteArrayFromUUID(@NonNull UUID uuid)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final UUID getUUIDFromByteArray(@NonNull byte[] uuidBytes, int off)",
+    "returnType" : "UUID",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final List<UUID> getUUIDsFromByteArray(@NonNull byte[] uuidBytes)",
+    "returnType" : "List<UUID>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native byte[] getSupportedCryptoSchemesNative()",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native boolean isCryptoSchemeSupportedNative(@NonNull byte[] uuid, @Nullable String mimeType, @SecurityLevel int securityLevel)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Handler createHandler()",
+    "returnType" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnExpirationUpdateListener(@Nullable OnExpirationUpdateListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when a session expiration update\n     * occurs.  The app's OnExpirationUpdateListener will be notified\n     * when the expiration time of the keys in the session have changed.\n     * @param listener the callback that will be run, or {@code null} to unregister the\n     *     previously registered callback.\n     * @param handler the handler on which the listener should be invoked, or\n     *     {@code null} if the listener should be invoked on the calling thread's looper.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnExpirationUpdateListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnExpirationUpdateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when a session expiration update\n     * occurs.\n     *\n     * @see #setOnExpirationUpdateListener(OnExpirationUpdateListener, Handler)\n     *\n     * @param executor the executor through which the listener should be invoked\n     * @param listener the callback that will be run.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOnExpirationUpdateListener()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the {@link OnExpirationUpdateListener}.\n     ",
+    "links" : [ "OnExpirationUpdateListener" ]
+  }, {
+    "name" : "public void setOnKeyStatusChangeListener(@Nullable OnKeyStatusChangeListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when the state of keys in a session\n     * change, e.g. when a license update occurs or when a license expires.\n     *\n     * @param listener the callback that will be run when key status changes, or\n     *     {@code null} to unregister the previously registered callback.\n     * @param handler the handler on which the listener should be invoked, or\n     *     null if the listener should be invoked on the calling thread's looper.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnKeyStatusChangeListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnKeyStatusChangeListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when the state of keys in a session\n     * change.\n     *\n     * @see #setOnKeyStatusChangeListener(OnKeyStatusChangeListener, Handler)\n     *\n     * @param listener the callback that will be run when key status changes.\n     * @param executor the executor on which the listener should be invoked.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOnKeyStatusChangeListener()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the {@link OnKeyStatusChangeListener}.\n     ",
+    "links" : [ "OnKeyStatusChangeListener" ]
+  }, {
+    "name" : "public void setOnSessionLostStateListener(@Nullable OnSessionLostStateListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when session state has been\n     * lost. This event can occur on devices that are not capable of\n     * retaining crypto session state across device suspend/resume\n     * cycles.  When this event occurs, the session must be closed and\n     * a new session opened to resume operation.\n     *\n     * @param listener the callback that will be run, or {@code null} to unregister the\n     *     previously registered callback.\n     * @param handler the handler on which the listener should be invoked, or\n     *     {@code null} if the listener should be invoked on the calling thread's looper.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnSessionLostStateListener(@NonNull @CallbackExecutor Executor executor, @Nullable OnSessionLostStateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when session state has been\n     * lost.\n     *\n     * @see #setOnSessionLostStateListener(OnSessionLostStateListener, Handler)\n     *\n     * @param listener the callback that will be run.\n     * @param executor the executor on which the listener should be invoked.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOnSessionLostStateListener()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the {@link OnSessionLostStateListener}.\n     ",
+    "links" : [ "OnSessionLostStateListener" ]
+  }, {
+    "name" : "public void setOnEventListener(@Nullable OnEventListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when an event occurs\n     *\n     * @see #setOnEventListener(OnEventListener, Handler)\n     *\n     * @param listener the callback that will be run.  Use {@code null} to\n     *        stop receiving event callbacks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnEventListener(@Nullable OnEventListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnEventListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnEventListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked when an event occurs\n     *\n     * @see #setOnEventListener(OnEventListener)\n     *\n     * @param executor the executor through which the listener should be invoked\n     * @param listener the callback that will be run.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOnEventListener()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the {@link OnEventListener}.\n     ",
+    "links" : [ "OnEventListener" ]
+  }, {
+    "name" : "private void setListenerWithHandler(int what, Handler handler, T listener, Function<T, Consumer<ListenerArgs>> converter)",
+    "returnType" : "void",
+    "comment" : " called by old-style set*Listener APIs using Handlers; listener & handler are Nullable",
+    "links" : [ ]
+  }, {
+    "name" : "private void setListenerWithExecutor(int what, Executor executor, T listener, Function<T, Consumer<ListenerArgs>> converter)",
+    "returnType" : "void",
+    "comment" : " called by new-style set*Listener APIs using Executors; listener & executor must be NonNull",
+    "links" : [ ]
+  }, {
+    "name" : "private void setGenericListener(int what, Executor executor, T listener, Function<T, Consumer<ListenerArgs>> converter)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void clearGenericListener(int what)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Consumer<ListenerArgs> createOnEventListener(OnEventListener listener)",
+    "returnType" : "Consumer<ListenerArgs>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Consumer<ListenerArgs> createOnKeyStatusChangeListener(OnKeyStatusChangeListener listener)",
+    "returnType" : "Consumer<ListenerArgs>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Consumer<ListenerArgs> createOnExpirationUpdateListener(OnExpirationUpdateListener listener)",
+    "returnType" : "Consumer<ListenerArgs>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Consumer<ListenerArgs> createOnSessionLostStateListener(OnSessionLostStateListener listener)",
+    "returnType" : "Consumer<ListenerArgs>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private List<KeyStatus> keyStatusListFromParcel(@NonNull Parcel parcel)",
+    "returnType" : "List<KeyStatus>",
+    "comment" : "\n     * Parse a list of KeyStatus objects from an event parcel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void postEventFromNative(@NonNull Object mediadrm_ref, int what, int eventType, int extra, byte[] sessionId, byte[] data, long expirationTime, List<KeyStatus> keyStatusList, boolean hasNewUsableKey)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called from native code when an event occurs.  This method\n     * just uses the EventHandler system to post the event back to the main app thread.\n     * We use a weak reference to the original MediaPlayer object so that the native\n     * code is safe from the object disappearing from underneath it.  (This is\n     * the cookie passed to native_setup().)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public byte[] openSession() throws NotProvisionedException, ResourceBusyException",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Open a new session with the MediaDrm object. A session ID is returned.\n     * By default, sessions are opened at the native security level of the device.\n     *\n     * @throws NotProvisionedException if provisioning is needed\n     * @throws ResourceBusyException if required resources are in use\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native byte[] openSession(@SecurityLevel int level) throws NotProvisionedException, ResourceBusyException",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Open a new session at a requested security level. The security level\n     * represents the robustness of the device's DRM implementation. By default,\n     * sessions are opened at the native security level of the device.\n     * Overriding the security level is necessary when the decrypted frames need\n     * to be manipulated, such as for image compositing. The security level\n     * parameter must be lower than the native level. Reducing the security\n     * level will typically limit the content to lower resolutions, as\n     * determined by the license policy. If the requested level is not\n     * supported, the next lower supported security level will be set. The level\n     * can be queried using {@link #getSecurityLevel}. A session\n     * ID is returned.\n     *\n     * @param level the new security level\n     * @throws NotProvisionedException if provisioning is needed\n     * @throws ResourceBusyException if required resources are in use\n     * @throws IllegalArgumentException if the requested security level is\n     * higher than the native level or lower than the lowest supported level or\n     * if the device does not support specifying the security level when opening\n     * a session\n     ",
+    "links" : [ "#getSecurityLevel" ]
+  }, {
+    "name" : "public native void closeSession(@NonNull byte[] sessionId)",
+    "returnType" : "void",
+    "comment" : "\n     * Close a session on the MediaDrm object that was previously opened\n     * with {@link #openSession}.\n     ",
+    "links" : [ "#openSession" ]
+  }, {
+    "name" : "public native KeyRequest getKeyRequest(@NonNull byte[] scope, @Nullable byte[] init, @Nullable String mimeType, @KeyType int keyType, @Nullable HashMap<String, String> optionalParameters) throws NotProvisionedException",
+    "returnType" : "KeyRequest",
+    "comment" : "\n     * A key request/response exchange occurs between the app and a license server\n     * to obtain or release keys used to decrypt encrypted content.\n     * <p>\n     * getKeyRequest() is used to obtain an opaque key request byte array that is\n     * delivered to the license server.  The opaque key request byte array is returned\n     * in KeyRequest.data.  The recommended URL to deliver the key request to is\n     * returned in KeyRequest.defaultUrl.\n     * <p>\n     * After the app has received the key request response from the server,\n     * it should deliver to the response to the MediaDrm instance using the method\n     * {@link #provideKeyResponse}.\n     *\n     * @param scope may be a sessionId or a keySetId, depending on the specified keyType.\n     * When the keyType is KEY_TYPE_STREAMING or KEY_TYPE_OFFLINE,\n     * scope should be set to the sessionId the keys will be provided to.  When the keyType\n     * is KEY_TYPE_RELEASE, scope should be set to the keySetId of the keys\n     * being released. Releasing keys from a device invalidates them for all sessions.\n     * @param init container-specific data, its meaning is interpreted based on the\n     * mime type provided in the mimeType parameter.  It could contain, for example,\n     * the content ID, key ID or other data obtained from the content metadata that is\n     * required in generating the key request. May be null when keyType is\n     * KEY_TYPE_RELEASE or if the request is a renewal, i.e. not the first key\n     * request for the session.\n     * @param mimeType identifies the mime type of the content. May be null if the\n     * keyType is KEY_TYPE_RELEASE or if the request is a renewal, i.e. not the\n     * first key request for the session.\n     * @param keyType specifes the type of the request. The request may be to acquire\n     * keys for streaming or offline content, or to release previously acquired\n     * keys, which are identified by a keySetId.\n     * @param optionalParameters are included in the key request message to\n     * allow a client application to provide additional message parameters to the server.\n     * This may be {@code null} if no additional parameters are to be sent.\n     * @throws NotProvisionedException if reprovisioning is needed, due to a\n     * problem with the certifcate\n     ",
+    "links" : [ "#provideKeyResponse" ]
+  }, {
+    "name" : "public native byte[] provideKeyResponse(@NonNull byte[] scope, @NonNull byte[] response) throws NotProvisionedException, DeniedByServerException",
+    "returnType" : "byte[]",
+    "comment" : "\n     * A key response is received from the license server by the app, then it is\n     * provided to the MediaDrm instance using provideKeyResponse.  When the\n     * response is for an offline key request, a keySetId is returned that can be\n     * used to later restore the keys to a new session with the method\n     * {@link #restoreKeys}.\n     * When the response is for a streaming or release request, an empty byte array\n     * is returned.\n     *\n     * @param scope may be a sessionId or keySetId depending on the type of the\n     * response.  Scope should be set to the sessionId when the response is for either\n     * streaming or offline key requests.  Scope should be set to the keySetId when\n     * the response is for a release request.\n     * @param response the byte array response from the server\n     * @return If the response is for an offline request, the keySetId for the offline\n     * keys will be returned. If the response is for a streaming or release request\n     * an empty byte array will be returned.\n     *\n     * @throws NotProvisionedException if the response indicates that\n     * reprovisioning is required\n     * @throws DeniedByServerException if the response indicates that the\n     * server rejected the request\n     ",
+    "links" : [ "#restoreKeys" ]
+  }, {
+    "name" : "public native void restoreKeys(@NonNull byte[] sessionId, @NonNull byte[] keySetId)",
+    "returnType" : "void",
+    "comment" : "\n     * Restore persisted offline keys into a new session.  keySetId identifies the\n     * keys to load, obtained from a prior call to {@link #provideKeyResponse}.\n     *\n     * @param sessionId the session ID for the DRM session\n     * @param keySetId identifies the saved key set to restore\n     ",
+    "links" : [ "#provideKeyResponse" ]
+  }, {
+    "name" : "public native void removeKeys(@NonNull byte[] sessionId)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove the current keys from a session.\n     *\n     * @param sessionId the session ID for the DRM session\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native HashMap<String, String> queryKeyStatus(@NonNull byte[] sessionId)",
+    "returnType" : "HashMap<String, String>",
+    "comment" : "\n     * Request an informative description of the key status for the session.  The status is\n     * in the form of {name, value} pairs.  Since DRM license policies vary by vendor,\n     * the specific status field names are determined by each DRM vendor.  Refer to your\n     * DRM provider documentation for definitions of the field names for a particular\n     * DRM plugin.\n     *\n     * @param sessionId the session ID for the DRM session\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ProvisionRequest getProvisionRequest()",
+    "returnType" : "ProvisionRequest",
+    "comment" : "\n     * A provision request/response exchange occurs between the app and a provisioning\n     * server to retrieve a device certificate.  If provisionining is required, the\n     * EVENT_PROVISION_REQUIRED event will be sent to the event handler.\n     * getProvisionRequest is used to obtain the opaque provision request byte array that\n     * should be delivered to the provisioning server. The provision request byte array\n     * is returned in ProvisionRequest.data. The recommended URL to deliver the provision\n     * request to is returned in ProvisionRequest.defaultUrl.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private native ProvisionRequest getProvisionRequestNative(int certType, @NonNull String certAuthority)",
+    "returnType" : "ProvisionRequest",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void provideProvisionResponse(@NonNull byte[] response) throws DeniedByServerException",
+    "returnType" : "void",
+    "comment" : "\n     * After a provision response is received by the app, it is provided to the\n     * MediaDrm instance using this method.\n     *\n     * @param response the opaque provisioning response byte array to provide to the\n     * MediaDrm instance.\n     *\n     * @throws DeniedByServerException if the response indicates that the\n     * server rejected the request\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private native Certificate provideProvisionResponseNative(@NonNull byte[] response) throws DeniedByServerException",
+    "returnType" : "Certificate",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public native List<byte[]> getOfflineLicenseKeySetIds()",
+    "returnType" : "List<byte[]>",
+    "comment" : "\n     * The keys in an offline license allow protected content to be played even\n     * if the device is not connected to a network. Offline licenses are stored\n     * on the device after a key request/response exchange when the key request\n     * KeyType is OFFLINE. Normally each app is responsible for keeping track of\n     * the keySetIds it has created. If an app loses the keySetId for any stored\n     * licenses that it created, however, it must be able to recover the stored\n     * keySetIds so those licenses can be removed when they expire or when the\n     * app is uninstalled.\n     * <p>\n     * This method returns a list of the keySetIds for all offline licenses.\n     * The offline license keySetId may be used to query the status of an\n     * offline license with {@link #getOfflineLicenseState} or remove it with\n     * {@link #removeOfflineLicense}.\n     *\n     * @return a list of offline license keySetIds\n     ",
+    "links" : [ "#getOfflineLicenseState", "#removeOfflineLicense" ]
+  }, {
+    "name" : "public native void removeOfflineLicense(@NonNull byte[] keySetId)",
+    "returnType" : "void",
+    "comment" : "\n     * Normally offline licenses are released using a key request/response\n     * exchange using {@link #getKeyRequest} where the key type is\n     * KEY_TYPE_RELEASE, followed by {@link #provideKeyResponse}. This allows\n     * the server to cryptographically confirm that the license has been removed\n     * and then adjust the count of offline licenses allocated to the device.\n     * <p>\n     * In some exceptional situations it may be necessary to directly remove\n     * offline licenses without notifying the server, which may be performed\n     * using this method.\n     *\n     * @param keySetId the id of the offline license to remove\n     * @throws IllegalArgumentException if the keySetId does not refer to an\n     * offline license.\n     ",
+    "links" : [ "#getKeyRequest", "#provideKeyResponse" ]
+  }, {
+    "name" : "public native int getOfflineLicenseState(@NonNull byte[] keySetId)",
+    "returnType" : "int",
+    "comment" : "\n     * Request the state of an offline license. An offline license may be usable\n     * or inactive. The keys in a usable offline license are available for\n     * decryption. When the offline license state is inactive, the keys have\n     * been marked for release using {@link #getKeyRequest} with\n     * KEY_TYPE_RELEASE but the key response has not been received. The keys in\n     * an inactive offline license are not usable for decryption.\n     *\n     * @param keySetId selects the offline license\n     * @return the offline license state\n     * @throws IllegalArgumentException if the keySetId does not refer to an\n     * offline license.\n     ",
+    "links" : [ "#getKeyRequest" ]
+  }, {
+    "name" : "public native List<byte[]> getSecureStops()",
+    "returnType" : "List<byte[]>",
+    "comment" : "\n     * Secure stops are a way to enforce limits on the number of concurrent\n     * streams per subscriber across devices. They provide secure monitoring of\n     * the lifetime of content decryption keys in MediaDrm sessions.\n     * <p>\n     * A secure stop is written to secure persistent memory when keys are loaded\n     * into a MediaDrm session. The secure stop state indicates that the keys\n     * are available for use. When playback completes and the keys are removed\n     * or the session is destroyed, the secure stop state is updated to indicate\n     * that keys are no longer usable.\n     * <p>\n     * After playback, the app can query the secure stop and send it in a\n     * message to the license server confirming that the keys are no longer\n     * active. The license server returns a secure stop release response\n     * message to the app which then deletes the secure stop from persistent\n     * memory using {@link #releaseSecureStops}.\n     * <p>\n     * Each secure stop has a unique ID that can be used to identify it during\n     * enumeration, access and removal.\n     * @return a list of all secure stops from secure persistent memory\n     ",
+    "links" : [ "#releaseSecureStops" ]
+  }, {
+    "name" : "public native List<byte[]> getSecureStopIds()",
+    "returnType" : "List<byte[]>",
+    "comment" : "\n     * Return a list of all secure stop IDs currently in persistent memory.\n     * The secure stop ID can be used to access or remove the corresponding\n     * secure stop.\n     *\n     * @return a list of secure stop IDs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native byte[] getSecureStop(@NonNull byte[] ssid)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Access a specific secure stop given its secure stop ID.\n     * Each secure stop has a unique ID.\n     *\n     * @param ssid the ID of the secure stop to return\n     * @return the secure stop identified by ssid\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native void releaseSecureStops(@NonNull byte[] ssRelease)",
+    "returnType" : "void",
+    "comment" : "\n     * Process the secure stop server response message ssRelease.  After\n     * authenticating the message, remove the secure stops identified in the\n     * response.\n     *\n     * @param ssRelease the server response indicating which secure stops to release\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native void removeSecureStop(@NonNull byte[] ssid)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a specific secure stop without requiring a secure stop release message\n     * from the license server.\n     * @param ssid the ID of the secure stop to remove\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native void removeAllSecureStops()",
+    "returnType" : "void",
+    "comment" : "\n     * Remove all secure stops without requiring a secure stop release message from\n     * the license server.\n     *\n     * This method was added in API 28. In API versions 18 through 27,\n     * {@link #releaseAllSecureStops} should be called instead. There is no need to\n     * do anything for API versions prior to 18.\n     ",
+    "links" : [ "#releaseAllSecureStops" ]
+  }, {
+    "name" : "public void releaseAllSecureStops()",
+    "returnType" : "void",
+    "comment" : "\n     * Remove all secure stops without requiring a secure stop release message from\n     * the license server.\n     *\n     * @deprecated Remove all secure stops using {@link #removeAllSecureStops} instead.\n     ",
+    "links" : [ "#removeAllSecureStops" ]
+  }, {
+    "name" : "public native int getConnectedHdcpLevel()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the HDCP level negotiated with downstream receivers the\n     * device is connected to. If multiple HDCP-capable displays are\n     * simultaneously connected to separate interfaces, this method\n     * returns the lowest negotiated level of all interfaces.\n     * <p>\n     * This method should only be used for informational purposes, not for\n     * enforcing compliance with HDCP requirements. Trusted enforcement of\n     * HDCP policies must be handled by the DRM system.\n     * <p>\n     * @return the connected HDCP level\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native int getMaxHdcpLevel()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the maximum supported HDCP level. The maximum HDCP level is a\n     * constant for a given device, it does not depend on downstream receivers\n     * that may be connected. If multiple HDCP-capable interfaces are present,\n     * it indicates the highest of the maximum HDCP levels of all interfaces.\n     * <p>\n     * @return the maximum supported HDCP level\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native int getOpenSessionCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of MediaDrm sessions that are currently opened\n     * simultaneously among all MediaDrm instances for the active DRM scheme.\n     * @return the number of open sessions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native int getMaxSessionCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the maximum number of MediaDrm sessions that may be opened\n     * simultaneosly among all MediaDrm instances for the active DRM\n     * scheme. The maximum number of sessions is not affected by any\n     * sessions that may have already been opened.\n     * @return maximum sessions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final int getMaxSecurityLevel()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a value that may be passed as a parameter to {@link #openSession(int)}\n     * requesting that the session be opened at the maximum security level of\n     * the device.\n     ",
+    "links" : [ "#openSession" ]
+  }, {
+    "name" : "public native int getSecurityLevel(@NonNull byte[] sessionId)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the current security level of a session. A session has an initial\n     * security level determined by the robustness of the DRM system's\n     * implementation on the device. The security level may be changed at the\n     * time a session is opened using {@link #openSession}.\n     * @param sessionId the session to query.\n     * <p>\n     * @return the security level of the session\n     ",
+    "links" : [ "#openSession" ]
+  }, {
+    "name" : "public native String getPropertyString(@NonNull String propertyName)",
+    "returnType" : "String",
+    "comment" : "\n     * Read a MediaDrm String property value, given the property name string.\n     * <p>\n     * Standard fields names are:\n     * {@link #PROPERTY_VENDOR}, {@link #PROPERTY_VERSION},\n     * {@link #PROPERTY_DESCRIPTION}, {@link #PROPERTY_ALGORITHMS}\n     ",
+    "links" : [ "#PROPERTY_VENDOR", "#PROPERTY_VERSION", "#PROPERTY_DESCRIPTION", "#PROPERTY_ALGORITHMS" ]
+  }, {
+    "name" : "public native void setPropertyString(@NonNull String propertyName, @NonNull String value)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a MediaDrm String property value, given the property name string\n     * and new value for the property.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public native byte[] getPropertyByteArray(String propertyName)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Read a MediaDrm byte array property value, given the property name string.\n     * <p>\n     * Standard fields names are {@link #PROPERTY_DEVICE_UNIQUE_ID}\n     ",
+    "links" : [ "#PROPERTY_DEVICE_UNIQUE_ID" ]
+  }, {
+    "name" : "public native void setPropertyByteArray(@NonNull String propertyName, @NonNull byte[] value)",
+    "returnType" : "void",
+    "comment" : "\n    * Set a MediaDrm byte array property value, given the property name string\n    * and new value for the property.\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native void setCipherAlgorithmNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native void setMacAlgorithmNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native byte[] encryptNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] input, @NonNull byte[] iv)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native byte[] decryptNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] input, @NonNull byte[] iv)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native byte[] signNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] message)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native boolean verifyNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] message, @NonNull byte[] signature)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public PersistableBundle getMetrics()",
+    "returnType" : "PersistableBundle",
+    "comment" : "\n     * Return Metrics data about the current MediaDrm instance.\n     *\n     * @return a {@link PersistableBundle} containing the set of attributes and values\n     * available for this instance of MediaDrm.\n     * The attributes are described in {@link MetricsConstants}.\n     *\n     * Additional vendor-specific fields may also be present in\n     * the return value.\n     ",
+    "links" : [ "PersistableBundle", "MetricsConstants" ]
+  }, {
+    "name" : "private native PersistableBundle getMetricsNative()",
+    "returnType" : "PersistableBundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CryptoSession getCryptoSession(@NonNull byte[] sessionId, @NonNull String cipherAlgorithm, @NonNull String macAlgorithm)",
+    "returnType" : "CryptoSession",
+    "comment" : "\n     * Obtain a CryptoSession object which can be used to encrypt, decrypt,\n     * sign and verify messages or data using the session keys established\n     * for the session using methods {@link #getKeyRequest} and\n     * {@link #provideKeyResponse} using a session key server.\n     *\n     * @param sessionId the session ID for the session containing keys\n     * to be used for encrypt, decrypt, sign and/or verify\n     * @param cipherAlgorithm the algorithm to use for encryption and\n     * decryption ciphers. The algorithm string conforms to JCA Standard\n     * Names for Cipher Transforms and is case insensitive.  For example\n     * \"AES/CBC/NoPadding\".\n     * @param macAlgorithm the algorithm to use for sign and verify\n     * The algorithm string conforms to JCA Standard Names for Mac\n     * Algorithms and is case insensitive.  For example \"HmacSHA256\".\n     * <p>\n     * The list of supported algorithms for a DRM plugin can be obtained\n     * using the method {@link #getPropertyString} with the property name\n     * \"algorithms\".\n     ",
+    "links" : [ "#getKeyRequest", "#provideKeyResponse", "#getPropertyString" ]
+  }, {
+    "name" : "public CertificateRequest getCertificateRequest(@CertificateType int certType, @NonNull String certAuthority)",
+    "returnType" : "CertificateRequest",
+    "comment" : "\n     * Generate a certificate request, specifying the certificate type\n     * and authority. The response received should be passed to\n     * provideCertificateResponse.\n     *\n     * @param certType Specifies the certificate type.\n     *\n     * @param certAuthority is passed to the certificate server to specify\n     * the chain of authority.\n     *\n     * @hide - not part of the public API at this time\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Certificate provideCertificateResponse(@NonNull byte[] response) throws DeniedByServerException",
+    "returnType" : "Certificate",
+    "comment" : "\n     * Process a response from the certificate server.  The response\n     * is obtained from an HTTP Post to the url provided by getCertificateRequest.\n     * <p>\n     * The public X509 certificate chain and wrapped private key are returned\n     * in the returned Certificate objec.  The certificate chain is in PEM format.\n     * The wrapped private key should be stored in application private\n     * storage, and used when invoking the signRSA method.\n     *\n     * @param response the opaque certificate response byte array to provide to the\n     * MediaDrm instance.\n     *\n     * @throws DeniedByServerException if the response indicates that the\n     * server rejected the request\n     *\n     * @hide - not part of the public API at this time\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native byte[] signRSANative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm, @NonNull byte[] wrappedKey, @NonNull byte[] message)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public byte[] signRSA(@NonNull byte[] sessionId, @NonNull String algorithm, @NonNull byte[] wrappedKey, @NonNull byte[] message)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Sign data using an RSA key\n     *\n     * @param sessionId a sessionId obtained from openSession on the MediaDrm object\n     * @param algorithm the signing algorithm to use, e.g. \"PKCS1-BlockType1\"\n     * @param wrappedKey - the wrapped (encrypted) RSA private key obtained\n     * from provideCertificateResponse\n     * @param message the data for which a signature is to be computed\n     *\n     * @hide - not part of the public API at this time\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Releases resources associated with the current session of\n     * MediaDrm. It is considered good practice to call this method when\n     * the {@link MediaDrm} object is no longer needed in your\n     * application. After this method is called, {@link MediaDrm} is no\n     * longer usable since it has lost all of its required resource.\n     *\n     * This method was added in API 28. In API versions 18 through 27, release()\n     * should be called instead. There is no need to do anything for API\n     * versions prior to 18.\n     ",
+    "links" : [ "MediaDrm", "MediaDrm" ]
+  }, {
+    "name" : "public void release()",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated replaced by {@link #close()}.\n     ",
+    "links" : [ "#close" ]
+  }, {
+    "name" : "public final native void native_release()",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final native void native_init()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final native void native_setup(Object mediadrm_this, byte[] uuid, String appPackageName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "mClosed", "mCloseGuard", "PERMISSION", "mNativeContext", "CERTIFICATE_TYPE_NONE", "CERTIFICATE_TYPE_X509", "EVENT_PROVISION_REQUIRED", "EVENT_KEY_REQUIRED", "EVENT_KEY_EXPIRED", "EVENT_VENDOR_DEFINED", "EVENT_SESSION_RECLAIMED", "DRM_EVENT", "EXPIRATION_UPDATE", "KEY_STATUS_CHANGE", "SESSION_LOST_STATE", "mListenerMap", "KEY_TYPE_STREAMING", "KEY_TYPE_OFFLINE", "KEY_TYPE_RELEASE", "OFFLINE_LICENSE_STATE_UNKNOWN", "OFFLINE_LICENSE_STATE_USABLE", "OFFLINE_LICENSE_STATE_RELEASED", "HDCP_LEVEL_UNKNOWN", "HDCP_NONE", "HDCP_V1", "HDCP_V2", "HDCP_V2_1", "HDCP_V2_2", "HDCP_V2_3", "HDCP_NO_DIGITAL_OUTPUT", "SECURITY_LEVEL_UNKNOWN", "SECURITY_LEVEL_SW_SECURE_CRYPTO", "SECURITY_LEVEL_SW_SECURE_DECODE", "SECURITY_LEVEL_HW_SECURE_CRYPTO", "SECURITY_LEVEL_HW_SECURE_DECODE", "SECURITY_LEVEL_HW_SECURE_ALL", "SECURITY_LEVEL_MAX", "PROPERTY_VENDOR", "PROPERTY_VERSION", "PROPERTY_DESCRIPTION", "PROPERTY_ALGORITHMS", "PROPERTY_DEVICE_UNIQUE_ID" ],
+  "methodNames" : [ "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid)", "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid, @NonNull String mimeType)", "public static final boolean isCryptoSchemeSupported(@NonNull UUID uuid, @NonNull String mimeType, @SecurityLevel int securityLevel)", "public static final List<UUID> getSupportedCryptoSchemes()", "private static final byte[] getByteArrayFromUUID(@NonNull UUID uuid)", "private static final UUID getUUIDFromByteArray(@NonNull byte[] uuidBytes, int off)", "private static final List<UUID> getUUIDsFromByteArray(@NonNull byte[] uuidBytes)", "private static final native byte[] getSupportedCryptoSchemesNative()", "private static final native boolean isCryptoSchemeSupportedNative(@NonNull byte[] uuid, @Nullable String mimeType, @SecurityLevel int securityLevel)", "private Handler createHandler()", "public void setOnExpirationUpdateListener(@Nullable OnExpirationUpdateListener listener, @Nullable Handler handler)", "public void setOnExpirationUpdateListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnExpirationUpdateListener listener)", "public void clearOnExpirationUpdateListener()", "public void setOnKeyStatusChangeListener(@Nullable OnKeyStatusChangeListener listener, @Nullable Handler handler)", "public void setOnKeyStatusChangeListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnKeyStatusChangeListener listener)", "public void clearOnKeyStatusChangeListener()", "public void setOnSessionLostStateListener(@Nullable OnSessionLostStateListener listener, @Nullable Handler handler)", "public void setOnSessionLostStateListener(@NonNull @CallbackExecutor Executor executor, @Nullable OnSessionLostStateListener listener)", "public void clearOnSessionLostStateListener()", "public void setOnEventListener(@Nullable OnEventListener listener)", "public void setOnEventListener(@Nullable OnEventListener listener, @Nullable Handler handler)", "public void setOnEventListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnEventListener listener)", "public void clearOnEventListener()", "private void setListenerWithHandler(int what, Handler handler, T listener, Function<T, Consumer<ListenerArgs>> converter)", "private void setListenerWithExecutor(int what, Executor executor, T listener, Function<T, Consumer<ListenerArgs>> converter)", "private void setGenericListener(int what, Executor executor, T listener, Function<T, Consumer<ListenerArgs>> converter)", "private void clearGenericListener(int what)", "private Consumer<ListenerArgs> createOnEventListener(OnEventListener listener)", "private Consumer<ListenerArgs> createOnKeyStatusChangeListener(OnKeyStatusChangeListener listener)", "private Consumer<ListenerArgs> createOnExpirationUpdateListener(OnExpirationUpdateListener listener)", "private Consumer<ListenerArgs> createOnSessionLostStateListener(OnSessionLostStateListener listener)", "private List<KeyStatus> keyStatusListFromParcel(@NonNull Parcel parcel)", "private static void postEventFromNative(@NonNull Object mediadrm_ref, int what, int eventType, int extra, byte[] sessionId, byte[] data, long expirationTime, List<KeyStatus> keyStatusList, boolean hasNewUsableKey)", "public byte[] openSession() throws NotProvisionedException, ResourceBusyException", "public native byte[] openSession(@SecurityLevel int level) throws NotProvisionedException, ResourceBusyException", "public native void closeSession(@NonNull byte[] sessionId)", "public native KeyRequest getKeyRequest(@NonNull byte[] scope, @Nullable byte[] init, @Nullable String mimeType, @KeyType int keyType, @Nullable HashMap<String, String> optionalParameters) throws NotProvisionedException", "public native byte[] provideKeyResponse(@NonNull byte[] scope, @NonNull byte[] response) throws NotProvisionedException, DeniedByServerException", "public native void restoreKeys(@NonNull byte[] sessionId, @NonNull byte[] keySetId)", "public native void removeKeys(@NonNull byte[] sessionId)", "public native HashMap<String, String> queryKeyStatus(@NonNull byte[] sessionId)", "public ProvisionRequest getProvisionRequest()", "private native ProvisionRequest getProvisionRequestNative(int certType, @NonNull String certAuthority)", "public void provideProvisionResponse(@NonNull byte[] response) throws DeniedByServerException", "private native Certificate provideProvisionResponseNative(@NonNull byte[] response) throws DeniedByServerException", "public native List<byte[]> getOfflineLicenseKeySetIds()", "public native void removeOfflineLicense(@NonNull byte[] keySetId)", "public native int getOfflineLicenseState(@NonNull byte[] keySetId)", "public native List<byte[]> getSecureStops()", "public native List<byte[]> getSecureStopIds()", "public native byte[] getSecureStop(@NonNull byte[] ssid)", "public native void releaseSecureStops(@NonNull byte[] ssRelease)", "public native void removeSecureStop(@NonNull byte[] ssid)", "public native void removeAllSecureStops()", "public void releaseAllSecureStops()", "public native int getConnectedHdcpLevel()", "public native int getMaxHdcpLevel()", "public native int getOpenSessionCount()", "public native int getMaxSessionCount()", "public static final int getMaxSecurityLevel()", "public native int getSecurityLevel(@NonNull byte[] sessionId)", "public native String getPropertyString(@NonNull String propertyName)", "public native void setPropertyString(@NonNull String propertyName, @NonNull String value)", "public native byte[] getPropertyByteArray(String propertyName)", "public native void setPropertyByteArray(@NonNull String propertyName, @NonNull byte[] value)", "private static final native void setCipherAlgorithmNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm)", "private static final native void setMacAlgorithmNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm)", "private static final native byte[] encryptNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] input, @NonNull byte[] iv)", "private static final native byte[] decryptNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] input, @NonNull byte[] iv)", "private static final native byte[] signNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] message)", "private static final native boolean verifyNative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull byte[] keyId, @NonNull byte[] message, @NonNull byte[] signature)", "public PersistableBundle getMetrics()", "private native PersistableBundle getMetricsNative()", "public CryptoSession getCryptoSession(@NonNull byte[] sessionId, @NonNull String cipherAlgorithm, @NonNull String macAlgorithm)", "public CertificateRequest getCertificateRequest(@CertificateType int certType, @NonNull String certAuthority)", "public Certificate provideCertificateResponse(@NonNull byte[] response) throws DeniedByServerException", "private static final native byte[] signRSANative(@NonNull MediaDrm drm, @NonNull byte[] sessionId, @NonNull String algorithm, @NonNull byte[] wrappedKey, @NonNull byte[] message)", "public byte[] signRSA(@NonNull byte[] sessionId, @NonNull String algorithm, @NonNull byte[] wrappedKey, @NonNull byte[] message)", "protected void finalize() throws Throwable", "public void close()", "public void release()", "public final native void native_release()", "private static final native void native_init()", "private final native void native_setup(Object mediadrm_this, byte[] uuid, String appPackageName)" ]
+}

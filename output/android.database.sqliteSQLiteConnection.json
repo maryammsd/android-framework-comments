@@ -1,0 +1,480 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/database/sqlite/SQLiteConnection.java",
+  "packageName" : "android.database.sqlite",
+  "className" : "SQLiteConnection",
+  "comment" : "\n * Represents a SQLite database connection.\n * Each connection wraps an instance of a native <code>sqlite3</code> object.\n * <p>\n * When database connection pooling is enabled, there can be multiple active\n * connections to the same database.  Otherwise there is typically only one\n * connection per database.\n * </p><p>\n * When the SQLite WAL feature is enabled, multiple readers and one writer\n * can concurrently access the database.  Without WAL, readers and writers\n * are mutually exclusive.\n * </p>\n *\n * <h2>Ownership and concurrency guarantees</h2>\n * <p>\n * Connection objects are not thread-safe.  They are acquired as needed to\n * perform a database operation and are then returned to the pool.  At any\n * given time, a connection is either owned and used by a {@link SQLiteSession}\n * object or the {@link SQLiteConnectionPool}.  Those classes are\n * responsible for serializing operations to guard against concurrent\n * use of a connection.\n * </p><p>\n * The guarantee of having a single owner allows this class to be implemented\n * without locks and greatly simplifies resource management.\n * </p>\n *\n * <h2>Encapsulation guarantees</h2>\n * <p>\n * The connection object object owns *all* of the SQLite related native\n * objects that are associated with the connection.  What's more, there are\n * no other objects in the system that are capable of obtaining handles to\n * those native objects.  Consequently, when the connection is closed, we do\n * not have to worry about what other components might have references to\n * its associated SQLite state -- there are none.\n * </p><p>\n * Encapsulation is what ensures that the connection object's\n * lifecycle does not become a tortured mess of finalizers and reference\n * queues.\n * </p>\n *\n * <h2>Reentrance</h2>\n * <p>\n * This class must tolerate reentrant execution of SQLite operations because\n * triggers may call custom SQLite functions that perform additional queries.\n * </p>\n *\n * @hide\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY_STRING_ARRAY",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY_BYTE_ARRAY",
+    "type" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCloseGuard",
+    "type" : "CloseGuard",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPool",
+    "type" : "SQLiteConnectionPool",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConfiguration",
+    "type" : "SQLiteDatabaseConfiguration",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsPrimaryConnection",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsReadOnlyConnection",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPreparedStatementCache",
+    "type" : "PreparedStatementCache",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPreparedStatementPool",
+    "type" : "PreparedStatement",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRecentOperations",
+    "type" : "OperationLog",
+    "comment" : " The recent operations log.",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionPtr",
+    "type" : "long",
+    "comment" : " The native SQLiteConnection pointer.  (FOR INTERNAL USE ONLY)",
+    "links" : [ ]
+  }, {
+    "name" : "mOnlyAllowReadOnlyOperations",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCancellationSignalAttachCount",
+    "type" : "int",
+    "comment" : " we can ensure that we detach the signal at the right time.",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static native long nativeOpen(String path, int openFlags, String label, boolean enableTrace, boolean enableProfile, int lookasideSlotSize, int lookasideSlotCount)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeClose(long connectionPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeRegisterCustomScalarFunction(long connectionPtr, String name, UnaryOperator<String> function)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeRegisterCustomAggregateFunction(long connectionPtr, String name, BinaryOperator<String> function)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeRegisterLocalizedCollators(long connectionPtr, String locale)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativePrepareStatement(long connectionPtr, String sql)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeFinalizeStatement(long connectionPtr, long statementPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeGetParameterCount(long connectionPtr, long statementPtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeIsReadOnly(long connectionPtr, long statementPtr)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeGetColumnCount(long connectionPtr, long statementPtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeGetColumnName(long connectionPtr, long statementPtr, int index)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindNull(long connectionPtr, long statementPtr, int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindLong(long connectionPtr, long statementPtr, int index, long value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindDouble(long connectionPtr, long statementPtr, int index, double value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindString(long connectionPtr, long statementPtr, int index, String value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindBlob(long connectionPtr, long statementPtr, int index, byte[] value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeResetStatementAndClearBindings(long connectionPtr, long statementPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeExecute(long connectionPtr, long statementPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeExecuteForLong(long connectionPtr, long statementPtr)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeExecuteForString(long connectionPtr, long statementPtr)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeExecuteForBlobFileDescriptor(long connectionPtr, long statementPtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeExecuteForChangedRowCount(long connectionPtr, long statementPtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeExecuteForLastInsertedRowId(long connectionPtr, long statementPtr)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeExecuteForCursorWindow(long connectionPtr, long statementPtr, long windowPtr, int startPos, int requiredPos, boolean countAllRows)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeGetDbLookaside(long connectionPtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeCancel(long connectionPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeResetCancel(long connectionPtr, boolean cancelable)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static SQLiteConnection open(SQLiteConnectionPool pool, SQLiteDatabaseConfiguration configuration, int connectionId, boolean primaryConnection)",
+    "returnType" : "SQLiteConnection",
+    "comment" : " Called by SQLiteConnectionPool only.",
+    "links" : [ ]
+  }, {
+    "name" : " void close()",
+    "returnType" : "void",
+    "comment" : " Do not call methods on the connection after it is closed.  It will probably crash.",
+    "links" : [ ]
+  }, {
+    "name" : "private void open()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispose(boolean finalized)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setPageSize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setAutoCheckpointInterval()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setJournalSizeLimit()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setForeignKeyModeFromConfiguration()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setWalModeFromConfiguration()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void maybeTruncateWalFile()",
+    "returnType" : "void",
+    "comment" : "\n     * If the WAL file exists and larger than a threshold, truncate it by executing\n     * PRAGMA wal_checkpoint.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSyncMode(String newValue)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String canonicalizeSyncMode(String value)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setJournalMode(String newValue)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setLocaleFromConfiguration()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setCustomFunctionsFromConfiguration()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void executePerConnectionSqlFromConfiguration(int startIndex)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkDatabaseWiped()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void reconfigure(SQLiteDatabaseConfiguration configuration)",
+    "returnType" : "void",
+    "comment" : " Called by SQLiteConnectionPool only.",
+    "links" : [ ]
+  }, {
+    "name" : " void setOnlyAllowReadOnlyOperations(boolean readOnly)",
+    "returnType" : "void",
+    "comment" : " Preparing statements that might write is ok, just don't execute them.",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isPreparedStatementInCache(String sql)",
+    "returnType" : "boolean",
+    "comment" : " Returns true if the prepared statement cache contains the specified SQL.",
+    "links" : [ ]
+  }, {
+    "name" : "public int getConnectionId()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the unique id of this connection.\n     * @return The connection id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isPrimaryConnection()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this is the primary database connection.\n     * @return True if this is the primary database connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void prepare(String sql, SQLiteStatementInfo outStatementInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Prepares a statement for execution but does not bind its parameters or execute it.\n     * <p>\n     * This method can be used to check for syntax errors during compilation\n     * prior to execution of the statement.  If the {@code outStatementInfo} argument\n     * is not null, the provided {@link SQLiteStatementInfo} object is populated\n     * with information about the statement.\n     * </p><p>\n     * A prepared statement makes no reference to the arguments that may eventually\n     * be bound to it, consequently it it possible to cache certain prepared statements\n     * such as SELECT or INSERT/UPDATE statements.  If the statement is cacheable,\n     * then it will be stored in the cache for later.\n     * </p><p>\n     * To take advantage of this behavior as an optimization, the connection pool\n     * provides a method to acquire a connection that already has a given SQL statement\n     * in its prepared statement cache so that it is ready for execution.\n     * </p>\n     *\n     * @param sql The SQL statement to prepare.\n     * @param outStatementInfo The {@link SQLiteStatementInfo} object to populate\n     * with information about the statement, or null if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error.\n     ",
+    "links" : [ "SQLiteStatementInfo", "SQLiteStatementInfo" ]
+  }, {
+    "name" : "public void execute(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "void",
+    "comment" : "\n     * Executes a statement that does not return a result.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long executeForLong(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "long",
+    "comment" : "\n     * Executes a statement that returns a single <code>long</code> result.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The value of the first column in the first row of the result set\n     * as a <code>long</code>, or zero if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String executeForString(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "String",
+    "comment" : "\n     * Executes a statement that returns a single {@link String} result.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The value of the first column in the first row of the result set\n     * as a <code>String</code>, or null if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ "String" ]
+  }, {
+    "name" : "public ParcelFileDescriptor executeForBlobFileDescriptor(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * Executes a statement that returns a single BLOB result as a\n     * file descriptor to a shared memory region.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The file descriptor for a shared memory region that contains\n     * the value of the first column in the first row of the result set as a BLOB,\n     * or null if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int executeForChangedRowCount(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "int",
+    "comment" : "\n     * Executes a statement that returns a count of the number of rows\n     * that were changed.  Use for UPDATE or DELETE SQL statements.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The number of rows that were changed.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long executeForLastInsertedRowId(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "long",
+    "comment" : "\n     * Executes a statement that returns the row id of the last row inserted\n     * by the statement.  Use for INSERT SQL statements.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The row id of the last row that was inserted, or 0 if none.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int executeForCursorWindow(String sql, Object[] bindArgs, CursorWindow window, int startPos, int requiredPos, boolean countAllRows, CancellationSignal cancellationSignal)",
+    "returnType" : "int",
+    "comment" : "\n     * Executes a statement and populates the specified {@link CursorWindow}\n     * with a range of results.  Returns the number of rows that were counted\n     * during query execution.\n     *\n     * @param sql The SQL statement to execute.\n     * @param bindArgs The arguments to bind, or null if none.\n     * @param window The cursor window to clear and fill.\n     * @param startPos The start position for filling the window.\n     * @param requiredPos The position of a row that MUST be in the window.\n     * If it won't fit, then the query should discard part of what it filled\n     * so that it does.  Must be greater than or equal to <code>startPos</code>.\n     * @param countAllRows True to count all rows that the query would return\n     * regagless of whether they fit in the window.\n     * @param cancellationSignal A signal to cancel the operation in progress, or null if none.\n     * @return The number of rows that were counted during query execution.  Might\n     * not be all rows in the result set unless <code>countAllRows</code> is true.\n     *\n     * @throws SQLiteException if an error occurs, such as a syntax error\n     * or invalid number of bind arguments.\n     * @throws OperationCanceledException if the operation was canceled.\n     ",
+    "links" : [ "CursorWindow" ]
+  }, {
+    "name" : "private PreparedStatement acquirePreparedStatement(String sql)",
+    "returnType" : "PreparedStatement",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void releasePreparedStatement(PreparedStatement statement)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void finalizePreparedStatement(PreparedStatement statement)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void attachCancellationSignal(CancellationSignal cancellationSignal)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void detachCancellationSignal(CancellationSignal cancellationSignal)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onCancel()",
+    "returnType" : "void",
+    "comment" : " that the SQLite connection is still alive.",
+    "links" : [ ]
+  }, {
+    "name" : "private void bindArguments(PreparedStatement statement, Object[] bindArgs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void throwIfStatementForbidden(PreparedStatement statement)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isCacheable(int statementType)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void applyBlockGuardPolicy(PreparedStatement statement)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(Printer printer, boolean verbose)",
+    "returnType" : "void",
+    "comment" : "\n     * Dumps debugging information about this connection.\n     *\n     * @param printer The printer to receive the dump, not null.\n     * @param verbose True to dump more verbose information.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void dumpUnsafe(Printer printer, boolean verbose)",
+    "returnType" : "void",
+    "comment" : "\n     * Dumps debugging information about this connection, in the case where the\n     * caller might not actually own the connection.\n     *\n     * This function is written so that it may be called by a thread that does not\n     * own the connection.  We need to be very careful because the connection state is\n     * not synchronized.\n     *\n     * At worst, the method may return stale or slightly wrong data, however\n     * it should not crash.  This is ok as it is only used for diagnostic purposes.\n     *\n     * @param printer The printer to receive the dump, not null.\n     * @param verbose True to dump more verbose information.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " String describeCurrentOperationUnsafe()",
+    "returnType" : "String",
+    "comment" : "\n     * Describes the currently executing operation, in the case where the\n     * caller might not actually own the connection.\n     *\n     * This function is written so that it may be called by a thread that does not\n     * own the connection.  We need to be very careful because the connection state is\n     * not synchronized.\n     *\n     * At worst, the method may return stale or slightly wrong data, however\n     * it should not crash.  This is ok as it is only used for diagnostic purposes.\n     *\n     * @return A description of the current operation including how long it has been running,\n     * or null if none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void collectDbStats(ArrayList<DbStats> dbStatsList)",
+    "returnType" : "void",
+    "comment" : "\n     * Collects statistics about database connection memory usage.\n     *\n     * @param dbStatsList The list to populate.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void collectDbStatsUnsafe(ArrayList<DbStats> dbStatsList)",
+    "returnType" : "void",
+    "comment" : "\n     * Collects statistics about database connection memory usage, in the case where the\n     * caller might not actually own the connection.\n     *\n     * @return The statistics object, never null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private DbStats getMainDbStatsUnsafe(int lookaside, long pageCount, long pageSize)",
+    "returnType" : "DbStats",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private PreparedStatement obtainPreparedStatement(String sql, long statementPtr, int numParameters, int type, boolean readOnly)",
+    "returnType" : "PreparedStatement",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void recyclePreparedStatement(PreparedStatement statement)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String trimSqlForDisplay(String sql)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DEBUG", "EMPTY_STRING_ARRAY", "EMPTY_BYTE_ARRAY", "mCloseGuard", "mPool", "mConfiguration", "mConnectionId", "mIsPrimaryConnection", "mIsReadOnlyConnection", "mPreparedStatementCache", "mPreparedStatementPool", "mRecentOperations", "mConnectionPtr", "mOnlyAllowReadOnlyOperations", "mCancellationSignalAttachCount" ],
+  "methodNames" : [ "private static native long nativeOpen(String path, int openFlags, String label, boolean enableTrace, boolean enableProfile, int lookasideSlotSize, int lookasideSlotCount)", "private static native void nativeClose(long connectionPtr)", "private static native void nativeRegisterCustomScalarFunction(long connectionPtr, String name, UnaryOperator<String> function)", "private static native void nativeRegisterCustomAggregateFunction(long connectionPtr, String name, BinaryOperator<String> function)", "private static native void nativeRegisterLocalizedCollators(long connectionPtr, String locale)", "private static native long nativePrepareStatement(long connectionPtr, String sql)", "private static native void nativeFinalizeStatement(long connectionPtr, long statementPtr)", "private static native int nativeGetParameterCount(long connectionPtr, long statementPtr)", "private static native boolean nativeIsReadOnly(long connectionPtr, long statementPtr)", "private static native int nativeGetColumnCount(long connectionPtr, long statementPtr)", "private static native String nativeGetColumnName(long connectionPtr, long statementPtr, int index)", "private static native void nativeBindNull(long connectionPtr, long statementPtr, int index)", "private static native void nativeBindLong(long connectionPtr, long statementPtr, int index, long value)", "private static native void nativeBindDouble(long connectionPtr, long statementPtr, int index, double value)", "private static native void nativeBindString(long connectionPtr, long statementPtr, int index, String value)", "private static native void nativeBindBlob(long connectionPtr, long statementPtr, int index, byte[] value)", "private static native void nativeResetStatementAndClearBindings(long connectionPtr, long statementPtr)", "private static native void nativeExecute(long connectionPtr, long statementPtr)", "private static native long nativeExecuteForLong(long connectionPtr, long statementPtr)", "private static native String nativeExecuteForString(long connectionPtr, long statementPtr)", "private static native int nativeExecuteForBlobFileDescriptor(long connectionPtr, long statementPtr)", "private static native int nativeExecuteForChangedRowCount(long connectionPtr, long statementPtr)", "private static native long nativeExecuteForLastInsertedRowId(long connectionPtr, long statementPtr)", "private static native long nativeExecuteForCursorWindow(long connectionPtr, long statementPtr, long windowPtr, int startPos, int requiredPos, boolean countAllRows)", "private static native int nativeGetDbLookaside(long connectionPtr)", "private static native void nativeCancel(long connectionPtr)", "private static native void nativeResetCancel(long connectionPtr, boolean cancelable)", "protected void finalize() throws Throwable", " static SQLiteConnection open(SQLiteConnectionPool pool, SQLiteDatabaseConfiguration configuration, int connectionId, boolean primaryConnection)", " void close()", "private void open()", "private void dispose(boolean finalized)", "private void setPageSize()", "private void setAutoCheckpointInterval()", "private void setJournalSizeLimit()", "private void setForeignKeyModeFromConfiguration()", "private void setWalModeFromConfiguration()", "private void maybeTruncateWalFile()", "private void setSyncMode(String newValue)", "private static String canonicalizeSyncMode(String value)", "private void setJournalMode(String newValue)", "private void setLocaleFromConfiguration()", "private void setCustomFunctionsFromConfiguration()", "private void executePerConnectionSqlFromConfiguration(int startIndex)", "private void checkDatabaseWiped()", " void reconfigure(SQLiteDatabaseConfiguration configuration)", " void setOnlyAllowReadOnlyOperations(boolean readOnly)", " boolean isPreparedStatementInCache(String sql)", "public int getConnectionId()", "public boolean isPrimaryConnection()", "public void prepare(String sql, SQLiteStatementInfo outStatementInfo)", "public void execute(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public long executeForLong(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public String executeForString(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public ParcelFileDescriptor executeForBlobFileDescriptor(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public int executeForChangedRowCount(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public long executeForLastInsertedRowId(String sql, Object[] bindArgs, CancellationSignal cancellationSignal)", "public int executeForCursorWindow(String sql, Object[] bindArgs, CursorWindow window, int startPos, int requiredPos, boolean countAllRows, CancellationSignal cancellationSignal)", "private PreparedStatement acquirePreparedStatement(String sql)", "private void releasePreparedStatement(PreparedStatement statement)", "private void finalizePreparedStatement(PreparedStatement statement)", "private void attachCancellationSignal(CancellationSignal cancellationSignal)", "private void detachCancellationSignal(CancellationSignal cancellationSignal)", "public void onCancel()", "private void bindArguments(PreparedStatement statement, Object[] bindArgs)", "private void throwIfStatementForbidden(PreparedStatement statement)", "private static boolean isCacheable(int statementType)", "private void applyBlockGuardPolicy(PreparedStatement statement)", "public void dump(Printer printer, boolean verbose)", " void dumpUnsafe(Printer printer, boolean verbose)", " String describeCurrentOperationUnsafe()", " void collectDbStats(ArrayList<DbStats> dbStatsList)", " void collectDbStatsUnsafe(ArrayList<DbStats> dbStatsList)", "private DbStats getMainDbStatsUnsafe(int lookaside, long pageCount, long pageSize)", "public String toString()", "private PreparedStatement obtainPreparedStatement(String sql, long statementPtr, int numParameters, int type, boolean readOnly)", "private void recyclePreparedStatement(PreparedStatement statement)", "private static String trimSqlForDisplay(String sql)" ]
+}

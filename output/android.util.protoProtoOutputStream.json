@@ -1,0 +1,615 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/util/proto/ProtoOutputStream.java",
+  "packageName" : "android.util.proto",
+  "className" : "ProtoOutputStream",
+  "comment" : " IMPLEMENTATION NOTES\n *\n * Because protobuf has inner values, and they are length prefixed, and\n * those sizes themselves are stored with a variable length encoding, it\n * is impossible to know how big an object will be in a single pass.\n *\n * The traditional way is to copy the in-memory representation of an object\n * into the generated proto Message objects, do a traversal of those to\n * cache the size, and then write the size-prefixed buffers.\n *\n * We are trying to avoid too much generated code here, but this class still\n * needs to have a somewhat sane API.  We can't have the multiple passes be\n * done by the calling code.  In addition, we want to avoid the memory high\n * water mark of duplicating all of the values into the traditional in-memory\n * Message objects. We need to find another way.\n *\n * So what we do here is to let the calling code write the data into a\n * byte[] (actually a collection of them wrapped in the EncodedBuffer class),\n * but not do the varint encoding of the sub-message sizes.  Then, we do a\n * recursive traversal of the buffer itself, calculating the sizes (which are\n * then knowable, although still not the actual sizes in the buffer because of\n * possible further nesting).  Then we do a third pass, compacting the\n * buffer and varint encoding the sizes.\n *\n * This gets us a relatively small number of fixed-size allocations,\n * which is less likely to cause memory fragmentation or churn the GC, and\n * the same number of data copies as we would have gotten with setting it\n * field-by-field in generated code, and no code bloat from generated code.\n * The final data copy is also done with System.arraycopy, which will be\n * more efficient, in general, than doing the individual fields twice (as in\n * the traditional way).\n *\n * To accomplish the multiple passes, whenever we write a\n * WIRE_TYPE_LENGTH_DELIMITED field, we write the size occupied in our\n * buffer as a fixed 32 bit int (called childRawSize), not a variable length\n * one. We reserve another 32 bit slot for the computed size (called\n * childEncodedSize).  If we know the size up front, as we do for strings\n * and byte[], then we also put that into childEncodedSize, if we don't, we\n * write the negative of childRawSize, as a sentinel that we need to\n * compute it during the second pass and recursively compact it during the\n * third pass.\n *\n * Unsigned size varints can be up to five bytes long, but we reserve eight\n * bytes for overhead, so we know that when we compact the buffer, there\n * will always be space for the encoded varint.\n *\n * When we can figure out the size ahead of time, we do, in order\n * to save overhead with recalculating it, and with the later arraycopy.\n *\n * During the period between when the caller has called #start, but\n * not yet called #end, we maintain a linked list of the tokens\n * returned by #start, stored in those 8 bytes of size storage space.\n * We use that linked list of tokens to ensure that the caller has\n * correctly matched pairs of #start and #end calls, and issue\n * errors if they are not matched.\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mBuffer",
+    "type" : "EncodedBuffer",
+    "comment" : "\n     * Our buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mStream",
+    "type" : "OutputStream",
+    "comment" : "\n     * Our stream.  If there is one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mDepth",
+    "type" : "int",
+    "comment" : "\n     * Current nesting depth of startObject calls.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mNextObjectId",
+    "type" : "int",
+    "comment" : "\n     * An ID given to objects and returned in the token from startObject\n     * and stored in the buffer until endObject is called, where the two\n     * are checked.\n     *\n     * <p>Starts at -1 and becomes more negative, so the values\n     * aren't likely to alias with the size it will be overwritten with,\n     * which tend to be small, and we will be more likely to catch when\n     * the caller of endObject uses a stale token that they didn't intend\n     * to (e.g. copy and paste error).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mExpectedObjectToken",
+    "type" : "long",
+    "comment" : "\n     * The object token we are expecting in endObject.\n     *\n     * <p>If another call to startObject happens, this is written to that location, which gives\n     * us a stack, stored in the space for the as-yet unused size fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCopyBegin",
+    "type" : "int",
+    "comment" : "\n     * Index in mBuffer that we should start copying from on the next\n     * pass of compaction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCompacted",
+    "type" : "boolean",
+    "comment" : "\n     * Whether we've already compacted\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public int getRawSize()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the total size of the data that has been written, after full\n     * protobuf encoding has occurred.\n     *\n     * @return the uncompressed buffer size\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, double val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a value for the given fieldId.\n     *\n     * <p>Will automatically convert for the following field types, and\n     * throw an exception for others: double, float, int32, int64, uint32, uint64,\n     * sint32, sint64, fixed32, fixed64, sfixed32, sfixed64, bool, enum.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, float val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a value for the given fieldId.\n     *\n     * <p>Will automatically convert for the following field types, and\n     * throw an exception for others: double, float, int32, int64, uint32, uint64,\n     * sint32, sint64, fixed32, fixed64, sfixed32, sfixed64, bool, enum.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a value for the given fieldId.\n     *\n     * <p>Will automatically convert for the following field types, and\n     * throw an exception for others: double, float, int32, int64, uint32, uint64,\n     * sint32, sint64, fixed32, fixed64, sfixed32, sfixed64, bool, enum.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a value for the given fieldId.\n     *\n     * <p>Will automatically convert for the following field types, and\n     * throw an exception for others: double, float, int32, int64, uint32, uint64,\n     * sint32, sint64, fixed32, fixed64, sfixed32, sfixed64, bool, enum.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, boolean val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a boolean value for the given fieldId.\n     *\n     * <p>If the field is not a bool field, an {@link IllegalStateException} will be thrown.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ "IllegalStateException" ]
+  }, {
+    "name" : "public void write(long fieldId, @Nullable String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a string value for the given fieldId.\n     *\n     * <p>If the field is not a string field, an exception will be thrown.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void write(long fieldId, @Nullable byte[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a byte[] value for the given fieldId.\n     *\n     * <p>If the field is not a bytes or object field, an exception will be thrown.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @param val The value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long start(long fieldId)",
+    "returnType" : "long",
+    "comment" : "\n     * Start a sub object.\n     *\n     * @param fieldId The field identifier constant from the generated class.\n     * @return The token to call {@link #end(long)} with.\n     ",
+    "links" : [ "#end" ]
+  }, {
+    "name" : "public void end(long token)",
+    "returnType" : "void",
+    "comment" : "\n     * End the object started by start() that returned token.\n     *\n     * @param token The token returned from {@link #start(long)}\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public void writeDouble(long fieldId, double val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"double\" type field value.\n     *\n     * @deprecated Use {@link #write(long, double)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeDoubleImpl(int id, double val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedDouble(long fieldId, double val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"double\" type field value.\n     *\n     * @deprecated Use {@link #write(long, double)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedDoubleImpl(int id, double val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedDouble(long fieldId, @Nullable double[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"double\" type field values.\n     *\n     * @deprecated Use {@link #write(long, double)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeFloat(long fieldId, float val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"float\" type field value.\n     *\n     * @deprecated Use {@link #write(long, float)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeFloatImpl(int id, float val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedFloat(long fieldId, float val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"float\" type field value.\n     *\n     * @deprecated Use {@link #write(long, float)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedFloatImpl(int id, float val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedFloat(long fieldId, @Nullable float[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"float\" type field value.\n     *\n     * @deprecated Use {@link #write(long, float)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeUnsignedVarintFromSignedInt(int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes a java int as an usigned varint.\n     *\n     * <p>The unadorned int32 type in protobuf is unfortunate because it\n     * is stored in memory as a signed value, but encodes as unsigned\n     * varints, which are formally always longs.  So here, we encode\n     * negative values as 64 bits, which will get the sign-extension,\n     * and positive values as 32 bits, which saves a marginal amount\n     * of work in that it processes ints instead of longs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"int32\" type field value.\n     *\n     * <p>Note that these are stored in memory as signed values and written as unsigned\n     * varints, which if negative, are 10 bytes long. If you know the data is likely\n     * to be negative, use \"sint32\".\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"int32\" type field value.\n     *\n     * <p>Note that these are stored in memory as signed values and written as unsigned\n     * varints, which if negative, are 10 bytes long. If you know the data is likely\n     * to be negative, use \"sint32\".\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedInt32(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"int32\" type field value.\n     *\n     * <p>Note that these are stored in memory as signed values and written as unsigned\n     * varints, which if negative, are 10 bytes long. If you know the data is likely\n     * to be negative, use \"sint32\".\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"int64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"int64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedInt64(long fieldId, @Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"int64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeUInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"uint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeUInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedUInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"uint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedUInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedUInt32(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"uint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeUInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"uint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeUInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedUInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"uint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedUInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedUInt64(long fieldId, @Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"uint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeSInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"sint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeSInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedSInt32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"sint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedSInt32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedSInt32(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"sint32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeSInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"sint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeSInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedSInt64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"sint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedSInt64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedSInt64(long fieldId, @Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"sint64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeFixed32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"fixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeFixed32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedFixed32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"fixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedFixed32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedFixed32(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"fixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeFixed64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"fixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeFixed64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedFixed64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"fixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedFixed64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedFixed64(long fieldId, @Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"fixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeSFixed32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"sfixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeSFixed32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedSFixed32(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"sfixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedSFixed32Impl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedSFixed32(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"sfixed32\" type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeSFixed64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"sfixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeSFixed64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedSFixed64(long fieldId, long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"sfixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedSFixed64Impl(int id, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedSFixed64(long fieldId, @Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"sfixed64\" type field value.\n     *\n     * @deprecated Use {@link #write(long, long)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeBool(long fieldId, boolean val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"bool\" type field value.\n     *\n     * @deprecated Use {@link #write(long, boolean)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeBoolImpl(int id, boolean val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedBool(long fieldId, boolean val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"bool\" type field value.\n     *\n     * @deprecated Use {@link #write(long, boolean)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedBoolImpl(int id, boolean val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedBool(long fieldId, @Nullable boolean[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"bool\" type field value.\n     *\n     * @deprecated Use {@link #write(long, boolean)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public void writeString(long fieldId, @Nullable String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"string\" type field value.\n     *\n     * @deprecated Use {@link #write(long, String)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeStringImpl(int id, String val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedString(long fieldId, @Nullable String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"string\" type field value.\n     *\n     * @deprecated Use {@link #write(long, String)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedStringImpl(int id, String val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeUtf8String(int id, String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto \"string\" type field value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeBytes(long fieldId, @Nullable byte[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto \"bytes\" type field value.\n     *\n     * @deprecated Use {@link #write(long, byte[])} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeBytesImpl(int id, byte[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedBytes(long fieldId, @Nullable byte[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto \"bytes\" type field value.\n     *\n     * @deprecated Use {@link #write(long, byte[])} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedBytesImpl(int id, byte[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeEnum(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single proto enum type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeEnumImpl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedEnum(long fieldId, int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a single repeated proto enum type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "private void writeRepeatedEnumImpl(int id, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writePackedEnum(long fieldId, @Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a list of packed proto enum type field value.\n     *\n     * @deprecated Use {@link #write(long, int)} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : "public long startObject(long fieldId)",
+    "returnType" : "long",
+    "comment" : "\n     * Start a child object.\n     *\n     * Returns a token which should be passed to endObject.  Calls to endObject must be\n     * nested properly.\n     *\n     * @deprecated Use {@link #start(long)} instead.\n     * @hide\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public void endObject(long token)",
+    "returnType" : "void",
+    "comment" : "\n     * End a child object. Pass in the token from the correspoinding startObject call.\n     *\n     * @deprecated Use {@link #end(long)} instead.\n     * @hide\n     ",
+    "links" : [ "#end" ]
+  }, {
+    "name" : "public long startRepeatedObject(long fieldId)",
+    "returnType" : "long",
+    "comment" : "\n     * Start a repeated child object.\n     *\n     * Returns a token which should be passed to endObject.  Calls to endObject must be\n     * nested properly.\n     *\n     * @deprecated Use {@link #start(long)} instead.\n     * @hide\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public void endRepeatedObject(long token)",
+    "returnType" : "void",
+    "comment" : "\n     * End a child object. Pass in the token from the correspoinding startRepeatedObject call.\n     *\n     * @deprecated Use {@link #end(long)} instead.\n     * @hide\n     ",
+    "links" : [ "#end" ]
+  }, {
+    "name" : "private long startObjectImpl(final int id, boolean repeated)",
+    "returnType" : "long",
+    "comment" : "\n     * Common implementation of startObject and startRepeatedObject.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void endObjectImpl(long token, boolean repeated)",
+    "returnType" : "void",
+    "comment" : "\n     * Common implementation of endObject and endRepeatedObject.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeObject(long fieldId, @Nullable byte[] value)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an object that has already been flattened.\n     *\n     * @deprecated Use {@link #write(long, byte[])} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : " void writeObjectImpl(int id, byte[] value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeRepeatedObject(long fieldId, @Nullable byte[] value)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an object that has already been flattened.\n     *\n     * @deprecated Use {@link #write(long, byte[])} instead.\n     * @hide\n     ",
+    "links" : [ "#write" ]
+  }, {
+    "name" : " void writeRepeatedObjectImpl(int id, byte[] value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static long makeFieldId(int id, long fieldFlags)",
+    "returnType" : "long",
+    "comment" : "\n     * Combine a fieldId (the field keys in the proto file) and the field flags.\n     * Mostly useful for testing because the generated code contains the fieldId\n     * constants.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int checkFieldId(long fieldId, long expectedFlags)",
+    "returnType" : "int",
+    "comment" : "\n     * Validates that the fieldId provided is of the type and count from expectedType.\n     *\n     * <p>The type must match exactly to pass this check.\n     *\n     * <p>The count must match according to this truth table to pass the check:\n     *\n     *                  expectedFlags\n     *                  UNKNOWN     SINGLE      REPEATED    PACKED\n     *    fieldId\n     *    UNKNOWN       true        false       false       false\n     *    SINGLE        x           true        false       false\n     *    REPEATED      x           false       true        false\n     *    PACKED        x           false       true        true\n     *\n     * @throws {@link IllegalArgumentException} if it is not.\n     *\n     * @return The raw ID of that field.\n     ",
+    "links" : [ "IllegalArgumentException" ]
+  }, {
+    "name" : "private static int getTagSize(int id)",
+    "returnType" : "int",
+    "comment" : "\n     * Return how many bytes an encoded field tag will require.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeTag(int id, @WireType int wireType)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an individual field tag by hand.\n     *\n     * See <a href=\"https://developers.google.com/protocol-buffers/docs/encoding\">Protobuf\n     * Encoding</a> for details on the structure of how tags and data are written.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeKnownLengthHeader(int id, int size)",
+    "returnType" : "void",
+    "comment" : "\n     * Write the header of a WIRE_TYPE_LENGTH_DELIMITED field for one where\n     * we know the size in advance and do not need to compute and compact.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void assertNotCompacted()",
+    "returnType" : "void",
+    "comment" : "\n     * Assert that the compact call has not already occured.\n     *\n     * TODO: Will change when we add the OutputStream version of ProtoOutputStream.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public byte[] getBytes()",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Finish the encoding of the data, and return a byte[] with\n     * the protobuf formatted data.\n     *\n     * <p>After this call, do not call any of the write* functions. The\n     * behavior is undefined.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void compactIfNecessary()",
+    "returnType" : "void",
+    "comment" : "\n     * If the buffer hasn't already had the nested object size fields compacted\n     * and turned into an actual protobuf format, then do so.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int editEncodedSize(int rawSize)",
+    "returnType" : "int",
+    "comment" : "\n     * First compaction pass. Iterate through the data, and fill in the\n     * nested object sizes so the next pass can compact them.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void compactSizes(int rawSize)",
+    "returnType" : "void",
+    "comment" : "\n     * Second compaction pass.  Iterate through the data, and copy the data\n     * forward in the buffer, converting the pairs of uint32s into a single\n     * unsigned varint of the size.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void flush()",
+    "returnType" : "void",
+    "comment" : "\n     * Write remaining data to the output stream.  If there is no output stream,\n     * this function does nothing. Any currently open objects (i.e. ones that\n     * have not had {@link #end(long)} called for them will not be written).  Whether this\n     * writes objects that are closed if there are remaining open objects is\n     * undefined (current implementation does not write it, future ones will).\n     * For now, can either call {@link #getBytes()} or {@link #flush()}, but not both.\n     ",
+    "links" : [ "#end", "#getBytes", "#flush" ]
+  }, {
+    "name" : "private int readRawTag()",
+    "returnType" : "int",
+    "comment" : "\n     * Read a raw tag from the buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(@NonNull String tag)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump debugging data about the buffers with the given log tag.\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "mBuffer", "mStream", "mDepth", "mNextObjectId", "mExpectedObjectToken", "mCopyBegin", "mCompacted" ],
+  "methodNames" : [ "public int getRawSize()", "public void write(long fieldId, double val)", "public void write(long fieldId, float val)", "public void write(long fieldId, int val)", "public void write(long fieldId, long val)", "public void write(long fieldId, boolean val)", "public void write(long fieldId, @Nullable String val)", "public void write(long fieldId, @Nullable byte[] val)", "public long start(long fieldId)", "public void end(long token)", "public void writeDouble(long fieldId, double val)", "private void writeDoubleImpl(int id, double val)", "public void writeRepeatedDouble(long fieldId, double val)", "private void writeRepeatedDoubleImpl(int id, double val)", "public void writePackedDouble(long fieldId, @Nullable double[] val)", "public void writeFloat(long fieldId, float val)", "private void writeFloatImpl(int id, float val)", "public void writeRepeatedFloat(long fieldId, float val)", "private void writeRepeatedFloatImpl(int id, float val)", "public void writePackedFloat(long fieldId, @Nullable float[] val)", "private void writeUnsignedVarintFromSignedInt(int val)", "public void writeInt32(long fieldId, int val)", "private void writeInt32Impl(int id, int val)", "public void writeRepeatedInt32(long fieldId, int val)", "private void writeRepeatedInt32Impl(int id, int val)", "public void writePackedInt32(long fieldId, @Nullable int[] val)", "public void writeInt64(long fieldId, long val)", "private void writeInt64Impl(int id, long val)", "public void writeRepeatedInt64(long fieldId, long val)", "private void writeRepeatedInt64Impl(int id, long val)", "public void writePackedInt64(long fieldId, @Nullable long[] val)", "public void writeUInt32(long fieldId, int val)", "private void writeUInt32Impl(int id, int val)", "public void writeRepeatedUInt32(long fieldId, int val)", "private void writeRepeatedUInt32Impl(int id, int val)", "public void writePackedUInt32(long fieldId, @Nullable int[] val)", "public void writeUInt64(long fieldId, long val)", "private void writeUInt64Impl(int id, long val)", "public void writeRepeatedUInt64(long fieldId, long val)", "private void writeRepeatedUInt64Impl(int id, long val)", "public void writePackedUInt64(long fieldId, @Nullable long[] val)", "public void writeSInt32(long fieldId, int val)", "private void writeSInt32Impl(int id, int val)", "public void writeRepeatedSInt32(long fieldId, int val)", "private void writeRepeatedSInt32Impl(int id, int val)", "public void writePackedSInt32(long fieldId, @Nullable int[] val)", "public void writeSInt64(long fieldId, long val)", "private void writeSInt64Impl(int id, long val)", "public void writeRepeatedSInt64(long fieldId, long val)", "private void writeRepeatedSInt64Impl(int id, long val)", "public void writePackedSInt64(long fieldId, @Nullable long[] val)", "public void writeFixed32(long fieldId, int val)", "private void writeFixed32Impl(int id, int val)", "public void writeRepeatedFixed32(long fieldId, int val)", "private void writeRepeatedFixed32Impl(int id, int val)", "public void writePackedFixed32(long fieldId, @Nullable int[] val)", "public void writeFixed64(long fieldId, long val)", "private void writeFixed64Impl(int id, long val)", "public void writeRepeatedFixed64(long fieldId, long val)", "private void writeRepeatedFixed64Impl(int id, long val)", "public void writePackedFixed64(long fieldId, @Nullable long[] val)", "public void writeSFixed32(long fieldId, int val)", "private void writeSFixed32Impl(int id, int val)", "public void writeRepeatedSFixed32(long fieldId, int val)", "private void writeRepeatedSFixed32Impl(int id, int val)", "public void writePackedSFixed32(long fieldId, @Nullable int[] val)", "public void writeSFixed64(long fieldId, long val)", "private void writeSFixed64Impl(int id, long val)", "public void writeRepeatedSFixed64(long fieldId, long val)", "private void writeRepeatedSFixed64Impl(int id, long val)", "public void writePackedSFixed64(long fieldId, @Nullable long[] val)", "public void writeBool(long fieldId, boolean val)", "private void writeBoolImpl(int id, boolean val)", "public void writeRepeatedBool(long fieldId, boolean val)", "private void writeRepeatedBoolImpl(int id, boolean val)", "public void writePackedBool(long fieldId, @Nullable boolean[] val)", "public void writeString(long fieldId, @Nullable String val)", "private void writeStringImpl(int id, String val)", "public void writeRepeatedString(long fieldId, @Nullable String val)", "private void writeRepeatedStringImpl(int id, String val)", "private void writeUtf8String(int id, String val)", "public void writeBytes(long fieldId, @Nullable byte[] val)", "private void writeBytesImpl(int id, byte[] val)", "public void writeRepeatedBytes(long fieldId, @Nullable byte[] val)", "private void writeRepeatedBytesImpl(int id, byte[] val)", "public void writeEnum(long fieldId, int val)", "private void writeEnumImpl(int id, int val)", "public void writeRepeatedEnum(long fieldId, int val)", "private void writeRepeatedEnumImpl(int id, int val)", "public void writePackedEnum(long fieldId, @Nullable int[] val)", "public long startObject(long fieldId)", "public void endObject(long token)", "public long startRepeatedObject(long fieldId)", "public void endRepeatedObject(long token)", "private long startObjectImpl(final int id, boolean repeated)", "private void endObjectImpl(long token, boolean repeated)", "public void writeObject(long fieldId, @Nullable byte[] value)", " void writeObjectImpl(int id, byte[] value)", "public void writeRepeatedObject(long fieldId, @Nullable byte[] value)", " void writeRepeatedObjectImpl(int id, byte[] value)", "public static long makeFieldId(int id, long fieldFlags)", "public static int checkFieldId(long fieldId, long expectedFlags)", "private static int getTagSize(int id)", "public void writeTag(int id, @WireType int wireType)", "private void writeKnownLengthHeader(int id, int size)", "private void assertNotCompacted()", "public byte[] getBytes()", "private void compactIfNecessary()", "private int editEncodedSize(int rawSize)", "private void compactSizes(int rawSize)", "public void flush()", "private int readRawTag()", "public void dump(@NonNull String tag)" ]
+}

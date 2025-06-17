@@ -1,0 +1,565 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/animation/ValueAnimator.java",
+  "packageName" : "android.animation",
+  "className" : "ValueAnimator",
+  "comment" : "\n * This class provides a simple timing engine for running animations\n * which calculate animated values and set them on target objects.\n *\n * <p>There is a single timing pulse that all animations use. It runs in a\n * custom handler to ensure that property changes happen on the UI thread.</p>\n *\n * <p>By default, ValueAnimator uses non-linear time interpolation, via the\n * {@link AccelerateDecelerateInterpolator} class, which accelerates into and decelerates\n * out of an animation. This behavior can be changed by calling\n * {@link ValueAnimator#setInterpolator(TimeInterpolator)}.</p>\n *\n * <p>Animators can be created from either code or resource files. Here is an example\n * of a ValueAnimator resource file:</p>\n *\n * {@sample development/samples/ApiDemos/res/anim/animator.xml ValueAnimatorResources}\n *\n * <p>Starting from API 23, it is also possible to use a combination of {@link PropertyValuesHolder}\n * and {@link Keyframe} resource tags to create a multi-step animation.\n * Note that you can specify explicit fractional values (from 0 to 1) for\n * each keyframe to determine when, in the overall duration, the animation should arrive at that\n * value. Alternatively, you can leave the fractions off and the keyframes will be equally\n * distributed within the total duration:</p>\n *\n * {@sample development/samples/ApiDemos/res/anim/value_animator_pvh_kf.xml\n * ValueAnimatorKeyframeResources}\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about animating with {@code ValueAnimator}, read the\n * <a href=\"{@docRoot}guide/topics/graphics/prop-animation.html#value-animator\">Property\n * Animation</a> developer guide.</p>\n * </div>\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sDurationScale",
+    "type" : "float",
+    "comment" : "\n     * System-wide animation scale.\n     *\n     * <p>To check whether animations are enabled system-wise use {@link #areAnimatorsEnabled()}.\n     ",
+    "links" : [ "#areAnimatorsEnabled" ]
+  }, {
+    "name" : "mStartTime",
+    "type" : "long",
+    "comment" : "\n     * The first time that the animation's animateFrame() method is called. This time is used to\n     * determine elapsed time (and therefore the elapsed fraction) in subsequent calls\n     * to animateFrame().\n     *\n     * Whenever mStartTime is set, you must also update mStartTimeCommitted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mStartTimeCommitted",
+    "type" : "boolean",
+    "comment" : "\n     * When true, the start time has been firmly committed as a chosen reference point in\n     * time by which the progress of the animation will be evaluated.  When false, the\n     * start time may be updated when the first animation frame is committed so as\n     * to compensate for jank that may have occurred between when the start time was\n     * initialized and when the frame was actually drawn.\n     *\n     * This flag is generally set to false during the first frame of the animation\n     * when the animation playing state transitions from STOPPED to RUNNING or\n     * resumes after having been paused.  This flag is set to true when the start time\n     * is firmly committed and should not be further compensated for jank.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSeekFraction",
+    "type" : "float",
+    "comment" : "\n     * Set when setCurrentPlayTime() is called. If negative, animation is not currently seeked\n     * to a value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPauseTime",
+    "type" : "long",
+    "comment" : "\n     * Set on the next frame after pause() is called, used to calculate a new startTime\n     * or delayStartTime which allows the animator to continue from the point at which\n     * it was paused. If negative, has not yet been set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mResumed",
+    "type" : "boolean",
+    "comment" : "\n     * Set when an animator is resumed. This triggers logic in the next frame which\n     * actually resumes the animator.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sDefaultInterpolator",
+    "type" : "TimeInterpolator",
+    "comment" : " The time interpolator to be used if none is set on the animation",
+    "links" : [ ]
+  }, {
+    "name" : "mReversing",
+    "type" : "boolean",
+    "comment" : "\n     * Flag to indicate whether this animator is playing in reverse mode, specifically\n     * by being started or interrupted by a call to reverse(). This flag is different than\n     * mPlayingBackwards, which indicates merely whether the current iteration of the\n     * animator is playing in reverse. It is used in corner cases to determine proper end\n     * behavior.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mOverallFraction",
+    "type" : "float",
+    "comment" : "\n     * Tracks the overall fraction of the animation, ranging from 0 to mRepeatCount + 1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentFraction",
+    "type" : "float",
+    "comment" : "\n     * Tracks current elapsed/eased fraction, for querying in getAnimatedFraction().\n     * This is calculated by interpolating the fraction (range: [0, 1]) in the current iteration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mLastFrameTime",
+    "type" : "long",
+    "comment" : "\n     * Tracks the time (in milliseconds) when the last frame arrived.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mFirstFrameTime",
+    "type" : "long",
+    "comment" : "\n     * Tracks the time (in milliseconds) when the first frame arrived. Note the frame may arrive\n     * during the start delay.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mRunning",
+    "type" : "boolean",
+    "comment" : "\n     * Additional playing state to indicate whether an animator has been start()'d. There is\n     * some lag between a call to start() and the first animation frame. We should still note\n     * that the animation has been started, even if it's first animation frame has not yet\n     * happened, and reflect that state in isRunning().\n     * Note that delayed animations are different: they are not started until their first\n     * animation frame, which occurs after their delay elapses.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mStarted",
+    "type" : "boolean",
+    "comment" : "\n     * Additional playing state to indicate whether an animator has been start()'d, whether or\n     * not there is a nonzero startDelay.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mStartListenersCalled",
+    "type" : "boolean",
+    "comment" : "\n     * Tracks whether we've notified listeners of the onAnimationStart() event. This can be\n     * complex to keep track of since we notify listeners at different times depending on\n     * startDelay and whether start() was called before end().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mInitialized",
+    "type" : "boolean",
+    "comment" : "\n     * Flag that denotes whether the animation is set up and ready to go. Used to\n     * set up animation that has not yet been started.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mAnimationEndRequested",
+    "type" : "boolean",
+    "comment" : "\n     * Flag that tracks whether animation has been requested to end.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mDuration",
+    "type" : "long",
+    "comment" : " How long the animation should last in ms",
+    "links" : [ ]
+  }, {
+    "name" : "mStartDelay",
+    "type" : "long",
+    "comment" : " scaling factor will be applied to this delay.",
+    "links" : [ ]
+  }, {
+    "name" : "mRepeatCount",
+    "type" : "int",
+    "comment" : " will play only once",
+    "links" : [ ]
+  }, {
+    "name" : "mRepeatMode",
+    "type" : "int",
+    "comment" : "\n     * The type of repetition that will occur when repeatMode is nonzero. RESTART means the\n     * animation will start from the beginning on every new cycle. REVERSE means the animation\n     * will reverse directions on each iteration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSelfPulse",
+    "type" : "boolean",
+    "comment" : "\n     * Whether or not the animator should register for its own animation callback to receive\n     * animation pulse.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSuppressSelfPulseRequested",
+    "type" : "boolean",
+    "comment" : "\n     * Whether or not the animator has been requested to start without pulsing. This flag gets set\n     * in startWithoutPulsing(), and reset in start().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mInterpolator",
+    "type" : "TimeInterpolator",
+    "comment" : "\n     * The time interpolator to be used. The elapsed fraction of the animation will be passed\n     * through this interpolator to calculate the interpolated fraction, which is then used to\n     * calculate the animated values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mUpdateListeners",
+    "type" : "ArrayList<AnimatorUpdateListener>",
+    "comment" : "\n     * The set of listeners to be sent events through the life of an animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mValues",
+    "type" : "PropertyValuesHolder[]",
+    "comment" : "\n     * The property/value sets being animated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mValuesMap",
+    "type" : "HashMap<String, PropertyValuesHolder>",
+    "comment" : "\n     * A hashmap of the PropertyValuesHolder objects. This map is used to lookup animated values\n     * by property name during calls to getAnimatedValue(String).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mDurationScale",
+    "type" : "float",
+    "comment" : "\n     * If set to non-negative value, this will override {@link #sDurationScale}.\n     ",
+    "links" : [ "#sDurationScale" ]
+  }, {
+    "name" : "mAnimationHandler",
+    "type" : "AnimationHandler",
+    "comment" : "\n     * Animation handler used to schedule updates for this animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESTART",
+    "type" : "int",
+    "comment" : "\n     * When the animation reaches the end and <code>repeatCount</code> is INFINITE\n     * or a positive value, the animation restarts from the beginning.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REVERSE",
+    "type" : "int",
+    "comment" : "\n     * When the animation reaches the end and <code>repeatCount</code> is INFINITE\n     * or a positive value, the animation reverses direction on every iteration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INFINITE",
+    "type" : "int",
+    "comment" : "\n     * This value used used with the {@link #setRepeatCount(int)} property to repeat\n     * the animation indefinitely.\n     ",
+    "links" : [ "#setRepeatCount" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static void setDurationScale(float durationScale)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static float getDurationScale()",
+    "returnType" : "float",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean areAnimatorsEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether animators are currently enabled, system-wide. By default, all\n     * animators are enabled. This can change if either the user sets a Developer Option\n     * to set the animator duration scale to 0 or by Battery Savery mode being enabled\n     * (which disables all animations).\n     *\n     * <p>Developers should not typically need to call this method, but should an app wish\n     * to show a different experience when animators are disabled, this return value\n     * can be used as a decider of which experience to offer.\n     *\n     * @return boolean Whether animators are currently enabled. The default value is\n     * <code>true</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ValueAnimator ofInt(int... values)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Constructs and returns a ValueAnimator that animates between int values. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * @param values A set of values that the animation will animate between over time.\n     * @return A ValueAnimator object that is set up to animate between the given values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ValueAnimator ofArgb(int... values)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Constructs and returns a ValueAnimator that animates between color values. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * @param values A set of values that the animation will animate between over time.\n     * @return A ValueAnimator object that is set up to animate between the given values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ValueAnimator ofFloat(float... values)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Constructs and returns a ValueAnimator that animates between float values. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * @param values A set of values that the animation will animate between over time.\n     * @return A ValueAnimator object that is set up to animate between the given values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ValueAnimator ofPropertyValuesHolder(PropertyValuesHolder... values)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Constructs and returns a ValueAnimator that animates between the values\n     * specified in the PropertyValuesHolder objects.\n     *\n     * @param values A set of PropertyValuesHolder objects whose values will be animated\n     * between over time.\n     * @return A ValueAnimator object that is set up to animate between the given values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ValueAnimator ofObject(TypeEvaluator evaluator, Object... values)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Constructs and returns a ValueAnimator that animates between Object values. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * <p><strong>Note:</strong> The Object values are stored as references to the original\n     * objects, which means that changes to those objects after this method is called will\n     * affect the values on the animator. If the objects will be mutated externally after\n     * this method is called, callers should pass a copy of those objects instead.\n     *\n     * <p>Since ValueAnimator does not know how to animate between arbitrary Objects, this\n     * factory method also takes a TypeEvaluator object that the ValueAnimator will use\n     * to perform that interpolation.\n     *\n     * @param evaluator A TypeEvaluator that will be called on each animation frame to\n     * provide the ncessry interpolation between the Object values to derive the animated\n     * value.\n     * @param values A set of values that the animation will animate between over time.\n     * @return A ValueAnimator object that is set up to animate between the given values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setIntValues(int... values)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets int values that will be animated between. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * <p>If there are already multiple sets of values defined for this ValueAnimator via more\n     * than one PropertyValuesHolder object, this method will set the values for the first\n     * of those objects.</p>\n     *\n     * @param values A set of values that the animation will animate between over time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFloatValues(float... values)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets float values that will be animated between. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * <p>If there are already multiple sets of values defined for this ValueAnimator via more\n     * than one PropertyValuesHolder object, this method will set the values for the first\n     * of those objects.</p>\n     *\n     * @param values A set of values that the animation will animate between over time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setObjectValues(Object... values)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the values to animate between for this animation. A single\n     * value implies that that value is the one being animated to. However, this is not typically\n     * useful in a ValueAnimator object because there is no way for the object to determine the\n     * starting value for the animation (unlike ObjectAnimator, which can derive that value\n     * from the target object and property being animated). Therefore, there should typically\n     * be two or more values.\n     *\n     * <p><strong>Note:</strong> The Object values are stored as references to the original\n     * objects, which means that changes to those objects after this method is called will\n     * affect the values on the animator. If the objects will be mutated externally after\n     * this method is called, callers should pass a copy of those objects instead.\n     *\n     * <p>If there are already multiple sets of values defined for this ValueAnimator via more\n     * than one PropertyValuesHolder object, this method will set the values for the first\n     * of those objects.</p>\n     *\n     * <p>There should be a TypeEvaluator set on the ValueAnimator that knows how to interpolate\n     * between these value objects. ValueAnimator only knows how to interpolate between the\n     * primitive types specified in the other setValues() methods.</p>\n     *\n     * @param values The set of values to animate between.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setValues(PropertyValuesHolder... values)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the values, per property, being animated between. This function is called internally\n     * by the constructors of ValueAnimator that take a list of values. But a ValueAnimator can\n     * be constructed without values and this method can be called to set the values manually\n     * instead.\n     *\n     * @param values The set of values, per property, being animated between.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public PropertyValuesHolder[] getValues()",
+    "returnType" : "PropertyValuesHolder[]",
+    "comment" : "\n     * Returns the values that this ValueAnimator animates between. These values are stored in\n     * PropertyValuesHolder objects, even if the ValueAnimator was created with a simple list\n     * of value objects instead.\n     *\n     * @return PropertyValuesHolder[] An array of PropertyValuesHolder objects which hold the\n     * values, per property, that define the animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void initAnimation()",
+    "returnType" : "void",
+    "comment" : "\n     * This function is called immediately before processing the first animation\n     * frame of an animation. If there is a nonzero <code>startDelay</code>, the\n     * function is called after that delay ends.\n     * It takes care of the final initialization steps for the\n     * animation.\n     *\n     *  <p>Overrides of this method should call the superclass method to ensure\n     *  that internal mechanisms for the animation are set up correctly.</p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ValueAnimator setDuration(long duration)",
+    "returnType" : "ValueAnimator",
+    "comment" : "\n     * Sets the length of the animation. The default duration is 300 milliseconds.\n     *\n     * @param duration The length of the animation, in milliseconds. This value cannot\n     * be negative.\n     * @return ValueAnimator The object called with setDuration(). This return\n     * value makes it easier to compose statements together that construct and then set the\n     * duration, as in <code>ValueAnimator.ofInt(0, 10).setDuration(500).start()</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void overrideDurationScale(float durationScale)",
+    "returnType" : "void",
+    "comment" : "\n     * Overrides the global duration scale by a custom value.\n     *\n     * @param durationScale The duration scale to set; or {@code -1f} to use the global duration\n     *                      scale.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private float resolveDurationScale()",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private long getScaledDuration()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public long getDuration()",
+    "returnType" : "long",
+    "comment" : "\n     * Gets the length of the animation. The default duration is 300 milliseconds.\n     *\n     * @return The length of the animation, in milliseconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getTotalDuration()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCurrentPlayTime(long playTime)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the position of the animation to the specified point in time. This time should\n     * be between 0 and the total duration of the animation, including any repetition. If\n     * the animation has not yet been started, then it will not advance forward after it is\n     * set to this time; it will simply set the time to this value and perform any appropriate\n     * actions based on that time. If the animation is already running, then setCurrentPlayTime()\n     * will set the current playing time to this value and continue playing from that point.\n     *\n     * @param playTime The time, in milliseconds, to which the animation is advanced or rewound.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCurrentFraction(float fraction)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the position of the animation to the specified fraction. This fraction should\n     * be between 0 and the total fraction of the animation, including any repetition. That is,\n     * a fraction of 0 will position the animation at the beginning, a value of 1 at the end,\n     * and a value of 2 at the end of a reversing animator that repeats once. If\n     * the animation has not yet been started, then it will not advance forward after it is\n     * set to this fraction; it will simply set the fraction to this value and perform any\n     * appropriate actions based on that fraction. If the animation is already running, then\n     * setCurrentFraction() will set the current fraction to this value and continue\n     * playing from that point. {@link Animator.AnimatorListener} events are not called\n     * due to changing the fraction; those events are only processed while the animation\n     * is running.\n     *\n     * @param fraction The fraction to which the animation is advanced or rewound. Values\n     * outside the range of 0 to the maximum fraction for the animator will be clamped to\n     * the correct range.\n     ",
+    "links" : [ "Animator.AnimatorListener" ]
+  }, {
+    "name" : "private int getCurrentIteration(float fraction)",
+    "returnType" : "int",
+    "comment" : "\n     * Calculates current iteration based on the overall fraction. The overall fraction will be\n     * in the range of [0, mRepeatCount + 1]. Both current iteration and fraction in the current\n     * iteration can be derived from it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private float getCurrentIterationFraction(float fraction, boolean inReverse)",
+    "returnType" : "float",
+    "comment" : "\n     * Calculates the fraction of the current iteration, taking into account whether the animation\n     * should be played backwards. E.g. When the animation is played backwards in an iteration,\n     * the fraction for that iteration will go from 1f to 0f.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private float clampFraction(float fraction)",
+    "returnType" : "float",
+    "comment" : "\n     * Clamps fraction into the correct range: [0, mRepeatCount + 1]. If repeat count is infinite,\n     * no upper bound will be set for the fraction.\n     *\n     * @param fraction fraction to be clamped\n     * @return fraction clamped into the range of [0, mRepeatCount + 1]\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean shouldPlayBackward(int iteration, boolean inReverse)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Calculates the direction of animation playing (i.e. forward or backward), based on 1)\n     * whether the entire animation is being reversed, 2) repeat mode applied to the current\n     * iteration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getCurrentPlayTime()",
+    "returnType" : "long",
+    "comment" : "\n     * Gets the current position of the animation in time, which is equal to the current\n     * time minus the time that the animation started. An animation that is not yet started will\n     * return a value of zero, unless the animation has has its play time set via\n     * {@link #setCurrentPlayTime(long)} or {@link #setCurrentFraction(float)}, in which case\n     * it will return the time that was set.\n     *\n     * @return The current position in time of the animation.\n     ",
+    "links" : [ "#setCurrentPlayTime", "#setCurrentFraction" ]
+  }, {
+    "name" : "public long getStartDelay()",
+    "returnType" : "long",
+    "comment" : "\n     * The amount of time, in milliseconds, to delay starting the animation after\n     * {@link #start()} is called.\n     *\n     * @return the number of milliseconds to delay running the animation\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public void setStartDelay(long startDelay)",
+    "returnType" : "void",
+    "comment" : "\n     * The amount of time, in milliseconds, to delay starting the animation after\n     * {@link #start()} is called. Note that the start delay should always be non-negative. Any\n     * negative start delay will be clamped to 0 on N and above.\n     *\n     * @param startDelay The amount of the delay, in milliseconds\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public static long getFrameDelay()",
+    "returnType" : "long",
+    "comment" : "\n     * The amount of time, in milliseconds, between each frame of the animation. This is a\n     * requested time that the animation will attempt to honor, but the actual delay between\n     * frames may be different, depending on system load and capabilities. This is a static\n     * function because the same delay will be applied to all animations, since they are all\n     * run off of a single timing loop.\n     *\n     * The frame delay may be ignored when the animation system uses an external timing\n     * source, such as the display refresh rate (vsync), to govern animations.\n     *\n     * Note that this method should be called from the same thread that {@link #start()} is\n     * called in order to check the frame delay for that animation. A runtime exception will be\n     * thrown if the calling thread does not have a Looper.\n     *\n     * @return the requested time between frames, in milliseconds\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public static void setFrameDelay(long frameDelay)",
+    "returnType" : "void",
+    "comment" : "\n     * The amount of time, in milliseconds, between each frame of the animation. This is a\n     * requested time that the animation will attempt to honor, but the actual delay between\n     * frames may be different, depending on system load and capabilities. This is a static\n     * function because the same delay will be applied to all animations, since they are all\n     * run off of a single timing loop.\n     *\n     * The frame delay may be ignored when the animation system uses an external timing\n     * source, such as the display refresh rate (vsync), to govern animations.\n     *\n     * Note that this method should be called from the same thread that {@link #start()} is\n     * called in order to have the new frame delay take effect on that animation. A runtime\n     * exception will be thrown if the calling thread does not have a Looper.\n     *\n     * @param frameDelay the requested time between frames, in milliseconds\n     ",
+    "links" : [ "#start" ]
+  }, {
+    "name" : "public Object getAnimatedValue()",
+    "returnType" : "Object",
+    "comment" : "\n     * The most recent value calculated by this <code>ValueAnimator</code> when there is just one\n     * property being animated. This value is only sensible while the animation is running. The main\n     * purpose for this read-only property is to retrieve the value from the <code>ValueAnimator</code>\n     * during a call to {@link AnimatorUpdateListener#onAnimationUpdate(ValueAnimator)}, which\n     * is called during each animation frame, immediately after the value is calculated.\n     *\n     * @return animatedValue The value most recently calculated by this <code>ValueAnimator</code> for\n     * the single property being animated. If there are several properties being animated\n     * (specified by several PropertyValuesHolder objects in the constructor), this function\n     * returns the animated value for the first of those objects.\n     ",
+    "links" : [ "AnimatorUpdateListener#onAnimationUpdate" ]
+  }, {
+    "name" : "public Object getAnimatedValue(String propertyName)",
+    "returnType" : "Object",
+    "comment" : "\n     * The most recent value calculated by this <code>ValueAnimator</code> for <code>propertyName</code>.\n     * The main purpose for this read-only property is to retrieve the value from the\n     * <code>ValueAnimator</code> during a call to\n     * {@link AnimatorUpdateListener#onAnimationUpdate(ValueAnimator)}, which\n     * is called during each animation frame, immediately after the value is calculated.\n     *\n     * @return animatedValue The value most recently calculated for the named property\n     * by this <code>ValueAnimator</code>.\n     ",
+    "links" : [ "AnimatorUpdateListener#onAnimationUpdate" ]
+  }, {
+    "name" : "public void setRepeatCount(int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets how many times the animation should be repeated. If the repeat\n     * count is 0, the animation is never repeated. If the repeat count is\n     * greater than 0 or {@link #INFINITE}, the repeat mode will be taken\n     * into account. The repeat count is 0 by default.\n     *\n     * @param value the number of times the animation should be repeated\n     ",
+    "links" : [ "#INFINITE" ]
+  }, {
+    "name" : "public int getRepeatCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Defines how many times the animation should repeat. The default value\n     * is 0.\n     *\n     * @return the number of times the animation should repeat, or {@link #INFINITE}\n     ",
+    "links" : [ "#INFINITE" ]
+  }, {
+    "name" : "public void setRepeatMode(@RepeatMode int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Defines what this animation should do when it reaches the end. This\n     * setting is applied only when the repeat count is either greater than\n     * 0 or {@link #INFINITE}. Defaults to {@link #RESTART}.\n     *\n     * @param value {@link #RESTART} or {@link #REVERSE}\n     ",
+    "links" : [ "#INFINITE", "#RESTART", "#RESTART", "#REVERSE" ]
+  }, {
+    "name" : "public int getRepeatMode()",
+    "returnType" : "int",
+    "comment" : "\n     * Defines what this animation should do when it reaches the end.\n     *\n     * @return either one of {@link #REVERSE} or {@link #RESTART}\n     ",
+    "links" : [ "#REVERSE", "#RESTART" ]
+  }, {
+    "name" : "public void addUpdateListener(AnimatorUpdateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a listener to the set of listeners that are sent update events through the life of\n     * an animation. This method is called on all listeners for every frame of the animation,\n     * after the values for the animation have been calculated.\n     *\n     * @param listener the listener to be added to the current set of listeners for this animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeAllUpdateListeners()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes all listeners from the set listening to frame updates for this animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeUpdateListener(AnimatorUpdateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a listener from the set listening to frame updates for this animation.\n     *\n     * @param listener the listener to be removed from the current set of update listeners\n     * for this animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setInterpolator(TimeInterpolator value)",
+    "returnType" : "void",
+    "comment" : "\n     * The time interpolator used in calculating the elapsed fraction of this animation. The\n     * interpolator determines whether the animation runs with linear or non-linear motion,\n     * such as acceleration and deceleration. The default value is\n     * {@link android.view.animation.AccelerateDecelerateInterpolator}\n     *\n     * @param value the interpolator to be used by this animation. A value of <code>null</code>\n     * will result in linear interpolation.\n     ",
+    "links" : [ "android.view.animation.AccelerateDecelerateInterpolator" ]
+  }, {
+    "name" : "public TimeInterpolator getInterpolator()",
+    "returnType" : "TimeInterpolator",
+    "comment" : "\n     * Returns the timing interpolator that this ValueAnimator uses.\n     *\n     * @return The timing interpolator for this ValueAnimator.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEvaluator(TypeEvaluator value)",
+    "returnType" : "void",
+    "comment" : "\n     * The type evaluator to be used when calculating the animated values of this animation.\n     * The system will automatically assign a float or int evaluator based on the type\n     * of <code>startValue</code> and <code>endValue</code> in the constructor. But if these values\n     * are not one of these primitive types, or if different evaluation is desired (such as is\n     * necessary with int values that represent colors), a custom evaluator needs to be assigned.\n     * For example, when running an animation on color values, the {@link ArgbEvaluator}\n     * should be used to get correct RGB color interpolation.\n     *\n     * <p>If this ValueAnimator has only one set of values being animated between, this evaluator\n     * will be used for that set. If there are several sets of values being animated, which is\n     * the case if PropertyValuesHolder objects were set on the ValueAnimator, then the evaluator\n     * is assigned just to the first PropertyValuesHolder object.</p>\n     *\n     * @param value the evaluator to be used this animation\n     ",
+    "links" : [ "ArgbEvaluator" ]
+  }, {
+    "name" : "private void notifyStartListeners()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void start(boolean playBackwards)",
+    "returnType" : "void",
+    "comment" : "\n     * Start the animation playing. This version of start() takes a boolean flag that indicates\n     * whether the animation should play in reverse. The flag is usually false, but may be set\n     * to true if called from the reverse() method.\n     *\n     * <p>The animation started by calling this method will be run on the thread that called\n     * this method. This thread should have a Looper on it (a runtime exception will be thrown if\n     * this is not the case). Also, if the animation will animate\n     * properties of objects in the view hierarchy, then the calling thread should be the UI\n     * thread for that view hierarchy.</p>\n     *\n     * @param playBackwards Whether the ValueAnimator should start playing in reverse.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void startWithoutPulsing(boolean inReverse)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void start()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void cancel()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void end()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void resume()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void pause()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isRunning()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isStarted()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void reverse()",
+    "returnType" : "void",
+    "comment" : "\n     * Plays the ValueAnimator in reverse. If the animation is already running,\n     * it will stop itself and play backwards from the point reached when reverse was called.\n     * If the animation is not currently running, then it will start from the end and\n     * play backwards. This behavior is only set for the current animation; future playing\n     * of the animation will use the default behavior of playing forward.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean canReverse()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void endAnimation()",
+    "returnType" : "void",
+    "comment" : "\n     * Called internally to end an animation by removing it from the animations list. Must be\n     * called on the UI thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void startAnimation()",
+    "returnType" : "void",
+    "comment" : "\n     * Called internally to start an animation by adding it to the active animations list. Must be\n     * called on the UI thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isPulsingInternal()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Internal only: This tracks whether the animation has gotten on the animation loop. Note\n     * this is different than {@link #isRunning()} in that the latter tracks the time after start()\n     * is called (or after start delay if any), which may be before the animation loop starts.\n     ",
+    "links" : [ "#isRunning" ]
+  }, {
+    "name" : " String getNameForTrace()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the name of this animator for debugging purposes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void commitAnimationFrame(long frameTime)",
+    "returnType" : "void",
+    "comment" : "\n     * Applies an adjustment to the animation to compensate for jank between when\n     * the animation first ran and when the frame was drawn.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean animateBasedOnTime(long currentTime)",
+    "returnType" : "boolean",
+    "comment" : "\n     * This internal function processes a single animation frame for a given animation. The\n     * currentTime parameter is the timing pulse sent by the handler, used to calculate the\n     * elapsed duration, and therefore\n     * the elapsed fraction, of the animation. The return value indicates whether the animation\n     * should be ended (which happens when the elapsed time of the animation exceeds the\n     * animation's duration, including the repeatCount).\n     *\n     * @param currentTime The current time, as tracked by the static timing handler\n     * @return true if the animation's duration, including any repetitions due to\n     * <code>repeatCount</code> has been exceeded and the animation should be ended.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)",
+    "returnType" : "void",
+    "comment" : "\n     * Internal use only.\n     *\n     * This method does not modify any fields of the animation. It should be called when seeking\n     * in an AnimatorSet. When the last play time and current play time are of different repeat\n     * iterations,\n     * {@link android.view.animation.Animation.AnimationListener#onAnimationRepeat(Animation)}\n     * will be called.\n     ",
+    "links" : [ "android.view.animation.Animation.AnimationListener#onAnimationRepeat" ]
+  }, {
+    "name" : " void skipToEndValue(boolean inReverse)",
+    "returnType" : "void",
+    "comment" : "\n     * Internal use only.\n     * Skips the animation value to end/start, depending on whether the play direction is forward\n     * or backward.\n     *\n     * @param inReverse whether the end value is based on a reverse direction. If yes, this is\n     *                  equivalent to skip to start value in a forward playing direction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isInitialized()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean doAnimationFrame(long frameTime)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Processes a frame of the animation, adjusting the start time if needed.\n     *\n     * @param frameTime The frame time.\n     * @return true if the animation has ended.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean pulseAnimationFrame(long frameTime)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addOneShotCommitCallback()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeAnimationCallback()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addAnimationCallback(long delay)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public float getAnimatedFraction()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the current animation fraction, which is the elapsed/interpolated fraction used in\n     * the most recent frame update on the animation.\n     *\n     * @return Elapsed/interpolated fraction of the animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void animateValue(float fraction)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called with the elapsed fraction of the animation during every\n     * animation frame. This function turns the elapsed fraction into an interpolated fraction\n     * and then into an animated value (from the evaluator. The function is called mostly during\n     * animation updates, but it is also called when the <code>end()</code>\n     * function is called, to set the final value on the property.\n     *\n     * <p>Overrides of this method must call the superclass to perform the calculation\n     * of the animated value.</p>\n     *\n     * @param fraction The elapsed fraction of the animation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ValueAnimator clone()",
+    "returnType" : "ValueAnimator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getCurrentAnimationsCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of animations currently running.\n     *\n     * Used by StrictMode internally to annotate violations.\n     * May be called on arbitrary threads!\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAllowRunningAsynchronously(boolean mayRunAsync)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>Whether or not the ValueAnimator is allowed to run asynchronously off of\n     * the UI thread. This is a hint that informs the ValueAnimator that it is\n     * OK to run the animation off-thread, however ValueAnimator may decide\n     * that it must run the animation on the UI thread anyway. For example if there\n     * is an {@link AnimatorUpdateListener} the animation will run on the UI thread,\n     * regardless of the value of this hint.</p>\n     *\n     * <p>Regardless of whether or not the animation runs asynchronously, all\n     * listener callbacks will be called on the UI thread.</p>\n     *\n     * <p>To be able to use this hint the following must be true:</p>\n     * <ol>\n     * <li>{@link #getAnimatedFraction()} is not needed (it will return undefined values).</li>\n     * <li>The animator is immutable while {@link #isStarted()} is true. Requests\n     *    to change values, duration, delay, etc... may be ignored.</li>\n     * <li>Lifecycle callback events may be asynchronous. Events such as\n     *    {@link Animator.AnimatorListener#onAnimationEnd(Animator)} or\n     *    {@link Animator.AnimatorListener#onAnimationRepeat(Animator)} may end up delayed\n     *    as they must be posted back to the UI thread, and any actions performed\n     *    by those callbacks (such as starting new animations) will not happen\n     *    in the same frame.</li>\n     * <li>State change requests ({@link #cancel()}, {@link #end()}, {@link #reverse()}, etc...)\n     *    may be asynchronous. It is guaranteed that all state changes that are\n     *    performed on the UI thread in the same frame will be applied as a single\n     *    atomic update, however that frame may be the current frame,\n     *    the next frame, or some future frame. This will also impact the observed\n     *    state of the Animator. For example, {@link #isStarted()} may still return true\n     *    after a call to {@link #end()}. Using the lifecycle callbacks is preferred over\n     *    queries to {@link #isStarted()}, {@link #isRunning()}, and {@link #isPaused()}\n     *    for this reason.</li>\n     * </ol>\n     * @hide\n     ",
+    "links" : [ "AnimatorUpdateListener", "#getAnimatedFraction", "#isStarted", "Animator.AnimatorListener#onAnimationEnd", "Animator.AnimatorListener#onAnimationRepeat", "#cancel", "#end", "#reverse", "#isStarted", "#end", "#isStarted", "#isRunning", "#isPaused" ]
+  }, {
+    "name" : "public AnimationHandler getAnimationHandler()",
+    "returnType" : "AnimationHandler",
+    "comment" : "\n     * @return The {@link AnimationHandler} that will be used to schedule updates for this animator.\n     * @hide\n     ",
+    "links" : [ "AnimationHandler" ]
+  }, {
+    "name" : "public void setAnimationHandler(@Nullable AnimationHandler animationHandler)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the animation handler used to schedule updates for this animator or {@code null} to use\n     * the default handler.\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DEBUG", "sDurationScale", "mStartTime", "mStartTimeCommitted", "mSeekFraction", "mPauseTime", "mResumed", "sDefaultInterpolator", "mReversing", "mOverallFraction", "mCurrentFraction", "mLastFrameTime", "mFirstFrameTime", "mRunning", "mStarted", "mStartListenersCalled", "mInitialized", "mAnimationEndRequested", "mDuration", "mStartDelay", "mRepeatCount", "mRepeatMode", "mSelfPulse", "mSuppressSelfPulseRequested", "mInterpolator", "mUpdateListeners", "mValues", "mValuesMap", "mDurationScale", "mAnimationHandler", "RESTART", "REVERSE", "INFINITE" ],
+  "methodNames" : [ "public static void setDurationScale(float durationScale)", "public static float getDurationScale()", "public static boolean areAnimatorsEnabled()", "public static ValueAnimator ofInt(int... values)", "public static ValueAnimator ofArgb(int... values)", "public static ValueAnimator ofFloat(float... values)", "public static ValueAnimator ofPropertyValuesHolder(PropertyValuesHolder... values)", "public static ValueAnimator ofObject(TypeEvaluator evaluator, Object... values)", "public void setIntValues(int... values)", "public void setFloatValues(float... values)", "public void setObjectValues(Object... values)", "public void setValues(PropertyValuesHolder... values)", "public PropertyValuesHolder[] getValues()", " void initAnimation()", "public ValueAnimator setDuration(long duration)", "public void overrideDurationScale(float durationScale)", "private float resolveDurationScale()", "private long getScaledDuration()", "public long getDuration()", "public long getTotalDuration()", "public void setCurrentPlayTime(long playTime)", "public void setCurrentFraction(float fraction)", "private int getCurrentIteration(float fraction)", "private float getCurrentIterationFraction(float fraction, boolean inReverse)", "private float clampFraction(float fraction)", "private boolean shouldPlayBackward(int iteration, boolean inReverse)", "public long getCurrentPlayTime()", "public long getStartDelay()", "public void setStartDelay(long startDelay)", "public static long getFrameDelay()", "public static void setFrameDelay(long frameDelay)", "public Object getAnimatedValue()", "public Object getAnimatedValue(String propertyName)", "public void setRepeatCount(int value)", "public int getRepeatCount()", "public void setRepeatMode(@RepeatMode int value)", "public int getRepeatMode()", "public void addUpdateListener(AnimatorUpdateListener listener)", "public void removeAllUpdateListeners()", "public void removeUpdateListener(AnimatorUpdateListener listener)", "public void setInterpolator(TimeInterpolator value)", "public TimeInterpolator getInterpolator()", "public void setEvaluator(TypeEvaluator value)", "private void notifyStartListeners()", "private void start(boolean playBackwards)", " void startWithoutPulsing(boolean inReverse)", "public void start()", "public void cancel()", "public void end()", "public void resume()", "public void pause()", "public boolean isRunning()", "public boolean isStarted()", "public void reverse()", "public boolean canReverse()", "private void endAnimation()", "private void startAnimation()", "private boolean isPulsingInternal()", " String getNameForTrace()", "public void commitAnimationFrame(long frameTime)", " boolean animateBasedOnTime(long currentTime)", " void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)", " void skipToEndValue(boolean inReverse)", " boolean isInitialized()", "public final boolean doAnimationFrame(long frameTime)", " boolean pulseAnimationFrame(long frameTime)", "private void addOneShotCommitCallback()", "private void removeAnimationCallback()", "private void addAnimationCallback(long delay)", "public float getAnimatedFraction()", " void animateValue(float fraction)", "public ValueAnimator clone()", "public static int getCurrentAnimationsCount()", "public String toString()", "public void setAllowRunningAsynchronously(boolean mayRunAsync)", "public AnimationHandler getAnimationHandler()", "public void setAnimationHandler(@Nullable AnimationHandler animationHandler)" ]
+}

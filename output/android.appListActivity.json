@@ -1,0 +1,95 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/ListActivity.java",
+  "packageName" : "android.app",
+  "className" : "ListActivity",
+  "comment" : "\n * An activity that displays a list of items by binding to a data source such as\n * an array or Cursor, and exposes event handlers when the user selects an item.\n * <p>\n * ListActivity hosts a {@link android.widget.ListView ListView} object that can\n * be bound to different data sources, typically either an array or a Cursor\n * holding query results. Binding, screen layout, and row layout are discussed\n * in the following sections.\n * <p>\n * <strong>Screen Layout</strong>\n * </p>\n * <p>\n * ListActivity has a default layout that consists of a single, full-screen list\n * in the center of the screen. However, if you desire, you can customize the\n * screen layout by setting your own view layout with setContentView() in\n * onCreate(). To do this, your own view MUST contain a ListView object with the\n * id \"@android:id/list\" (or {@link android.R.id#list} if it's in code)\n * <p>\n * Optionally, your custom view can contain another view object of any type to\n * display when the list view is empty. This \"empty list\" notifier must have an\n * id \"android:id/empty\". Note that when an empty view is present, the list view\n * will be hidden when there is no data to display.\n * <p>\n * The following code demonstrates an (ugly) custom screen layout. It has a list\n * with a green background, and an alternate red \"no data\" message.\n * </p>\n *\n * <pre>\n * &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n * &lt;LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n *         android:orientation=&quot;vertical&quot;\n *         android:layout_width=&quot;match_parent&quot;\n *         android:layout_height=&quot;match_parent&quot;\n *         android:paddingLeft=&quot;8dp&quot;\n *         android:paddingRight=&quot;8dp&quot;&gt;\n *\n *     &lt;ListView android:id=&quot;@android:id/list&quot;\n *               android:layout_width=&quot;match_parent&quot;\n *               android:layout_height=&quot;match_parent&quot;\n *               android:background=&quot;#00FF00&quot;\n *               android:layout_weight=&quot;1&quot;\n *               android:drawSelectorOnTop=&quot;false&quot;/&gt;\n *\n *     &lt;TextView android:id=&quot;@android:id/empty&quot;\n *               android:layout_width=&quot;match_parent&quot;\n *               android:layout_height=&quot;match_parent&quot;\n *               android:background=&quot;#FF0000&quot;\n *               android:text=&quot;No data&quot;/&gt;\n * &lt;/LinearLayout&gt;\n * </pre>\n *\n * <p>\n * <strong>Row Layout</strong>\n * </p>\n * <p>\n * You can specify the layout of individual rows in the list. You do this by\n * specifying a layout resource in the ListAdapter object hosted by the activity\n * (the ListAdapter binds the ListView to the data; more on this later).\n * <p>\n * A ListAdapter constructor takes a parameter that specifies a layout resource\n * for each row. It also has two additional parameters that let you specify\n * which data field to associate with which object in the row layout resource.\n * These two parameters are typically parallel arrays.\n * </p>\n * <p>\n * Android provides some standard row layout resources. These are in the\n * {@link android.R.layout} class, and have names such as simple_list_item_1,\n * simple_list_item_2, and two_line_list_item. The following layout XML is the\n * source for the resource two_line_list_item, which displays two data\n * fields,one above the other, for each list row.\n * </p>\n *\n * <pre>\n * &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;\n * &lt;LinearLayout xmlns:android=\"http://schemas.android.com/apk/res/android\"\n *     android:layout_width=&quot;match_parent&quot;\n *     android:layout_height=&quot;wrap_content&quot;\n *     android:orientation=&quot;vertical&quot;&gt;\n *\n *     &lt;TextView android:id=&quot;@+id/text1&quot;\n *         android:textSize=&quot;16sp&quot;\n *         android:textStyle=&quot;bold&quot;\n *         android:layout_width=&quot;match_parent&quot;\n *         android:layout_height=&quot;wrap_content&quot;/&gt;\n *\n *     &lt;TextView android:id=&quot;@+id/text2&quot;\n *         android:textSize=&quot;16sp&quot;\n *         android:layout_width=&quot;match_parent&quot;\n *         android:layout_height=&quot;wrap_content&quot;/&gt;\n * &lt;/LinearLayout&gt;\n * </pre>\n *\n * <p>\n * You must identify the data bound to each TextView object in this layout. The\n * syntax for this is discussed in the next section.\n * </p>\n * <p>\n * <strong>Binding to Data</strong>\n * </p>\n * <p>\n * You bind the ListActivity's ListView object to data using a class that\n * implements the {@link android.widget.ListAdapter ListAdapter} interface.\n * Android provides two standard list adapters:\n * {@link android.widget.SimpleAdapter SimpleAdapter} for static data (Maps),\n * and {@link android.widget.SimpleCursorAdapter SimpleCursorAdapter} for Cursor\n * query results.\n * </p>\n * <p>\n * The following code from a custom ListActivity demonstrates querying the\n * Contacts provider for all contacts, then binding the Name and Company fields\n * to a two line row layout in the activity's ListView.\n * </p>\n *\n * <pre>\n * public class MyListAdapter extends ListActivity {\n *\n *     &#064;Override\n *     protected void onCreate(Bundle savedInstanceState){\n *         super.onCreate(savedInstanceState);\n *\n *         // We'll define a custom screen layout here (the one shown above), but\n *         // typically, you could just use the standard ListActivity layout.\n *         setContentView(R.layout.custom_list_activity_view);\n *\n *         // Query for all people contacts using the {@link android.provider.Contacts.People} convenience class.\n *         // Put a managed wrapper around the retrieved cursor so we don't have to worry about\n *         // requerying or closing it as the activity changes state.\n *         mCursor = this.getContentResolver().query(People.CONTENT_URI, null, null, null, null);\n *         startManagingCursor(mCursor);\n *\n *         // Now create a new list adapter bound to the cursor.\n *         // SimpleListAdapter is designed for binding to a Cursor.\n *         ListAdapter adapter = new SimpleCursorAdapter(\n *                 this, // Context.\n *                 android.R.layout.two_line_list_item,  // Specify the row template to use (here, two columns bound to the two retrieved cursor\n * rows).\n *                 mCursor,                                              // Pass in the cursor to bind to.\n *                 new String[] {People.NAME, People.COMPANY},           // Array of cursor columns to bind to.\n *                 new int[] {android.R.id.text1, android.R.id.text2});  // Parallel array of which template objects to bind to those columns.\n *\n *         // Bind to our new adapter.\n *         setListAdapter(adapter);\n *     }\n * }\n * </pre>\n *\n * @see #setListAdapter\n * @see android.widget.ListView\n *\n * @deprecated Use {@link androidx.fragment.app.ListFragment} or\n *   {@link androidx.recyclerview.widget.RecyclerView} to implement your Activity instead.\n ",
+  "variables" : [ {
+    "name" : "mAdapter",
+    "type" : "ListAdapter",
+    "comment" : "\n     * This field should be made private, so it is hidden from the SDK.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mList",
+    "type" : "ListView",
+    "comment" : "\n     * This field should be made private, so it is hidden from the SDK.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mFinishedStart",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRequestFocus",
+    "type" : "Runnable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOnClickListener",
+    "type" : "AdapterView.OnItemClickListener",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected void onListItemClick(ListView l, View v, int position, long id)",
+    "returnType" : "void",
+    "comment" : "\n     * This method will be called when an item in the list is selected.\n     * Subclasses should override. Subclasses can call\n     * getListView().getItemAtPosition(position) if they need to access the\n     * data associated with the selected item.\n     *\n     * @param l The ListView where the click happened\n     * @param v The view that was clicked within the ListView\n     * @param position The position of the view in the list\n     * @param id The row id of the item that was clicked\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onRestoreInstanceState(Bundle state)",
+    "returnType" : "void",
+    "comment" : "\n     * Ensures the list view has been created before Activity restores all\n     * of the view states.\n     *\n     *@see Activity#onRestoreInstanceState(Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onDestroy()",
+    "returnType" : "void",
+    "comment" : "\n     * @see Activity#onDestroy()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onContentChanged()",
+    "returnType" : "void",
+    "comment" : "\n     * Updates the screen state (current list and other views) when the\n     * content changes.\n     *\n     * @see Activity#onContentChanged()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setListAdapter(ListAdapter adapter)",
+    "returnType" : "void",
+    "comment" : "\n     * Provide the cursor for the list view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSelection(int position)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the currently selected list item to the specified\n     * position with the adapter's data\n     *\n     * @param position\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSelectedItemPosition()",
+    "returnType" : "int",
+    "comment" : "\n     * Get the position of the currently selected list item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getSelectedItemId()",
+    "returnType" : "long",
+    "comment" : "\n     * Get the cursor row ID of the currently selected list item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ListView getListView()",
+    "returnType" : "ListView",
+    "comment" : "\n     * Get the activity's list view widget.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ListAdapter getListAdapter()",
+    "returnType" : "ListAdapter",
+    "comment" : "\n     * Get the ListAdapter associated with this activity's ListView.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureList()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "mAdapter", "mList", "mHandler", "mFinishedStart", "mRequestFocus", "mOnClickListener" ],
+  "methodNames" : [ "protected void onListItemClick(ListView l, View v, int position, long id)", "protected void onRestoreInstanceState(Bundle state)", "protected void onDestroy()", "public void onContentChanged()", "public void setListAdapter(ListAdapter adapter)", "public void setSelection(int position)", "public int getSelectedItemPosition()", "public long getSelectedItemId()", "public ListView getListView()", "public ListAdapter getListAdapter()", "private void ensureList()" ]
+}
