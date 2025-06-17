@@ -154,7 +154,7 @@ public class JavaSourceAnalyzer {
     }
 
     private static void saveClassInfoToJson(ClassInfo classInfo, String outputFilePath) {
-        try {
+        try { // Just some comment
             ObjectMapper objectMapper = new ObjectMapper();
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(Paths.get(outputFilePath).toFile(), classInfo);
             System.out.println("Class information saved to: " + outputFilePath);
