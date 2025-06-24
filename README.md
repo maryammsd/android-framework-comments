@@ -49,12 +49,28 @@ You can configure the application settings in the `src/main/resources/applicatio
 Before running the application, you should update `source.dir` with the path to the android platform source code. 
 
 
-## Desired Output
-In this project, we aim at analyzing the Android framework source code. In the Android source code, the developers use `javadoc` to describe the operation behind each variable, method and class. They leverage `@link` to explicitely define the relation between methods and variables. They also mention the required configuration of Android device settings. Hence, these comments are valuable resources to learn about 
+##  Output
+In this project, we aim at analyzing the Android framework source code. In the Android source code, the developers use `javadoc` documentation format creating comments for the classes, variables and methods. In such a format, they leverage `@link` to explicitely define the relation between methods and variables. As shown in the below example, the method `getDisplayId` returns the value corresponding to `getDisplay` method declared in the class `DisplayManager`.
+
+````
+ /**
+     * Returns the display id of the received-gesture display, for use with
+     * {@link android.hardware.display.DisplayManager#getDisplay(int)}.
+     *
+     * @return the display id.
+     */
+    public int getDisplayId() {
+        return mDisplayId;
+    }
+
+
+````
+By studying the documentation, we found out that existing comments contain valuable information about 
 - dependency of methods and variables to each other in their operation.
 - type of inputs for each method
 - required configuration of an Android device
-We try to analyze the source code and the comments and collect these information for each API class and store it in `output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
+
+Hence, we try to analyze the source code and the comments and collect these information for each API class and store it in `output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
 
 ````
 {
