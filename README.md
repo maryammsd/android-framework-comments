@@ -70,6 +70,42 @@ By studying the documentation, we found out that existing comments contain valua
 - type of inputs for each method
 - required configuration of an Android device
 
+### Example of Permission Description in the Comments
+````
+
+    /**
+     * Sets the global display brightness configuration for a specific user.
+     *
+     * Note this requires the INTERACT_ACROSS_USERS permission if setting the configuration for a
+     * user other than the one you're currently running as.
+     *
+     * @hide
+     */
+    public void setBrightnessConfigurationForUser(BrightnessConfiguration c, int userId,
+            String packageName) {
+        mGlobal.setBrightnessConfigurationForUser(c, userId, packageName);
+    }
+
+````
+### Example of Display Setting in the Comments
+````
+/**
+     * Returns the minimum brightness curve, which guarantess that any brightness curve that dips
+     * below it is rejected by the system.
+     * This prevent auto-brightness from setting the screen so dark as to prevent the user from
+     * resetting or disabling it, and maps lux to the absolute minimum nits that are still readable
+     * in that ambient brightness.
+     *
+     * @return The minimum brightness curve (as lux values and their corresponding nits values).
+     *
+     * @hide
+     */
+    @SystemApi
+    public Pair<float[], float[]> getMinimumBrightnessCurve() {
+        return mGlobal.getMinimumBrightnessCurve();
+    }
+
+````
 Hence, we try to analyze the source code and the comments and collect these information for each API class and store it in `output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
 
 ````
