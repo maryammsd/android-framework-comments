@@ -1,0 +1,1350 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/ConnectivityManager.java",
+  "packageName" : "android.net",
+  "className" : "ConnectivityManager",
+  "comment" : "\n * Class that answers queries about the state of network connectivity. It also\n * notifies applications when network connectivity changes.\n * <p>\n * The primary responsibilities of this class are to:\n * <ol>\n * <li>Monitor network connections (Wi-Fi, GPRS, UMTS, etc.)</li>\n * <li>Send broadcast intents when network connectivity changes</li>\n * <li>Attempt to \"fail over\" to another network when connectivity to a network\n * is lost</li>\n * <li>Provide an API that allows applications to query the coarse-grained or fine-grained\n * state of the available networks</li>\n * <li>Provide an API that allows applications to request and select networks for their data\n * traffic</li>\n * </ol>\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECTIVITY_ACTION",
+    "type" : "String",
+    "comment" : "\n     * A change in network connectivity has occurred. A default connection has either\n     * been established or lost. The NetworkInfo for the affected network is\n     * sent as an extra; it should be consulted to see what kind of\n     * connectivity event occurred.\n     * <p/>\n     * Apps targeting Android 7.0 (API level 24) and higher do not receive this\n     * broadcast if they declare the broadcast receiver in their manifest. Apps\n     * will still receive broadcasts if they register their\n     * {@link android.content.BroadcastReceiver} with\n     * {@link android.content.Context#registerReceiver Context.registerReceiver()}\n     * and that context is still valid.\n     * <p/>\n     * If this is a connection that was the result of failing over from a\n     * disconnected network, then the FAILOVER_CONNECTION boolean extra is\n     * set to true.\n     * <p/>\n     * For a loss of connectivity, if the connectivity manager is attempting\n     * to connect (or has already connected) to another network, the\n     * NetworkInfo for the new network is also passed as an extra. This lets\n     * any receivers of the broadcast know that they should not necessarily\n     * tell the user that no data traffic will be possible. Instead, the\n     * receiver should expect another broadcast soon, indicating either that\n     * the failover attempt succeeded (and so there is still overall data\n     * connectivity), or that the failover attempt failed, meaning that all\n     * connectivity has been lost.\n     * <p/>\n     * For a disconnect event, the boolean extra EXTRA_NO_CONNECTIVITY\n     * is set to {@code true} if there are no connected networks at all.\n     *\n     * @deprecated apps should use the more versatile {@link #requestNetwork},\n     *             {@link #registerNetworkCallback} or {@link #registerDefaultNetworkCallback}\n     *             functions instead for faster and more detailed updates about the network\n     *             changes they care about.\n     ",
+    "links" : [ "#registerNetworkCallback", "android.content.Context#registerReceiver", "#registerDefaultNetworkCallback", "#requestNetwork", "android.content.BroadcastReceiver" ]
+  }, {
+    "name" : "ACTION_CAPTIVE_PORTAL_SIGN_IN",
+    "type" : "String",
+    "comment" : "\n     * The device has connected to a network that has presented a captive\n     * portal, which is blocking Internet connectivity. The user was presented\n     * with a notification that network sign in is required,\n     * and the user invoked the notification's action indicating they\n     * desire to sign in to the network. Apps handling this activity should\n     * facilitate signing in to the network. This action includes a\n     * {@link Network} typed extra called {@link #EXTRA_NETWORK} that represents\n     * the network presenting the captive portal; all communication with the\n     * captive portal must be done using this {@code Network} object.\n     * <p/>\n     * This activity includes a {@link CaptivePortal} extra named\n     * {@link #EXTRA_CAPTIVE_PORTAL} that can be used to indicate different\n     * outcomes of the captive portal sign in to the system:\n     * <ul>\n     * <li> When the app handling this action believes the user has signed in to\n     * the network and the captive portal has been dismissed, the app should\n     * call {@link CaptivePortal#reportCaptivePortalDismissed} so the system can\n     * reevaluate the network. If reevaluation finds the network no longer\n     * subject to a captive portal, the network may become the default active\n     * data network.</li>\n     * <li> When the app handling this action believes the user explicitly wants\n     * to ignore the captive portal and the network, the app should call\n     * {@link CaptivePortal#ignoreNetwork}. </li>\n     * </ul>\n     ",
+    "links" : [ "android.net.CaptivePortal#reportCaptivePortalDismissed", "android.net.CaptivePortal", "android.net.CaptivePortal#ignoreNetwork", "android.net.Network", "#EXTRA_NETWORK", "#EXTRA_CAPTIVE_PORTAL" ]
+  }, {
+    "name" : "EXTRA_NETWORK_INFO",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link NetworkInfo} object. Retrieve with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     *\n     * @deprecated The {@link NetworkInfo} object is deprecated, as many of its properties\n     *             can't accurately represent modern network characteristics.\n     *             Please obtain information about networks from the {@link NetworkCapabilities}\n     *             or {@link LinkProperties} objects instead.\n     ",
+    "links" : [ "android.net.NetworkInfo", "android.net.NetworkCapabilities", "android.content.Intent#getParcelableExtra(String)", "android.net.LinkProperties" ]
+  }, {
+    "name" : "EXTRA_NETWORK_TYPE",
+    "type" : "String",
+    "comment" : "\n     * Network type which triggered a {@link #CONNECTIVITY_ACTION} broadcast.\n     *\n     * @see android.content.Intent#getIntExtra(String, int)\n     * @deprecated The network type is not rich enough to represent the characteristics\n     *             of modern networks. Please use {@link NetworkCapabilities} instead,\n     *             in particular the transports.\n     ",
+    "links" : [ "#CONNECTIVITY_ACTION", "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "EXTRA_IS_FAILOVER",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a boolean that indicates whether a connect event\n     * is for a network to which the connectivity manager was failing over\n     * following a disconnect on another network.\n     * Retrieve it with {@link android.content.Intent#getBooleanExtra(String,boolean)}.\n     *\n     * @deprecated See {@link NetworkInfo}.\n     ",
+    "links" : [ "android.net.NetworkInfo", "android.content.Intent#getBooleanExtra(String" ]
+  }, {
+    "name" : "EXTRA_OTHER_NETWORK_INFO",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link NetworkInfo} object. This is supplied when\n     * there is another network that it may be possible to connect to. Retrieve with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     *\n     * @deprecated See {@link NetworkInfo}.\n     ",
+    "links" : [ "android.net.NetworkInfo", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "EXTRA_NO_CONNECTIVITY",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a boolean that indicates whether there is a\n     * complete lack of connectivity, i.e., no network is available.\n     * Retrieve it with {@link android.content.Intent#getBooleanExtra(String,boolean)}.\n     ",
+    "links" : [ "android.content.Intent#getBooleanExtra(String" ]
+  }, {
+    "name" : "EXTRA_REASON",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a string that indicates why an attempt to connect\n     * to a network failed. The string has no particular structure. It is\n     * intended to be used in notifications presented to users. Retrieve\n     * it with {@link android.content.Intent#getStringExtra(String)}.\n     ",
+    "links" : [ "android.content.Intent#getStringExtra(String)" ]
+  }, {
+    "name" : "EXTRA_EXTRA_INFO",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a string that provides optionally supplied\n     * extra information about the network state. The information\n     * may be passed up from the lower networking layers, and its\n     * meaning may be specific to a particular network type. Retrieve\n     * it with {@link android.content.Intent#getStringExtra(String)}.\n     *\n     * @deprecated See {@link NetworkInfo#getExtraInfo()}.\n     ",
+    "links" : [ "android.content.Intent#getStringExtra(String)", "android.net.NetworkInfo#getExtraInfo()" ]
+  }, {
+    "name" : "EXTRA_INET_CONDITION",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for an int that provides information about\n     * our connection to the internet at large.  0 indicates no connection,\n     * 100 indicates a great connection.  Retrieve it with\n     * {@link android.content.Intent#getIntExtra(String, int)}.\n     * {@hide}\n     ",
+    "links" : [ "android.content.Intent#getIntExtra(String" ]
+  }, {
+    "name" : "EXTRA_CAPTIVE_PORTAL",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link CaptivePortal} object included with the\n     * {@link #ACTION_CAPTIVE_PORTAL_SIGN_IN} intent.  The {@code CaptivePortal}\n     * object can be used to either indicate to the system that the captive\n     * portal has been dismissed or that the user does not want to pursue\n     * signing in to captive portal.  Retrieve it with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "#ACTION_CAPTIVE_PORTAL_SIGN_IN", "android.net.CaptivePortal", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "EXTRA_CAPTIVE_PORTAL_URL",
+    "type" : "String",
+    "comment" : "\n     * Key for passing a URL to the captive portal login activity.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_CAPTIVE_PORTAL_PROBE_SPEC",
+    "type" : "String",
+    "comment" : "\n     * Key for passing a {@link android.net.captiveportal.CaptivePortalProbeSpec} to the captive\n     * portal login activity.\n     * {@hide}\n     ",
+    "links" : [ "android.net.captiveportal.CaptivePortalProbeSpec" ]
+  }, {
+    "name" : "EXTRA_CAPTIVE_PORTAL_USER_AGENT",
+    "type" : "String",
+    "comment" : "\n     * Key for passing a user agent string to the captive portal login activity.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_DATA_ACTIVITY_CHANGE",
+    "type" : "String",
+    "comment" : "\n     * Broadcast action to indicate the change of data activity status\n     * (idle or active) on a network in a recent period.\n     * The network becomes active when data transmission is started, or\n     * idle if there is no data transmission for a period of time.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_DEVICE_TYPE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for an enum that indicates the network device type on which this data activity\n     * change happens.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_IS_ACTIVE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a boolean that indicates the device is active or not. {@code true} means\n     * it is actively sending or receiving data and {@code false} means it is idle.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_REALTIME_NS",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a long that contains the timestamp (nanos) of the radio state change.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_BACKGROUND_DATA_SETTING_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: The setting for background data usage has changed\n     * values. Use {@link #getBackgroundDataSetting()} to get the current value.\n     * <p>\n     * If an application uses the network in the background, it should listen\n     * for this broadcast and stop using the background data if the value is\n     * {@code false}.\n     * <p>\n     *\n     * @deprecated As of {@link VERSION_CODES#ICE_CREAM_SANDWICH}, availability\n     *             of background data depends on several combined factors, and\n     *             this broadcast is no longer sent. Instead, when background\n     *             data is unavailable, {@link #getActiveNetworkInfo()} will now\n     *             appear disconnected. During first boot after a platform\n     *             upgrade, this broadcast will be sent once if\n     *             {@link #getBackgroundDataSetting()} was {@code false} before\n     *             the upgrade.\n     ",
+    "links" : [ "#getActiveNetworkInfo()", "#getBackgroundDataSetting()", "android.os.Build.VERSION_CODES#ICE_CREAM_SANDWICH" ]
+  }, {
+    "name" : "INET_CONDITION_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: The network connection may not be good\n     * uses {@code ConnectivityManager.EXTRA_INET_CONDITION} and\n     * {@code ConnectivityManager.EXTRA_NETWORK_INFO} to specify\n     * the network and it's condition.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_TETHER_STATE_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: A tetherable connection has come or gone.\n     * Uses {@code ConnectivityManager.EXTRA_AVAILABLE_TETHER},\n     * {@code ConnectivityManager.EXTRA_ACTIVE_LOCAL_ONLY},\n     * {@code ConnectivityManager.EXTRA_ACTIVE_TETHER}, and\n     * {@code ConnectivityManager.EXTRA_ERRORED_TETHER} to indicate\n     * the current state of tethering.  Each include a list of\n     * interface names in that state (may be empty).\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_AVAILABLE_TETHER",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     * gives a String[] listing all the interfaces configured for\n     * tethering and currently available for tethering.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_ACTIVE_LOCAL_ONLY",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     * gives a String[] listing all the interfaces currently in local-only\n     * mode (ie, has DHCPv4+IPv6-ULA support and no packet forwarding)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_ACTIVE_TETHER",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     * gives a String[] listing all the interfaces currently tethered\n     * (ie, has DHCPv4 support and packets potentially forwarded/NATed)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_ERRORED_TETHER",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     * gives a String[] listing all the interfaces we tried to tether and\n     * failed.  Use {@link #getLastTetherError} to find the error code\n     * for any interfaces listed here.\n     ",
+    "links" : [ "#getLastTetherError" ]
+  }, {
+    "name" : "ACTION_CAPTIVE_PORTAL_TEST_COMPLETED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: The captive portal tracker has finished its test.\n     * Sent only while running Setup Wizard, in lieu of showing a user\n     * notification.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_IS_CAPTIVE_PORTAL",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a boolean that indicates whether a captive portal was detected.\n     * Retrieve it with {@link android.content.Intent#getBooleanExtra(String,boolean)}.\n     * @hide\n     ",
+    "links" : [ "android.content.Intent#getBooleanExtra(String" ]
+  }, {
+    "name" : "ACTION_PROMPT_UNVALIDATED",
+    "type" : "String",
+    "comment" : "\n     * Action used to display a dialog that asks the user whether to connect to a network that is\n     * not validated. This intent is used to start the dialog in settings via startActivity.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_PROMPT_LOST_VALIDATION",
+    "type" : "String",
+    "comment" : "\n     * Action used to display a dialog that asks the user whether to avoid a network that is no\n     * longer validated. This intent is used to start the dialog in settings via startActivity.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_PROMPT_PARTIAL_CONNECTIVITY",
+    "type" : "String",
+    "comment" : "\n     * Action used to display a dialog that asks the user whether to stay connected to a network\n     * that has not validated. This intent is used to start the dialog in settings via\n     * startActivity.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TETHERING_INVALID",
+    "type" : "int",
+    "comment" : "\n     * Invalid tethering type.\n     * @see #startTethering(int, boolean, OnStartTetheringCallback)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TETHERING_WIFI",
+    "type" : "int",
+    "comment" : "\n     * Wifi tethering type.\n     * @see #startTethering(int, boolean, OnStartTetheringCallback)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TETHERING_USB",
+    "type" : "int",
+    "comment" : "\n     * USB tethering type.\n     * @see #startTethering(int, boolean, OnStartTetheringCallback)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TETHERING_BLUETOOTH",
+    "type" : "int",
+    "comment" : "\n     * Bluetooth tethering type.\n     * @see #startTethering(int, boolean, OnStartTetheringCallback)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TETHERING_WIFI_P2P",
+    "type" : "int",
+    "comment" : "\n     * Wifi P2p tethering type.\n     * Wifi P2p tethering is set through events automatically, and don't\n     * need to start from #startTethering(int, boolean, OnStartTetheringCallback).\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_ADD_TETHER_TYPE",
+    "type" : "String",
+    "comment" : "\n     * Extra used for communicating with the TetherService. Includes the type of tethering to\n     * enable if any.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_REM_TETHER_TYPE",
+    "type" : "String",
+    "comment" : "\n     * Extra used for communicating with the TetherService. Includes the type of tethering for\n     * which to cancel provisioning.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_SET_ALARM",
+    "type" : "String",
+    "comment" : "\n     * Extra used for communicating with the TetherService. True to schedule a recheck of tether\n     * provisioning.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_RUN_PROVISION",
+    "type" : "String",
+    "comment" : "\n     * Tells the TetherService to run a provision check now.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_PROVISION_CALLBACK",
+    "type" : "String",
+    "comment" : "\n     * Extra used for communicating with the TetherService. Contains the {@link ResultReceiver}\n     * which will receive provisioning results. Can be left empty.\n     * @hide\n     ",
+    "links" : [ "android.os.ResultReceiver" ]
+  }, {
+    "name" : "TYPE_NONE",
+    "type" : "int",
+    "comment" : "\n     * The absence of a connection type.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TYPE_MOBILE",
+    "type" : "int",
+    "comment" : "\n     * A Mobile data connection. Devices may support more than one.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_WIFI",
+    "type" : "int",
+    "comment" : "\n     * A WIFI data connection. Devices may support more than one.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_MOBILE_MMS",
+    "type" : "int",
+    "comment" : "\n     * An MMS-specific Mobile data connection.  This network type may use the\n     * same network interface as {@link #TYPE_MOBILE} or it may use a different\n     * one.  This is used by applications needing to talk to the carrier's\n     * Multimedia Messaging Service servers.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasCapability} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request a network that\n     *         provides the {@link NetworkCapabilities#NET_CAPABILITY_MMS} capability.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasCapability", "android.net.NetworkCapabilities#NET_CAPABILITY_MMS", "#TYPE_MOBILE", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_MOBILE_SUPL",
+    "type" : "int",
+    "comment" : "\n     * A SUPL-specific Mobile data connection.  This network type may use the\n     * same network interface as {@link #TYPE_MOBILE} or it may use a different\n     * one.  This is used by applications needing to talk to the carrier's\n     * Secure User Plane Location servers for help locating the device.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasCapability} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request a network that\n     *         provides the {@link NetworkCapabilities#NET_CAPABILITY_SUPL} capability.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasCapability", "#TYPE_MOBILE", "#requestNetwork(NetworkRequest", "android.net.NetworkCapabilities#NET_CAPABILITY_SUPL" ]
+  }, {
+    "name" : "TYPE_MOBILE_DUN",
+    "type" : "int",
+    "comment" : "\n     * A DUN-specific Mobile data connection.  This network type may use the\n     * same network interface as {@link #TYPE_MOBILE} or it may use a different\n     * one.  This is sometimes by the system when setting up an upstream connection\n     * for tethering so that the carrier is aware of DUN traffic.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasCapability} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request a network that\n     *         provides the {@link NetworkCapabilities#NET_CAPABILITY_DUN} capability.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasCapability", "#TYPE_MOBILE", "android.net.NetworkCapabilities#NET_CAPABILITY_DUN", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_MOBILE_HIPRI",
+    "type" : "int",
+    "comment" : "\n     * A High Priority Mobile data connection.  This network type uses the\n     * same network interface as {@link #TYPE_MOBILE} but the routing setup\n     * is different.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#TYPE_MOBILE", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_WIMAX",
+    "type" : "int",
+    "comment" : "\n     * A WiMAX data connection.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_BLUETOOTH",
+    "type" : "int",
+    "comment" : "\n     * A Bluetooth data connection.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_DUMMY",
+    "type" : "int",
+    "comment" : "\n     * Dummy data connection.  This should not be used on shipping devices.\n     * @deprecated This is not used any more.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TYPE_ETHERNET",
+    "type" : "int",
+    "comment" : "\n     * An Ethernet data connection.\n     *\n     * @deprecated Applications should instead use {@link NetworkCapabilities#hasTransport} or\n     *         {@link #requestNetwork(NetworkRequest, NetworkCallback)} to request an\n     *         appropriate network. {@see NetworkCapabilities} for supported transports.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#hasTransport", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "TYPE_MOBILE_FOTA",
+    "type" : "int",
+    "comment" : "\n     * Over the air Administration.\n     * @deprecated Use {@link NetworkCapabilities} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "TYPE_MOBILE_IMS",
+    "type" : "int",
+    "comment" : "\n     * IP Multimedia Subsystem.\n     * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_IMS} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_IMS" ]
+  }, {
+    "name" : "TYPE_MOBILE_CBS",
+    "type" : "int",
+    "comment" : "\n     * Carrier Branded Services.\n     * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_CBS} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_CBS" ]
+  }, {
+    "name" : "TYPE_WIFI_P2P",
+    "type" : "int",
+    "comment" : "\n     * A Wi-Fi p2p connection. Only requesting processes will have access to\n     * the peers connected.\n     * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_WIFI_P2P} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_WIFI_P2P" ]
+  }, {
+    "name" : "TYPE_MOBILE_IA",
+    "type" : "int",
+    "comment" : "\n     * The network to use for initially attaching to the network\n     * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_IA} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_IA" ]
+  }, {
+    "name" : "TYPE_MOBILE_EMERGENCY",
+    "type" : "int",
+    "comment" : "\n     * Emergency PDN connection for emergency services.  This\n     * may include IMS and MMS in emergency situations.\n     * @deprecated Use {@link NetworkCapabilities#NET_CAPABILITY_EIMS} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_EIMS" ]
+  }, {
+    "name" : "TYPE_PROXY",
+    "type" : "int",
+    "comment" : "\n     * The network that uses proxy to achieve connectivity.\n     * @deprecated Use {@link NetworkCapabilities} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "TYPE_VPN",
+    "type" : "int",
+    "comment" : "\n     * A virtual network using one or more native bearers.\n     * It may or may not be providing security services.\n     * @deprecated Applications should use {@link NetworkCapabilities#TRANSPORT_VPN} instead.\n     ",
+    "links" : [ "android.net.NetworkCapabilities#TRANSPORT_VPN" ]
+  }, {
+    "name" : "TYPE_TEST",
+    "type" : "int",
+    "comment" : "\n     * A network that is exclusively meant to be used for testing\n     *\n     * @deprecated Use {@link NetworkCapabilities} instead.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "DEPRECATED_PHONE_CONSTANT_APN_ALREADY_ACTIVE",
+    "type" : "int",
+    "comment" : " in com.android.internal.telephony.PhoneConstants until they were made inaccessible.",
+    "links" : [ ]
+  }, {
+    "name" : "DEPRECATED_PHONE_CONSTANT_APN_REQUEST_STARTED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEPRECATED_PHONE_CONSTANT_APN_REQUEST_FAILED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_RADIO_TYPE",
+    "type" : "int",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_NETWORK_TYPE",
+    "type" : "int",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_NETWORK_TYPE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_NETWORK_PREFERENCE",
+    "type" : "int",
+    "comment" : "\n     * If you want to set the default network preference,you can directly\n     * change the networkAttributes array in framework's config.xml.\n     *\n     * @deprecated Since we support so many more networks now, the single\n     *             network default network preference can't really express\n     *             the hierarchy.  Instead, the default is defined by the\n     *             networkAttributes in config.xml.  You can determine\n     *             the current value by calling {@link #getNetworkPreference()}\n     *             from an App.\n     ",
+    "links" : [ "#getNetworkPreference()" ]
+  }, {
+    "name" : "REQUEST_ID_UNSET",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ALREADY_UNREGISTERED",
+    "type" : "NetworkRequest",
+    "comment" : "\n     * Static unique request used as a tombstone for NetworkCallbacks that have been unregistered.\n     * This allows to distinguish when unregistering NetworkCallbacks those that were never\n     * registered from those that were already unregistered.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NETID_UNSET",
+    "type" : "int",
+    "comment" : "\n     * A NetID indicating no Network is selected.\n     * Keep in sync with bionic/libc/dns/include/resolv_netid.h\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PRIVATE_DNS_MODE_OFF",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PRIVATE_DNS_MODE_OPPORTUNISTIC",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PRIVATE_DNS_MODE_PROVIDER_HOSTNAME",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PRIVATE_DNS_DEFAULT_MODE_FALLBACK",
+    "type" : "String",
+    "comment" : "\n     * The default Private DNS mode.\n     *\n     * This may change from release to release or may become dependent upon\n     * the capabilities of the underlying platform.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IConnectivityManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sInstance",
+    "type" : "ConnectivityManager",
+    "comment" : "\n     * A kludge to facilitate static access where a Context pointer isn't available, like in the\n     * case of the static set/getProcessDefaultNetwork methods and from the Network class.\n     * TODO: Remove this after deprecating the static methods in favor of non-static methods or\n     * methods that take a Context argument.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNMService",
+    "type" : "INetworkManagementService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNPManager",
+    "type" : "INetworkPolicyManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTetheringManager",
+    "type" : "TetheringManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLegacyRequests",
+    "type" : "HashMap<NetworkCapabilities, LegacyRequest>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLegacyTypeToTransport",
+    "type" : "SparseIntArray",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLegacyTypeToCapability",
+    "type" : "SparseIntArray",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNetworkActivityListeners",
+    "type" : "ArrayMap<OnNetworkActiveListener, INetworkActivityListener>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTetheringEventCallbacks",
+    "type" : "ArrayMap<OnTetheringEventCallback, TetheringEventCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TETHER_ERROR_NO_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_NO_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_NO_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_UNKNOWN_IFACE",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNKNOWN_IFACE}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_UNKNOWN_IFACE" ]
+  }, {
+    "name" : "TETHER_ERROR_SERVICE_UNAVAIL",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_SERVICE_UNAVAIL}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_SERVICE_UNAVAIL" ]
+  }, {
+    "name" : "TETHER_ERROR_UNSUPPORTED",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNSUPPORTED}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_UNSUPPORTED" ]
+  }, {
+    "name" : "TETHER_ERROR_UNAVAIL_IFACE",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNAVAIL_IFACE}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_UNAVAIL_IFACE" ]
+  }, {
+    "name" : "TETHER_ERROR_MASTER_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_INTERNAL_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_INTERNAL_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_TETHER_IFACE_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_TETHER_IFACE_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_TETHER_IFACE_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_UNTETHER_IFACE_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_UNTETHER_IFACE_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_UNTETHER_IFACE_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_ENABLE_NAT_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_ENABLE_FORWARDING_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_ENABLE_FORWARDING_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_DISABLE_NAT_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_DISABLE_FORWARDING_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_DISABLE_FORWARDING_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_IFACE_CFG_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_IFACE_CFG_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_IFACE_CFG_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_PROVISION_FAILED",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_PROVISIONING_FAILED}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_PROVISIONING_FAILED" ]
+  }, {
+    "name" : "TETHER_ERROR_DHCPSERVER_ERROR",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_DHCPSERVER_ERROR}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_DHCPSERVER_ERROR" ]
+  }, {
+    "name" : "TETHER_ERROR_ENTITLEMENT_UNKONWN",
+    "type" : "int",
+    "comment" : "\n     * @deprecated Use {@link TetheringManager#TETHER_ERROR_ENTITLEMENT_UNKNOWN}.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager#TETHER_ERROR_ENTITLEMENT_UNKNOWN" ]
+  }, {
+    "name" : "BASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_PRECHECK",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_AVAILABLE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_LOSING",
+    "type" : "int",
+    "comment" : " @hide arg1 = TTL ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_LOST",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_UNAVAIL",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_CAP_CHANGED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_IP_CHANGED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "EXPIRE_LEGACY_REQUEST",
+    "type" : "int",
+    "comment" : " @hide obj = NetworkCapabilities, arg1 = seq number ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_SUSPENDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_RESUMED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLBACK_BLK_CHANGED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "sCallbacks",
+    "type" : "HashMap<NetworkRequest, NetworkCallback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sCallbackHandler",
+    "type" : "CallbackHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LISTEN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_NETWORK",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link Network} object included with the intent after\n     * successfully finding a network for the applications request.  Retrieve it with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     * <p>\n     * Note that if you intend to invoke {@link Network#openConnection(java.net.URL)}\n     * then you must get a ConnectivityManager instance before doing so.\n     ",
+    "links" : [ "android.net.Network#openConnection(java.net.URL)", "android.net.Network", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "EXTRA_NETWORK_REQUEST",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link NetworkRequest} object included with the intent after\n     * successfully finding a network for the applications request.  Retrieve it with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "android.net.NetworkRequest", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "MULTIPATH_PREFERENCE_HANDOVER",
+    "type" : "int",
+    "comment" : "\n     * It is acceptable to briefly use multipath data to provide seamless connectivity for\n     * time-sensitive user-facing operations when the system default network is temporarily\n     * unresponsive. The amount of data should be limited (less than one megabyte for every call to\n     * this method), and the operation should be infrequent to ensure that data usage is limited.\n     *\n     * An example of such an operation might be a time-sensitive foreground activity, such as a\n     * voice command, that the user is performing while walking out of range of a Wi-Fi network.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MULTIPATH_PREFERENCE_RELIABILITY",
+    "type" : "int",
+    "comment" : "\n     * It is acceptable to use small amounts of multipath data on an ongoing basis to provide\n     * a backup channel for traffic that is primarily going over another network.\n     *\n     * An example might be maintaining backup connections to peers or servers for the purpose of\n     * fast fallback if the default network is temporarily unresponsive or disconnects. The traffic\n     * on backup paths should be negligible compared to the traffic on the main path.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MULTIPATH_PREFERENCE_PERFORMANCE",
+    "type" : "int",
+    "comment" : "\n     * It is acceptable to use metered data to improve network latency and performance.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MULTIPATH_PREFERENCE_UNMETERED",
+    "type" : "int",
+    "comment" : "\n     * Return value to use for unmetered networks. On such networks we currently set all the flags\n     * to true.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESTRICT_BACKGROUND_STATUS_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Device is not restricting metered network activity while application is running on\n     * background.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESTRICT_BACKGROUND_STATUS_WHITELISTED",
+    "type" : "int",
+    "comment" : "\n     * Device is restricting metered network activity while application is running on background,\n     * but application is allowed to bypass it.\n     * <p>\n     * In this state, application should take action to mitigate metered network access.\n     * For example, a music streaming application should switch to a low-bandwidth bitrate.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESTRICT_BACKGROUND_STATUS_ENABLED",
+    "type" : "int",
+    "comment" : "\n     * Device is restricting metered network activity while application is running on background.\n     * <p>\n     * In this state, application should not try to use the network while running on background,\n     * because it would be denied.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_RESTRICT_BACKGROUND_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * A change in the background metered network activity restriction has occurred.\n     * <p>\n     * Applications should call {@link #getRestrictBackgroundStatus()} to check if the restriction\n     * applies to them.\n     * <p>\n     * This is only sent to registered receivers, not manifest receivers.\n     ",
+    "links" : [ "#getRestrictBackgroundStatus()" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static boolean isNetworkTypeValid(int networkType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tests if a given integer represents a valid network type.\n     * @param networkType the type to be tested\n     * @return a boolean.  {@code true} if the type is valid, else {@code false}\n     * @deprecated All APIs accepting a network type are deprecated. There should be no need to\n     *             validate a network type.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getNetworkTypeName(int type)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a non-localized string representing a given network type.\n     * ONLY used for debugging output.\n     * @param type the type needing naming\n     * @return a String for the given type, or a string version of the type (\"87\")\n     * if no name is known.\n     * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "public static boolean isNetworkTypeMobile(int networkType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if a given type uses the cellular data connection.\n     * This should be replaced in the future by a network property.\n     * @param networkType the type to check\n     * @return a boolean - {@code true} if uses cellular network, else {@code false}\n     * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "public static boolean isNetworkTypeWifi(int networkType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the given network type is backed by a Wi-Fi radio.\n     *\n     * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "public void setNetworkPreference(int preference)",
+    "returnType" : "void",
+    "comment" : "\n     * Specifies the preferred network type.  When the device has more\n     * than one type available the preferred network type will be used.\n     *\n     * @param preference the network type to prefer over all others.  It is\n     *         unspecified what happens to the old preferred network in the\n     *         overall ordering.\n     * @deprecated Functionality has been removed as it no longer makes sense,\n     *             with many more than two networks - we'd need an array to express\n     *             preference.  Instead we use dynamic network properties of\n     *             the networks to describe their precedence.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getNetworkPreference()",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieves the current preferred network type.\n     *\n     * @return an integer representing the preferred network type\n     *\n     * @deprecated Functionality has been removed as it no longer makes sense,\n     *             with many more than two networks - we'd need an array to express\n     *             preference.  Instead we use dynamic network properties of\n     *             the networks to describe their precedence.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkInfo getActiveNetworkInfo()",
+    "returnType" : "NetworkInfo",
+    "comment" : "\n     * Returns details about the currently active default data network. When\n     * connected, this network is the default route for outgoing connections.\n     * You should always check {@link NetworkInfo#isConnected()} before initiating\n     * network traffic. This may return {@code null} when there is no default\n     * network.\n     * Note that if the default network is a VPN, this method will return the\n     * NetworkInfo for one of its underlying networks instead, or null if the\n     * VPN agent did not specify any. Apps interested in learning about VPNs\n     * should use {@link #getNetworkInfo(android.net.Network)} instead.\n     *\n     * @return a {@link NetworkInfo} object for the current default network\n     *        or {@code null} if no default network is currently active\n     * @deprecated See {@link NetworkInfo}.\n     ",
+    "links" : [ "android.net.NetworkInfo#isConnected()", "#getNetworkInfo(android.net.Network)", "android.net.NetworkInfo" ]
+  }, {
+    "name" : "public Network getActiveNetwork()",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns a {@link Network} object corresponding to the currently active\n     * default data network.  In the event that the current active default data\n     * network disconnects, the returned {@code Network} object will no longer\n     * be usable.  This will return {@code null} when there is no default\n     * network.\n     *\n     * @return a {@link Network} object for the current default network or\n     *        {@code null} if no default network is currently active\n     ",
+    "links" : [ "android.net.Network" ]
+  }, {
+    "name" : "public Network getActiveNetworkForUid(int uid)",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns a {@link Network} object corresponding to the currently active\n     * default data network for a specific UID.  In the event that the default data\n     * network disconnects, the returned {@code Network} object will no longer\n     * be usable.  This will return {@code null} when there is no default\n     * network for the UID.\n     *\n     * @return a {@link Network} object for the current default network for the\n     *         given UID or {@code null} if no default network is currently active\n     *\n     * @hide\n     ",
+    "links" : [ "android.net.Network" ]
+  }, {
+    "name" : "public Network getActiveNetworkForUid(int uid, boolean ignoreBlocked)",
+    "returnType" : "Network",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAlwaysOnVpnPackageSupportedForUser(int userId, @Nullable String vpnPackage)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if a VPN app supports always-on mode.\n     *\n     * In order to support the always-on feature, an app has to\n     * <ul>\n     *     <li>target {@link VERSION_CODES#N API 24} or above, and\n     *     <li>not opt out through the {@link VpnService#SERVICE_META_DATA_SUPPORTS_ALWAYS_ON}\n     *         meta-data field.\n     * </ul>\n     *\n     * @param userId The identifier of the user for whom the VPN app is installed.\n     * @param vpnPackage The canonical package name of the VPN app.\n     * @return {@code true} if and only if the VPN app exists and supports always-on mode.\n     * @hide\n     ",
+    "links" : [ "android.net.VpnService#SERVICE_META_DATA_SUPPORTS_ALWAYS_ON", "android.os.Build.VERSION_CODES#N" ]
+  }, {
+    "name" : "public boolean setAlwaysOnVpnPackageForUser(int userId, @Nullable String vpnPackage, boolean lockdownEnabled, @Nullable List<String> lockdownWhitelist)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Configures an always-on VPN connection through a specific application.\n     * This connection is automatically granted and persisted after a reboot.\n     *\n     * <p>The designated package should declare a {@link VpnService} in its\n     *    manifest guarded by {@link android.Manifest.permission.BIND_VPN_SERVICE},\n     *    otherwise the call will fail.\n     *\n     * @param userId The identifier of the user to set an always-on VPN for.\n     * @param vpnPackage The package name for an installed VPN app on the device, or {@code null}\n     *                   to remove an existing always-on VPN configuration.\n     * @param lockdownEnabled {@code true} to disallow networking when the VPN is not connected or\n     *        {@code false} otherwise.\n     * @param lockdownWhitelist The list of packages that are allowed to access network directly\n     *         when VPN is in lockdown mode but is not running. Non-existent packages are ignored so\n     *         this method must be called when a package that should be whitelisted is installed or\n     *         uninstalled.\n     * @return {@code true} if the package is set as always-on VPN controller;\n     *         {@code false} otherwise.\n     * @hide\n     ",
+    "links" : [ "android.net.VpnService", "android.Manifest.permission.BIND_VPN_SERVICE" ]
+  }, {
+    "name" : "public String getAlwaysOnVpnPackageForUser(int userId)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the package name of the currently set always-on VPN application.\n     * If there is no always-on VPN set, or the VPN is provided by the system instead\n     * of by an app, {@code null} will be returned.\n     *\n     * @return Package name of VPN controller responsible for always-on VPN,\n     *         or {@code null} if none is set.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isVpnLockdownEnabled(int userId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return whether always-on VPN is in lockdown mode.\n     *\n     * @hide\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getVpnLockdownWhitelist(int userId)",
+    "returnType" : "List<String>",
+    "comment" : "\n     * @return the list of packages that are allowed to access network when always-on VPN is in\n     * lockdown mode but not connected. Returns {@code null} when VPN lockdown is not active.\n     *\n     * @hide\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkInfo getActiveNetworkInfoForUid(int uid)",
+    "returnType" : "NetworkInfo",
+    "comment" : "\n     * Returns details about the currently active default data network\n     * for a given uid.  This is for internal use only to avoid spying\n     * other apps.\n     *\n     * @return a {@link NetworkInfo} object for the current default network\n     *        for the given uid or {@code null} if no default network is\n     *        available for the specified uid.\n     *\n     * {@hide}\n     ",
+    "links" : [ "android.net.NetworkInfo" ]
+  }, {
+    "name" : "public NetworkInfo getActiveNetworkInfoForUid(int uid, boolean ignoreBlocked)",
+    "returnType" : "NetworkInfo",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkInfo getNetworkInfo(int networkType)",
+    "returnType" : "NetworkInfo",
+    "comment" : "\n     * Returns connection status information about a particular\n     * network type.\n     *\n     * @param networkType integer specifying which networkType in\n     *        which you're interested.\n     * @return a {@link NetworkInfo} object for the requested\n     *        network type or {@code null} if the type is not\n     *        supported by the device. If {@code networkType} is\n     *        TYPE_VPN and a VPN is active for the calling app,\n     *        then this method will try to return one of the\n     *        underlying networks for the VPN or null if the\n     *        VPN agent didn't specify any.\n     *\n     * @deprecated This method does not support multiple connected networks\n     *             of the same type. Use {@link #getAllNetworks} and\n     *             {@link #getNetworkInfo(android.net.Network)} instead.\n     ",
+    "links" : [ "android.net.NetworkInfo", "#getNetworkInfo(android.net.Network)", "#getAllNetworks" ]
+  }, {
+    "name" : "public NetworkInfo getNetworkInfo(@Nullable Network network)",
+    "returnType" : "NetworkInfo",
+    "comment" : "\n     * Returns connection status information about a particular\n     * Network.\n     *\n     * @param network {@link Network} specifying which network\n     *        in which you're interested.\n     * @return a {@link NetworkInfo} object for the requested\n     *        network or {@code null} if the {@code Network}\n     *        is not valid.\n     * @deprecated See {@link NetworkInfo}.\n     ",
+    "links" : [ "android.net.NetworkInfo", "android.net.Network" ]
+  }, {
+    "name" : "public NetworkInfo getNetworkInfoForUid(Network network, int uid, boolean ignoreBlocked)",
+    "returnType" : "NetworkInfo",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkInfo[] getAllNetworkInfo()",
+    "returnType" : "NetworkInfo[]",
+    "comment" : "\n     * Returns connection status information about all network\n     * types supported by the device.\n     *\n     * @return an array of {@link NetworkInfo} objects.  Check each\n     * {@link NetworkInfo#getType} for which type each applies.\n     *\n     * @deprecated This method does not support multiple connected networks\n     *             of the same type. Use {@link #getAllNetworks} and\n     *             {@link #getNetworkInfo(android.net.Network)} instead.\n     ",
+    "links" : [ "android.net.NetworkInfo#getType", "android.net.NetworkInfo", "#getNetworkInfo(android.net.Network)", "#getAllNetworks" ]
+  }, {
+    "name" : "public Network getNetworkForType(int networkType)",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns the {@link Network} object currently serving a given type, or\n     * null if the given type is not connected.\n     *\n     * @hide\n     * @deprecated This method does not support multiple connected networks\n     *             of the same type. Use {@link #getAllNetworks} and\n     *             {@link #getNetworkInfo(android.net.Network)} instead.\n     ",
+    "links" : [ "#getNetworkInfo(android.net.Network)", "android.net.Network", "#getAllNetworks" ]
+  }, {
+    "name" : "public Network[] getAllNetworks()",
+    "returnType" : "Network[]",
+    "comment" : "\n     * Returns an array of all {@link Network} currently tracked by the\n     * framework.\n     *\n     * @return an array of {@link Network} objects.\n     ",
+    "links" : [ "android.net.Network" ]
+  }, {
+    "name" : "public NetworkCapabilities[] getDefaultNetworkCapabilitiesForUser(int userId)",
+    "returnType" : "NetworkCapabilities[]",
+    "comment" : "\n     * Returns an array of {@link android.net.NetworkCapabilities} objects, representing\n     * the Networks that applications run by the given user will use by default.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "public LinkProperties getActiveLinkProperties()",
+    "returnType" : "LinkProperties",
+    "comment" : "\n     * Returns the IP information for the current default network.\n     *\n     * @return a {@link LinkProperties} object describing the IP info\n     *        for the current default network, or {@code null} if there\n     *        is no current default network.\n     *\n     * {@hide}\n     * @deprecated please use {@link #getLinkProperties(Network)} on the return\n     *             value of {@link #getActiveNetwork()} instead. In particular,\n     *             this method will return non-null LinkProperties even if the\n     *             app is blocked by policy from using this network.\n     ",
+    "links" : [ "#getLinkProperties(Network)", "#getActiveNetwork()", "android.net.LinkProperties" ]
+  }, {
+    "name" : "public LinkProperties getLinkProperties(int networkType)",
+    "returnType" : "LinkProperties",
+    "comment" : "\n     * Returns the IP information for a given network type.\n     *\n     * @param networkType the network type of interest.\n     * @return a {@link LinkProperties} object describing the IP info\n     *        for the given networkType, or {@code null} if there is\n     *        no current default network.\n     *\n     * {@hide}\n     * @deprecated This method does not support multiple connected networks\n     *             of the same type. Use {@link #getAllNetworks},\n     *             {@link #getNetworkInfo(android.net.Network)}, and\n     *             {@link #getLinkProperties(android.net.Network)} instead.\n     ",
+    "links" : [ "#getLinkProperties(android.net.Network)", "#getNetworkInfo(android.net.Network)", "android.net.LinkProperties", "#getAllNetworks" ]
+  }, {
+    "name" : "public LinkProperties getLinkProperties(@Nullable Network network)",
+    "returnType" : "LinkProperties",
+    "comment" : "\n     * Get the {@link LinkProperties} for the given {@link Network}.  This\n     * will return {@code null} if the network is unknown.\n     *\n     * @param network The {@link Network} object identifying the network in question.\n     * @return The {@link LinkProperties} for the network, or {@code null}.\n     ",
+    "links" : [ "android.net.Network", "android.net.LinkProperties" ]
+  }, {
+    "name" : "public NetworkCapabilities getNetworkCapabilities(@Nullable Network network)",
+    "returnType" : "NetworkCapabilities",
+    "comment" : "\n     * Get the {@link android.net.NetworkCapabilities} for the given {@link Network}.  This\n     * will return {@code null} if the network is unknown.\n     *\n     * @param network The {@link Network} object identifying the network in question.\n     * @return The {@link android.net.NetworkCapabilities} for the network, or {@code null}.\n     ",
+    "links" : [ "android.net.NetworkCapabilities", "android.net.Network" ]
+  }, {
+    "name" : "public String getCaptivePortalServerUrl()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets a URL that can be used for resolving whether a captive portal is present.\n     * 1. This URL should respond with a 204 response to a GET request to indicate no captive\n     *    portal is present.\n     * 2. This URL must be HTTP as redirect responses are used to find captive portal\n     *    sign-in pages. Captive portals cannot respond to HTTPS requests with redirects.\n     *\n     * The system network validation may be using different strategies to detect captive portals,\n     * so this method does not necessarily return a URL used by the system. It only returns a URL\n     * that may be relevant for other components trying to detect captive portals.\n     *\n     * @hide\n     * @deprecated This API returns URL which is not guaranteed to be one of the URLs used by the\n     *             system.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int startUsingNetworkFeature(int networkType, String feature)",
+    "returnType" : "int",
+    "comment" : "\n     * Tells the underlying networking system that the caller wants to\n     * begin using the named feature. The interpretation of {@code feature}\n     * is completely up to each networking implementation.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param networkType specifies which network the request pertains to\n     * @param feature the name of the feature to be used\n     * @return an integer value representing the outcome of the request.\n     * The interpretation of this value is specific to each networking\n     * implementation+feature combination, except that the value {@code -1}\n     * always indicates failure.\n     *\n     * @deprecated Deprecated in favor of the cleaner\n     *             {@link #requestNetwork(NetworkRequest, NetworkCallback)} API.\n     *             In {@link VERSION_CODES#M}, and above, this method is unsupported and will\n     *             throw {@code UnsupportedOperationException} if called.\n     * @removed\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#requestNetwork(NetworkRequest", "android.os.Build.VERSION_CODES#M" ]
+  }, {
+    "name" : "public int stopUsingNetworkFeature(int networkType, String feature)",
+    "returnType" : "int",
+    "comment" : "\n     * Tells the underlying networking system that the caller is finished\n     * using the named feature. The interpretation of {@code feature}\n     * is completely up to each networking implementation.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param networkType specifies which network the request pertains to\n     * @param feature the name of the feature that is no longer needed\n     * @return an integer value representing the outcome of the request.\n     * The interpretation of this value is specific to each networking\n     * implementation+feature combination, except that the value {@code -1}\n     * always indicates failure.\n     *\n     * @deprecated Deprecated in favor of the cleaner\n     *             {@link #unregisterNetworkCallback(NetworkCallback)} API.\n     *             In {@link VERSION_CODES#M}, and above, this method is unsupported and will\n     *             throw {@code UnsupportedOperationException} if called.\n     * @removed\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#unregisterNetworkCallback(NetworkCallback)", "android.os.Build.VERSION_CODES#M" ]
+  }, {
+    "name" : "private NetworkCapabilities networkCapabilitiesForFeature(int networkType, String feature)",
+    "returnType" : "NetworkCapabilities",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int legacyTypeForNetworkCapabilities(NetworkCapabilities netCap)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private NetworkRequest findRequestForFeature(NetworkCapabilities netCap)",
+    "returnType" : "NetworkRequest",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void renewRequestLocked(LegacyRequest l)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void expireRequest(NetworkCapabilities netCap, int sequenceNum)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private NetworkRequest requestNetworkForFeatureLocked(NetworkCapabilities netCap)",
+    "returnType" : "NetworkRequest",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void sendExpireMsgForFeature(NetworkCapabilities netCap, int seqNum, int delay)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean removeRequestForFeature(NetworkCapabilities netCap)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static NetworkCapabilities networkCapabilitiesForType(int type)",
+    "returnType" : "NetworkCapabilities",
+    "comment" : "\n     * Given a legacy type (TYPE_WIFI, ...) returns a NetworkCapabilities\n     * instance suitable for registering a request or callback.  Throws an\n     * IllegalArgumentException if no mapping from the legacy type to\n     * NetworkCapabilities is known.\n     *\n     * @deprecated Types are deprecated. Use {@link NetworkCallback} or {@link NetworkRequest}\n     *     to find the network instead.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public PacketKeepalive startNattKeepalive(Network network, int intervalSeconds, PacketKeepaliveCallback callback, InetAddress srcAddr, int srcPort, InetAddress dstAddr)",
+    "returnType" : "PacketKeepalive",
+    "comment" : "\n     * Starts an IPsec NAT-T keepalive packet with the specified parameters.\n     *\n     * @deprecated Use {@link #createSocketKeepalive} instead.\n     *\n     * @hide\n     ",
+    "links" : [ "#createSocketKeepalive" ]
+  }, {
+    "name" : "public SocketKeepalive createSocketKeepalive(@NonNull Network network, @NonNull UdpEncapsulationSocket socket, @NonNull InetAddress source, @NonNull InetAddress destination, @NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)",
+    "returnType" : "SocketKeepalive",
+    "comment" : "\n     * Request that keepalives be started on a IPsec NAT-T socket.\n     *\n     * @param network The {@link Network} the socket is on.\n     * @param socket The socket that needs to be kept alive.\n     * @param source The source address of the {@link UdpEncapsulationSocket}.\n     * @param destination The destination address of the {@link UdpEncapsulationSocket}.\n     * @param executor The executor on which callback will be invoked. The provided {@link Executor}\n     *                 must run callback sequentially, otherwise the order of callbacks cannot be\n     *                 guaranteed.\n     * @param callback A {@link SocketKeepalive.Callback}. Used for notifications about keepalive\n     *        changes. Must be extended by applications that use this API.\n     *\n     * @return A {@link SocketKeepalive} object that can be used to control the keepalive on the\n     *         given socket.\n     *",
+    "links" : [ "android.net.SocketKeepalive", "SocketKeepalive.Callback", "android.annotation.CallbackExecutor", "android.net.Network", "android.net.IpSecManager.UdpEncapsulationSocket" ]
+  }, {
+    "name" : "public SocketKeepalive createNattKeepalive(@NonNull Network network, @NonNull ParcelFileDescriptor pfd, @NonNull InetAddress source, @NonNull InetAddress destination, @NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)",
+    "returnType" : "SocketKeepalive",
+    "comment" : "\n     * Request that keepalives be started on a IPsec NAT-T socket file descriptor. Directly called\n     * by system apps which don't use IpSecService to create {@link UdpEncapsulationSocket}.\n     *\n     * @param network The {@link Network} the socket is on.\n     * @param pfd The {@link ParcelFileDescriptor} that needs to be kept alive. The provided\n     *        {@link ParcelFileDescriptor} must be bound to a port and the keepalives will be sent\n     *        from that port.\n     * @param source The source address of the {@link UdpEncapsulationSocket}.\n     * @param destination The destination address of the {@link UdpEncapsulationSocket}. The\n     *        keepalive packets will always be sent to port 4500 of the given {@code destination}.\n     * @param executor The executor on which callback will be invoked. The provided {@link Executor}\n     *                 must run callback sequentially, otherwise the order of callbacks cannot be\n     *                 guaranteed.\n     * @param callback A {@link SocketKeepalive.Callback}. Used for notifications about keepalive\n     *        changes. Must be extended by applications that use this API.\n     *\n     * @return A {@link SocketKeepalive} object that can be used to control the keepalive on the\n     *         given socket.\n     * @hide\n     ",
+    "links" : [ "android.net.SocketKeepalive", "android.os.ParcelFileDescriptor", "SocketKeepalive.Callback", "android.annotation.CallbackExecutor", "android.net.IpSecManager.UdpEncapsulationSocket", "android.net.Network" ]
+  }, {
+    "name" : "public SocketKeepalive createSocketKeepalive(@NonNull Network network, @NonNull Socket socket, @NonNull Executor executor, @NonNull Callback callback)",
+    "returnType" : "SocketKeepalive",
+    "comment" : "\n     * Request that keepalives be started on a TCP socket.\n     * The socket must be established.\n     *\n     * @param network The {@link Network} the socket is on.\n     * @param socket The socket that needs to be kept alive.\n     * @param executor The executor on which callback will be invoked. This implementation assumes\n     *                 the provided {@link Executor} runs the callbacks in sequence with no\n     *                 concurrency. Failing this, no guarantee of correctness can be made. It is\n     *                 the responsibility of the caller to ensure the executor provides this\n     *                 guarantee. A simple way of creating such an executor is with the standard\n     *                 tool {@code Executors.newSingleThreadExecutor}.\n     * @param callback A {@link SocketKeepalive.Callback}. Used for notifications about keepalive\n     *        changes. Must be extended by applications that use this API.\n     *\n     * @return A {@link SocketKeepalive} object that can be used to control the keepalive on the\n     *         given socket.\n     * @hide\n     ",
+    "links" : [ "android.net.SocketKeepalive", "SocketKeepalive.Callback", "android.annotation.CallbackExecutor", "android.net.Network" ]
+  }, {
+    "name" : "public boolean requestRouteToHost(int networkType, int hostAddress)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Ensure that a network route exists to deliver traffic to the specified\n     * host via the specified network interface. An attempt to add a route that\n     * already exists is ignored, but treated as successful.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param networkType the type of the network over which traffic to the specified\n     * host is to be routed\n     * @param hostAddress the IP address of the host to which the route is desired\n     * @return {@code true} on success, {@code false} on failure\n     *\n     * @deprecated Deprecated in favor of the\n     *             {@link #requestNetwork(NetworkRequest, NetworkCallback)},\n     *             {@link #bindProcessToNetwork} and {@link Network#getSocketFactory} API.\n     *             In {@link VERSION_CODES#M}, and above, this method is unsupported and will\n     *             throw {@code UnsupportedOperationException} if called.\n     * @removed\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.net.Network#getSocketFactory", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#requestNetwork(NetworkRequest", "#bindProcessToNetwork", "android.os.Build.VERSION_CODES#M" ]
+  }, {
+    "name" : "public boolean requestRouteToHostAddress(int networkType, InetAddress hostAddress)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Ensure that a network route exists to deliver traffic to the specified\n     * host via the specified network interface. An attempt to add a route that\n     * already exists is ignored, but treated as successful.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param networkType the type of the network over which traffic to the specified\n     * host is to be routed\n     * @param hostAddress the IP address of the host to which the route is desired\n     * @return {@code true} on success, {@code false} on failure\n     * @hide\n     * @deprecated Deprecated in favor of the {@link #requestNetwork} and\n     *             {@link #bindProcessToNetwork} API.\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#requestNetwork", "#bindProcessToNetwork" ]
+  }, {
+    "name" : "public boolean getBackgroundDataSetting()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns the value of the setting for background data usage. If false,\n     * applications should not use the network if the application is not in the\n     * foreground. Developers should respect this setting, and check the value\n     * of this before performing any background data operations.\n     * <p>\n     * All applications that have background services that use the network\n     * should listen to {@link #ACTION_BACKGROUND_DATA_SETTING_CHANGED}.\n     * <p>\n     * @deprecated As of {@link VERSION_CODES#ICE_CREAM_SANDWICH}, availability of\n     * background data depends on several combined factors, and this method will\n     * always return {@code true}. Instead, when background data is unavailable,\n     * {@link #getActiveNetworkInfo()} will now appear disconnected.\n     *\n     * @return Whether background data usage is allowed.\n     ",
+    "links" : [ "#getActiveNetworkInfo()", "android.os.Build.VERSION_CODES#ICE_CREAM_SANDWICH", "#ACTION_BACKGROUND_DATA_SETTING_CHANGED" ]
+  }, {
+    "name" : "public void setBackgroundDataSetting(boolean allowBackgroundData)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the value of the setting for background data usage.\n     *\n     * @param allowBackgroundData Whether an application should use data while\n     *            it is in the background.\n     *\n     * @attr ref android.Manifest.permission#CHANGE_BACKGROUND_DATA_SETTING\n     * @see #getBackgroundDataSetting()\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkQuotaInfo getActiveNetworkQuotaInfo()",
+    "returnType" : "NetworkQuotaInfo",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getMobileDataEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     * @deprecated Talk to TelephonyManager directly\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private INetworkManagementService getNetworkManagementService()",
+    "returnType" : "INetworkManagementService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void addDefaultNetworkActiveListener(final OnNetworkActiveListener l)",
+    "returnType" : "void",
+    "comment" : "\n     * Start listening to reports when the system's default data network is active, meaning it is\n     * a good time to perform network traffic.  Use {@link #isDefaultNetworkActive()}\n     * to determine the current state of the system's default network after registering the\n     * listener.\n     * <p>\n     * If the process default network has been set with\n     * {@link ConnectivityManager#bindProcessToNetwork} this function will not\n     * reflect the process's default, but the system default.\n     *\n     * @param l The listener to be told when the network is active.\n     ",
+    "links" : [ "#isDefaultNetworkActive()", "android.net.ConnectivityManager#bindProcessToNetwork" ]
+  }, {
+    "name" : "public void removeDefaultNetworkActiveListener(@NonNull OnNetworkActiveListener l)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove network active listener previously registered with\n     * {@link #addDefaultNetworkActiveListener}.\n     *\n     * @param l Previously registered listener.\n     ",
+    "links" : [ "#addDefaultNetworkActiveListener" ]
+  }, {
+    "name" : "public boolean isDefaultNetworkActive()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return whether the data network is currently active.  An active network means that\n     * it is currently in a high power state for performing data transmission.  On some\n     * types of networks, it may be expensive to move and stay in such a state, so it is\n     * more power efficient to batch network traffic together when the radio is already in\n     * this state.  This method tells you whether right now is currently a good time to\n     * initiate network traffic, as the network is already active.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ConnectivityManager from(Context context)",
+    "returnType" : "ConnectivityManager",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public NetworkRequest getDefaultRequest()",
+    "returnType" : "NetworkRequest",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final void enforceChangePermission(Context context)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : " static ConnectivityManager getInstanceOrNull()",
+    "returnType" : "ConnectivityManager",
+    "comment" : "\n     * @deprecated - use getSystemService. This is a kludge to support static access in certain\n     *               situations where a Context pointer is unavailable.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ConnectivityManager getInstance()",
+    "returnType" : "ConnectivityManager",
+    "comment" : "\n     * @deprecated - use getSystemService. This is a kludge to support static access in certain\n     *               situations where a Context pointer is unavailable.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] getTetherableIfaces()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the set of tetherable, available interfaces.  This list is limited by\n     * device configuration and current interface existence.\n     *\n     * @return an array of 0 or more Strings of tetherable interface names.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetherableInterfacesChanged(List)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onTetherableInterfacesChanged(List)" ]
+  }, {
+    "name" : "public String[] getTetheredIfaces()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the set of tethered interfaces.\n     *\n     * @return an array of 0 or more String of currently tethered interface names.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetherableInterfacesChanged(List)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onTetherableInterfacesChanged(List)" ]
+  }, {
+    "name" : "public String[] getTetheringErroredIfaces()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the set of interface names which attempted to tether but\n     * failed.  Re-attempting to tether may cause them to reset to the Tethered\n     * state.  Alternatively, causing the interface to be destroyed and recreated\n     * may cause them to reset to the available state.\n     * {@link ConnectivityManager#getLastTetherError} can be used to get more\n     * information on the cause of the errors.\n     *\n     * @return an array of 0 or more String indicating the interface names\n     *        which failed to tether.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onError(String, int)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onError(String", "android.net.ConnectivityManager#getLastTetherError" ]
+  }, {
+    "name" : "public String[] getTetheredDhcpRanges()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the set of tethered dhcp ranges.\n     *\n     * @deprecated This method is not supported.\n     * TODO: remove this function when all of clients are removed.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int tether(String iface)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to tether the named interface.  This will setup a dhcp server\n     * on the interface, forward and NAT IP packets and forward DNS requests\n     * to the best active upstream network interface.  Note that if no upstream\n     * IP network interface is available, dhcp will still run and traffic will be\n     * allowed between the tethered devices and this device, though upstream net\n     * access will of course fail until an upstream network interface becomes\n     * active.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * <p>WARNING: New clients should not use this function. The only usages should be in PanService\n     * and WifiStateMachine which need direct access. All other clients should use\n     * {@link #startTethering} and {@link #stopTethering} which encapsulate proper provisioning\n     * logic.</p>\n     *\n     * @param iface the interface name to tether.\n     * @return error a {@code TETHER_ERROR} value indicating success or failure type\n     * @deprecated Use {@link TetheringManager#startTethering} instead\n     *\n     * {@hide}\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#startTethering", "#stopTethering", "android.net.TetheringManager#startTethering" ]
+  }, {
+    "name" : "public int untether(String iface)",
+    "returnType" : "int",
+    "comment" : "\n     * Stop tethering the named interface.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * <p>WARNING: New clients should not use this function. The only usages should be in PanService\n     * and WifiStateMachine which need direct access. All other clients should use\n     * {@link #startTethering} and {@link #stopTethering} which encapsulate proper provisioning\n     * logic.</p>\n     *\n     * @param iface the interface name to untether.\n     * @return error a {@code TETHER_ERROR} value indicating success or failure type\n     *\n     * {@hide}\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#startTethering", "#stopTethering" ]
+  }, {
+    "name" : "public boolean isTetheringSupported()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check if the device allows for tethering.  It may be disabled via\n     * {@code ro.tether.denied} system property, Settings.TETHER_SUPPORTED or\n     * due to device configuration.\n     *\n     * <p>If this app does not have permission to use this API, it will always\n     * return false rather than throw an exception.</p>\n     *\n     * <p>If the device has a hotspot provisioning app, the caller is required to hold the\n     * {@link android.Manifest.permission.TETHER_PRIVILEGED} permission.</p>\n     *\n     * <p>Otherwise, this method requires the caller to hold the ability to modify system\n     * settings as determined by {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @return a boolean - {@code true} indicating Tethering is supported.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetheringSupported(boolean)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission.TETHER_PRIVILEGED", "android.net.TetheringManager.TetheringEventCallback#onTetheringSupported(boolean)" ]
+  }, {
+    "name" : "public void startTethering(int type, boolean showProvisioningUi, final OnStartTetheringCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Convenient overload for\n     * {@link #startTethering(int, boolean, OnStartTetheringCallback, Handler)} which passes a null\n     * handler to run on the current thread's {@link Looper}.\n     *\n     * @deprecated Use {@link TetheringManager#startTethering} instead.\n     * @hide\n     ",
+    "links" : [ "#startTethering(int", "android.os.Looper", "android.net.TetheringManager#startTethering" ]
+  }, {
+    "name" : "public void startTethering(int type, boolean showProvisioningUi, final OnStartTetheringCallback callback, Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Runs tether provisioning for the given type if needed and then starts tethering if\n     * the check succeeds. If no carrier provisioning is required for tethering, tethering is\n     * enabled immediately. If provisioning fails, tethering will not be enabled. It also\n     * schedules tether provisioning re-checks if appropriate.\n     *\n     * @param type The type of tethering to start. Must be one of\n     *         {@link ConnectivityManager.TETHERING_WIFI},\n     *         {@link ConnectivityManager.TETHERING_USB}, or\n     *         {@link ConnectivityManager.TETHERING_BLUETOOTH}.\n     * @param showProvisioningUi a boolean indicating to show the provisioning app UI if there\n     *         is one. This should be true the first time this function is called and also any time\n     *         the user can see this UI. It gives users information from their carrier about the\n     *         check failing and how they can sign up for tethering if possible.\n     * @param callback an {@link OnStartTetheringCallback} which will be called to notify the caller\n     *         of the result of trying to tether.\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     *\n     * @deprecated Use {@link TetheringManager#startTethering} instead.\n     * @hide\n     ",
+    "links" : [ "ConnectivityManager.TETHERING_WIFI", "ConnectivityManager.TETHERING_BLUETOOTH", "ConnectivityManager.TETHERING_USB", "android.os.Handler", "OnStartTetheringCallback", "android.net.TetheringManager#startTethering" ]
+  }, {
+    "name" : "public void stopTethering(int type)",
+    "returnType" : "void",
+    "comment" : "\n     * Stops tethering for the given type. Also cancels any provisioning rechecks for that type if\n     * applicable.\n     *\n     * @param type The type of tethering to stop. Must be one of\n     *         {@link ConnectivityManager.TETHERING_WIFI},\n     *         {@link ConnectivityManager.TETHERING_USB}, or\n     *         {@link ConnectivityManager.TETHERING_BLUETOOTH}.\n     *\n     * @deprecated Use {@link TetheringManager#stopTethering} instead.\n     * @hide\n     ",
+    "links" : [ "ConnectivityManager.TETHERING_WIFI", "ConnectivityManager.TETHERING_BLUETOOTH", "ConnectivityManager.TETHERING_USB", "android.net.TetheringManager#stopTethering" ]
+  }, {
+    "name" : "public void registerTetheringEventCallback(@NonNull @CallbackExecutor Executor executor, @NonNull final OnTetheringEventCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Start listening to tethering change events. Any new added callback will receive the last\n     * tethering status right away. If callback is registered when tethering has no upstream or\n     * disabled, {@link OnTetheringEventCallback#onUpstreamChanged} will immediately be called\n     * with a null argument. The same callback object cannot be registered twice.\n     *\n     * @param executor the executor on which callback will be invoked.\n     * @param callback the callback to be called when tethering has change events.\n     *\n     * @deprecated Use {@link TetheringManager#registerTetheringEventCallback} instead.\n     * @hide\n     ",
+    "links" : [ "#onUpstreamChanged", "android.net.TetheringManager#registerTetheringEventCallback" ]
+  }, {
+    "name" : "public void unregisterTetheringEventCallback(@NonNull final OnTetheringEventCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove tethering event callback previously registered with\n     * {@link #registerTetheringEventCallback}.\n     *\n     * @param callback previously registered callback.\n     *\n     * @deprecated Use {@link TetheringManager#unregisterTetheringEventCallback} instead.\n     * @hide\n     ",
+    "links" : [ "#registerTetheringEventCallback", "android.net.TetheringManager#unregisterTetheringEventCallback" ]
+  }, {
+    "name" : "public String[] getTetherableUsbRegexs()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the list of regular expressions that define any tetherable\n     * USB network interfaces.  If USB tethering is not supported by the\n     * device, this list should be empty.\n     *\n     * @return an array of 0 or more regular expression Strings defining\n     *        what interfaces are considered tetherable usb interfaces.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onTetherableInterfaceRegexpsChanged" ]
+  }, {
+    "name" : "public String[] getTetherableWifiRegexs()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the list of regular expressions that define any tetherable\n     * Wifi network interfaces.  If Wifi tethering is not supported by the\n     * device, this list should be empty.\n     *\n     * @return an array of 0 or more regular expression Strings defining\n     *        what interfaces are considered tetherable wifi interfaces.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onTetherableInterfaceRegexpsChanged" ]
+  }, {
+    "name" : "public String[] getTetherableBluetoothRegexs()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Get the list of regular expressions that define any tetherable\n     * Bluetooth network interfaces.  If Bluetooth tethering is not supported by the\n     * device, this list should be empty.\n     *\n     * @return an array of 0 or more regular expression Strings defining\n     *        what interfaces are considered tetherable bluetooth interfaces.\n     *\n     * @deprecated Use {@link TetheringEventCallback#onTetherableInterfaceRegexpsChanged(\n     *TetheringManager.TetheringInterfaceRegexps)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onTetherableInterfaceRegexpsChanged(" ]
+  }, {
+    "name" : "public int setUsbTethering(boolean enable)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to both alter the mode of USB and Tethering of USB.  A\n     * utility method to deal with some of the complexity of USB - will\n     * attempt to switch to Rndis and subsequently tether the resulting\n     * interface on {@code true} or turn off tethering and switch off\n     * Rndis on {@code false}.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param enable a boolean - {@code true} to enable tethering\n     * @return error a {@code TETHER_ERROR} value indicating success or failure type\n     * @deprecated Use {@link TetheringManager#startTethering} instead\n     *\n     * {@hide}\n     ",
+    "links" : [ "android.provider.Settings.System#canWrite", "android.Manifest.permission#CHANGE_NETWORK_STATE", "android.net.TetheringManager#startTethering" ]
+  }, {
+    "name" : "public int getLastTetherError(String iface)",
+    "returnType" : "int",
+    "comment" : "\n     * Get a more detailed error code after a Tethering or Untethering\n     * request asynchronously failed.\n     *\n     * @param iface The name of the interface of interest\n     * @return error The error code of the last error tethering or untethering the named\n     *               interface\n     *\n     * @deprecated Use {@link TetheringEventCallback#onError(String, int)} instead.\n     * {@hide}\n     ",
+    "links" : [ "android.net.TetheringManager.TetheringEventCallback#onError(String" ]
+  }, {
+    "name" : "public void getLatestTetheringEntitlementResult(int type, boolean showEntitlementUi, @NonNull @CallbackExecutor Executor executor, @NonNull final OnTetheringEntitlementResultListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Get the last value of the entitlement check on this downstream. If the cached value is\n     * {@link #TETHER_ERROR_NO_ERROR} or showEntitlementUi argument is false, it just return the\n     * cached value. Otherwise, a UI-based entitlement check would be performed. It is not\n     * guaranteed that the UI-based entitlement check will complete in any specific time period\n     * and may in fact never complete. Any successful entitlement check the platform performs for\n     * any reason will update the cached value.\n     *\n     * @param type the downstream type of tethering. Must be one of\n     *         {@link #TETHERING_WIFI},\n     *         {@link #TETHERING_USB}, or\n     *         {@link #TETHERING_BLUETOOTH}.\n     * @param showEntitlementUi a boolean indicating whether to run UI-based entitlement check.\n     * @param executor the executor on which callback will be invoked.\n     * @param listener an {@link OnTetheringEntitlementResultListener} which will be called to\n     *         notify the caller of the result of entitlement check. The listener may be called zero\n     *         or one time.\n     * @deprecated Use {@link TetheringManager#requestLatestTetheringEntitlementResult} instead.\n     * {@hide}\n     ",
+    "links" : [ "#TETHERING_WIFI", "#TETHERING_BLUETOOTH", "android.net.TetheringManager#requestLatestTetheringEntitlementResult", "#TETHER_ERROR_NO_ERROR", "#TETHERING_USB", "OnTetheringEntitlementResultListener" ]
+  }, {
+    "name" : "public void reportInetCondition(int networkType, int percentage)",
+    "returnType" : "void",
+    "comment" : "\n     * Report network connectivity status.  This is currently used only\n     * to alter status bar UI.\n     * <p>This method requires the caller to hold the permission\n     * {@link android.Manifest.permission#STATUS_BAR}.\n     *\n     * @param networkType The type of network you want to report on\n     * @param percentage The quality of the connection 0 is bad, 100 is good\n     * @deprecated Types are deprecated. Use {@link #reportNetworkConnectivity} instead.\n     * {@hide}\n     ",
+    "links" : [ "#reportNetworkConnectivity", "android.Manifest.permission#STATUS_BAR" ]
+  }, {
+    "name" : "public void reportBadNetwork(@Nullable Network network)",
+    "returnType" : "void",
+    "comment" : "\n     * Report a problem network to the framework.  This provides a hint to the system\n     * that there might be connectivity problems on this network and may cause\n     * the framework to re-evaluate network connectivity and/or switch to another\n     * network.\n     *\n     * @param network The {@link Network} the application was attempting to use\n     *                or {@code null} to indicate the current default network.\n     * @deprecated Use {@link #reportNetworkConnectivity} which allows reporting both\n     *             working and non-working connectivity.\n     ",
+    "links" : [ "#reportNetworkConnectivity", "android.net.Network" ]
+  }, {
+    "name" : "public void reportNetworkConnectivity(@Nullable Network network, boolean hasConnectivity)",
+    "returnType" : "void",
+    "comment" : "\n     * Report to the framework whether a network has working connectivity.\n     * This provides a hint to the system that a particular network is providing\n     * working connectivity or not.  In response the framework may re-evaluate\n     * the network's connectivity and might take further action thereafter.\n     *\n     * @param network The {@link Network} the application was attempting to use\n     *                or {@code null} to indicate the current default network.\n     * @param hasConnectivity {@code true} if the application was able to successfully access the\n     *                        Internet using {@code network} or {@code false} if not.\n     ",
+    "links" : [ "android.net.Network" ]
+  }, {
+    "name" : "public void setGlobalProxy(ProxyInfo p)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a network-independent global http proxy.  This is not normally what you want\n     * for typical HTTP proxies - they are general network dependent.  However if you're\n     * doing something unusual like general internal filtering this may be useful.  On\n     * a private network where the proxy is not accessible, you may break HTTP using this.\n     *\n     * @param p A {@link ProxyInfo} object defining the new global\n     *        HTTP proxy.  A {@code null} value will clear the global HTTP proxy.\n     * @hide\n     ",
+    "links" : [ "android.net.ProxyInfo" ]
+  }, {
+    "name" : "public ProxyInfo getGlobalProxy()",
+    "returnType" : "ProxyInfo",
+    "comment" : "\n     * Retrieve any network-independent global HTTP proxy.\n     *\n     * @return {@link ProxyInfo} for the current global HTTP proxy or {@code null}\n     *        if no global HTTP proxy is set.\n     * @hide\n     ",
+    "links" : [ "android.net.ProxyInfo" ]
+  }, {
+    "name" : "public ProxyInfo getProxyForNetwork(Network network)",
+    "returnType" : "ProxyInfo",
+    "comment" : "\n     * Retrieve the global HTTP proxy, or if no global HTTP proxy is set, a\n     * network-specific HTTP proxy.  If {@code network} is null, the\n     * network-specific proxy returned is the proxy of the default active\n     * network.\n     *\n     * @return {@link ProxyInfo} for the current global HTTP proxy, or if no\n     *         global HTTP proxy is set, {@code ProxyInfo} for {@code network},\n     *         or when {@code network} is {@code null},\n     *         the {@code ProxyInfo} for the default active network.  Returns\n     *         {@code null} when no proxy applies or the caller doesn't have\n     *         permission to use {@code network}.\n     * @hide\n     ",
+    "links" : [ "android.net.ProxyInfo" ]
+  }, {
+    "name" : "public ProxyInfo getDefaultProxy()",
+    "returnType" : "ProxyInfo",
+    "comment" : "\n     * Get the current default HTTP proxy settings.  If a global proxy is set it will be returned,\n     * otherwise if this process is bound to a {@link Network} using\n     * {@link #bindProcessToNetwork} then that {@code Network}'s proxy is returned, otherwise\n     * the default network's proxy is returned.\n     *\n     * @return the {@link ProxyInfo} for the current HTTP proxy, or {@code null} if no\n     *        HTTP proxy is active.\n     ",
+    "links" : [ "android.net.Network", "#bindProcessToNetwork", "android.net.ProxyInfo" ]
+  }, {
+    "name" : "public boolean isNetworkSupported(int networkType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the hardware supports the given network type\n     * else it returns false.  This doesn't indicate we have coverage\n     * or are authorized onto a network, just whether or not the\n     * hardware supports it.  For example a GSM phone without a SIM\n     * should still return {@code true} for mobile data, but a wifi only\n     * tablet would return {@code false}.\n     *\n     * @param networkType The network type we'd like to check\n     * @return {@code true} if supported, else {@code false}\n     * @deprecated Types are deprecated. Use {@link NetworkCapabilities} instead.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkCapabilities" ]
+  }, {
+    "name" : "public boolean isActiveNetworkMetered()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns if the currently active data network is metered. A network is\n     * classified as metered when the user is sensitive to heavy data usage on\n     * that connection due to monetary costs, data limitations or\n     * battery/performance issues. You should check this before doing large\n     * data transfers, and warn the user or delay the operation until another\n     * network is available.\n     *\n     * @return {@code true} if large transfers should be avoided, otherwise\n     *        {@code false}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean updateLockdownVpn()",
+    "returnType" : "boolean",
+    "comment" : "\n     * If the LockdownVpn mechanism is enabled, updates the vpn\n     * with a reload of its profile.\n     *\n     * @return a boolean with {@code} indicating success\n     *\n     * <p>This method can only be called by the system UID\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int checkMobileProvisioning(int suggestedTimeOutMs)",
+    "returnType" : "int",
+    "comment" : "\n     * Check mobile provisioning.\n     *\n     * @param suggestedTimeOutMs, timeout in milliseconds\n     *\n     * @return time out that will be used, maybe less that suggestedTimeOutMs\n     * -1 if an error.\n     *\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getMobileProvisioningUrl()",
+    "returnType" : "String",
+    "comment" : "\n     * Get the mobile provisioning url.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setProvisioningNotificationVisible(boolean visible, int networkType, String action)",
+    "returnType" : "void",
+    "comment" : "\n     * Set sign in error notification to visible or in visible\n     *\n     * {@hide}\n     * @deprecated Doesn't properly deal with multiple connected networks of the same type.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAirplaneMode(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the value for enabling/disabling airplane mode\n     *\n     * @param enable whether to enable airplane mode or not\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int registerNetworkFactory(Messenger messenger, String name)",
+    "returnType" : "int",
+    "comment" : " {@hide} - returns the factory serial number ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unregisterNetworkFactory(Messenger messenger)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public int registerNetworkProvider(@NonNull NetworkProvider provider)",
+    "returnType" : "int",
+    "comment" : "\n     * Registers the specified {@link NetworkProvider}.\n     * Each listener must only be registered once. The listener can be unregistered with\n     * {@link #unregisterNetworkProvider}.\n     *\n     * @param provider the provider to register\n     * @return the ID of the provider. This ID must be used by the provider when registering\n     *         {@link android.net.NetworkAgent}s.\n     * @hide\n     ",
+    "links" : [ "android.net.NetworkProvider", "android.net.NetworkAgent", "#unregisterNetworkProvider" ]
+  }, {
+    "name" : "public void unregisterNetworkProvider(@NonNull NetworkProvider provider)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters the specified NetworkProvider.\n     *\n     * @param provider the provider to unregister\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void declareNetworkRequestUnfulfillable(@NonNull NetworkRequest request)",
+    "returnType" : "void",
+    "comment" : " @hide exposed via the NetworkProvider class. ",
+    "links" : [ ]
+  }, {
+    "name" : "public Network registerNetworkAgent(Messenger messenger, NetworkInfo ni, LinkProperties lp, NetworkCapabilities nc, int score, NetworkAgentConfig config)",
+    "returnType" : "Network",
+    "comment" : "\n     * @hide\n     * Register a NetworkAgent with ConnectivityService.\n     * @return Network corresponding to NetworkAgent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Network registerNetworkAgent(Messenger messenger, NetworkInfo ni, LinkProperties lp, NetworkCapabilities nc, int score, NetworkAgentConfig config, int providerId)",
+    "returnType" : "Network",
+    "comment" : "\n     * @hide\n     * Register a NetworkAgent with ConnectivityService.\n     * @return Network corresponding to NetworkAgent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static RuntimeException convertServiceException(ServiceSpecificException e)",
+    "returnType" : "RuntimeException",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getCallbackName(int whichCallback)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private CallbackHandler getDefaultHandler()",
+    "returnType" : "CallbackHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private NetworkRequest sendRequestForNetwork(NetworkCapabilities need, NetworkCallback callback, int timeoutMs, int action, int legacyType, CallbackHandler handler)",
+    "returnType" : "NetworkRequest",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, int timeoutMs, int legacyType, @NonNull Handler handler, @NonNull NetworkCallback networkCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Helper function to request a network with a particular legacy type.\n     *\n     * This API is only for use in internal system code that requests networks with legacy type and\n     * relies on CONNECTIVITY_ACTION broadcasts instead of NetworkCallbacks. New caller should use\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback, Handler)} instead.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param timeoutMs The time in milliseconds to attempt looking for a suitable network\n     *                  before {@link NetworkCallback#onUnavailable()} is called. The timeout must\n     *                  be a positive value (i.e. >0).\n     * @param legacyType to specify the network type(#TYPE_*).\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     * @param networkCallback The {@link NetworkCallback} to be utilized for this request. Note\n     *                        the callback must not be shared - it uniquely specifies this request.\n     *\n     * @hide\n     ",
+    "links" : [ "android.os.Handler", "#requestNetwork(NetworkRequest", "android.net.NetworkRequest", "#onUnavailable()", "NetworkCallback" ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a network to satisfy a set of {@link android.net.NetworkCapabilities}.\n     *\n     * <p>This method will attempt to find the best network that matches the passed\n     * {@link NetworkRequest}, and to bring up one that does if none currently satisfies the\n     * criteria. The platform will evaluate which network is the best at its own discretion.\n     * Throughput, latency, cost per byte, policy, user preference and other considerations\n     * may be factored in the decision of what is considered the best network.\n     *\n     * <p>As long as this request is outstanding, the platform will try to maintain the best network\n     * matching this request, while always attempting to match the request to a better network if\n     * possible. If a better match is found, the platform will switch this request to the now-best\n     * network and inform the app of the newly best network by invoking\n     * {@link NetworkCallback#onAvailable(Network)} on the provided callback. Note that the platform\n     * will not try to maintain any other network than the best one currently matching the request:\n     * a network not matching any network request may be disconnected at any time.\n     *\n     * <p>For example, an application could use this method to obtain a connected cellular network\n     * even if the device currently has a data connection over Ethernet. This may cause the cellular\n     * radio to consume additional power. Or, an application could inform the system that it wants\n     * a network supporting sending MMSes and have the system let it know about the currently best\n     * MMS-supporting network through the provided {@link NetworkCallback}.\n     *\n     * <p>The status of the request can be followed by listening to the various callbacks described\n     * in {@link NetworkCallback}. The {@link Network} object passed to the callback methods can be\n     * used to direct traffic to the network (although accessing some networks may be subject to\n     * holding specific permissions). Callers will learn about the specific characteristics of the\n     * network through\n     * {@link NetworkCallback#onCapabilitiesChanged(Network, NetworkCapabilities)} and\n     * {@link NetworkCallback#onLinkPropertiesChanged(Network, LinkProperties)}. The methods of the\n     * provided {@link NetworkCallback} will only be invoked due to changes in the best network\n     * matching the request at any given time; therefore when a better network matching the request\n     * becomes available, the {@link NetworkCallback#onAvailable(Network)} method is called\n     * with the new network after which no further updates are given about the previously-best\n     * network, unless it becomes the best again at some later time. All callbacks are invoked\n     * in order on the same thread, which by default is a thread created by the framework running\n     * in the app.\n     * {@see #requestNetwork(NetworkRequest, NetworkCallback, Handler)} to change where the\n     * callbacks are invoked.\n     *\n     * <p>This{@link NetworkRequest} will live until released via\n     * {@link #unregisterNetworkCallback(NetworkCallback)} or the calling application exits, at\n     * which point the system may let go of the network at any time.\n     *\n     * <p>A version of this method which takes a timeout is\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback, int)}, that an app can use to only\n     * wait for a limited amount of time for the network to become unavailable.\n     *\n     * <p>It is presently unsupported to request a network with mutable\n     * {@link NetworkCapabilities} such as\n     * {@link NetworkCapabilities#NET_CAPABILITY_VALIDATED} or\n     * {@link NetworkCapabilities#NET_CAPABILITY_CAPTIVE_PORTAL}\n     * as these {@code NetworkCapabilities} represent states that a particular\n     * network may never attain, and whether a network will attain these states\n     * is unknown prior to bringing up the network so the framework does not\n     * know how to go about satisfying a request with these capabilities.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #registerNetworkCallback} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with\n     * {@link #unregisterNetworkCallback(NetworkCallback)}.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} to be utilized for this request. Note\n     *                        the callback must not be shared - it uniquely specifies this request.\n     *                        The callback is invoked on the default internal Handler.\n     * @throws IllegalArgumentException if {@code request} contains invalid network capabilities.\n     * @throws SecurityException if missing the appropriate permissions.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "android.Manifest.permission#CHANGE_NETWORK_STATE", "#requestNetwork(NetworkRequest", "android.net.NetworkCapabilities", "#onLinkPropertiesChanged(Network", "android.net.NetworkCapabilities#NET_CAPABILITY_VALIDATED", "android.net.NetworkRequest", "android.net.Network", "NetworkCallback", "android.provider.Settings.System#canWrite", "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "#onCapabilitiesChanged(Network", "#onAvailable(Network)", "android.net.NetworkCapabilities#NET_CAPABILITY_CAPTIVE_PORTAL", "#registerNetworkCallback", "#unregisterNetworkCallback(NetworkCallback)" ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a network to satisfy a set of {@link android.net.NetworkCapabilities}.\n     *\n     * This method behaves identically to {@link #requestNetwork(NetworkRequest, NetworkCallback)}\n     * but runs all the callbacks on the passed Handler.\n     *\n     * <p>This method has the same permission requirements as\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback)}, is subject to the same limitations,\n     * and throws the same exceptions in the same conditions.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} to be utilized for this request. Note\n     *                        the callback must not be shared - it uniquely specifies this request.\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     ",
+    "links" : [ "android.os.Handler", "#requestNetwork(NetworkRequest", "android.net.NetworkCapabilities", "android.net.NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, int timeoutMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a network to satisfy a set of {@link android.net.NetworkCapabilities}, limited\n     * by a timeout.\n     *\n     * This function behaves identically to the non-timed-out version\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback)}, but if a suitable network\n     * is not found within the given time (in milliseconds) the\n     * {@link NetworkCallback#onUnavailable()} callback is called. The request can still be\n     * released normally by calling {@link #unregisterNetworkCallback(NetworkCallback)} but does\n     * not have to be released if timed-out (it is automatically released). Unregistering a\n     * request that timed out is not an error.\n     *\n     * <p>Do not use this method to poll for the existence of specific networks (e.g. with a small\n     * timeout) - {@link #registerNetworkCallback(NetworkRequest, NetworkCallback)} is provided\n     * for that purpose. Calling this method will attempt to bring up the requested network.\n     *\n     * <p>This method has the same permission requirements as\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback)}, is subject to the same limitations,\n     * and throws the same exceptions in the same conditions.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} to be utilized for this request. Note\n     *                        the callback must not be shared - it uniquely specifies this request.\n     * @param timeoutMs The time in milliseconds to attempt looking for a suitable network\n     *                  before {@link NetworkCallback#onUnavailable()} is called. The timeout must\n     *                  be a positive value (i.e. >0).\n     ",
+    "links" : [ "#registerNetworkCallback(NetworkRequest", "#unregisterNetworkCallback(NetworkCallback)", "#requestNetwork(NetworkRequest", "android.net.NetworkCapabilities", "android.net.NetworkRequest", "#onUnavailable()", "NetworkCallback" ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler, int timeoutMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a network to satisfy a set of {@link android.net.NetworkCapabilities}, limited\n     * by a timeout.\n     *\n     * This method behaves identically to\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback, int)} but runs all the callbacks\n     * on the passed Handler.\n     *\n     * <p>This method has the same permission requirements as\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback)}, is subject to the same limitations,\n     * and throws the same exceptions in the same conditions.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} to be utilized for this request. Note\n     *                        the callback must not be shared - it uniquely specifies this request.\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     * @param timeoutMs The time in milliseconds to attempt looking for a suitable network\n     *                  before {@link NetworkCallback#onUnavailable} is called.\n     ",
+    "links" : [ "android.os.Handler", "#onUnavailable", "#requestNetwork(NetworkRequest", "android.net.NetworkCapabilities", "android.net.NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public void requestNetwork(@NonNull NetworkRequest request, @NonNull PendingIntent operation)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a network to satisfy a set of {@link android.net.NetworkCapabilities}.\n     *\n     * This function behaves identically to the version that takes a NetworkCallback, but instead\n     * of {@link NetworkCallback} a {@link PendingIntent} is used.  This means\n     * the request may outlive the calling application and get called back when a suitable\n     * network is found.\n     * <p>\n     * The operation is an Intent broadcast that goes to a broadcast receiver that\n     * you registered with {@link Context#registerReceiver} or through the\n     * &lt;receiver&gt; tag in an AndroidManifest.xml file\n     * <p>\n     * The operation Intent is delivered with two extras, a {@link Network} typed\n     * extra called {@link #EXTRA_NETWORK} and a {@link NetworkRequest}\n     * typed extra called {@link #EXTRA_NETWORK_REQUEST} containing\n     * the original requests parameters.  It is important to create a new,\n     * {@link NetworkCallback} based request before completing the processing of the\n     * Intent to reserve the network or it will be released shortly after the Intent\n     * is processed.\n     * <p>\n     * If there is already a request for this Intent registered (with the equality of\n     * two Intents defined by {@link Intent#filterEquals}), then it will be removed and\n     * replaced by this one, effectively releasing the previous {@link NetworkRequest}.\n     * <p>\n     * The request may be released normally by calling\n     * {@link #releaseNetworkRequest(android.app.PendingIntent)}.\n     * <p>It is presently unsupported to request a network with either\n     * {@link NetworkCapabilities#NET_CAPABILITY_VALIDATED} or\n     * {@link NetworkCapabilities#NET_CAPABILITY_CAPTIVE_PORTAL}\n     * as these {@code NetworkCapabilities} represent states that a particular\n     * network may never attain, and whether a network will attain these states\n     * is unknown prior to bringing up the network so the framework does not\n     * know how to go about satisfying a request with these capabilities.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #registerNetworkCallback} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with {@link #unregisterNetworkCallback(PendingIntent)}\n     * or {@link #releaseNetworkRequest(PendingIntent)}.\n     *\n     * <p>This method requires the caller to hold either the\n     * {@link android.Manifest.permission#CHANGE_NETWORK_STATE} permission\n     * or the ability to modify system settings as determined by\n     * {@link android.provider.Settings.System#canWrite}.</p>\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param operation Action to perform when the network is available (corresponds\n     *                  to the {@link NetworkCallback#onAvailable} call.  Typically\n     *                  comes from {@link PendingIntent#getBroadcast}. Cannot be null.\n     * @throws IllegalArgumentException if {@code request} contains invalid network capabilities.\n     * @throws SecurityException if missing the appropriate permissions.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "#releaseNetworkRequest(android.app.PendingIntent)", "android.Manifest.permission#CHANGE_NETWORK_STATE", "#releaseNetworkRequest(PendingIntent)", "android.content.Context#registerReceiver", "android.net.NetworkCapabilities", "android.app.PendingIntent", "android.net.NetworkCapabilities#NET_CAPABILITY_VALIDATED", "android.net.Network", "android.net.NetworkRequest", "NetworkCallback", "android.provider.Settings.System#canWrite", "android.app.PendingIntent#filterEquals", "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "#onAvailable", "#unregisterNetworkCallback(PendingIntent)", "android.app.PendingIntent#getBroadcast", "#EXTRA_NETWORK_REQUEST", "android.net.NetworkCapabilities#NET_CAPABILITY_CAPTIVE_PORTAL", "#registerNetworkCallback", "#EXTRA_NETWORK" ]
+  }, {
+    "name" : "public void releaseNetworkRequest(@NonNull PendingIntent operation)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a request made via {@link #requestNetwork(NetworkRequest, android.app.PendingIntent)}\n     * <p>\n     * This method has the same behavior as\n     * {@link #unregisterNetworkCallback(android.app.PendingIntent)} with respect to\n     * releasing network resources and disconnecting.\n     *\n     * @param operation A PendingIntent equal (as defined by {@link Intent#filterEquals}) to the\n     *                  PendingIntent passed to\n     *                  {@link #requestNetwork(NetworkRequest, android.app.PendingIntent)} with the\n     *                  corresponding NetworkRequest you'd like to remove. Cannot be null.\n     ",
+    "links" : [ "android.app.PendingIntent#filterEquals", "#unregisterNetworkCallback(android.app.PendingIntent)", "#requestNetwork(NetworkRequest" ]
+  }, {
+    "name" : "private static void checkPendingIntentNotNull(PendingIntent intent)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkCallbackNotNull(NetworkCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkTimeout(int timeoutMs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers to receive notifications about all networks which satisfy the given\n     * {@link NetworkRequest}.  The callbacks will continue to be called until\n     * either the application exits or {@link #unregisterNetworkCallback(NetworkCallback)} is\n     * called.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #requestNetwork} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with\n     * {@link #unregisterNetworkCallback(NetworkCallback)}.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} that the system will call as suitable\n     *                        networks change state.\n     *                        The callback is invoked on the default internal Handler.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "#unregisterNetworkCallback(NetworkCallback)", "#requestNetwork", "android.net.NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers to receive notifications about all networks which satisfy the given\n     * {@link NetworkRequest}.  The callbacks will continue to be called until\n     * either the application exits or {@link #unregisterNetworkCallback(NetworkCallback)} is\n     * called.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #requestNetwork} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with\n     * {@link #unregisterNetworkCallback(NetworkCallback)}.\n     *\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param networkCallback The {@link NetworkCallback} that the system will call as suitable\n     *                        networks change state.\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "android.os.Handler", "#unregisterNetworkCallback(NetworkCallback)", "#requestNetwork", "android.net.NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull PendingIntent operation)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a PendingIntent to be sent when a network is available which satisfies the given\n     * {@link NetworkRequest}.\n     *\n     * This function behaves identically to the version that takes a NetworkCallback, but instead\n     * of {@link NetworkCallback} a {@link PendingIntent} is used.  This means\n     * the request may outlive the calling application and get called back when a suitable\n     * network is found.\n     * <p>\n     * The operation is an Intent broadcast that goes to a broadcast receiver that\n     * you registered with {@link Context#registerReceiver} or through the\n     * &lt;receiver&gt; tag in an AndroidManifest.xml file\n     * <p>\n     * The operation Intent is delivered with two extras, a {@link Network} typed\n     * extra called {@link #EXTRA_NETWORK} and a {@link NetworkRequest}\n     * typed extra called {@link #EXTRA_NETWORK_REQUEST} containing\n     * the original requests parameters.\n     * <p>\n     * If there is already a request for this Intent registered (with the equality of\n     * two Intents defined by {@link Intent#filterEquals}), then it will be removed and\n     * replaced by this one, effectively releasing the previous {@link NetworkRequest}.\n     * <p>\n     * The request may be released normally by calling\n     * {@link #unregisterNetworkCallback(android.app.PendingIntent)}.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #requestNetwork} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with {@link #unregisterNetworkCallback(PendingIntent)}\n     * or {@link #releaseNetworkRequest(PendingIntent)}.\n     *\n     * @param request {@link NetworkRequest} describing this request.\n     * @param operation Action to perform when the network is available (corresponds\n     *                  to the {@link NetworkCallback#onAvailable} call.  Typically\n     *                  comes from {@link PendingIntent#getBroadcast}. Cannot be null.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "#releaseNetworkRequest(PendingIntent)", "android.content.Context#registerReceiver", "android.app.PendingIntent", "android.net.NetworkRequest", "android.net.Network", "NetworkCallback", "android.app.PendingIntent#filterEquals", "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "#onAvailable", "#unregisterNetworkCallback(PendingIntent)", "android.app.PendingIntent#getBroadcast", "#EXTRA_NETWORK_REQUEST", "#unregisterNetworkCallback(android.app.PendingIntent)", "#requestNetwork", "#EXTRA_NETWORK" ]
+  }, {
+    "name" : "public void registerDefaultNetworkCallback(@NonNull NetworkCallback networkCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers to receive notifications about changes in the system default network. The callbacks\n     * will continue to be called until either the application exits or\n     * {@link #unregisterNetworkCallback(NetworkCallback)} is called.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #requestNetwork} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with\n     * {@link #unregisterNetworkCallback(NetworkCallback)}.\n     *\n     * @param networkCallback The {@link NetworkCallback} that the system will call as the\n     *                        system default network changes.\n     *                        The callback is invoked on the default internal Handler.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "#unregisterNetworkCallback(NetworkCallback)", "#requestNetwork", "NetworkCallback" ]
+  }, {
+    "name" : "public void registerDefaultNetworkCallback(@NonNull NetworkCallback networkCallback, @NonNull Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers to receive notifications about changes in the system default network. The callbacks\n     * will continue to be called until either the application exits or\n     * {@link #unregisterNetworkCallback(NetworkCallback)} is called.\n     *\n     * <p>To avoid performance issues due to apps leaking callbacks, the system will limit the\n     * number of outstanding requests to 100 per app (identified by their UID), shared with\n     * all variants of this method, of {@link #requestNetwork} as well as\n     * {@link ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback}.\n     * Requesting a network with this method will count toward this limit. If this limit is\n     * exceeded, an exception will be thrown. To avoid hitting this issue and to conserve resources,\n     * make sure to unregister the callbacks with\n     * {@link #unregisterNetworkCallback(NetworkCallback)}.\n     *\n     * @param networkCallback The {@link NetworkCallback} that the system will call as the\n     *                        system default network changes.\n     * @param handler {@link Handler} to specify the thread upon which the callback will be invoked.\n     * @throws RuntimeException if the app already has too many callbacks registered.\n     ",
+    "links" : [ "android.net.ConnectivityDiagnosticsManager#registerConnectivityDiagnosticsCallback", "android.os.Handler", "#unregisterNetworkCallback(NetworkCallback)", "#requestNetwork", "NetworkCallback" ]
+  }, {
+    "name" : "public boolean requestBandwidthUpdate(@NonNull Network network)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Requests bandwidth update for a given {@link Network} and returns whether the update request\n     * is accepted by ConnectivityService. Once accepted, ConnectivityService will poll underlying\n     * network connection for updated bandwidth information. The caller will be notified via\n     * {@link ConnectivityManager.NetworkCallback} if there is an update. Notice that this\n     * method assumes that the caller has previously called\n     * {@link #registerNetworkCallback(NetworkRequest, NetworkCallback)} to listen for network\n     * changes.\n     *\n     * @param network {@link Network} specifying which network you're interested.\n     * @return {@code true} on success, {@code false} if the {@link Network} is no longer valid.\n     ",
+    "links" : [ "#registerNetworkCallback(NetworkRequest", "ConnectivityManager.NetworkCallback", "android.net.Network" ]
+  }, {
+    "name" : "public void unregisterNetworkCallback(@NonNull NetworkCallback networkCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters a {@code NetworkCallback} and possibly releases networks originating from\n     * {@link #requestNetwork(NetworkRequest, NetworkCallback)} and\n     * {@link #registerNetworkCallback(NetworkRequest, NetworkCallback)} calls.\n     * If the given {@code NetworkCallback} had previously been used with\n     * {@code #requestNetwork}, any networks that had been connected to only to satisfy that request\n     * will be disconnected.\n     *\n     * Notifications that would have triggered that {@code NetworkCallback} will immediately stop\n     * triggering it as soon as this call returns.\n     *\n     * @param networkCallback The {@link NetworkCallback} used when making the request.\n     ",
+    "links" : [ "#registerNetworkCallback(NetworkRequest", "#requestNetwork(NetworkRequest", "NetworkCallback" ]
+  }, {
+    "name" : "public void unregisterNetworkCallback(@NonNull PendingIntent operation)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters a callback previously registered via\n     * {@link #registerNetworkCallback(NetworkRequest, android.app.PendingIntent)}.\n     *\n     * @param operation A PendingIntent equal (as defined by {@link Intent#filterEquals}) to the\n     *                  PendingIntent passed to\n     *                  {@link #registerNetworkCallback(NetworkRequest, android.app.PendingIntent)}.\n     *                  Cannot be null.\n     ",
+    "links" : [ "#registerNetworkCallback(NetworkRequest", "android.app.PendingIntent#filterEquals" ]
+  }, {
+    "name" : "public void setAcceptUnvalidated(Network network, boolean accept, boolean always)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs the system whether it should switch to {@code network} regardless of whether it is\n     * validated or not. If {@code accept} is true, and the network was explicitly selected by the\n     * user (e.g., by selecting a Wi-Fi network in the Settings app), then the network will become\n     * the system default network regardless of any other network that's currently connected. If\n     * {@code always} is true, then the choice is remembered, so that the next time the user\n     * connects to this network, the system will switch to it.\n     *\n     * @param network The network to accept.\n     * @param accept Whether to accept the network even if unvalidated.\n     * @param always Whether to remember this choice in the future.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAcceptPartialConnectivity(Network network, boolean accept, boolean always)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs the system whether it should consider the network as validated even if it only has\n     * partial connectivity. If {@code accept} is true, then the network will be considered as\n     * validated even if connectivity is only partial. If {@code always} is true, then the choice\n     * is remembered, so that the next time the user connects to this network, the system will\n     * switch to it.\n     *\n     * @param network The network to accept.\n     * @param accept Whether to consider the network as validated even if it has partial\n     *               connectivity.\n     * @param always Whether to remember this choice in the future.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAvoidUnvalidated(Network network)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs the system to penalize {@code network}'s score when it becomes unvalidated. This is\n     * only meaningful if the system is configured not to penalize such networks, e.g., if the\n     * {@code config_networkAvoidBadWifi} configuration variable is set to 0 and the {@code\n     * NETWORK_AVOID_BAD_WIFI setting is unset}.\n     *\n     * @param network The network to accept.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startCaptivePortalApp(Network network)",
+    "returnType" : "void",
+    "comment" : "\n     * Requests that the system open the captive portal app on the specified network.\n     *\n     * @param network The network to log into.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startCaptivePortalApp(@NonNull Network network, @NonNull Bundle appExtras)",
+    "returnType" : "void",
+    "comment" : "\n     * Requests that the system open the captive portal app with the specified extras.\n     *\n     * <p>This endpoint is exclusively for use by the NetworkStack and is protected by the\n     * corresponding permission.\n     * @param network Network on which the captive portal was detected.\n     * @param appExtras Extras to include in the app start intent.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean shouldAvoidBadWifi()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determine whether the device is configured to avoid bad wifi.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMultipathPreference(@Nullable Network network)",
+    "returnType" : "int",
+    "comment" : "\n     * Provides a hint to the calling application on whether it is desirable to use the\n     * multinetwork APIs (e.g., {@link Network#openConnection}, {@link Network#bindSocket}, etc.)\n     * for multipath data transfer on this network when it is not the system default network.\n     * Applications desiring to use multipath network protocols should call this method before\n     * each such operation.\n     *\n     * @param network The network on which the application desires to use multipath data.\n     *                If {@code null}, this method will return the a preference that will generally\n     *                apply to metered networks.\n     * @return a bitwise OR of zero or more of the  {@code MULTIPATH_PREFERENCE_*} constants.\n     ",
+    "links" : [ "android.net.Network#bindSocket", "android.net.Network#openConnection" ]
+  }, {
+    "name" : "public void factoryReset()",
+    "returnType" : "void",
+    "comment" : "\n     * Resets all connectivity manager settings back to factory defaults.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean bindProcessToNetwork(@Nullable Network network)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Binds the current process to {@code network}.  All Sockets created in the future\n     * (and not explicitly bound via a bound SocketFactory from\n     * {@link Network#getSocketFactory() Network.getSocketFactory()}) will be bound to\n     * {@code network}.  All host name resolutions will be limited to {@code network} as well.\n     * Note that if {@code network} ever disconnects, all Sockets created in this way will cease to\n     * work and all host name resolutions will fail.  This is by design so an application doesn't\n     * accidentally use Sockets it thinks are still bound to a particular {@link Network}.\n     * To clear binding pass {@code null} for {@code network}.  Using individually bound\n     * Sockets created by Network.getSocketFactory().createSocket() and\n     * performing network-specific host name resolutions via\n     * {@link Network#getAllByName Network.getAllByName} is preferred to calling\n     * {@code bindProcessToNetwork}.\n     *\n     * @param network The {@link Network} to bind the current process to, or {@code null} to clear\n     *                the current binding.\n     * @return {@code true} on success, {@code false} if the {@link Network} is no longer valid.\n     ",
+    "links" : [ "android.net.Network#getSocketFactory()", "android.net.Network#getAllByName", "android.net.Network" ]
+  }, {
+    "name" : "public static boolean setProcessDefaultNetwork(@Nullable Network network)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Binds the current process to {@code network}.  All Sockets created in the future\n     * (and not explicitly bound via a bound SocketFactory from\n     * {@link Network#getSocketFactory() Network.getSocketFactory()}) will be bound to\n     * {@code network}.  All host name resolutions will be limited to {@code network} as well.\n     * Note that if {@code network} ever disconnects, all Sockets created in this way will cease to\n     * work and all host name resolutions will fail.  This is by design so an application doesn't\n     * accidentally use Sockets it thinks are still bound to a particular {@link Network}.\n     * To clear binding pass {@code null} for {@code network}.  Using individually bound\n     * Sockets created by Network.getSocketFactory().createSocket() and\n     * performing network-specific host name resolutions via\n     * {@link Network#getAllByName Network.getAllByName} is preferred to calling\n     * {@code setProcessDefaultNetwork}.\n     *\n     * @param network The {@link Network} to bind the current process to, or {@code null} to clear\n     *                the current binding.\n     * @return {@code true} on success, {@code false} if the {@link Network} is no longer valid.\n     * @deprecated This function can throw {@link IllegalStateException}.  Use\n     *             {@link #bindProcessToNetwork} instead.  {@code bindProcessToNetwork}\n     *             is a direct replacement.\n     ",
+    "links" : [ "IllegalStateException", "android.net.Network#getSocketFactory()", "android.net.Network#getAllByName", "android.net.Network", "#bindProcessToNetwork" ]
+  }, {
+    "name" : "public Network getBoundNetworkForProcess()",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns the {@link Network} currently bound to this process via\n     * {@link #bindProcessToNetwork}, or {@code null} if no {@link Network} is explicitly bound.\n     *\n     * @return {@code Network} to which this process is bound, or {@code null}.\n     ",
+    "links" : [ "android.net.Network", "#bindProcessToNetwork" ]
+  }, {
+    "name" : "public static Network getProcessDefaultNetwork()",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns the {@link Network} currently bound to this process via\n     * {@link #bindProcessToNetwork}, or {@code null} if no {@link Network} is explicitly bound.\n     *\n     * @return {@code Network} to which this process is bound, or {@code null}.\n     * @deprecated Using this function can lead to other functions throwing\n     *             {@link IllegalStateException}.  Use {@link #getBoundNetworkForProcess} instead.\n     *             {@code getBoundNetworkForProcess} is a direct replacement.\n     ",
+    "links" : [ "IllegalStateException", "android.net.Network", "#getBoundNetworkForProcess", "#bindProcessToNetwork" ]
+  }, {
+    "name" : "private void unsupportedStartingFrom(int version)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkLegacyRoutingApiAccess()",
+    "returnType" : "void",
+    "comment" : " so is unsupported and may break in the future. http://b/22728205",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean setProcessDefaultNetworkForHostResolution(Network network)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Binds host resolutions performed by this process to {@code network}.\n     * {@link #bindProcessToNetwork} takes precedence over this setting.\n     *\n     * @param network The {@link Network} to bind host resolutions from the current process to, or\n     *                {@code null} to clear the current binding.\n     * @return {@code true} on success, {@code false} if the {@link Network} is no longer valid.\n     * @hide\n     * @deprecated This is strictly for legacy usage to support {@link #startUsingNetworkFeature}.\n     ",
+    "links" : [ "#startUsingNetworkFeature", "android.net.Network", "#bindProcessToNetwork" ]
+  }, {
+    "name" : "private INetworkPolicyManager getNetworkPolicyManager()",
+    "returnType" : "INetworkPolicyManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRestrictBackgroundStatus()",
+    "returnType" : "int",
+    "comment" : "\n     * Determines if the calling application is subject to metered network restrictions while\n     * running on background.\n     *\n     * @return {@link #RESTRICT_BACKGROUND_STATUS_DISABLED},\n     * {@link #RESTRICT_BACKGROUND_STATUS_ENABLED},\n     * or {@link #RESTRICT_BACKGROUND_STATUS_WHITELISTED}\n     ",
+    "links" : [ "#RESTRICT_BACKGROUND_STATUS_ENABLED", "#RESTRICT_BACKGROUND_STATUS_DISABLED", "#RESTRICT_BACKGROUND_STATUS_WHITELISTED" ]
+  }, {
+    "name" : "public byte[] getNetworkWatchlistConfigHash()",
+    "returnType" : "byte[]",
+    "comment" : "\n     * The network watchlist is a list of domains and IP addresses that are associated with\n     * potentially harmful apps. This method returns the SHA-256 of the watchlist config file\n     * currently used by the system for validation purposes.\n     *\n     * @return Hash of network watchlist config file. Null if config does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getConnectionOwnerUid(int protocol, @NonNull InetSocketAddress local, @NonNull InetSocketAddress remote)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the {@code uid} of the owner of a network connection.\n     *\n     * @param protocol The protocol of the connection. Only {@code IPPROTO_TCP} and {@code\n     *     IPPROTO_UDP} currently supported.\n     * @param local The local {@link InetSocketAddress} of a connection.\n     * @param remote The remote {@link InetSocketAddress} of a connection.\n     * @return {@code uid} if the connection is found and the app has permission to observe it\n     *     (e.g., if it is associated with the calling VPN app's VpnService tunnel) or {@link\n     *     android.os.Process#INVALID_UID} if the connection is not found.\n     * @throws {@link SecurityException} if the caller is not the active VpnService for the current\n     *     user.\n     * @throws {@link IllegalArgumentException} if an unsupported protocol is requested.\n     ",
+    "links" : [ "android.os.Process#INVALID_UID", "SecurityException", "java.net.InetSocketAddress", "IllegalArgumentException" ]
+  }, {
+    "name" : "private void printStackTrace()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void simulateDataStall(int detectionMethod, long timestampMillis, @NonNull Network network, @NonNull PersistableBundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Simulates a Data Stall for the specified Network.\n     *\n     * <p>The caller must be the owner of the specified Network.\n     *\n     * @param detectionMethod The detection method used to identify the Data Stall.\n     * @param timestampMillis The timestamp at which the stall 'occurred', in milliseconds.\n     * @param network The Network for which a Data Stall is being simluated.\n     * @param extras The PersistableBundle of extras included in the Data Stall notification.\n     * @throws SecurityException if the caller is not the owner of the given network.\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DEBUG", "CONNECTIVITY_ACTION", "ACTION_CAPTIVE_PORTAL_SIGN_IN", "EXTRA_NETWORK_INFO", "EXTRA_NETWORK_TYPE", "EXTRA_IS_FAILOVER", "EXTRA_OTHER_NETWORK_INFO", "EXTRA_NO_CONNECTIVITY", "EXTRA_REASON", "EXTRA_EXTRA_INFO", "EXTRA_INET_CONDITION", "EXTRA_CAPTIVE_PORTAL", "EXTRA_CAPTIVE_PORTAL_URL", "EXTRA_CAPTIVE_PORTAL_PROBE_SPEC", "EXTRA_CAPTIVE_PORTAL_USER_AGENT", "ACTION_DATA_ACTIVITY_CHANGE", "EXTRA_DEVICE_TYPE", "EXTRA_IS_ACTIVE", "EXTRA_REALTIME_NS", "ACTION_BACKGROUND_DATA_SETTING_CHANGED", "INET_CONDITION_ACTION", "ACTION_TETHER_STATE_CHANGED", "EXTRA_AVAILABLE_TETHER", "EXTRA_ACTIVE_LOCAL_ONLY", "EXTRA_ACTIVE_TETHER", "EXTRA_ERRORED_TETHER", "ACTION_CAPTIVE_PORTAL_TEST_COMPLETED", "EXTRA_IS_CAPTIVE_PORTAL", "ACTION_PROMPT_UNVALIDATED", "ACTION_PROMPT_LOST_VALIDATION", "ACTION_PROMPT_PARTIAL_CONNECTIVITY", "TETHERING_INVALID", "TETHERING_WIFI", "TETHERING_USB", "TETHERING_BLUETOOTH", "TETHERING_WIFI_P2P", "EXTRA_ADD_TETHER_TYPE", "EXTRA_REM_TETHER_TYPE", "EXTRA_SET_ALARM", "EXTRA_RUN_PROVISION", "EXTRA_PROVISION_CALLBACK", "TYPE_NONE", "TYPE_MOBILE", "TYPE_WIFI", "TYPE_MOBILE_MMS", "TYPE_MOBILE_SUPL", "TYPE_MOBILE_DUN", "TYPE_MOBILE_HIPRI", "TYPE_WIMAX", "TYPE_BLUETOOTH", "TYPE_DUMMY", "TYPE_ETHERNET", "TYPE_MOBILE_FOTA", "TYPE_MOBILE_IMS", "TYPE_MOBILE_CBS", "TYPE_WIFI_P2P", "TYPE_MOBILE_IA", "TYPE_MOBILE_EMERGENCY", "TYPE_PROXY", "TYPE_VPN", "TYPE_TEST", "DEPRECATED_PHONE_CONSTANT_APN_ALREADY_ACTIVE", "DEPRECATED_PHONE_CONSTANT_APN_REQUEST_STARTED", "DEPRECATED_PHONE_CONSTANT_APN_REQUEST_FAILED", "MAX_RADIO_TYPE", "MAX_NETWORK_TYPE", "MIN_NETWORK_TYPE", "DEFAULT_NETWORK_PREFERENCE", "REQUEST_ID_UNSET", "ALREADY_UNREGISTERED", "NETID_UNSET", "PRIVATE_DNS_MODE_OFF", "PRIVATE_DNS_MODE_OPPORTUNISTIC", "PRIVATE_DNS_MODE_PROVIDER_HOSTNAME", "PRIVATE_DNS_DEFAULT_MODE_FALLBACK", "mService", "sInstance", "mContext", "mNMService", "mNPManager", "mTetheringManager", "sLegacyRequests", "sLegacyTypeToTransport", "sLegacyTypeToCapability", "mNetworkActivityListeners", "mTetheringEventCallbacks", "TETHER_ERROR_NO_ERROR", "TETHER_ERROR_UNKNOWN_IFACE", "TETHER_ERROR_SERVICE_UNAVAIL", "TETHER_ERROR_UNSUPPORTED", "TETHER_ERROR_UNAVAIL_IFACE", "TETHER_ERROR_MASTER_ERROR", "TETHER_ERROR_TETHER_IFACE_ERROR", "TETHER_ERROR_UNTETHER_IFACE_ERROR", "TETHER_ERROR_ENABLE_NAT_ERROR", "TETHER_ERROR_DISABLE_NAT_ERROR", "TETHER_ERROR_IFACE_CFG_ERROR", "TETHER_ERROR_PROVISION_FAILED", "TETHER_ERROR_DHCPSERVER_ERROR", "TETHER_ERROR_ENTITLEMENT_UNKONWN", "BASE", "CALLBACK_PRECHECK", "CALLBACK_AVAILABLE", "CALLBACK_LOSING", "CALLBACK_LOST", "CALLBACK_UNAVAIL", "CALLBACK_CAP_CHANGED", "CALLBACK_IP_CHANGED", "EXPIRE_LEGACY_REQUEST", "CALLBACK_SUSPENDED", "CALLBACK_RESUMED", "CALLBACK_BLK_CHANGED", "sCallbacks", "sCallbackHandler", "LISTEN", "REQUEST", "EXTRA_NETWORK", "EXTRA_NETWORK_REQUEST", "MULTIPATH_PREFERENCE_HANDOVER", "MULTIPATH_PREFERENCE_RELIABILITY", "MULTIPATH_PREFERENCE_PERFORMANCE", "MULTIPATH_PREFERENCE_UNMETERED", "RESTRICT_BACKGROUND_STATUS_DISABLED", "RESTRICT_BACKGROUND_STATUS_WHITELISTED", "RESTRICT_BACKGROUND_STATUS_ENABLED", "ACTION_RESTRICT_BACKGROUND_CHANGED" ],
+  "methodNames" : [ "public static boolean isNetworkTypeValid(int networkType)", "public static String getNetworkTypeName(int type)", "public static boolean isNetworkTypeMobile(int networkType)", "public static boolean isNetworkTypeWifi(int networkType)", "public void setNetworkPreference(int preference)", "public int getNetworkPreference()", "public NetworkInfo getActiveNetworkInfo()", "public Network getActiveNetwork()", "public Network getActiveNetworkForUid(int uid)", "public Network getActiveNetworkForUid(int uid, boolean ignoreBlocked)", "public boolean isAlwaysOnVpnPackageSupportedForUser(int userId, @Nullable String vpnPackage)", "public boolean setAlwaysOnVpnPackageForUser(int userId, @Nullable String vpnPackage, boolean lockdownEnabled, @Nullable List<String> lockdownWhitelist)", "public String getAlwaysOnVpnPackageForUser(int userId)", "public boolean isVpnLockdownEnabled(int userId)", "public List<String> getVpnLockdownWhitelist(int userId)", "public NetworkInfo getActiveNetworkInfoForUid(int uid)", "public NetworkInfo getActiveNetworkInfoForUid(int uid, boolean ignoreBlocked)", "public NetworkInfo getNetworkInfo(int networkType)", "public NetworkInfo getNetworkInfo(@Nullable Network network)", "public NetworkInfo getNetworkInfoForUid(Network network, int uid, boolean ignoreBlocked)", "public NetworkInfo[] getAllNetworkInfo()", "public Network getNetworkForType(int networkType)", "public Network[] getAllNetworks()", "public NetworkCapabilities[] getDefaultNetworkCapabilitiesForUser(int userId)", "public LinkProperties getActiveLinkProperties()", "public LinkProperties getLinkProperties(int networkType)", "public LinkProperties getLinkProperties(@Nullable Network network)", "public NetworkCapabilities getNetworkCapabilities(@Nullable Network network)", "public String getCaptivePortalServerUrl()", "public int startUsingNetworkFeature(int networkType, String feature)", "public int stopUsingNetworkFeature(int networkType, String feature)", "private NetworkCapabilities networkCapabilitiesForFeature(int networkType, String feature)", "private int legacyTypeForNetworkCapabilities(NetworkCapabilities netCap)", "private NetworkRequest findRequestForFeature(NetworkCapabilities netCap)", "private void renewRequestLocked(LegacyRequest l)", "private void expireRequest(NetworkCapabilities netCap, int sequenceNum)", "private NetworkRequest requestNetworkForFeatureLocked(NetworkCapabilities netCap)", "private void sendExpireMsgForFeature(NetworkCapabilities netCap, int seqNum, int delay)", "private boolean removeRequestForFeature(NetworkCapabilities netCap)", "public static NetworkCapabilities networkCapabilitiesForType(int type)", "public PacketKeepalive startNattKeepalive(Network network, int intervalSeconds, PacketKeepaliveCallback callback, InetAddress srcAddr, int srcPort, InetAddress dstAddr)", "public SocketKeepalive createSocketKeepalive(@NonNull Network network, @NonNull UdpEncapsulationSocket socket, @NonNull InetAddress source, @NonNull InetAddress destination, @NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)", "public SocketKeepalive createNattKeepalive(@NonNull Network network, @NonNull ParcelFileDescriptor pfd, @NonNull InetAddress source, @NonNull InetAddress destination, @NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)", "public SocketKeepalive createSocketKeepalive(@NonNull Network network, @NonNull Socket socket, @NonNull Executor executor, @NonNull Callback callback)", "public boolean requestRouteToHost(int networkType, int hostAddress)", "public boolean requestRouteToHostAddress(int networkType, InetAddress hostAddress)", "public boolean getBackgroundDataSetting()", "public void setBackgroundDataSetting(boolean allowBackgroundData)", "public NetworkQuotaInfo getActiveNetworkQuotaInfo()", "public boolean getMobileDataEnabled()", "private INetworkManagementService getNetworkManagementService()", "public void addDefaultNetworkActiveListener(final OnNetworkActiveListener l)", "public void removeDefaultNetworkActiveListener(@NonNull OnNetworkActiveListener l)", "public boolean isDefaultNetworkActive()", "public static ConnectivityManager from(Context context)", "public NetworkRequest getDefaultRequest()", "public static final void enforceChangePermission(Context context)", " static ConnectivityManager getInstanceOrNull()", "private static ConnectivityManager getInstance()", "public String[] getTetherableIfaces()", "public String[] getTetheredIfaces()", "public String[] getTetheringErroredIfaces()", "public String[] getTetheredDhcpRanges()", "public int tether(String iface)", "public int untether(String iface)", "public boolean isTetheringSupported()", "public void startTethering(int type, boolean showProvisioningUi, final OnStartTetheringCallback callback)", "public void startTethering(int type, boolean showProvisioningUi, final OnStartTetheringCallback callback, Handler handler)", "public void stopTethering(int type)", "public void registerTetheringEventCallback(@NonNull @CallbackExecutor Executor executor, @NonNull final OnTetheringEventCallback callback)", "public void unregisterTetheringEventCallback(@NonNull final OnTetheringEventCallback callback)", "public String[] getTetherableUsbRegexs()", "public String[] getTetherableWifiRegexs()", "public String[] getTetherableBluetoothRegexs()", "public int setUsbTethering(boolean enable)", "public int getLastTetherError(String iface)", "public void getLatestTetheringEntitlementResult(int type, boolean showEntitlementUi, @NonNull @CallbackExecutor Executor executor, @NonNull final OnTetheringEntitlementResultListener listener)", "public void reportInetCondition(int networkType, int percentage)", "public void reportBadNetwork(@Nullable Network network)", "public void reportNetworkConnectivity(@Nullable Network network, boolean hasConnectivity)", "public void setGlobalProxy(ProxyInfo p)", "public ProxyInfo getGlobalProxy()", "public ProxyInfo getProxyForNetwork(Network network)", "public ProxyInfo getDefaultProxy()", "public boolean isNetworkSupported(int networkType)", "public boolean isActiveNetworkMetered()", "public boolean updateLockdownVpn()", "public int checkMobileProvisioning(int suggestedTimeOutMs)", "public String getMobileProvisioningUrl()", "public void setProvisioningNotificationVisible(boolean visible, int networkType, String action)", "public void setAirplaneMode(boolean enable)", "public int registerNetworkFactory(Messenger messenger, String name)", "public void unregisterNetworkFactory(Messenger messenger)", "public int registerNetworkProvider(@NonNull NetworkProvider provider)", "public void unregisterNetworkProvider(@NonNull NetworkProvider provider)", "public void declareNetworkRequestUnfulfillable(@NonNull NetworkRequest request)", "public Network registerNetworkAgent(Messenger messenger, NetworkInfo ni, LinkProperties lp, NetworkCapabilities nc, int score, NetworkAgentConfig config)", "public Network registerNetworkAgent(Messenger messenger, NetworkInfo ni, LinkProperties lp, NetworkCapabilities nc, int score, NetworkAgentConfig config, int providerId)", "private static RuntimeException convertServiceException(ServiceSpecificException e)", "public static String getCallbackName(int whichCallback)", "private CallbackHandler getDefaultHandler()", "private NetworkRequest sendRequestForNetwork(NetworkCapabilities need, NetworkCallback callback, int timeoutMs, int action, int legacyType, CallbackHandler handler)", "public void requestNetwork(@NonNull NetworkRequest request, int timeoutMs, int legacyType, @NonNull Handler handler, @NonNull NetworkCallback networkCallback)", "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback)", "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler)", "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, int timeoutMs)", "public void requestNetwork(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler, int timeoutMs)", "public void requestNetwork(@NonNull NetworkRequest request, @NonNull PendingIntent operation)", "public void releaseNetworkRequest(@NonNull PendingIntent operation)", "private static void checkPendingIntentNotNull(PendingIntent intent)", "private static void checkCallbackNotNull(NetworkCallback callback)", "private static void checkTimeout(int timeoutMs)", "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback)", "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull NetworkCallback networkCallback, @NonNull Handler handler)", "public void registerNetworkCallback(@NonNull NetworkRequest request, @NonNull PendingIntent operation)", "public void registerDefaultNetworkCallback(@NonNull NetworkCallback networkCallback)", "public void registerDefaultNetworkCallback(@NonNull NetworkCallback networkCallback, @NonNull Handler handler)", "public boolean requestBandwidthUpdate(@NonNull Network network)", "public void unregisterNetworkCallback(@NonNull NetworkCallback networkCallback)", "public void unregisterNetworkCallback(@NonNull PendingIntent operation)", "public void setAcceptUnvalidated(Network network, boolean accept, boolean always)", "public void setAcceptPartialConnectivity(Network network, boolean accept, boolean always)", "public void setAvoidUnvalidated(Network network)", "public void startCaptivePortalApp(Network network)", "public void startCaptivePortalApp(@NonNull Network network, @NonNull Bundle appExtras)", "public boolean shouldAvoidBadWifi()", "public int getMultipathPreference(@Nullable Network network)", "public void factoryReset()", "public boolean bindProcessToNetwork(@Nullable Network network)", "public static boolean setProcessDefaultNetwork(@Nullable Network network)", "public Network getBoundNetworkForProcess()", "public static Network getProcessDefaultNetwork()", "private void unsupportedStartingFrom(int version)", "private void checkLegacyRoutingApiAccess()", "public static boolean setProcessDefaultNetworkForHostResolution(Network network)", "private INetworkPolicyManager getNetworkPolicyManager()", "public int getRestrictBackgroundStatus()", "public byte[] getNetworkWatchlistConfigHash()", "public int getConnectionOwnerUid(int protocol, @NonNull InetSocketAddress local, @NonNull InetSocketAddress remote)", "private void printStackTrace()", "public void simulateDataStall(int detectionMethod, long timestampMillis, @NonNull Network network, @NonNull PersistableBundle extras)" ]
+}

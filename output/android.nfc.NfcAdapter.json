@@ -1,0 +1,535 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/nfc/NfcAdapter.java",
+  "packageName" : "android.nfc",
+  "className" : "NfcAdapter",
+  "comment" : "\n * Represents the local NFC adapter.\n * <p>\n * Use the helper {@link #getDefaultAdapter(Context)} to get the default NFC\n * adapter for this Android device.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about using NFC, read the\n * <a href=\"{@docRoot}guide/topics/nfc/index.html\">Near Field Communication</a> developer guide.</p>\n * <p>To perform basic file sharing between devices, read\n * <a href=\"{@docRoot}training/beam-files/index.html\">Sharing Files with NFC</a>.\n * </div>\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_NDEF_DISCOVERED",
+    "type" : "String",
+    "comment" : "\n     * Intent to start an activity when a tag with NDEF payload is discovered.\n     *\n     * <p>The system inspects the first {@link NdefRecord} in the first {@link NdefMessage} and\n     * looks for a URI, SmartPoster, or MIME record. If a URI or SmartPoster record is found the\n     * intent will contain the URI in its data field. If a MIME record is found the intent will\n     * contain the MIME type in its type field. This allows activities to register\n     * {@link IntentFilter}s targeting specific content on tags. Activities should register the\n     * most specific intent filters possible to avoid the activity chooser dialog, which can\n     * disrupt the interaction with the tag as the user interacts with the screen.\n     *\n     * <p>If the tag has an NDEF payload this intent is started before\n     * {@link #ACTION_TECH_DISCOVERED}. If any activities respond to this intent neither\n     * {@link #ACTION_TECH_DISCOVERED} or {@link #ACTION_TAG_DISCOVERED} will be started.\n     *\n     * <p>The MIME type or data URI of this intent are normalized before dispatch -\n     * so that MIME, URI scheme and URI host are always lower-case.\n     ",
+    "links" : [ "#ACTION_TAG_DISCOVERED", "android.content.IntentFilter", "android.nfc.NdefRecord", "#ACTION_TECH_DISCOVERED", "android.nfc.NdefMessage" ]
+  }, {
+    "name" : "ACTION_TECH_DISCOVERED",
+    "type" : "String",
+    "comment" : "\n     * Intent to start an activity when a tag is discovered and activities are registered for the\n     * specific technologies on the tag.\n     *\n     * <p>To receive this intent an activity must include an intent filter\n     * for this action and specify the desired tech types in a\n     * manifest <code>meta-data</code> entry. Here is an example manfiest entry:\n     * <pre>\n     * &lt;activity android:name=\".nfc.TechFilter\" android:label=\"NFC/TechFilter\"&gt;\n     *     &lt;!-- Add a technology filter --&gt;\n     *     &lt;intent-filter&gt;\n     *         &lt;action android:name=\"android.nfc.action.TECH_DISCOVERED\" /&gt;\n     *     &lt;/intent-filter&gt;\n     *\n     *     &lt;meta-data android:name=\"android.nfc.action.TECH_DISCOVERED\"\n     *         android:resource=\"@xml/filter_nfc\"\n     *     /&gt;\n     * &lt;/activity&gt;</pre>\n     *\n     * <p>The meta-data XML file should contain one or more <code>tech-list</code> entries\n     * each consisting or one or more <code>tech</code> entries. The <code>tech</code> entries refer\n     * to the qualified class name implementing the technology, for example \"android.nfc.tech.NfcA\".\n     *\n     * <p>A tag matches if any of the\n     * <code>tech-list</code> sets is a subset of {@link Tag#getTechList() Tag.getTechList()}. Each\n     * of the <code>tech-list</code>s is considered independently and the\n     * activity is considered a match is any single <code>tech-list</code> matches the tag that was\n     * discovered. This provides AND and OR semantics for filtering desired techs. Here is an\n     * example that will match any tag using {@link NfcF} or any tag using {@link NfcA},\n     * {@link MifareClassic}, and {@link Ndef}:\n     *\n     * <pre>\n     * &lt;resources xmlns:xliff=\"urn:oasis:names:tc:xliff:document:1.2\"&gt;\n     *     &lt;!-- capture anything using NfcF --&gt;\n     *     &lt;tech-list&gt;\n     *         &lt;tech&gt;android.nfc.tech.NfcF&lt;/tech&gt;\n     *     &lt;/tech-list&gt;\n     *\n     *     &lt;!-- OR --&gt;\n     *\n     *     &lt;!-- capture all MIFARE Classics with NDEF payloads --&gt;\n     *     &lt;tech-list&gt;\n     *         &lt;tech&gt;android.nfc.tech.NfcA&lt;/tech&gt;\n     *         &lt;tech&gt;android.nfc.tech.MifareClassic&lt;/tech&gt;\n     *         &lt;tech&gt;android.nfc.tech.Ndef&lt;/tech&gt;\n     *     &lt;/tech-list&gt;\n     * &lt;/resources&gt;</pre>\n     *\n     * <p>This intent is started after {@link #ACTION_NDEF_DISCOVERED} and before\n     * {@link #ACTION_TAG_DISCOVERED}. If any activities respond to {@link #ACTION_NDEF_DISCOVERED}\n     * this intent will not be started. If any activities respond to this intent\n     * {@link #ACTION_TAG_DISCOVERED} will not be started.\n     ",
+    "links" : [ "android.nfc.Tag#getTechList()", "android.nfc.tech.NfcA", "android.nfc.tech.Ndef", "#ACTION_TAG_DISCOVERED", "android.nfc.tech.MifareClassic", "#ACTION_NDEF_DISCOVERED", "android.nfc.tech.NfcF" ]
+  }, {
+    "name" : "ACTION_TAG_DISCOVERED",
+    "type" : "String",
+    "comment" : "\n     * Intent to start an activity when a tag is discovered.\n     *\n     * <p>This intent will not be started when a tag is discovered if any activities respond to\n     * {@link #ACTION_NDEF_DISCOVERED} or {@link #ACTION_TECH_DISCOVERED} for the current tag.\n     ",
+    "links" : [ "#ACTION_NDEF_DISCOVERED", "#ACTION_TECH_DISCOVERED" ]
+  }, {
+    "name" : "ACTION_TRANSACTION_DETECTED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: Intent to notify an application that a transaction event has occurred\n     * on the Secure Element.\n     *\n     * <p>This intent will only be sent if the application has requested permission for\n     * {@link android.Manifest.permission#NFC_TRANSACTION_EVENT} and if the application has the\n     * necessary access to Secure Element which witnessed the particular event.\n     ",
+    "links" : [ "android.Manifest.permission#NFC_TRANSACTION_EVENT" ]
+  }, {
+    "name" : "ACTION_PREFERRED_PAYMENT_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: Intent to notify if the preferred payment service changed.\n     *\n     * <p>This intent will only be sent to the application has requested permission for\n     * {@link android.Manifest.permission#NFC_PREFERRED_PAYMENT_INFO} and if the application\n     * has the necessary access to Secure Element which witnessed the particular event.\n     ",
+    "links" : [ "android.Manifest.permission#NFC_PREFERRED_PAYMENT_INFO" ]
+  }, {
+    "name" : "ACTION_TAG_LEFT_FIELD",
+    "type" : "String",
+    "comment" : "\n     * Broadcast to only the activity that handles ACTION_TAG_DISCOVERED\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_TAG",
+    "type" : "String",
+    "comment" : "\n     * Mandatory extra containing the {@link Tag} that was discovered for the\n     * {@link #ACTION_NDEF_DISCOVERED}, {@link #ACTION_TECH_DISCOVERED}, and\n     * {@link #ACTION_TAG_DISCOVERED} intents.\n     ",
+    "links" : [ "android.nfc.Tag", "#ACTION_TAG_DISCOVERED", "#ACTION_NDEF_DISCOVERED", "#ACTION_TECH_DISCOVERED" ]
+  }, {
+    "name" : "EXTRA_NDEF_MESSAGES",
+    "type" : "String",
+    "comment" : "\n     * Extra containing an array of {@link NdefMessage} present on the discovered tag.<p>\n     * This extra is mandatory for {@link #ACTION_NDEF_DISCOVERED} intents,\n     * and optional for {@link #ACTION_TECH_DISCOVERED}, and\n     * {@link #ACTION_TAG_DISCOVERED} intents.<p>\n     * When this extra is present there will always be at least one\n     * {@link NdefMessage} element. Most NDEF tags have only one NDEF message,\n     * but we use an array for future compatibility.\n     ",
+    "links" : [ "#ACTION_TAG_DISCOVERED", "#ACTION_NDEF_DISCOVERED", "#ACTION_TECH_DISCOVERED", "android.nfc.NdefMessage" ]
+  }, {
+    "name" : "EXTRA_ID",
+    "type" : "String",
+    "comment" : "\n     * Optional extra containing a byte array containing the ID of the discovered tag for\n     * the {@link #ACTION_NDEF_DISCOVERED}, {@link #ACTION_TECH_DISCOVERED}, and\n     * {@link #ACTION_TAG_DISCOVERED} intents.\n     ",
+    "links" : [ "#ACTION_TAG_DISCOVERED", "#ACTION_NDEF_DISCOVERED", "#ACTION_TECH_DISCOVERED" ]
+  }, {
+    "name" : "ACTION_ADAPTER_STATE_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast Action: The state of the local NFC adapter has been\n     * changed.\n     * <p>For example, NFC has been turned on or off.\n     * <p>Always contains the extra field {@link #EXTRA_ADAPTER_STATE}\n     ",
+    "links" : [ "#EXTRA_ADAPTER_STATE" ]
+  }, {
+    "name" : "EXTRA_ADAPTER_STATE",
+    "type" : "String",
+    "comment" : "\n     * Used as an int extra field in {@link #ACTION_ADAPTER_STATE_CHANGED}\n     * intents to request the current power state. Possible values are:\n     * {@link #STATE_OFF},\n     * {@link #STATE_TURNING_ON},\n     * {@link #STATE_ON},\n     * {@link #STATE_TURNING_OFF},\n     ",
+    "links" : [ "#STATE_TURNING_OFF", "#STATE_TURNING_ON", "#STATE_ON", "#ACTION_ADAPTER_STATE_CHANGED", "#STATE_OFF" ]
+  }, {
+    "name" : "EXTRA_AID",
+    "type" : "String",
+    "comment" : "\n     * Mandatory byte[] extra field in {@link #ACTION_TRANSACTION_DETECTED}\n     ",
+    "links" : [ "#ACTION_TRANSACTION_DETECTED" ]
+  }, {
+    "name" : "EXTRA_DATA",
+    "type" : "String",
+    "comment" : "\n     * Optional byte[] extra field in {@link #ACTION_TRANSACTION_DETECTED}\n     ",
+    "links" : [ "#ACTION_TRANSACTION_DETECTED" ]
+  }, {
+    "name" : "EXTRA_SECURE_ELEMENT_NAME",
+    "type" : "String",
+    "comment" : "\n     * Mandatory String extra field in {@link #ACTION_TRANSACTION_DETECTED}\n     * Indicates the Secure Element on which the transaction occurred.\n     * eSE1...eSEn for Embedded Secure Elements, SIM1...SIMn for UICC, etc.\n     ",
+    "links" : [ "#ACTION_TRANSACTION_DETECTED" ]
+  }, {
+    "name" : "EXTRA_PREFERRED_PAYMENT_CHANGED_REASON",
+    "type" : "String",
+    "comment" : "\n     * Mandatory String extra field in {@link #ACTION_PREFERRED_PAYMENT_CHANGED}\n     * Indicates the condition when trigger this event. Possible values are:\n     * {@link #PREFERRED_PAYMENT_LOADED},\n     * {@link #PREFERRED_PAYMENT_CHANGED},\n     * {@link #PREFERRED_PAYMENT_UPDATED},\n     ",
+    "links" : [ "#PREFERRED_PAYMENT_LOADED", "#ACTION_PREFERRED_PAYMENT_CHANGED", "#PREFERRED_PAYMENT_CHANGED", "#PREFERRED_PAYMENT_UPDATED" ]
+  }, {
+    "name" : "PREFERRED_PAYMENT_LOADED",
+    "type" : "int",
+    "comment" : "\n     * Nfc is enabled and the preferred payment aids are registered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PREFERRED_PAYMENT_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * User selected another payment application as the preferred payment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PREFERRED_PAYMENT_UPDATED",
+    "type" : "int",
+    "comment" : "\n     * Current preferred payment has issued an update (registered/unregistered new aids or has been\n     * updated itself).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_OFF",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_TURNING_ON",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_ON",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_TURNING_OFF",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_READER_NFC_A",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag enables polling for Nfc-A technology.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_NFC_B",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag enables polling for Nfc-B technology.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_NFC_F",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag enables polling for Nfc-F technology.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_NFC_V",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag enables polling for Nfc-V (ISO15693) technology.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_NFC_BARCODE",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag enables polling for NfcBarcode technology.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_SKIP_NDEF_CHECK",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag allows the caller to prevent the\n     * platform from performing an NDEF check on the tags it\n     * finds.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_READER_NO_PLATFORM_SOUNDS",
+    "type" : "int",
+    "comment" : "\n     * Flag for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this flag allows the caller to prevent the\n     * platform from playing sounds when it discovers a tag.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "EXTRA_READER_PRESENCE_CHECK_DELAY",
+    "type" : "String",
+    "comment" : "\n     * Int Extra for use with {@link #enableReaderMode(Activity, ReaderCallback, int, Bundle)}.\n     * <p>\n     * Setting this integer extra allows the calling application to specify\n     * the delay that the platform will use for performing presence checks\n     * on any discovered tag.\n     ",
+    "links" : [ "#enableReaderMode(Activity" ]
+  }, {
+    "name" : "FLAG_NDEF_PUSH_NO_CONFIRM",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_HANDOVER_TRANSFER_STARTED",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_HANDOVER_TRANSFER_DONE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_HANDOVER_TRANSFER_STATUS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "HANDOVER_TRANSFER_STATUS_SUCCESS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "HANDOVER_TRANSFER_STATUS_FAILURE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_HANDOVER_TRANSFER_URI",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "sIsInitialized",
+    "type" : "boolean",
+    "comment" : " Guarded by NfcAdapter.class",
+    "links" : [ ]
+  }, {
+    "name" : "sHasNfcFeature",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sHasBeamFeature",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sService",
+    "type" : "INfcAdapter",
+    "comment" : " recovery",
+    "links" : [ ]
+  }, {
+    "name" : "sTagService",
+    "type" : "INfcTag",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sCardEmulationService",
+    "type" : "INfcCardEmulation",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNfcFCardEmulationService",
+    "type" : "INfcFCardEmulation",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNfcAdapters",
+    "type" : "HashMap<Context, NfcAdapter>",
+    "comment" : "guard by NfcAdapter.class",
+    "links" : [ ]
+  }, {
+    "name" : "sNullContextNfcAdapter",
+    "type" : "NfcAdapter",
+    "comment" : " protected by NfcAdapter.class",
+    "links" : [ ]
+  }, {
+    "name" : "mNfcActivityManager",
+    "type" : "NfcActivityManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNfcUnlockHandlers",
+    "type" : "HashMap<NfcUnlockHandler, INfcUnlockHandler>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTagRemovedListener",
+    "type" : "ITagRemovedCallback",
+    "comment" : " protected by mLock",
+    "links" : [ ]
+  }, {
+    "name" : "mForegroundDispatchListener",
+    "type" : "OnActivityPausedListener",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static boolean hasBeamFeature()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper to check if this device has FEATURE_NFC_BEAM, but without using\n     * a context.\n     * Equivalent to\n     * context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_NFC_BEAM)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean hasNfcFeature()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper to check if this device has FEATURE_NFC, but without using\n     * a context.\n     * Equivalent to\n     * context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_NFC)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean hasNfcHceFeature()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper to check if this device is NFC HCE capable, by checking for\n     * FEATURE_NFC_HOST_CARD_EMULATION and/or FEATURE_NFC_HOST_CARD_EMULATION_NFCF,\n     * but without using a context.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getSupportedOffHostSecureElements()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Return list of Secure Elements which support off host card emulation.\n     *\n     * @return List<String> containing secure elements on the device which supports\n     *                      off host card emulation. eSE for Embedded secure element,\n     *                      SIM for UICC and so on.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static synchronized NfcAdapter getNfcAdapter(Context context)",
+    "returnType" : "NfcAdapter",
+    "comment" : "\n     * Returns the NfcAdapter for application context,\n     * or throws if NFC is not available.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static INfcAdapter getServiceInterface()",
+    "returnType" : "INfcAdapter",
+    "comment" : " get handle to NFC service interface ",
+    "links" : [ ]
+  }, {
+    "name" : "public static NfcAdapter getDefaultAdapter(Context context)",
+    "returnType" : "NfcAdapter",
+    "comment" : "\n     * Helper to get the default NFC Adapter.\n     * <p>\n     * Most Android devices will only have one NFC Adapter (NFC Controller).\n     * <p>\n     * This helper is the equivalent of:\n     * <pre>\n     * NfcManager manager = (NfcManager) context.getSystemService(Context.NFC_SERVICE);\n     * NfcAdapter adapter = manager.getDefaultAdapter();</pre>\n     * @param context the calling application's context\n     *\n     * @return the default NFC adapter, or null if no NFC adapter exists\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static NfcAdapter getDefaultAdapter()",
+    "returnType" : "NfcAdapter",
+    "comment" : "\n     * Legacy NfcAdapter getter, always use {@link #getDefaultAdapter(Context)} instead.<p>\n     * This method was deprecated at API level 10 (Gingerbread MR1) because a context is required\n     * for many NFC API methods. Those methods will fail when called on an NfcAdapter\n     * object created from this method.<p>\n     * @deprecated use {@link #getDefaultAdapter(Context)}\n     * @hide\n     ",
+    "links" : [ "#getDefaultAdapter(Context)" ]
+  }, {
+    "name" : "public Context getContext()",
+    "returnType" : "Context",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcAdapter getService()",
+    "returnType" : "INfcAdapter",
+    "comment" : "\n     * Returns the binder interface to the service.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcTag getTagService()",
+    "returnType" : "INfcTag",
+    "comment" : "\n     * Returns the binder interface to the tag service.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcCardEmulation getCardEmulationService()",
+    "returnType" : "INfcCardEmulation",
+    "comment" : "\n     * Returns the binder interface to the card emulation service.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcFCardEmulation getNfcFCardEmulationService()",
+    "returnType" : "INfcFCardEmulation",
+    "comment" : "\n     * Returns the binder interface to the NFC-F card emulation service.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcDta getNfcDtaInterface()",
+    "returnType" : "INfcDta",
+    "comment" : "\n     * Returns the binder interface to the NFC-DTA test interface.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void attemptDeadServiceRecovery(Exception e)",
+    "returnType" : "void",
+    "comment" : "\n     * NFC service dead - attempt best effort recovery\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if this NFC Adapter has any features enabled.\n     *\n     * <p>If this method returns false, the NFC hardware is guaranteed not to\n     * generate or respond to any NFC communication over its NFC radio.\n     * <p>Applications can use this to check if NFC is enabled. Applications\n     * can request Settings UI allowing the user to toggle NFC using:\n     * <p><pre>startActivity(new Intent(Settings.ACTION_NFC_SETTINGS))</pre>\n     *\n     * @see android.provider.Settings#ACTION_NFC_SETTINGS\n     * @return true if this NFC Adapter has any features enabled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getAdapterState()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the state of this NFC Adapter.\n     *\n     * <p>Returns one of {@link #STATE_ON}, {@link #STATE_TURNING_ON},\n     * {@link #STATE_OFF}, {@link #STATE_TURNING_OFF}.\n     *\n     * <p>{@link #isEnabled()} is equivalent to\n     * <code>{@link #getAdapterState()} == {@link #STATE_ON}</code>\n     *\n     * @return the current state of this NFC adapter\n     *\n     * @hide\n     ",
+    "links" : [ "#STATE_TURNING_OFF", "#STATE_TURNING_ON", "#STATE_ON", "#isEnabled()", "#getAdapterState()", "#STATE_OFF" ]
+  }, {
+    "name" : "public boolean enable()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Enable NFC hardware.\n     *\n     * <p>This call is asynchronous. Listen for\n     * {@link #ACTION_ADAPTER_STATE_CHANGED} broadcasts to find out when the\n     * operation is complete.\n     *\n     * <p>If this returns true, then either NFC is already on, or\n     * a {@link #ACTION_ADAPTER_STATE_CHANGED} broadcast will be sent\n     * to indicate a state transition. If this returns false, then\n     * there is some problem that prevents an attempt to turn\n     * NFC on (for example we are in airplane mode and NFC is not\n     * toggleable in airplane mode on this platform).\n     *\n     * @hide\n     ",
+    "links" : [ "#ACTION_ADAPTER_STATE_CHANGED" ]
+  }, {
+    "name" : "public boolean disable()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Disable NFC hardware.\n     *\n     * <p>No NFC features will work after this call, and the hardware\n     * will not perform or respond to any NFC communication.\n     *\n     * <p>This call is asynchronous. Listen for\n     * {@link #ACTION_ADAPTER_STATE_CHANGED} broadcasts to find out when the\n     * operation is complete.\n     *\n     * <p>If this returns true, then either NFC is already off, or\n     * a {@link #ACTION_ADAPTER_STATE_CHANGED} broadcast will be sent\n     * to indicate a state transition. If this returns false, then\n     * there is some problem that prevents an attempt to turn\n     * NFC off.\n     *\n     * @hide\n     ",
+    "links" : [ "#ACTION_ADAPTER_STATE_CHANGED" ]
+  }, {
+    "name" : "public boolean disable(boolean persist)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Disable NFC hardware.\n     * @hide\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pausePolling(int timeoutInMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Pauses polling for a {@code timeoutInMs} millis. If polling must be resumed before timeout,\n     * use {@link #resumePolling()}.\n     * @hide\n     ",
+    "links" : [ "#resumePolling()" ]
+  }, {
+    "name" : "public void resumePolling()",
+    "returnType" : "void",
+    "comment" : "\n     * Resumes default polling for the current device state if polling is paused. Calling\n     * this while polling is not paused is a no-op.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setBeamPushUris(Uri[] uris, Activity activity)",
+    "returnType" : "void",
+    "comment" : "\n     * Set one or more {@link Uri}s to send using Android Beam (TM). Every\n     * Uri you provide must have either scheme 'file' or scheme 'content'.\n     *\n     * <p>For the data provided through this method, Android Beam tries to\n     * switch to alternate transports such as Bluetooth to achieve a fast\n     * transfer speed. Hence this method is very suitable\n     * for transferring large files such as pictures or songs.\n     *\n     * <p>The receiving side will store the content of each Uri in\n     * a file and present a notification to the user to open the file\n     * with a {@link android.content.Intent} with action\n     * {@link android.content.Intent#ACTION_VIEW}.\n     * If multiple URIs are sent, the {@link android.content.Intent} will refer\n     * to the first of the stored files.\n     *\n     * <p>This method may be called at any time before {@link Activity#onDestroy},\n     * but the URI(s) are only made available for Android Beam when the\n     * specified activity(s) are in resumed (foreground) state. The recommended\n     * approach is to call this method during your Activity's\n     * {@link Activity#onCreate} - see sample\n     * code below. This method does not immediately perform any I/O or blocking work,\n     * so is safe to call on your main thread.\n     *\n     * <p>{@link #setBeamPushUris} and {@link #setBeamPushUrisCallback}\n     * have priority over both {@link #setNdefPushMessage} and\n     * {@link #setNdefPushMessageCallback}.\n     *\n     * <p>If {@link #setBeamPushUris} is called with a null Uri array,\n     * and/or {@link #setBeamPushUrisCallback} is called with a null callback,\n     * then the Uri push will be completely disabled for the specified activity(s).\n     *\n     * <p>Code example:\n     * <pre>\n     * protected void onCreate(Bundle savedInstanceState) {\n     *     super.onCreate(savedInstanceState);\n     *     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);\n     *     if (nfcAdapter == null) return;  // NFC not available on this device\n     *     nfcAdapter.setBeamPushUris(new Uri[] {uri1, uri2}, this);\n     * }</pre>\n     * And that is it. Only one call per activity is necessary. The Android\n     * OS will automatically release its references to the Uri(s) and the\n     * Activity object when it is destroyed if you follow this pattern.\n     *\n     * <p>If your Activity wants to dynamically supply Uri(s),\n     * then set a callback using {@link #setBeamPushUrisCallback} instead\n     * of using this method.\n     *\n     * <p class=\"note\">Do not pass in an Activity that has already been through\n     * {@link Activity#onDestroy}. This is guaranteed if you call this API\n     * during {@link Activity#onCreate}.\n     *\n     * <p class=\"note\">If this device does not support alternate transports\n     * such as Bluetooth or WiFI, calling this method does nothing.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param uris an array of Uri(s) to push over Android Beam\n     * @param activity activity for which the Uri(s) will be pushed\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onCreate", "android.content.Intent#ACTION_VIEW", "android.net.Uri", "#setBeamPushUrisCallback", "android.app.Activity#onDestroy", "#setBeamPushUris", "#setNdefPushMessageCallback", "android.content.Intent", "#setNdefPushMessage" ]
+  }, {
+    "name" : "public void setBeamPushUrisCallback(CreateBeamUrisCallback callback, Activity activity)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a callback that will dynamically generate one or more {@link Uri}s\n     * to send using Android Beam (TM). Every Uri the callback provides\n     * must have either scheme 'file' or scheme 'content'.\n     *\n     * <p>For the data provided through this callback, Android Beam tries to\n     * switch to alternate transports such as Bluetooth to achieve a fast\n     * transfer speed. Hence this method is very suitable\n     * for transferring large files such as pictures or songs.\n     *\n     * <p>The receiving side will store the content of each Uri in\n     * a file and present a notification to the user to open the file\n     * with a {@link android.content.Intent} with action\n     * {@link android.content.Intent#ACTION_VIEW}.\n     * If multiple URIs are sent, the {@link android.content.Intent} will refer\n     * to the first of the stored files.\n     *\n     * <p>This method may be called at any time before {@link Activity#onDestroy},\n     * but the URI(s) are only made available for Android Beam when the\n     * specified activity(s) are in resumed (foreground) state. The recommended\n     * approach is to call this method during your Activity's\n     * {@link Activity#onCreate} - see sample\n     * code below. This method does not immediately perform any I/O or blocking work,\n     * so is safe to call on your main thread.\n     *\n     * <p>{@link #setBeamPushUris} and {@link #setBeamPushUrisCallback}\n     * have priority over both {@link #setNdefPushMessage} and\n     * {@link #setNdefPushMessageCallback}.\n     *\n     * <p>If {@link #setBeamPushUris} is called with a null Uri array,\n     * and/or {@link #setBeamPushUrisCallback} is called with a null callback,\n     * then the Uri push will be completely disabled for the specified activity(s).\n     *\n     * <p>Code example:\n     * <pre>\n     * protected void onCreate(Bundle savedInstanceState) {\n     *     super.onCreate(savedInstanceState);\n     *     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);\n     *     if (nfcAdapter == null) return;  // NFC not available on this device\n     *     nfcAdapter.setBeamPushUrisCallback(callback, this);\n     * }</pre>\n     * And that is it. Only one call per activity is necessary. The Android\n     * OS will automatically release its references to the Uri(s) and the\n     * Activity object when it is destroyed if you follow this pattern.\n     *\n     * <p class=\"note\">Do not pass in an Activity that has already been through\n     * {@link Activity#onDestroy}. This is guaranteed if you call this API\n     * during {@link Activity#onCreate}.\n     *\n     * <p class=\"note\">If this device does not support alternate transports\n     * such as Bluetooth or WiFI, calling this method does nothing.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param callback callback, or null to disable\n     * @param activity activity for which the Uri(s) will be pushed\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onCreate", "android.content.Intent#ACTION_VIEW", "android.net.Uri", "#setBeamPushUrisCallback", "android.app.Activity#onDestroy", "#setBeamPushUris", "#setNdefPushMessageCallback", "android.content.Intent", "#setNdefPushMessage" ]
+  }, {
+    "name" : "public void setNdefPushMessage(NdefMessage message, Activity activity, Activity... activities)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a static {@link NdefMessage} to send using Android Beam (TM).\n     *\n     * <p>This method may be called at any time before {@link Activity#onDestroy},\n     * but the NDEF message is only made available for NDEF push when the\n     * specified activity(s) are in resumed (foreground) state. The recommended\n     * approach is to call this method during your Activity's\n     * {@link Activity#onCreate} - see sample\n     * code below. This method does not immediately perform any I/O or blocking work,\n     * so is safe to call on your main thread.\n     *\n     * <p>Only one NDEF message can be pushed by the currently resumed activity.\n     * If both {@link #setNdefPushMessage} and\n     * {@link #setNdefPushMessageCallback} are set, then\n     * the callback will take priority.\n     *\n     * <p>If neither {@link #setNdefPushMessage} or\n     * {@link #setNdefPushMessageCallback} have been called for your activity, then\n     * the Android OS may choose to send a default NDEF message on your behalf,\n     * such as a URI for your application.\n     *\n     * <p>If {@link #setNdefPushMessage} is called with a null NDEF message,\n     * and/or {@link #setNdefPushMessageCallback} is called with a null callback,\n     * then NDEF push will be completely disabled for the specified activity(s).\n     * This also disables any default NDEF message the Android OS would have\n     * otherwise sent on your behalf for those activity(s).\n     *\n     * <p>If you want to prevent the Android OS from sending default NDEF\n     * messages completely (for all activities), you can include a\n     * {@code <meta-data>} element inside the {@code <application>}\n     * element of your AndroidManifest.xml file, like this:\n     * <pre>\n     * &lt;application ...>\n     *     &lt;meta-data android:name=\"android.nfc.disable_beam_default\"\n     *         android:value=\"true\" />\n     * &lt;/application></pre>\n     *\n     * <p>The API allows for multiple activities to be specified at a time,\n     * but it is strongly recommended to just register one at a time,\n     * and to do so during the activity's {@link Activity#onCreate}. For example:\n     * <pre>\n     * protected void onCreate(Bundle savedInstanceState) {\n     *     super.onCreate(savedInstanceState);\n     *     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);\n     *     if (nfcAdapter == null) return;  // NFC not available on this device\n     *     nfcAdapter.setNdefPushMessage(ndefMessage, this);\n     * }</pre>\n     * And that is it. Only one call per activity is necessary. The Android\n     * OS will automatically release its references to the NDEF message and the\n     * Activity object when it is destroyed if you follow this pattern.\n     *\n     * <p>If your Activity wants to dynamically generate an NDEF message,\n     * then set a callback using {@link #setNdefPushMessageCallback} instead\n     * of a static message.\n     *\n     * <p class=\"note\">Do not pass in an Activity that has already been through\n     * {@link Activity#onDestroy}. This is guaranteed if you call this API\n     * during {@link Activity#onCreate}.\n     *\n     * <p class=\"note\">For sending large content such as pictures and songs,\n     * consider using {@link #setBeamPushUris}, which switches to alternate transports\n     * such as Bluetooth to achieve a fast transfer rate.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param message NDEF message to push over NFC, or null to disable\n     * @param activity activity for which the NDEF message will be pushed\n     * @param activities optional additional activities, however we strongly recommend\n     *        to only register one at a time, and to do so in that activity's\n     *        {@link Activity#onCreate}\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onCreate", "android.app.Activity#onDestroy", "#setNdefPushMessageCallback", "#setBeamPushUris", "#setNdefPushMessage", "android.nfc.NdefMessage" ]
+  }, {
+    "name" : "public void setNdefPushMessage(NdefMessage message, Activity activity, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNdefPushMessageCallback(CreateNdefMessageCallback callback, Activity activity, Activity... activities)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a callback that dynamically generates NDEF messages to send using Android Beam (TM).\n     *\n     * <p>This method may be called at any time before {@link Activity#onDestroy},\n     * but the NDEF message callback can only occur when the\n     * specified activity(s) are in resumed (foreground) state. The recommended\n     * approach is to call this method during your Activity's\n     * {@link Activity#onCreate} - see sample\n     * code below. This method does not immediately perform any I/O or blocking work,\n     * so is safe to call on your main thread.\n     *\n     * <p>Only one NDEF message can be pushed by the currently resumed activity.\n     * If both {@link #setNdefPushMessage} and\n     * {@link #setNdefPushMessageCallback} are set, then\n     * the callback will take priority.\n     *\n     * <p>If neither {@link #setNdefPushMessage} or\n     * {@link #setNdefPushMessageCallback} have been called for your activity, then\n     * the Android OS may choose to send a default NDEF message on your behalf,\n     * such as a URI for your application.\n     *\n     * <p>If {@link #setNdefPushMessage} is called with a null NDEF message,\n     * and/or {@link #setNdefPushMessageCallback} is called with a null callback,\n     * then NDEF push will be completely disabled for the specified activity(s).\n     * This also disables any default NDEF message the Android OS would have\n     * otherwise sent on your behalf for those activity(s).\n     *\n     * <p>If you want to prevent the Android OS from sending default NDEF\n     * messages completely (for all activities), you can include a\n     * {@code <meta-data>} element inside the {@code <application>}\n     * element of your AndroidManifest.xml file, like this:\n     * <pre>\n     * &lt;application ...>\n     *     &lt;meta-data android:name=\"android.nfc.disable_beam_default\"\n     *         android:value=\"true\" />\n     * &lt;/application></pre>\n     *\n     * <p>The API allows for multiple activities to be specified at a time,\n     * but it is strongly recommended to just register one at a time,\n     * and to do so during the activity's {@link Activity#onCreate}. For example:\n     * <pre>\n     * protected void onCreate(Bundle savedInstanceState) {\n     *     super.onCreate(savedInstanceState);\n     *     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);\n     *     if (nfcAdapter == null) return;  // NFC not available on this device\n     *     nfcAdapter.setNdefPushMessageCallback(callback, this);\n     * }</pre>\n     * And that is it. Only one call per activity is necessary. The Android\n     * OS will automatically release its references to the callback and the\n     * Activity object when it is destroyed if you follow this pattern.\n     *\n     * <p class=\"note\">Do not pass in an Activity that has already been through\n     * {@link Activity#onDestroy}. This is guaranteed if you call this API\n     * during {@link Activity#onCreate}.\n     * <p class=\"note\">For sending large content such as pictures and songs,\n     * consider using {@link #setBeamPushUris}, which switches to alternate transports\n     * such as Bluetooth to achieve a fast transfer rate.\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param callback callback, or null to disable\n     * @param activity activity for which the NDEF message will be pushed\n     * @param activities optional additional activities, however we strongly recommend\n     *        to only register one at a time, and to do so in that activity's\n     *        {@link Activity#onCreate}\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onCreate", "android.app.Activity#onDestroy", "#setNdefPushMessageCallback", "#setBeamPushUris", "#setNdefPushMessage" ]
+  }, {
+    "name" : "public void setNdefPushMessageCallback(CreateNdefMessageCallback callback, Activity activity, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnNdefPushCompleteCallback(OnNdefPushCompleteCallback callback, Activity activity, Activity... activities)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a callback on successful Android Beam (TM).\n     *\n     * <p>This method may be called at any time before {@link Activity#onDestroy},\n     * but the callback can only occur when the\n     * specified activity(s) are in resumed (foreground) state. The recommended\n     * approach is to call this method during your Activity's\n     * {@link Activity#onCreate} - see sample\n     * code below. This method does not immediately perform any I/O or blocking work,\n     * so is safe to call on your main thread.\n     *\n     * <p>The API allows for multiple activities to be specified at a time,\n     * but it is strongly recommended to just register one at a time,\n     * and to do so during the activity's {@link Activity#onCreate}. For example:\n     * <pre>\n     * protected void onCreate(Bundle savedInstanceState) {\n     *     super.onCreate(savedInstanceState);\n     *     NfcAdapter nfcAdapter = NfcAdapter.getDefaultAdapter(this);\n     *     if (nfcAdapter == null) return;  // NFC not available on this device\n     *     nfcAdapter.setOnNdefPushCompleteCallback(callback, this);\n     * }</pre>\n     * And that is it. Only one call per activity is necessary. The Android\n     * OS will automatically release its references to the callback and the\n     * Activity object when it is destroyed if you follow this pattern.\n     *\n     * <p class=\"note\">Do not pass in an Activity that has already been through\n     * {@link Activity#onDestroy}. This is guaranteed if you call this API\n     * during {@link Activity#onCreate}.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param callback callback, or null to disable\n     * @param activity activity for which the NDEF message will be pushed\n     * @param activities optional additional activities, however we strongly recommend\n     *        to only register one at a time, and to do so in that activity's\n     *        {@link Activity#onCreate}\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onCreate", "android.app.Activity#onDestroy" ]
+  }, {
+    "name" : "public void enableForegroundDispatch(Activity activity, PendingIntent intent, IntentFilter[] filters, String[][] techLists)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable foreground dispatch to the given Activity.\n     *\n     * <p>This will give priority to the foreground activity when\n     * dispatching a discovered {@link Tag} to an application.\n     *\n     * <p>If any IntentFilters are provided to this method they are used to match dispatch Intents\n     * for both the {@link NfcAdapter#ACTION_NDEF_DISCOVERED} and\n     * {@link NfcAdapter#ACTION_TAG_DISCOVERED}. Since {@link NfcAdapter#ACTION_TECH_DISCOVERED}\n     * relies on meta data outside of the IntentFilter matching for that dispatch Intent is handled\n     * by passing in the tech lists separately. Each first level entry in the tech list represents\n     * an array of technologies that must all be present to match. If any of the first level sets\n     * match then the dispatch is routed through the given PendingIntent. In other words, the second\n     * level is ANDed together and the first level entries are ORed together.\n     *\n     * <p>If you pass {@code null} for both the {@code filters} and {@code techLists} parameters\n     * that acts a wild card and will cause the foreground activity to receive all tags via the\n     * {@link NfcAdapter#ACTION_TAG_DISCOVERED} intent.\n     *\n     * <p>This method must be called from the main thread, and only when the activity is in the\n     * foreground (resumed). Also, activities must call {@link #disableForegroundDispatch} before\n     * the completion of their {@link Activity#onPause} callback to disable foreground dispatch\n     * after it has been enabled.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param activity the Activity to dispatch to\n     * @param intent the PendingIntent to start for the dispatch\n     * @param filters the IntentFilters to override dispatching for, or null to always dispatch\n     * @param techLists the tech lists used to perform matching for dispatching of the\n     *      {@link NfcAdapter#ACTION_TECH_DISCOVERED} intent\n     * @throws IllegalStateException if the Activity is not currently in the foreground\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.nfc.Tag", "android.app.Activity#onPause", "android.nfc.NfcAdapter#ACTION_TAG_DISCOVERED", "#disableForegroundDispatch", "android.nfc.NfcAdapter#ACTION_NDEF_DISCOVERED", "android.nfc.NfcAdapter#ACTION_TECH_DISCOVERED" ]
+  }, {
+    "name" : "public void disableForegroundDispatch(Activity activity)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable foreground dispatch to the given activity.\n     *\n     * <p>After calling {@link #enableForegroundDispatch}, an activity\n     * must call this method before its {@link Activity#onPause} callback\n     * completes.\n     *\n     * <p>This method must be called from the main thread.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param activity the Activity to disable dispatch to\n     * @throws IllegalStateException if the Activity has already been paused\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "#enableForegroundDispatch", "android.app.Activity#onPause" ]
+  }, {
+    "name" : " void disableForegroundDispatchInternal(Activity activity, boolean force)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void enableReaderMode(Activity activity, ReaderCallback callback, int flags, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Limit the NFC controller to reader mode while this Activity is in the foreground.\n     *\n     * <p>In this mode the NFC controller will only act as an NFC tag reader/writer,\n     * thus disabling any peer-to-peer (Android Beam) and card-emulation modes of\n     * the NFC adapter on this device.\n     *\n     * <p>Use {@link #FLAG_READER_SKIP_NDEF_CHECK} to prevent the platform from\n     * performing any NDEF checks in reader mode. Note that this will prevent the\n     * {@link Ndef} tag technology from being enumerated on the tag, and that\n     * NDEF-based tag dispatch will not be functional.\n     *\n     * <p>For interacting with tags that are emulated on another Android device\n     * using Android's host-based card-emulation, the recommended flags are\n     * {@link #FLAG_READER_NFC_A} and {@link #FLAG_READER_SKIP_NDEF_CHECK}.\n     *\n     * @param activity the Activity that requests the adapter to be in reader mode\n     * @param callback the callback to be called when a tag is discovered\n     * @param flags Flags indicating poll technologies and other optional parameters\n     * @param extras Additional extras for configuring reader mode.\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     ",
+    "links" : [ "#FLAG_READER_NFC_A", "android.nfc.tech.Ndef", "#FLAG_READER_SKIP_NDEF_CHECK" ]
+  }, {
+    "name" : "public void disableReaderMode(Activity activity)",
+    "returnType" : "void",
+    "comment" : "\n     * Restore the NFC adapter to normal mode of operation: supporting\n     * peer-to-peer (Android Beam), card emulation, and polling for\n     * all supported tag technologies.\n     *\n     * @param activity the Activity that currently has reader mode enabled\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean invokeBeam(Activity activity)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Manually invoke Android Beam to share data.\n     *\n     * <p>The Android Beam animation is normally only shown when two NFC-capable\n     * devices come into range.\n     * By calling this method, an Activity can invoke the Beam animation directly\n     * even if no other NFC device is in range yet. The Beam animation will then\n     * prompt the user to tap another NFC-capable device to complete the data\n     * transfer.\n     *\n     * <p>The main advantage of using this method is that it avoids the need for the\n     * user to tap the screen to complete the transfer, as this method already\n     * establishes the direction of the transfer and the consent of the user to\n     * share data. Callers are responsible for making sure that the user has\n     * consented to sharing data on NFC tap.\n     *\n     * <p>Note that to use this method, the passed in Activity must have already\n     * set data to share over Beam by using method calls such as\n     * {@link #setNdefPushMessageCallback} or\n     * {@link #setBeamPushUrisCallback}.\n     *\n     * @param activity the current foreground Activity that has registered data to share\n     * @return whether the Beam animation was successfully invoked\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ "#setBeamPushUrisCallback", "#setNdefPushMessageCallback" ]
+  }, {
+    "name" : "public boolean invokeBeam(BeamShareData shareData)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void enableForegroundNdefPush(Activity activity, NdefMessage message)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable NDEF message push over NFC while this Activity is in the foreground.\n     *\n     * <p>You must explicitly call this method every time the activity is\n     * resumed, and you must call {@link #disableForegroundNdefPush} before\n     * your activity completes {@link Activity#onPause}.\n     *\n     * <p>Strongly recommend to use the new {@link #setNdefPushMessage}\n     * instead: it automatically hooks into your activity life-cycle,\n     * so you do not need to call enable/disable in your onResume/onPause.\n     *\n     * <p>For NDEF push to function properly the other NFC device must\n     * support either NFC Forum's SNEP (Simple Ndef Exchange Protocol), or\n     * Android's \"com.android.npp\" (Ndef Push Protocol). This was optional\n     * on Gingerbread level Android NFC devices, but SNEP is mandatory on\n     * Ice-Cream-Sandwich and beyond.\n     *\n     * <p>This method must be called from the main thread.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param activity foreground activity\n     * @param message a NDEF Message to push over NFC\n     * @throws IllegalStateException if the activity is not currently in the foreground\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated use {@link #setNdefPushMessage} instead\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "#disableForegroundNdefPush", "android.app.Activity#onPause", "#setNdefPushMessage" ]
+  }, {
+    "name" : "public void disableForegroundNdefPush(Activity activity)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable NDEF message push over P2P.\n     *\n     * <p>After calling {@link #enableForegroundNdefPush}, an activity\n     * must call this method before its {@link Activity#onPause} callback\n     * completes.\n     *\n     * <p>Strongly recommend to use the new {@link #setNdefPushMessage}\n     * instead: it automatically hooks into your activity life-cycle,\n     * so you do not need to call enable/disable in your onResume/onPause.\n     *\n     * <p>This method must be called from the main thread.\n     *\n     * <p class=\"note\">Requires the {@link android.Manifest.permission#NFC} permission.\n     *\n     * @param activity the Foreground activity\n     * @throws IllegalStateException if the Activity has already been paused\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated use {@link #setNdefPushMessage} instead\n     ",
+    "links" : [ "android.Manifest.permission#NFC", "android.app.Activity#onPause", "#setNdefPushMessage", "#enableForegroundNdefPush" ]
+  }, {
+    "name" : "public boolean enableSecureNfc(boolean enable)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets Secure NFC feature.\n     * <p>This API is for the Settings application.\n     * @return True if successful\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isSecureNfcSupported()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the device supports Secure NFC functionality.\n     *\n     * @return True if device supports Secure NFC, false otherwise\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isSecureNfcEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks Secure NFC feature is enabled.\n     *\n     * @return True if Secure NFC is enabled, false otherwise\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @throws UnsupportedOperationException if device doesn't support\n     *         Secure NFC functionality. {@link #isSecureNfcSupported}\n     ",
+    "links" : [ "#isSecureNfcSupported" ]
+  }, {
+    "name" : "public boolean enableNdefPush()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Enable NDEF Push feature.\n     * <p>This API is for the Settings application.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean disableNdefPush()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Disable NDEF Push feature.\n     * <p>This API is for the Settings application.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isNdefPushEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the NDEF Push (Android Beam) feature is enabled.\n     * <p>This function will return true only if both NFC is enabled, and the\n     * NDEF Push feature is enabled.\n     * <p>Note that if NFC is enabled but NDEF Push is disabled then this\n     * device can still <i>receive</i> NDEF messages, it just cannot send them.\n     * <p>Applications cannot directly toggle the NDEF Push feature, but they\n     * can request Settings UI allowing the user to toggle NDEF Push using\n     * <code>startActivity(new Intent(Settings.ACTION_NFCSHARING_SETTINGS))</code>\n     * <p>Example usage in an Activity that requires NDEF Push:\n     * <p><pre>\n     * protected void onResume() {\n     *     super.onResume();\n     *     if (!nfcAdapter.isEnabled()) {\n     *         startActivity(new Intent(Settings.ACTION_NFC_SETTINGS));\n     *     } else if (!nfcAdapter.isNdefPushEnabled()) {\n     *         startActivity(new Intent(Settings.ACTION_NFCSHARING_SETTINGS));\n     *     }\n     * }</pre>\n     *\n     * @see android.provider.Settings#ACTION_NFCSHARING_SETTINGS\n     * @return true if NDEF Push feature is enabled\n     * @throws UnsupportedOperationException if FEATURE_NFC is unavailable.\n     * @deprecated this feature is deprecated. File sharing can work using other technology like\n     * Bluetooth.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean ignore(final Tag tag, int debounceMs, final OnTagRemovedListener tagRemovedListener, final Handler handler)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Signals that you are no longer interested in communicating with an NFC tag\n     * for as long as it remains in range.\n     *\n     * All future attempted communication to this tag will fail with {@link IOException}.\n     * The NFC controller will be put in a low-power polling mode, allowing the device\n     * to save power in cases where it's \"attached\" to a tag all the time (e.g. a tag in\n     * car dock).\n     *\n     * Additionally the debounceMs parameter allows you to specify for how long the tag needs\n     * to have gone out of range, before it will be dispatched again.\n     *\n     * Note: the NFC controller typically polls at a pretty slow interval (100 - 500 ms).\n     * This means that if the tag repeatedly goes in and out of range (for example, in\n     * case of a flaky connection), and the controller happens to poll every time the\n     * tag is out of range, it *will* re-dispatch the tag after debounceMs, despite the tag\n     * having been \"in range\" during the interval.\n     *\n     * Note 2: if a tag with another UID is detected after this API is called, its effect\n     * will be cancelled; if this tag shows up before the amount of time specified in\n     * debounceMs, it will be dispatched again.\n     *\n     * Note 3: some tags have a random UID, in which case this API won't work reliably.\n     *\n     * @param tag        the {@link android.nfc.Tag Tag} to ignore.\n     * @param debounceMs minimum amount of time the tag needs to be out of range before being\n     *                   dispatched again.\n     * @param tagRemovedListener listener to be called when the tag is removed from the field.\n     *                           Note that this will only be called if the tag has been out of range\n     *                           for at least debounceMs, or if another tag came into range before\n     *                           debounceMs. May be null in case you don't want a callback.\n     * @param handler the {@link android.os.Handler Handler} that will be used for delivering\n     *                the callback. if the handler is null, then the thread used for delivering\n     *                the callback is unspecified.\n     * @return false if the tag couldn't be found (or has already gone out of range), true otherwise\n     ",
+    "links" : [ "android.nfc.Tag", "android.os.Handler", "java.io.IOException" ]
+  }, {
+    "name" : "public void dispatch(Tag tag)",
+    "returnType" : "void",
+    "comment" : "\n     * Inject a mock NFC tag.<p>\n     * Used for testing purposes.\n     * <p class=\"note\">Requires the\n     * {@link android.Manifest.permission#WRITE_SECURE_SETTINGS} permission.\n     * @hide\n     ",
+    "links" : [ "android.Manifest.permission#WRITE_SECURE_SETTINGS" ]
+  }, {
+    "name" : "public void setP2pModes(int initiatorModes, int targetModes)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean addNfcUnlockHandler(final NfcUnlockHandler unlockHandler, String[] tagTechnologies)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Registers a new NFC unlock handler with the NFC service.\n     *\n     * <p />NFC unlock handlers are intended to unlock the keyguard in the presence of a trusted\n     * NFC device. The handler should return true if it successfully authenticates the user and\n     * unlocks the keyguard.\n     *\n     * <p /> The parameter {@code tagTechnologies} determines which Tag technologies will be polled for\n     * at the lockscreen. Polling for less tag technologies reduces latency, and so it is\n     * strongly recommended to only provide the Tag technologies that the handler is expected to\n     * receive. There must be at least one tag technology provided, otherwise the unlock handler\n     * is ignored.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean removeNfcUnlockHandler(NfcUnlockHandler unlockHandler)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Removes a previously registered unlock handler. Also removes the tag technologies\n     * associated with the removed unlock handler.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public INfcAdapterExtras getNfcAdapterExtrasInterface()",
+    "returnType" : "INfcAdapterExtras",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void enforceResumed(Activity activity)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " int getSdkVersion()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "ACTION_NDEF_DISCOVERED", "ACTION_TECH_DISCOVERED", "ACTION_TAG_DISCOVERED", "ACTION_TRANSACTION_DETECTED", "ACTION_PREFERRED_PAYMENT_CHANGED", "ACTION_TAG_LEFT_FIELD", "EXTRA_TAG", "EXTRA_NDEF_MESSAGES", "EXTRA_ID", "ACTION_ADAPTER_STATE_CHANGED", "EXTRA_ADAPTER_STATE", "EXTRA_AID", "EXTRA_DATA", "EXTRA_SECURE_ELEMENT_NAME", "EXTRA_PREFERRED_PAYMENT_CHANGED_REASON", "PREFERRED_PAYMENT_LOADED", "PREFERRED_PAYMENT_CHANGED", "PREFERRED_PAYMENT_UPDATED", "STATE_OFF", "STATE_TURNING_ON", "STATE_ON", "STATE_TURNING_OFF", "FLAG_READER_NFC_A", "FLAG_READER_NFC_B", "FLAG_READER_NFC_F", "FLAG_READER_NFC_V", "FLAG_READER_NFC_BARCODE", "FLAG_READER_SKIP_NDEF_CHECK", "FLAG_READER_NO_PLATFORM_SOUNDS", "EXTRA_READER_PRESENCE_CHECK_DELAY", "FLAG_NDEF_PUSH_NO_CONFIRM", "ACTION_HANDOVER_TRANSFER_STARTED", "ACTION_HANDOVER_TRANSFER_DONE", "EXTRA_HANDOVER_TRANSFER_STATUS", "HANDOVER_TRANSFER_STATUS_SUCCESS", "HANDOVER_TRANSFER_STATUS_FAILURE", "EXTRA_HANDOVER_TRANSFER_URI", "sIsInitialized", "sHasNfcFeature", "sHasBeamFeature", "sService", "sTagService", "sCardEmulationService", "sNfcFCardEmulationService", "sNfcAdapters", "sNullContextNfcAdapter", "mNfcActivityManager", "mContext", "mNfcUnlockHandlers", "mLock", "mTagRemovedListener", "mForegroundDispatchListener" ],
+  "methodNames" : [ "private static boolean hasBeamFeature()", "private static boolean hasNfcFeature()", "private static boolean hasNfcHceFeature()", "public List<String> getSupportedOffHostSecureElements()", "public static synchronized NfcAdapter getNfcAdapter(Context context)", "private static INfcAdapter getServiceInterface()", "public static NfcAdapter getDefaultAdapter(Context context)", "public static NfcAdapter getDefaultAdapter()", "public Context getContext()", "public INfcAdapter getService()", "public INfcTag getTagService()", "public INfcCardEmulation getCardEmulationService()", "public INfcFCardEmulation getNfcFCardEmulationService()", "public INfcDta getNfcDtaInterface()", "public void attemptDeadServiceRecovery(Exception e)", "public boolean isEnabled()", "public int getAdapterState()", "public boolean enable()", "public boolean disable()", "public boolean disable(boolean persist)", "public void pausePolling(int timeoutInMs)", "public void resumePolling()", "public void setBeamPushUris(Uri[] uris, Activity activity)", "public void setBeamPushUrisCallback(CreateBeamUrisCallback callback, Activity activity)", "public void setNdefPushMessage(NdefMessage message, Activity activity, Activity... activities)", "public void setNdefPushMessage(NdefMessage message, Activity activity, int flags)", "public void setNdefPushMessageCallback(CreateNdefMessageCallback callback, Activity activity, Activity... activities)", "public void setNdefPushMessageCallback(CreateNdefMessageCallback callback, Activity activity, int flags)", "public void setOnNdefPushCompleteCallback(OnNdefPushCompleteCallback callback, Activity activity, Activity... activities)", "public void enableForegroundDispatch(Activity activity, PendingIntent intent, IntentFilter[] filters, String[][] techLists)", "public void disableForegroundDispatch(Activity activity)", " void disableForegroundDispatchInternal(Activity activity, boolean force)", "public void enableReaderMode(Activity activity, ReaderCallback callback, int flags, Bundle extras)", "public void disableReaderMode(Activity activity)", "public boolean invokeBeam(Activity activity)", "public boolean invokeBeam(BeamShareData shareData)", "public void enableForegroundNdefPush(Activity activity, NdefMessage message)", "public void disableForegroundNdefPush(Activity activity)", "public boolean enableSecureNfc(boolean enable)", "public boolean isSecureNfcSupported()", "public boolean isSecureNfcEnabled()", "public boolean enableNdefPush()", "public boolean disableNdefPush()", "public boolean isNdefPushEnabled()", "public boolean ignore(final Tag tag, int debounceMs, final OnTagRemovedListener tagRemovedListener, final Handler handler)", "public void dispatch(Tag tag)", "public void setP2pModes(int initiatorModes, int targetModes)", "public boolean addNfcUnlockHandler(final NfcUnlockHandler unlockHandler, String[] tagTechnologies)", "public boolean removeNfcUnlockHandler(NfcUnlockHandler unlockHandler)", "public INfcAdapterExtras getNfcAdapterExtrasInterface()", " void enforceResumed(Activity activity)", " int getSdkVersion()" ]
+}

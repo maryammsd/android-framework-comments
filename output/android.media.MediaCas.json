@@ -1,0 +1,320 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/MediaCas.java",
+  "packageName" : "android.media",
+  "className" : "MediaCas",
+  "comment" : "\n * MediaCas can be used to obtain keys for descrambling protected media streams, in\n * conjunction with {@link android.media.MediaDescrambler}. The MediaCas APIs are\n * designed to support conditional access such as those in the ISO/IEC13818-1.\n * The CA system is identified by a 16-bit integer CA_system_id. The scrambling\n * algorithms are usually proprietary and implemented by vendor-specific CA plugins\n * installed on the device.\n * <p>\n * The app is responsible for constructing a MediaCas object for the CA system it\n * intends to use. The app can query if a certain CA system is supported using static\n * method {@link #isSystemIdSupported}. It can also obtain the entire list of supported\n * CA systems using static method {@link #enumeratePlugins}.\n * <p>\n * Once the MediaCas object is constructed, the app should properly provision it by\n * using method {@link #provision} and/or {@link #processEmm}. The EMMs (Entitlement\n * management messages) can be distributed out-of-band, or in-band with the stream.\n * <p>\n * To descramble elementary streams, the app first calls {@link #openSession} to\n * generate a {@link Session} object that will uniquely identify a session. A session\n * provides a context for subsequent key updates and descrambling activities. The ECMs\n * (Entitlement control messages) are sent to the session via method\n * {@link Session#processEcm}.\n * <p>\n * The app next constructs a MediaDescrambler object, and initializes it with the\n * session using {@link MediaDescrambler#setMediaCasSession}. This ties the\n * descrambler to the session, and the descrambler can then be used to descramble\n * content secured with the session's key, either during extraction, or during decoding\n * with {@link android.media.MediaCodec}.\n * <p>\n * If the app handles sample extraction using its own extractor, it can use\n * MediaDescrambler to descramble samples into clear buffers (if the session's license\n * doesn't require secure decoders), or descramble a small amount of data to retrieve\n * information necessary for the downstream pipeline to process the sample (if the\n * session's license requires secure decoders).\n * <p>\n * If the session requires a secure decoder, a MediaDescrambler needs to be provided to\n * MediaCodec to descramble samples queued by {@link MediaCodec#queueSecureInputBuffer}\n * into protected buffers. The app should use {@link MediaCodec#configure(MediaFormat,\n * android.view.Surface, int, MediaDescrambler)} instead of the normal {@link\n * MediaCodec#configure(MediaFormat, android.view.Surface, MediaCrypto, int)} method\n * to configure MediaCodec.\n * <p>\n * <h3>Using Android's MediaExtractor</h3>\n * <p>\n * If the app uses {@link MediaExtractor}, it can delegate the CAS session\n * management to MediaExtractor by calling {@link MediaExtractor#setMediaCas}.\n * MediaExtractor will take over and call {@link #openSession}, {@link #processEmm}\n * and/or {@link Session#processEcm}, etc.. if necessary.\n * <p>\n * When using {@link MediaExtractor}, the app would still need a MediaDescrambler\n * to use with {@link MediaCodec} if the licensing requires a secure decoder. The\n * session associated with the descrambler of a track can be retrieved by calling\n * {@link MediaExtractor#getCasInfo}, and used to initialize a MediaDescrambler\n * object for MediaCodec.\n * <p>\n * <h3>Listeners</h3>\n * <p>The app may register a listener to receive events from the CA system using\n * method {@link #setEventListener}. The exact format of the event is scheme-specific\n * and is not specified by this API.\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mICas",
+    "type" : "ICas",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mICasV11",
+    "type" : "android.hardware.cas.V1_1.ICas",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mICasV12",
+    "type" : "android.hardware.cas.V1_2.ICas",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListener",
+    "type" : "EventListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandlerThread",
+    "type" : "HandlerThread",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEventHandler",
+    "type" : "EventHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPriorityHint",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTvInputServiceSessionId",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClientId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCasSystemId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUserId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTunerResourceManager",
+    "type" : "TunerResourceManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSessionMap",
+    "type" : "Map<Session, Integer>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_RESERVED",
+    "type" : "int",
+    "comment" : "\n     * DVB (Digital Video Broadcasting) reserved mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CSA1",
+    "type" : "int",
+    "comment" : "\n     * DVB (Digital Video Broadcasting) Common Scrambling Algorithm (CSA) 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CSA2",
+    "type" : "int",
+    "comment" : "\n     * DVB CSA 2.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CSA3_STANDARD",
+    "type" : "int",
+    "comment" : "\n     * DVB CSA 3 in standard mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CSA3_MINIMAL",
+    "type" : "int",
+    "comment" : "\n     * DVB CSA 3 in minimally enhanced mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CSA3_ENHANCE",
+    "type" : "int",
+    "comment" : "\n     * DVB CSA 3 in fully enhanced mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_CISSA_V1",
+    "type" : "int",
+    "comment" : "\n     * DVB Common IPTV Software-oriented Scrambling Algorithm (CISSA) Version 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_DVB_IDSA",
+    "type" : "int",
+    "comment" : "\n     * ATIS-0800006 IIF Default Scrambling Algorithm (IDSA).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_MULTI2",
+    "type" : "int",
+    "comment" : "\n     * A symmetric key algorithm.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_AES128",
+    "type" : "int",
+    "comment" : "\n     * Advanced Encryption System (AES) 128-bit Encryption mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_AES_ECB",
+    "type" : "int",
+    "comment" : "\n     * Advanced Encryption System (AES) Electronic Code Book (ECB) mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_AES_SCTE52",
+    "type" : "int",
+    "comment" : "\n     * Advanced Encryption System (AES) Society of Cable Telecommunications Engineers (SCTE) 52\n     * mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_TDES_ECB",
+    "type" : "int",
+    "comment" : "\n     * Triple Data Encryption Algorithm (TDES) Electronic Code Book (ECB) mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_MODE_TDES_SCTE52",
+    "type" : "int",
+    "comment" : "\n     * Triple Data Encryption Algorithm (TDES) Society of Cable Telecommunications Engineers (SCTE)\n     * 52 mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_USAGE_LIVE",
+    "type" : "int",
+    "comment" : "\n     * Cas session is used to descramble live streams.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_USAGE_PLAYBACK",
+    "type" : "int",
+    "comment" : "\n     * Cas session is used to descramble recoreded streams.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_USAGE_RECORD",
+    "type" : "int",
+    "comment" : "\n     * Cas session is used to descramble live streams and encrypt local recorded content\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_USAGE_TIMESHIFT",
+    "type" : "int",
+    "comment" : "\n     * Cas session is used to descramble live streams , encrypt local recorded content and playback\n     * local encrypted content.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PLUGIN_STATUS_PHYSICAL_MODULE_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * The event to indicate that the status of CAS system is changed by the removal or insertion of\n     * physical CAS modules.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PLUGIN_STATUS_SESSION_NUMBER_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * The event to indicate that the number of CAS system's session is changed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sService",
+    "type" : "Singleton<IMediaCasService>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBinder",
+    "type" : "ICasListener.Stub",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mResourceListener",
+    "type" : "TunerResourceManager.ResourcesReclaimListener",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static IMediaCasService getService()",
+    "returnType" : "IMediaCasService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void validateInternalStates()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void cleanupAndRethrowIllegalState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ArrayList<Byte> toByteArray(@NonNull byte[] data, int offset, int length)",
+    "returnType" : "ArrayList<Byte>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ArrayList<Byte> toByteArray(@Nullable byte[] data)",
+    "returnType" : "ArrayList<Byte>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private byte[] toBytes(@NonNull ArrayList<Byte> byteArray)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " Session createFromSessionId(@NonNull ArrayList<Byte> sessionId)",
+    "returnType" : "Session",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isSystemIdSupported(int CA_system_id)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Query if a certain CA system is supported on this device.\n     *\n     * @param CA_system_id the id of the CA system.\n     *\n     * @return Whether the specified CA system is supported on this device.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluginDescriptor[] enumeratePlugins()",
+    "returnType" : "PluginDescriptor[]",
+    "comment" : "\n     * List all available CA plugins on the device.\n     *\n     * @return an array of descriptors for the available CA plugins.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " IHwBinder getBinder()",
+    "returnType" : "IHwBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEventListener(@Nullable EventListener listener, @Nullable Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Set an event listener to receive notifications from the MediaCas instance.\n     *\n     * @param listener the event listener to be set.\n     * @param handler the handler whose looper the event listener will be called on.\n     * If handler is null, we'll try to use current thread's looper, or the main\n     * looper. If neither are available, an internal thread will be created instead.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPrivateData(@NonNull byte[] data) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Send the private data for the CA system.\n     *\n     * @param data byte array of the private data.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getSessionResourceHandle() throws MediaCasException",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addSessionToResourceMap(Session session, int sessionResourceHandle)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeSessionFromResourceMap(Session session)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Session openSession() throws MediaCasException",
+    "returnType" : "Session",
+    "comment" : "\n     * Open a session to descramble one or more streams scrambled by the\n     * conditional access system.\n     *\n     * <p>Tuner resource manager (TRM) uses the client priority value to decide whether it is able\n     * to get cas session resource if cas session resources is limited. If the client can't get the\n     * resource, this call returns {@link MediaCasException.InsufficientResourceException }.\n     *\n     * @return session the newly opened session.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ "MediaCasException.InsufficientResourceException" ]
+  }, {
+    "name" : "public Session openSession(@SessionUsage int sessionUsage, @ScramblingMode int scramblingMode) throws MediaCasException",
+    "returnType" : "Session",
+    "comment" : "\n     * Open a session with usage and scrambling information, so that descrambler can be configured\n     * to descramble one or more streams scrambled by the conditional access system.\n     *\n     * <p>Tuner resource manager (TRM) uses the client priority value to decide whether it is able\n     * to get cas session resource if cas session resources is limited. If the client can't get the\n     * resource, this call returns {@link MediaCasException.InsufficientResourceException}.\n     *\n     * @param sessionUsage used for the created session.\n     * @param scramblingMode used for the created session.\n     *\n     * @return session the newly opened session.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ "MediaCasException.InsufficientResourceException" ]
+  }, {
+    "name" : "public void processEmm(@NonNull byte[] data, int offset, int length) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Send a received EMM packet to the CA system.\n     *\n     * @param data byte array of the EMM data.\n     * @param offset position within data where the EMM data begins.\n     * @param length length of the data (starting from offset).\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void processEmm(@NonNull byte[] data) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Send a received EMM packet to the CA system. This is similar to\n     * {@link #processEmm(byte[], int, int)} except that the entire byte\n     * array is sent.\n     *\n     * @param data byte array of the EMM data.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ "#processEmm(byte" ]
+  }, {
+    "name" : "public void sendEvent(int event, int arg, @Nullable byte[] data) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Send an event to a CA system. The format of the event is scheme-specific\n     * and is opaque to the framework.\n     *\n     * @param event an integer denoting a scheme-specific event to be sent.\n     * @param arg a scheme-specific integer argument for the event.\n     * @param data a byte array containing scheme-specific data for the event.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void provision(@NonNull String provisionString) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Initiate a provisioning operation for a CA system.\n     *\n     * @param provisionString string containing information needed for the\n     * provisioning operation, the format of which is scheme and implementation\n     * specific.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void refreshEntitlements(int refreshType, @Nullable byte[] refreshData) throws MediaCasException",
+    "returnType" : "void",
+    "comment" : "\n     * Notify the CA system to refresh entitlement keys.\n     *\n     * @param refreshType the type of the refreshment.\n     * @param refreshData private data associated with the refreshment.\n     *\n     * @throws IllegalStateException if the MediaCas instance is not valid.\n     * @throws MediaCasException for CAS-specific errors.\n     * @throws MediaCasStateException for CAS-specific state exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forceResourceLost()",
+    "returnType" : "void",
+    "comment" : "\n     * Release Cas session. This is primarily used as a test API for CTS.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "mICas", "mICasV11", "mICasV12", "mListener", "mHandlerThread", "mEventHandler", "mPriorityHint", "mTvInputServiceSessionId", "mClientId", "mCasSystemId", "mUserId", "mTunerResourceManager", "mSessionMap", "SCRAMBLING_MODE_RESERVED", "SCRAMBLING_MODE_DVB_CSA1", "SCRAMBLING_MODE_DVB_CSA2", "SCRAMBLING_MODE_DVB_CSA3_STANDARD", "SCRAMBLING_MODE_DVB_CSA3_MINIMAL", "SCRAMBLING_MODE_DVB_CSA3_ENHANCE", "SCRAMBLING_MODE_DVB_CISSA_V1", "SCRAMBLING_MODE_DVB_IDSA", "SCRAMBLING_MODE_MULTI2", "SCRAMBLING_MODE_AES128", "SCRAMBLING_MODE_AES_ECB", "SCRAMBLING_MODE_AES_SCTE52", "SCRAMBLING_MODE_TDES_ECB", "SCRAMBLING_MODE_TDES_SCTE52", "SESSION_USAGE_LIVE", "SESSION_USAGE_PLAYBACK", "SESSION_USAGE_RECORD", "SESSION_USAGE_TIMESHIFT", "PLUGIN_STATUS_PHYSICAL_MODULE_CHANGED", "PLUGIN_STATUS_SESSION_NUMBER_CHANGED", "sService", "mBinder", "mResourceListener" ],
+  "methodNames" : [ " static IMediaCasService getService()", "private void validateInternalStates()", "private void cleanupAndRethrowIllegalState()", "private ArrayList<Byte> toByteArray(@NonNull byte[] data, int offset, int length)", "private ArrayList<Byte> toByteArray(@Nullable byte[] data)", "private byte[] toBytes(@NonNull ArrayList<Byte> byteArray)", " Session createFromSessionId(@NonNull ArrayList<Byte> sessionId)", "public static boolean isSystemIdSupported(int CA_system_id)", "public static PluginDescriptor[] enumeratePlugins()", " IHwBinder getBinder()", "public void setEventListener(@Nullable EventListener listener, @Nullable Handler handler)", "public void setPrivateData(@NonNull byte[] data) throws MediaCasException", "private int getSessionResourceHandle() throws MediaCasException", "private void addSessionToResourceMap(Session session, int sessionResourceHandle)", "private void removeSessionFromResourceMap(Session session)", "public Session openSession() throws MediaCasException", "public Session openSession(@SessionUsage int sessionUsage, @ScramblingMode int scramblingMode) throws MediaCasException", "public void processEmm(@NonNull byte[] data, int offset, int length) throws MediaCasException", "public void processEmm(@NonNull byte[] data) throws MediaCasException", "public void sendEvent(int event, int arg, @Nullable byte[] data) throws MediaCasException", "public void provision(@NonNull String provisionString) throws MediaCasException", "public void refreshEntitlements(int refreshType, @Nullable byte[] refreshData) throws MediaCasException", "public void forceResourceLost()", "public void close()", "protected void finalize()" ]
+}

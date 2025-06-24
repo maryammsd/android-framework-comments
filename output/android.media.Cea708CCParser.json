@@ -1,0 +1,185 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/Cea708CaptionRenderer.java",
+  "packageName" : "android.media",
+  "className" : "Cea708CCParser",
+  "comment" : "\n * @hide\n *\n * A class for parsing CEA-708, which is the standard for closed captioning for ATSC DTV.\n *\n * <p>ATSC DTV closed caption data are carried on picture user data of video streams.\n * This class starts to parse from picture user data payload, so extraction process of user_data\n * from video streams is up to outside of this code.\n *\n * <p>There are 4 steps to decode user_data to provide closed caption services. Step 1 and 2 are\n * done in NuPlayer and libstagefright.\n *\n * <h3>Step 1. user_data -&gt; CcPacket</h3>\n *\n * <p>First, user_data consists of cc_data packets, which are 3-byte segments. Here, CcPacket is a\n * collection of cc_data packets in a frame along with same presentation timestamp. Because cc_data\n * packets must be reassembled in the frame display order, CcPackets are reordered.\n *\n * <h3>Step 2. CcPacket -&gt; DTVCC packet</h3>\n *\n * <p>Each cc_data packet has a one byte for declaring a type of itself and data validity, and the\n * subsequent two bytes for input data of a DTVCC packet. There are 4 types for cc_data packet.\n * We're interested in DTVCC_PACKET_START(type 3) and DTVCC_PACKET_DATA(type 2). Each DTVCC packet\n * begins with DTVCC_PACKET_START(type 3) and the following cc_data packets which has\n * DTVCC_PACKET_DATA(type 2) are appended into the DTVCC packet being assembled.\n *\n * <h3>Step 3. DTVCC packet -&gt; Service Blocks</h3>\n *\n * <p>A DTVCC packet consists of multiple service blocks. Each service block represents a caption\n * track and has a service number, which ranges from 1 to 63, that denotes caption track identity.\n * In here, we listen at most one chosen caption track by service number. Otherwise, just skip the\n * other service blocks.\n *\n * <h3>Step 4. Interpreting Service Block Data ({@link #parseServiceBlockData}, {@code parseXX},\n * and {@link #parseExt1} methods)</h3>\n *\n * <p>Service block data is actual caption stream. it looks similar to telnet. It uses most parts of\n * ASCII table and consists of specially defined commands and some ASCII control codes which work\n * in a behavior slightly different from their original purpose. ASCII control codes and caption\n * commands are explicit instructions that control the state of a closed caption service and the\n * other ASCII and text codes are implicit instructions that send their characters to buffer.\n *\n * <p>There are 4 main code groups and 4 extended code groups. Both the range of code groups are the\n * same as the range of a byte.\n *\n * <p>4 main code groups: C0, C1, G0, G1\n * <br>4 extended code groups: C2, C3, G2, G3\n *\n * <p>Each code group has its own handle method. For example, {@link #parseC0} handles C0 code group\n * and so on. And {@link #parseServiceBlockData} method maps a stream on the main code groups while\n * {@link #parseExt1} method maps on the extended code groups.\n *\n * <p>The main code groups:\n * <ul>\n * <li>C0 - contains modified ASCII control codes. It is not intended by CEA-708 but Korea TTA\n *      standard for ATSC CC uses P16 character heavily, which is unclear entity in CEA-708 doc,\n *      even for the alphanumeric characters instead of ASCII characters.</li>\n * <li>C1 - contains the caption commands. There are 3 categories of a caption command.</li>\n * <ul>\n * <li>Window commands: The window commands control a caption window which is addressable area being\n *                  with in the Safe title area. (CWX, CLW, DSW, HDW, TGW, DLW, SWA, DFX)</li>\n * <li>Pen commands: Th pen commands control text style and location. (SPA, SPC, SPL)</li>\n * <li>Job commands: The job commands make a delay and recover from the delay. (DLY, DLC, RST)</li>\n * </ul>\n * <li>G0 - same as printable ASCII character set except music note character.</li>\n * <li>G1 - same as ISO 8859-1 Latin 1 character set.</li>\n * </ul>\n * <p>Most of the extended code groups are being skipped.\n *\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MUSIC_NOTE_CHAR",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBuffer",
+    "type" : "StringBuffer",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCommand",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListener",
+    "type" : "DisplayListener",
+    "comment" : " Assign a dummy listener in order to avoid null checks.",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_BUFFER",
+    "type" : "int",
+    "comment" : "\n     * {@link Cea708Parser} emits caption event of three different types.\n     * {@link DisplayListener#emitEvent} is invoked with the parameter\n     * {@link CaptionEvent} to pass all the results to an observer of the decoding process .\n     *\n     * <p>{@link CaptionEvent#type} determines the type of the result and\n     * {@link CaptionEvent#obj} contains the output value of a caption event.\n     * The observer must do the casting to the corresponding type.\n     *\n     * <ul><li>{@code CAPTION_EMIT_TYPE_BUFFER}: Passes a caption text buffer to a observer.\n     * {@code obj} must be of {@link String}.</li>\n     *\n     * <li>{@code CAPTION_EMIT_TYPE_CONTROL}: Passes a caption character control code to a observer.\n     * {@code obj} must be of {@link Character}.</li>\n     *\n     * <li>{@code CAPTION_EMIT_TYPE_CLEAR_COMMAND}: Passes a clear command to a observer.\n     * {@code obj} must be {@code NULL}.</li></ul>\n     ",
+    "links" : [ "Character", "CaptionEvent", "#obj", "Cea708Parser", "#emitEvent", "String", "#type" ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_CONTROL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_CWX",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_CLW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_DSW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_HDW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_TGW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_DLW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_DLY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_DLC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_RST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_SPA",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_SPC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_SPL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_SWA",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CAPTION_EMIT_TYPE_COMMAND_DFX",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void emitCaptionEvent(CaptionEvent captionEvent)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void emitCaptionBuffer()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void parse(byte[] data)",
+    "returnType" : "void",
+    "comment" : " Step 3. DTVCC packet -> Service Blocks (parseDtvCcPacket method)",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseServiceBlockData(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : " Step 4. Main code groups",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseC0(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseC1(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseG0(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseG1(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseExt1(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : " Step 4. Extended code groups",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseC2(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseC3(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseG2(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseG3(byte[] data, int pos)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "DEBUG", "MUSIC_NOTE_CHAR", "mBuffer", "mCommand", "mListener", "CAPTION_EMIT_TYPE_BUFFER", "CAPTION_EMIT_TYPE_CONTROL", "CAPTION_EMIT_TYPE_COMMAND_CWX", "CAPTION_EMIT_TYPE_COMMAND_CLW", "CAPTION_EMIT_TYPE_COMMAND_DSW", "CAPTION_EMIT_TYPE_COMMAND_HDW", "CAPTION_EMIT_TYPE_COMMAND_TGW", "CAPTION_EMIT_TYPE_COMMAND_DLW", "CAPTION_EMIT_TYPE_COMMAND_DLY", "CAPTION_EMIT_TYPE_COMMAND_DLC", "CAPTION_EMIT_TYPE_COMMAND_RST", "CAPTION_EMIT_TYPE_COMMAND_SPA", "CAPTION_EMIT_TYPE_COMMAND_SPC", "CAPTION_EMIT_TYPE_COMMAND_SPL", "CAPTION_EMIT_TYPE_COMMAND_SWA", "CAPTION_EMIT_TYPE_COMMAND_DFX" ],
+  "methodNames" : [ "private void emitCaptionEvent(CaptionEvent captionEvent)", "private void emitCaptionBuffer()", "public void parse(byte[] data)", "private int parseServiceBlockData(byte[] data, int pos)", "private int parseC0(byte[] data, int pos)", "private int parseC1(byte[] data, int pos)", "private int parseG0(byte[] data, int pos)", "private int parseG1(byte[] data, int pos)", "private int parseExt1(byte[] data, int pos)", "private int parseC2(byte[] data, int pos)", "private int parseC3(byte[] data, int pos)", "private int parseG2(byte[] data, int pos)", "private int parseG3(byte[] data, int pos)" ]
+}

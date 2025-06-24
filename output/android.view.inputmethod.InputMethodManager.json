@@ -1,0 +1,855 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/view/inputmethod/InputMethodManager.java",
+  "packageName" : "android.view.inputmethod",
+  "className" : "InputMethodManager",
+  "comment" : "\n * Central system API to the overall input method framework (IMF) architecture,\n * which arbitrates interaction between applications and the current input method.\n *\n * <p>Topics covered here:\n * <ol>\n * <li><a href=\"#ArchitectureOverview\">Architecture Overview</a>\n * <li><a href=\"#Applications\">Applications</a>\n * <li><a href=\"#InputMethods\">Input Methods</a>\n * <li><a href=\"#Security\">Security</a>\n * </ol>\n *\n * <a name=\"ArchitectureOverview\"></a>\n * <h3>Architecture Overview</h3>\n *\n * <p>There are three primary parties involved in the input method\n * framework (IMF) architecture:</p>\n *\n * <ul>\n * <li> The <strong>input method manager</strong> as expressed by this class\n * is the central point of the system that manages interaction between all\n * other parts.  It is expressed as the client-side API here which exists\n * in each application context and communicates with a global system service\n * that manages the interaction across all processes.\n * <li> An <strong>input method (IME)</strong> implements a particular\n * interaction model allowing the user to generate text.  The system binds\n * to the current input method that is in use, causing it to be created and run,\n * and tells it when to hide and show its UI.  Only one IME is running at a time.\n * <li> Multiple <strong>client applications</strong> arbitrate with the input\n * method manager for input focus and control over the state of the IME.  Only\n * one such client is ever active (working with the IME) at a time.\n * </ul>\n *\n *\n * <a name=\"Applications\"></a>\n * <h3>Applications</h3>\n *\n * <p>In most cases, applications that are using the standard\n * {@link android.widget.TextView} or its subclasses will have little they need\n * to do to work well with soft input methods.  The main things you need to\n * be aware of are:</p>\n *\n * <ul>\n * <li> Properly set the {@link android.R.attr#inputType} in your editable\n * text views, so that the input method will have enough context to help the\n * user in entering text into them.\n * <li> Deal well with losing screen space when the input method is\n * displayed.  Ideally an application should handle its window being resized\n * smaller, but it can rely on the system performing panning of the window\n * if needed.  You should set the {@link android.R.attr#windowSoftInputMode}\n * attribute on your activity or the corresponding values on windows you\n * create to help the system determine whether to pan or resize (it will\n * try to determine this automatically but may get it wrong).\n * <li> You can also control the preferred soft input state (open, closed, etc)\n * for your window using the same {@link android.R.attr#windowSoftInputMode}\n * attribute.\n * </ul>\n *\n * <p>More finer-grained control is available through the APIs here to directly\n * interact with the IMF and its IME -- either showing or hiding the input\n * area, letting the user pick an input method, etc.</p>\n *\n * <p>For the rare people amongst us writing their own text editors, you\n * will need to implement {@link android.view.View#onCreateInputConnection}\n * to return a new instance of your own {@link InputConnection} interface\n * allowing the IME to interact with your editor.</p>\n *\n *\n * <a name=\"InputMethods\"></a>\n * <h3>Input Methods</h3>\n *\n * <p>An input method (IME) is implemented\n * as a {@link android.app.Service}, typically deriving from\n * {@link android.inputmethodservice.InputMethodService}.  It must provide\n * the core {@link InputMethod} interface, though this is normally handled by\n * {@link android.inputmethodservice.InputMethodService} and implementors will\n * only need to deal with the higher-level API there.</p>\n *\n * See the {@link android.inputmethodservice.InputMethodService} class for\n * more information on implementing IMEs.\n *\n *\n * <a name=\"Security\"></a>\n * <h3>Security</h3>\n *\n * <p>There are a lot of security issues associated with input methods,\n * since they essentially have freedom to completely drive the UI and monitor\n * everything the user enters.  The Android input method framework also allows\n * arbitrary third party IMEs, so care must be taken to restrict their\n * selection and interactions.</p>\n *\n * <p>Here are some key points about the security architecture behind the\n * IMF:</p>\n *\n * <ul>\n * <li> <p>Only the system is allowed to directly access an IME's\n * {@link InputMethod} interface, via the\n * {@link android.Manifest.permission#BIND_INPUT_METHOD} permission.  This is\n * enforced in the system by not binding to an input method service that does\n * not require this permission, so the system can guarantee no other untrusted\n * clients are accessing the current input method outside of its control.</p>\n *\n * <li> <p>There may be many client processes of the IMF, but only one may\n * be active at a time.  The inactive clients can not interact with key\n * parts of the IMF through the mechanisms described below.</p>\n *\n * <li> <p>Clients of an input method are only given access to its\n * {@link InputMethodSession} interface.  One instance of this interface is\n * created for each client, and only calls from the session associated with\n * the active client will be processed by the current IME.  This is enforced\n * by {@link android.inputmethodservice.AbstractInputMethodService} for normal\n * IMEs, but must be explicitly handled by an IME that is customizing the\n * raw {@link InputMethodSession} implementation.</p>\n *\n * <li> <p>Only the active client's {@link InputConnection} will accept\n * operations.  The IMF tells each client process whether it is active, and\n * the framework enforces that in inactive processes calls on to the current\n * InputConnection will be ignored.  This ensures that the current IME can\n * only deliver events and text edits to the UI that the user sees as\n * being in focus.</p>\n *\n * <li> <p>An IME can never interact with an {@link InputConnection} while\n * the screen is off.  This is enforced by making all clients inactive while\n * the screen is off, and prevents bad IMEs from driving the UI when the user\n * can not be aware of its behavior.</p>\n *\n * <li> <p>A client application can ask that the system let the user pick a\n * new IME, but can not programmatically switch to one itself.  This avoids\n * malicious applications from switching the user to their own IME, which\n * remains running when the user navigates away to another application.  An\n * IME, on the other hand, <em>is</em> allowed to programmatically switch\n * the system to another IME, since it already has full control of user\n * input.</p>\n *\n * <li> <p>The user must explicitly enable a new IME in settings before\n * they can switch to it, to confirm with the system that they know about it\n * and want to make it available for use.</p>\n * </ul>\n ",
+  "variables" : [ {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PENDING_EVENT_COUNTER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NOT_A_SUBTYPE_ID",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SUBTYPE_MODE_VOICE",
+    "type" : "String",
+    "comment" : "\n     * A constant that represents Voice IME.\n     *\n     * @see InputMethodSubtype#getMode()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sInstance",
+    "type" : "InputMethodManager",
+    "comment" : "\n     * @deprecated This cannot be compatible with multi-display. Please do not use this.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sInstanceMap",
+    "type" : "SparseArray<InputMethodManager>",
+    "comment" : "\n     * Global map between display to {@link InputMethodManager}.\n     *\n     * <p>Currently this map works like a so-called leaky singleton.  Once an instance is registered\n     * for the associated display ID, that instance will never be garbage collected.</p>\n     *\n     * <p>TODO(Bug 116699479): Implement instance clean up mechanism.</p>\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodManager" ]
+  }, {
+    "name" : "INPUT_METHOD_NOT_RESPONDING_TIMEOUT",
+    "type" : "long",
+    "comment" : "\n     * Timeout in milliseconds for delivering a key to an IME.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DISPATCH_IN_PROGRESS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISPATCH_NOT_HANDLED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISPATCH_HANDLED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_IM_PICKER_MODE_AUTO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_IM_PICKER_MODE_INCLUDE_AUXILIARY_SUBTYPES",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_IM_PICKER_MODE_EXCLUDE_AUXILIARY_SUBTYPES",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IInputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMainLooper",
+    "type" : "Looper",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mH",
+    "type" : "H",
+    "comment" : " so an access to the field is closed.",
+    "links" : [ ]
+  }, {
+    "name" : "mIInputContext",
+    "type" : "IInputContext",
+    "comment" : " Our generic input connection if the current target does not have its own.",
+    "links" : [ ]
+  }, {
+    "name" : "mDisplayId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActive",
+    "type" : "boolean",
+    "comment" : "\n     * True if this input method client is active, initially false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mRestartOnNextWindowFocus",
+    "type" : "boolean",
+    "comment" : "\n     * {@code true} if next {@link ImeFocusController#onPostWindowFocus} needs to\n     * restart input.\n     ",
+    "links" : [ "android.view.ImeFocusController#onPostWindowFocus" ]
+  }, {
+    "name" : "mFullscreenMode",
+    "type" : "boolean",
+    "comment" : "\n     * As reported by IME through InputConnection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurRootView",
+    "type" : "ViewRootImpl",
+    "comment" : "\n     * This is the root view of the overall window that currently has input\n     * method focus.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mServedConnecting",
+    "type" : "boolean",
+    "comment" : "\n     * This is set when we are in the process of connecting, to determine\n     * when we have actually finished.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentTextBoxAttribute",
+    "type" : "EditorInfo",
+    "comment" : "\n     * This is non-null when we have connected the served view; it holds\n     * the attributes that were last retrieved from the served view and given\n     * to the input connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mServedInputConnectionWrapper",
+    "type" : "ControlledInputConnectionWrapper",
+    "comment" : "\n     * The InputConnection that was last retrieved from the served view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCompletions",
+    "type" : "CompletionInfo[]",
+    "comment" : "\n     * The completions that were last provided by the served view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mTmpCursorRect",
+    "type" : "Rect",
+    "comment" : " Cursor position on the screen.",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorRect",
+    "type" : "Rect",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorSelStart",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorSelEnd",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorCandStart",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorCandEnd",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCursorAnchorInfo",
+    "type" : "CursorAnchorInfo",
+    "comment" : "\n     * The instance that has previously been sent to the input method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mActivityViewToScreenMatrix",
+    "type" : "Matrix",
+    "comment" : "\n     * A special {@link Matrix} that can be provided by the system when this instance is running\n     * inside a virtual display that is managed by {@link android.app.ActivityView}.\n     *\n     * <p>If this is non-{@code null}, {@link #updateCursorAnchorInfo(View, CursorAnchorInfo)}\n     * should be adjusted with this {@link Matrix}.</p>\n     *\n     * <p>{@code null} when not used.</p>\n     ",
+    "links" : [ "android.app.ActivityView", "android.graphics.Matrix", "#updateCursorAnchorInfo(View" ]
+  }, {
+    "name" : "mBindSequence",
+    "type" : "int",
+    "comment" : "\n     * Sequence number of this binding, as returned by the server.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurId",
+    "type" : "String",
+    "comment" : "\n     * ID of the method we are bound to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurMethod",
+    "type" : "IInputMethodSession",
+    "comment" : "\n     * The actual instance of the method to make calls on it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurChannel",
+    "type" : "InputChannel",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurSender",
+    "type" : "ImeInputEventSender",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_UPDATE_CURSOR_ANCHOR_INFO_NONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRequestUpdateCursorAnchorInfoMonitorMode",
+    "type" : "int",
+    "comment" : "\n     * The monitor mode for {@link #updateCursorAnchorInfo(View, CursorAnchorInfo)}.\n     ",
+    "links" : [ "#updateCursorAnchorInfo(View" ]
+  }, {
+    "name" : "mImeInsetsConsumer",
+    "type" : "ImeInsetsSourceConsumer",
+    "comment" : "\n     * When {@link ViewRootImpl#sNewInsetsMode} is set to\n     * >= {@link ViewRootImpl#NEW_INSETS_MODE_IME}, {@link ImeInsetsSourceConsumer} applies the\n     * IME visibility and listens for other state changes.\n     ",
+    "links" : [ "android.view.ViewRootImpl#sNewInsetsMode", "android.view.ViewRootImpl#NEW_INSETS_MODE_IME", "android.view.ImeInsetsSourceConsumer" ]
+  }, {
+    "name" : "mPendingEventPool",
+    "type" : "Pool<PendingEvent>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPendingEvents",
+    "type" : "SparseArray<PendingEvent>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDelegate",
+    "type" : "DelegateImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_DUMP",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_BIND",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_UNBIND",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SET_ACTIVE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SEND_INPUT_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_TIMEOUT_INPUT_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_FLUSH_INPUT_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REPORT_FULLSCREEN_MODE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REPORT_PRE_RENDERED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_APPLY_IME_VISIBILITY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_UPDATE_ACTIVITY_VIEW_TO_SCREEN_MATRIX",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClient",
+    "type" : "IInputMethodClient.Stub",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDummyInputConnection",
+    "type" : "InputConnection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_IMPLICIT",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #showSoftInput} to indicate that this is an implicit\n     * request to show the input window, not as the result of a direct request\n     * by the user.  The window may not be shown in this case.\n     ",
+    "links" : [ "#showSoftInput" ]
+  }, {
+    "name" : "SHOW_FORCED",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #showSoftInput} to indicate that the user has forced\n     * the input method open (such as by long-pressing menu) so it should\n     * not be closed until they explicitly do so.\n     ",
+    "links" : [ "#showSoftInput" ]
+  }, {
+    "name" : "RESULT_UNCHANGED_SHOWN",
+    "type" : "int",
+    "comment" : "\n     * Flag for the {@link ResultReceiver} result code from\n     * {@link #showSoftInput(View, int, ResultReceiver)} and\n     * {@link #hideSoftInputFromWindow(IBinder, int, ResultReceiver)}: the\n     * state of the soft input window was unchanged and remains shown.\n     ",
+    "links" : [ "#showSoftInput(View", "#hideSoftInputFromWindow(IBinder", "android.os.ResultReceiver" ]
+  }, {
+    "name" : "RESULT_UNCHANGED_HIDDEN",
+    "type" : "int",
+    "comment" : "\n     * Flag for the {@link ResultReceiver} result code from\n     * {@link #showSoftInput(View, int, ResultReceiver)} and\n     * {@link #hideSoftInputFromWindow(IBinder, int, ResultReceiver)}: the\n     * state of the soft input window was unchanged and remains hidden.\n     ",
+    "links" : [ "#showSoftInput(View", "#hideSoftInputFromWindow(IBinder", "android.os.ResultReceiver" ]
+  }, {
+    "name" : "RESULT_SHOWN",
+    "type" : "int",
+    "comment" : "\n     * Flag for the {@link ResultReceiver} result code from\n     * {@link #showSoftInput(View, int, ResultReceiver)} and\n     * {@link #hideSoftInputFromWindow(IBinder, int, ResultReceiver)}: the\n     * state of the soft input window changed from hidden to shown.\n     ",
+    "links" : [ "#showSoftInput(View", "#hideSoftInputFromWindow(IBinder", "android.os.ResultReceiver" ]
+  }, {
+    "name" : "RESULT_HIDDEN",
+    "type" : "int",
+    "comment" : "\n     * Flag for the {@link ResultReceiver} result code from\n     * {@link #showSoftInput(View, int, ResultReceiver)} and\n     * {@link #hideSoftInputFromWindow(IBinder, int, ResultReceiver)}: the\n     * state of the soft input window changed from shown to hidden.\n     ",
+    "links" : [ "#showSoftInput(View", "#hideSoftInputFromWindow(IBinder", "android.os.ResultReceiver" ]
+  }, {
+    "name" : "HIDE_IMPLICIT_ONLY",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #hideSoftInputFromWindow} and {@link InputMethodService#requestHideSelf(int)}\n     * to indicate that the soft input window should only be hidden if it was not explicitly shown\n     * by the user.\n     ",
+    "links" : [ "#hideSoftInputFromWindow", "android.inputmethodservice.InputMethodService#requestHideSelf(int)" ]
+  }, {
+    "name" : "HIDE_NOT_ALWAYS",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #hideSoftInputFromWindow} and {@link InputMethodService#requestShowSelf(int)}\n     * to indicate that the soft input window should normally be hidden, unless it was originally\n     * shown with {@link #SHOW_FORCED}.\n     ",
+    "links" : [ "#hideSoftInputFromWindow", "android.inputmethodservice.InputMethodService#requestShowSelf(int)", "#SHOW_FORCED" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static void ensureDefaultInstanceForDefaultDisplayIfNecessary()",
+    "returnType" : "void",
+    "comment" : "\n     * Ensures that {@link #sInstance} becomes non-{@code null} for application that have directly\n     * or indirectly relied on {@link #sInstance} via reflection or something like that.\n     *\n     * <p>Here are scenarios we know and there could be more scenarios we are not\n     * aware of right know.</p>\n     *\n     * <ul>\n     *     <li>Apps that directly access {@link #sInstance} via reflection, which is currently\n     *     allowed because of {@link UnsupportedAppUsage} annotation.  Currently\n     *     {@link android.view.WindowManagerGlobal#getWindowSession()} is likely to guarantee that\n     *     {@link #sInstance} is not {@code null} when such an app is accessing it, but removing\n     *     that code from {@link android.view.WindowManagerGlobal#getWindowSession()} can reveal\n     *     untested code paths in their apps, which probably happen in an early startup time of that\n     *     app.</li>\n     *     <li>Apps that directly access {@link #peekInstance()} via reflection, which is currently\n     *     allowed because of {@link UnsupportedAppUsage} annotation.  Currently\n     *     {@link android.view.WindowManagerGlobal#getWindowSession()} is likely to guarantee that\n     *     {@link #peekInstance()} returns non-{@code null} object when such an app is calling\n     *     {@link #peekInstance()}, but removing that code from\n     *     {@link android.view.WindowManagerGlobal#getWindowSession()} can reveal untested code\n     *     paths in their apps, which probably happen in an early startup time of that app. The good\n     *     news is that unlike {@link #sInstance}'s case we can at least work around this scenario\n     *     by changing the semantics of {@link #peekInstance()}, which is currently defined as\n     *     \"retrieve the global {@link InputMethodManager} instance, if it exists\" to something that\n     *     always returns non-{@code null} {@link InputMethodManager}.  However, introducing such an\n     *     workaround can also trigger different compatibility issues if {@link #peekInstance()} was\n     *     called before {@link android.view.WindowManagerGlobal#getWindowSession()} and it expected\n     *     {@link #peekInstance()} to return {@code null} as written in the JavaDoc.</li>\n     * </ul>\n     *\n     * <p>Since this is purely a compatibility hack, this method must be used only from\n     * {@link android.view.WindowManagerGlobal#getWindowSession()} and {@link #getInstance()}.</p>\n     *\n     * <p>TODO(Bug 116157766): Remove this method once we clean up {@link UnsupportedAppUsage}.</p>\n     * @hide\n     ",
+    "links" : [ "android.compat.annotation.UnsupportedAppUsage", "com.android.internal.view.IInputMethodManager", "android.view.WindowManagerGlobal#getWindowSession()", "#sInstance", "#getInstance()", "#peekInstance()" ]
+  }, {
+    "name" : "private static boolean isAutofillUIShowing(View servedView)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private InputMethodManager getFallbackInputMethodManagerIfNecessary(@Nullable View view)",
+    "returnType" : "InputMethodManager",
+    "comment" : "\n     * Returns fallback {@link InputMethodManager} if the called one is not likely to be compatible\n     * with the given {@code view}.\n     *\n     * @param view {@link View} to be checked.\n     * @return {@code null} when it is unnecessary (or impossible) to use fallback\n     *         {@link InputMethodManager} to which IME API calls need to be re-dispatched.\n     *          Non-{@code null} {@link InputMethodManager} if this method believes it'd be safer to\n     *          re-dispatch IME APIs calls on it.\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodManager", "android.view.View" ]
+  }, {
+    "name" : "private static boolean canStartInput(View servedView)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void reportPerceptible(IBinder windowToken, boolean perceptible)",
+    "returnType" : "void",
+    "comment" : "\n     * Reports whether the IME is currently perceptible or not, according to the leash applied by\n     * {@link android.view.WindowInsetsController}.\n     * @hide\n     ",
+    "links" : [ "android.view.WindowInsetsController" ]
+  }, {
+    "name" : "public DelegateImpl getDelegate()",
+    "returnType" : "DelegateImpl",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private View getServedViewLocked()",
+    "returnType" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private View getNextServedViewLocked()",
+    "returnType" : "View",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setServedViewLocked(View view)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setNextServedViewLocked(View view)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ImeFocusController getFocusController()",
+    "returnType" : "ImeFocusController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean hasServedByInputMethodLocked(View view)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} when the given view has been served by Input Method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void tearDownEditMode()",
+    "returnType" : "void",
+    "comment" : "\n     * For layoutlib to clean up static objects inside {@link InputMethodManager}.\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodManager" ]
+  }, {
+    "name" : "private static boolean isInEditMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * For layoutlib to override this method to return {@code true}.\n     *\n     * @return {@code true} if the process is running for developer tools\n     * @see View#isInEditMode()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static InputMethodManager createInstance(int displayId, Looper looper)",
+    "returnType" : "InputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static InputMethodManager createRealInstance(int displayId, Looper looper)",
+    "returnType" : "InputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static InputMethodManager createStubInstance(int displayId, Looper looper)",
+    "returnType" : "InputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static InputMethodManager forContext(Context context)",
+    "returnType" : "InputMethodManager",
+    "comment" : "\n     * Retrieve an instance for the given {@link Context}, creating it if it doesn't already exist.\n     *\n     * @param context {@link Context} for which IME APIs need to work\n     * @return {@link InputMethodManager} instance\n     * @hide\n     ",
+    "links" : [ "android.content.Context", "com.android.internal.view.IInputMethodManager" ]
+  }, {
+    "name" : "private static InputMethodManager forContextInternal(int displayId, Looper looper)",
+    "returnType" : "InputMethodManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static InputMethodManager getInstance()",
+    "returnType" : "InputMethodManager",
+    "comment" : "\n     * Deprecated. Do not use.\n     *\n     * @return global {@link InputMethodManager} instance\n     * @deprecated Use {@link Context#getSystemService(Class)} instead. This method cannot fully\n     *             support multi-display scenario.\n     * @hide\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodManager", "android.content.Context#getSystemService(Class)" ]
+  }, {
+    "name" : "public static InputMethodManager peekInstance()",
+    "returnType" : "InputMethodManager",
+    "comment" : "\n     * Deprecated. Do not use.\n     *\n     * @return {@link #sInstance}\n     * @deprecated Use {@link Context#getSystemService(Class)} instead. This method cannot fully\n     *             support multi-display scenario.\n     * @hide\n     ",
+    "links" : [ "#sInstance", "android.content.Context#getSystemService(Class)" ]
+  }, {
+    "name" : "public IInputMethodClient getClient()",
+    "returnType" : "IInputMethodClient",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public IInputContext getInputContext()",
+    "returnType" : "IInputContext",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<InputMethodInfo> getInputMethodList()",
+    "returnType" : "List<InputMethodInfo>",
+    "comment" : "\n     * Returns the list of installed input methods.\n     *\n     * <p>On multi user environment, this API returns a result for the calling process user.</p>\n     *\n     * @return {@link List} of {@link InputMethodInfo}.\n     ",
+    "links" : [ "android.view.inputmethod.InputMethodInfo", "java.util.List" ]
+  }, {
+    "name" : "public List<InputMethodInfo> getInputMethodListAsUser(@UserIdInt int userId)",
+    "returnType" : "List<InputMethodInfo>",
+    "comment" : "\n     * Returns the list of installed input methods for the specified user.\n     *\n     * @param userId user ID to query\n     * @return {@link List} of {@link InputMethodInfo}.\n     * @hide\n     ",
+    "links" : [ "android.view.inputmethod.InputMethodInfo", "java.util.List" ]
+  }, {
+    "name" : "public List<InputMethodInfo> getEnabledInputMethodList()",
+    "returnType" : "List<InputMethodInfo>",
+    "comment" : "\n     * Returns the list of enabled input methods.\n     *\n     * <p>On multi user environment, this API returns a result for the calling process user.</p>\n     *\n     * @return {@link List} of {@link InputMethodInfo}.\n     ",
+    "links" : [ "android.view.inputmethod.InputMethodInfo", "java.util.List" ]
+  }, {
+    "name" : "public List<InputMethodInfo> getEnabledInputMethodListAsUser(@UserIdInt int userId)",
+    "returnType" : "List<InputMethodInfo>",
+    "comment" : "\n     * Returns the list of enabled input methods for the specified user.\n     *\n     * @param userId user ID to query\n     * @return {@link List} of {@link InputMethodInfo}.\n     * @hide\n     ",
+    "links" : [ "android.view.inputmethod.InputMethodInfo", "java.util.List" ]
+  }, {
+    "name" : "public List<InputMethodSubtype> getEnabledInputMethodSubtypeList(InputMethodInfo imi, boolean allowsImplicitlySelectedSubtypes)",
+    "returnType" : "List<InputMethodSubtype>",
+    "comment" : "\n     * Returns a list of enabled input method subtypes for the specified input method info.\n     *\n     * <p>On multi user environment, this API returns a result for the calling process user.</p>\n     *\n     * @param imi An input method info whose subtypes list will be returned.\n     * @param allowsImplicitlySelectedSubtypes A boolean flag to allow to return the implicitly\n     * selected subtypes. If an input method info doesn't have enabled subtypes, the framework\n     * will implicitly enable subtypes according to the current system language.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void showStatusIcon(IBinder imeToken, String packageName, @DrawableRes int iconId)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link InputMethodService#showStatusIcon(int)} instead. This method was\n     * intended for IME developers who should be accessing APIs through the service. APIs in this\n     * class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#showStatusIcon(int)" ]
+  }, {
+    "name" : "public void hideStatusIcon(IBinder imeToken)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Use {@link InputMethodService#hideStatusIcon()} instead. This method was\n     * intended for IME developers who should be accessing APIs through the service. APIs in\n     * this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#hideStatusIcon()" ]
+  }, {
+    "name" : "public void registerSuggestionSpansForNotification(SuggestionSpan[] spans)",
+    "returnType" : "void",
+    "comment" : "\n     * This hidden API is deprecated in {@link android.os.Build.VERSION_CODES#Q}. Does nothing.\n     *\n     * @param spans will be ignored.\n     *\n     * @deprecated Do not use.\n     * @hide\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#Q" ]
+  }, {
+    "name" : "public void notifySuggestionPicked(SuggestionSpan span, String originalString, int index)",
+    "returnType" : "void",
+    "comment" : "\n     * This hidden API is deprecated in {@link android.os.Build.VERSION_CODES#Q}. Does nothing.\n     *\n     * @deprecated Do not use.\n     * @hide\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#Q" ]
+  }, {
+    "name" : "public boolean isFullscreenMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Allows you to discover whether the attached input method is running\n     * in fullscreen mode.  Return true if it is fullscreen, entirely covering\n     * your UI, else returns false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isActive(View view)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given view is the currently active view for the\n     * input method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isActive()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if any view is currently active in the input method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAcceptingText()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the currently served view is accepting full text edits.\n     * If false, it has no input connection, so can only handle raw key events.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void clearBindingLocked()",
+    "returnType" : "void",
+    "comment" : "\n     * Reset all of the state associated with being bound to an input method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void setInputChannelLocked(InputChannel channel)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void clearConnectionLocked()",
+    "returnType" : "void",
+    "comment" : "\n     * Reset all of the state associated with a served view being connected\n     * to an input method\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void finishInputLocked()",
+    "returnType" : "void",
+    "comment" : "\n     * Disconnect any existing input connection, clearing the served view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void displayCompletions(View view, CompletionInfo[] completions)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void updateExtractedText(View view, int token, ExtractedText text)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean showSoftInput(View view, int flags)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Synonym for {@link #showSoftInput(View, int, ResultReceiver)} without\n     * a result receiver: explicitly request that the current input method's\n     * soft input area be shown to the user, if needed.\n     *\n     * @param view The currently focused view, which would like to receive\n     * soft keyboard input.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #SHOW_IMPLICIT} bit set.\n     ",
+    "links" : [ "#showSoftInput(View", "#SHOW_IMPLICIT" ]
+  }, {
+    "name" : "public boolean showSoftInput(View view, int flags, ResultReceiver resultReceiver)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Explicitly request that the current input method's soft input area be\n     * shown to the user, if needed.  Call this if the user interacts with\n     * your view in such a way that they have expressed they would like to\n     * start performing input into it.\n     *\n     * <p><strong>Caveat:</strong> {@link ResultReceiver} instance passed to\n     * this method can be a long-lived object, because it may not be\n     * garbage-collected until all the corresponding {@link ResultReceiver}\n     * objects transferred to different processes get garbage-collected.\n     * Follow the general patterns to avoid memory leaks in Android.\n     * Consider to use {@link java.lang.ref.WeakReference} so that application\n     * logic objects such as {@link android.app.Activity} and {@link Context}\n     * can be garbage collected regardless of the lifetime of\n     * {@link ResultReceiver}.\n     *\n     * @param view The currently focused view, which would like to receive\n     * soft keyboard input.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #SHOW_IMPLICIT} bit set.\n     * @param resultReceiver If non-null, this will be called by the IME when\n     * it has processed your request to tell you what it has done.  The result\n     * code you receive may be either {@link #RESULT_UNCHANGED_SHOWN},\n     * {@link #RESULT_UNCHANGED_HIDDEN}, {@link #RESULT_SHOWN}, or\n     * {@link #RESULT_HIDDEN}.\n     ",
+    "links" : [ "#RESULT_SHOWN", "#RESULT_HIDDEN", "android.content.Context", "#RESULT_UNCHANGED_HIDDEN", "#SHOW_IMPLICIT", "#RESULT_UNCHANGED_SHOWN", "android.os.ResultReceiver", "java.lang.ref.WeakReference", "android.app.Activity" ]
+  }, {
+    "name" : "public void showSoftInputUnchecked(int flags, ResultReceiver resultReceiver)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is still kept for a while until android.support.v7.widget.SearchView ver. 26.0\n     * is publicly released because previous implementations of that class had relied on this method\n     * via reflection.\n     *\n     * @deprecated This is a hidden API. You should never use this.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hideSoftInputFromWindow(IBinder windowToken, int flags)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Synonym for {@link #hideSoftInputFromWindow(IBinder, int, ResultReceiver)}\n     * without a result: request to hide the soft input window from the\n     * context of the window that is currently accepting input.\n     *\n     * @param windowToken The token of the window that is making the request,\n     * as returned by {@link View#getWindowToken() View.getWindowToken()}.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #HIDE_IMPLICIT_ONLY} bit set.\n     ",
+    "links" : [ "android.view.View#getWindowToken()", "#hideSoftInputFromWindow(IBinder", "#HIDE_IMPLICIT_ONLY" ]
+  }, {
+    "name" : "public boolean hideSoftInputFromWindow(IBinder windowToken, int flags, ResultReceiver resultReceiver)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Request to hide the soft input window from the context of the window\n     * that is currently accepting input.  This should be called as a result\n     * of the user doing some actually than fairly explicitly requests to\n     * have the input window hidden.\n     *\n     * <p><strong>Caveat:</strong> {@link ResultReceiver} instance passed to\n     * this method can be a long-lived object, because it may not be\n     * garbage-collected until all the corresponding {@link ResultReceiver}\n     * objects transferred to different processes get garbage-collected.\n     * Follow the general patterns to avoid memory leaks in Android.\n     * Consider to use {@link java.lang.ref.WeakReference} so that application\n     * logic objects such as {@link android.app.Activity} and {@link Context}\n     * can be garbage collected regardless of the lifetime of\n     * {@link ResultReceiver}.\n     *\n     * @param windowToken The token of the window that is making the request,\n     * as returned by {@link View#getWindowToken() View.getWindowToken()}.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #HIDE_IMPLICIT_ONLY} bit set.\n     * @param resultReceiver If non-null, this will be called by the IME when\n     * it has processed your request to tell you what it has done.  The result\n     * code you receive may be either {@link #RESULT_UNCHANGED_SHOWN},\n     * {@link #RESULT_UNCHANGED_HIDDEN}, {@link #RESULT_SHOWN}, or\n     * {@link #RESULT_HIDDEN}.\n     ",
+    "links" : [ "android.view.View#getWindowToken()", "#RESULT_SHOWN", "#RESULT_HIDDEN", "android.content.Context", "#RESULT_UNCHANGED_HIDDEN", "#HIDE_IMPLICIT_ONLY", "#RESULT_UNCHANGED_SHOWN", "android.os.ResultReceiver", "java.lang.ref.WeakReference", "android.app.Activity" ]
+  }, {
+    "name" : "public void toggleSoftInputFromWindow(IBinder windowToken, int showFlags, int hideFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * This method toggles the input method window display.\n     * If the input window is already displayed, it gets hidden.\n     * If not the input window will be displayed.\n     * @param windowToken The token of the window that is making the request,\n     * as returned by {@link View#getWindowToken() View.getWindowToken()}.\n     * @param showFlags Provides additional operating flags.  May be\n     * 0 or have the {@link #SHOW_IMPLICIT},\n     * {@link #SHOW_FORCED} bit set.\n     * @param hideFlags Provides additional operating flags.  May be\n     * 0 or have the {@link #HIDE_IMPLICIT_ONLY},\n     * {@link #HIDE_NOT_ALWAYS} bit set.\n     *",
+    "links" : [ "android.view.View#getWindowToken()", "#HIDE_NOT_ALWAYS", "#SHOW_FORCED", "#SHOW_IMPLICIT", "#HIDE_IMPLICIT_ONLY" ]
+  }, {
+    "name" : "public void toggleSoftInput(int showFlags, int hideFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * This method toggles the input method window display.\n     *\n     * If the input window is already displayed, it gets hidden.\n     * If not the input window will be displayed.\n     * @param showFlags Provides additional operating flags.  May be\n     * 0 or have the {@link #SHOW_IMPLICIT},\n     * {@link #SHOW_FORCED} bit set.\n     * @param hideFlags Provides additional operating flags.  May be\n     * 0 or have the {@link #HIDE_IMPLICIT_ONLY},\n     * {@link #HIDE_NOT_ALWAYS} bit set.\n     ",
+    "links" : [ "#HIDE_NOT_ALWAYS", "#SHOW_FORCED", "#SHOW_IMPLICIT", "#HIDE_IMPLICIT_ONLY" ]
+  }, {
+    "name" : "public void restartInput(View view)",
+    "returnType" : "void",
+    "comment" : "\n     * If the input method is currently connected to the given view,\n     * restart it with its new contents.  You should call this when the text\n     * within your view changes outside of the normal input method or key\n     * input flow, such as when an application calls TextView.setText().\n     *\n     * @param view The view whose text has changed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean startInputInner(@StartInputReason int startInputReason, @Nullable IBinder windowGainingFocus, @StartInputFlags int startInputFlags, @SoftInputModeFlags int softInputMode, int windowFlags)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called when {@link DelegateImpl#startInput}, {@link #restartInput(View)},\n     * {@link #MSG_BIND} or {@link #MSG_UNBIND}.\n     * Note that this method should *NOT* be called inside of {@code mH} lock to prevent start input\n     * background thread may blocked by other methods which already inside {@code mH} lock.\n     ",
+    "links" : [ "#MSG_BIND", "#MSG_UNBIND", "#restartInput(View)", "#startInput" ]
+  }, {
+    "name" : "public void windowDismissed(IBinder appWindowToken)",
+    "returnType" : "void",
+    "comment" : "\n     * An empty method only to avoid crashes of apps that call this method via reflection and do not\n     * handle {@link NoSuchMethodException} in a graceful manner.\n     *\n     * @deprecated This is an empty method.  No framework method must call this method.\n     * @hide\n     ",
+    "links" : [ "NoSuchMethodException" ]
+  }, {
+    "name" : "private int getStartInputFlags(View focusedView, int startInputFlags)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void checkFocus()",
+    "returnType" : "void",
+    "comment" : "\n     * Check the next served view from {@link ImeFocusController} if needs to start input.\n     * Note that this method should *NOT* be called inside of {@code mH} lock to prevent start input\n     * background thread may blocked by other methods which already inside {@code mH} lock.\n     * @hide\n     ",
+    "links" : [ "android.view.ImeFocusController" ]
+  }, {
+    "name" : " void closeCurrentInput()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerImeConsumer(@NonNull ImeInsetsSourceConsumer imeInsetsConsumer)",
+    "returnType" : "void",
+    "comment" : "\n     * Register for IME state callbacks and applying visibility in\n     * {@link android.view.ImeInsetsSourceConsumer}.\n     * @hide\n     ",
+    "links" : [ "android.view.ImeInsetsSourceConsumer" ]
+  }, {
+    "name" : "public void unregisterImeConsumer(@NonNull ImeInsetsSourceConsumer imeInsetsConsumer)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregister for IME state callbacks and applying visibility in\n     * {@link android.view.ImeInsetsSourceConsumer}.\n     * @hide\n     ",
+    "links" : [ "android.view.ImeInsetsSourceConsumer" ]
+  }, {
+    "name" : "public boolean requestImeShow(IBinder windowToken)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Call showSoftInput with currently focused view.\n     *\n     * @param windowToken the window from which this request originates. If this doesn't match the\n     *                    currently served view, the request is ignored and returns {@code false}.\n     *\n     * @return {@code true} if IME can (eventually) be shown, {@code false} otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyImeHidden(IBinder windowToken)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify IME directly that it is no longer visible.\n     *\n     * @param windowToken the window from which this request originates. If this doesn't match the\n     *                    currently served view, the request is ignored.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeImeSurface(IBinder windowToken)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify IME directly to remove surface as it is no longer visible.\n     * @param windowToken The client window token that requests the IME to remove its surface.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void updateSelection(View view, int selStart, int selEnd, int candidatesStart, int candidatesEnd)",
+    "returnType" : "void",
+    "comment" : "\n     * Report the current selection range.\n     *\n     * <p><strong>Editor authors</strong>, you need to call this method whenever\n     * the cursor moves in your editor. Remember that in addition to doing this, your\n     * editor needs to always supply current cursor values in\n     * {@link EditorInfo#initialSelStart} and {@link EditorInfo#initialSelEnd} every\n     * time {@link android.view.View#onCreateInputConnection(EditorInfo)} is\n     * called, which happens whenever the keyboard shows up or the focus changes\n     * to a text field, among other cases.</p>\n     ",
+    "links" : [ "android.view.View#onCreateInputConnection(EditorInfo)", "android.view.inputmethod.EditorInfo#initialSelEnd", "android.view.inputmethod.EditorInfo#initialSelStart" ]
+  }, {
+    "name" : "public void viewClicked(View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify the event when the user tapped or clicked the text view.\n     *\n     * @param view {@link View} which is being clicked.\n     * @see InputMethodService#onViewClicked(boolean)\n     * @deprecated The semantics of this method can never be defined well for composite {@link View}\n     *             that works as a giant \"Canvas\", which can host its own UI hierarchy and sub focus\n     *             state. {@link android.webkit.WebView} is a good example. Application / IME\n     *             developers should not rely on this method.\n     ",
+    "links" : [ "android.view.View", "android.webkit.WebView" ]
+  }, {
+    "name" : "public boolean isWatchingCursor(View view)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the current input method wants to watch the location\n     * of the input editor's cursor in its window.\n     *\n     * @deprecated Use {@link InputConnection#requestCursorUpdates(int)} instead.\n     ",
+    "links" : [ "android.view.inputmethod.InputConnection#requestCursorUpdates(int)" ]
+  }, {
+    "name" : "public boolean isCursorAnchorInfoEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the current input method wants to be notified when cursor/anchor location\n     * is changed.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUpdateCursorAnchorInfoMode(int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the requested mode for {@link #updateCursorAnchorInfo(View, CursorAnchorInfo)}.\n     *\n     * @hide\n     ",
+    "links" : [ "#updateCursorAnchorInfo(View" ]
+  }, {
+    "name" : "public void updateCursor(View view, int left, int top, int right, int bottom)",
+    "returnType" : "void",
+    "comment" : "\n     * Report the current cursor location in its window.\n     *\n     * @deprecated Use {@link #updateCursorAnchorInfo(View, CursorAnchorInfo)} instead.\n     ",
+    "links" : [ "#updateCursorAnchorInfo(View" ]
+  }, {
+    "name" : "public void updateCursorAnchorInfo(View view, final CursorAnchorInfo cursorAnchorInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Report positional change of the text insertion point and/or characters in the composition\n     * string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendAppPrivateCommand(View view, String action, Bundle data)",
+    "returnType" : "void",
+    "comment" : "\n     * Call {@link InputMethodSession#appPrivateCommand(String, Bundle)\n     * InputMethodSession.appPrivateCommand()} on the current Input Method.\n     * @param view Optional View that is sending the command, or null if\n     * you want to send the command regardless of the view that is attached\n     * to the input method.\n     * @param action Name of the command to be performed.  This <em>must</em>\n     * be a scoped name, i.e. prefixed with a package name you own, so that\n     * different developers will not create conflicting commands.\n     * @param data Any data to include with the command.\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodSession#appPrivateCommand(String" ]
+  }, {
+    "name" : "public void setInputMethod(IBinder token, String id)",
+    "returnType" : "void",
+    "comment" : "\n     * Force switch to a new input method component. This can only be called\n     * from an application or a service which has a token of the currently active input method.\n     *\n     * <p>On Android {@link Build.VERSION_CODES#Q} and later devices, the undocumented behavior that\n     * token can be {@code null} when the caller has\n     * {@link android.Manifest.permission#WRITE_SECURE_SETTINGS} is deprecated. Instead, update\n     * {@link android.provider.Settings.Secure#DEFAULT_INPUT_METHOD} and\n     * {@link android.provider.Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE} directly.</p>\n     *\n     * @param token Supplies the identifying token given to an input method\n     * when it was started, which allows it to perform this operation on\n     * itself.\n     * @param id The unique identifier for the new input method to be switched to.\n     * @deprecated Use {@link InputMethodService#switchInputMethod(String)}\n     * instead. This method was intended for IME developers who should be accessing APIs through\n     * the service. APIs in this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.provider.Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE", "Build.VERSION_CODES#Q", "android.Manifest.permission#WRITE_SECURE_SETTINGS", "android.provider.Settings.Secure#DEFAULT_INPUT_METHOD", "android.inputmethodservice.InputMethodService#switchInputMethod(String)" ]
+  }, {
+    "name" : "public void setInputMethodAndSubtype(@NonNull IBinder token, String id, InputMethodSubtype subtype)",
+    "returnType" : "void",
+    "comment" : "\n     * Force switch to a new input method and subtype. This can only be called\n     * from an application or a service which has a token of the currently active input method.\n     *\n     * <p>On Android {@link Build.VERSION_CODES#Q} and later devices, {@code token} cannot be\n     * {@code null} even with {@link android.Manifest.permission#WRITE_SECURE_SETTINGS}. Instead,\n     * update {@link android.provider.Settings.Secure#DEFAULT_INPUT_METHOD} and\n     * {@link android.provider.Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE} directly.</p>\n     *\n     * @param token Supplies the identifying token given to an input method\n     * when it was started, which allows it to perform this operation on\n     * itself.\n     * @param id The unique identifier for the new input method to be switched to.\n     * @param subtype The new subtype of the new input method to be switched to.\n     * @deprecated Use\n     * {@link InputMethodService#switchInputMethod(String, InputMethodSubtype)}\n     * instead. This method was intended for IME developers who should be accessing APIs through\n     * the service. APIs in this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.provider.Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE", "Build.VERSION_CODES#Q", "android.inputmethodservice.InputMethodService#switchInputMethod(String", "android.Manifest.permission#WRITE_SECURE_SETTINGS", "android.provider.Settings.Secure#DEFAULT_INPUT_METHOD" ]
+  }, {
+    "name" : "public void hideSoftInputFromInputMethod(IBinder token, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Close/hide the input method's soft input area, so the user no longer\n     * sees it or can interact with it.  This can only be called\n     * from the currently active input method, as validated by the given token.\n     *\n     * @param token Supplies the identifying token given to an input method\n     * when it was started, which allows it to perform this operation on\n     * itself.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #HIDE_IMPLICIT_ONLY},\n     * {@link #HIDE_NOT_ALWAYS} bit set.\n     * @deprecated Use {@link InputMethodService#requestHideSelf(int)} instead. This method was\n     * intended for IME developers who should be accessing APIs through the service. APIs in this\n     * class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "#HIDE_NOT_ALWAYS", "android.inputmethodservice.InputMethodService#requestHideSelf(int)", "#HIDE_IMPLICIT_ONLY" ]
+  }, {
+    "name" : "public void showSoftInputFromInputMethod(IBinder token, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Show the input method's soft input area, so the user\n     * sees the input method window and can interact with it.\n     * This can only be called from the currently active input method,\n     * as validated by the given token.\n     *\n     * @param token Supplies the identifying token given to an input method\n     * when it was started, which allows it to perform this operation on\n     * itself.\n     * @param flags Provides additional operating flags.  Currently may be\n     * 0 or have the {@link #SHOW_IMPLICIT} or\n     * {@link #SHOW_FORCED} bit set.\n     * @deprecated Use {@link InputMethodService#requestShowSelf(int)} instead. This method was\n     * intended for IME developers who should be accessing APIs through the service. APIs in this\n     * class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#requestShowSelf(int)", "#SHOW_FORCED", "#SHOW_IMPLICIT" ]
+  }, {
+    "name" : "public int dispatchInputEvent(InputEvent event, Object token, FinishedInputEventCallback callback, Handler handler)",
+    "returnType" : "int",
+    "comment" : "\n     * Dispatches an input event to the IME.\n     *\n     * Returns {@link #DISPATCH_HANDLED} if the event was handled.\n     * Returns {@link #DISPATCH_NOT_HANDLED} if the event was not handled.\n     * Returns {@link #DISPATCH_IN_PROGRESS} if the event is in progress and the\n     * callback will be invoked later.\n     *\n     * @hide\n     ",
+    "links" : [ "#DISPATCH_NOT_HANDLED", "#DISPATCH_IN_PROGRESS", "#DISPATCH_HANDLED" ]
+  }, {
+    "name" : "public void dispatchKeyEventFromInputMethod(@Nullable View targetView, @NonNull KeyEvent event)",
+    "returnType" : "void",
+    "comment" : "\n     * Provides the default implementation of {@link InputConnection#sendKeyEvent(KeyEvent)}, which\n     * is expected to dispatch an keyboard event sent from the IME to an appropriate event target\n     * depending on the given {@link View} and the current focus state.\n     *\n     * <p>CAUTION: This method is provided only for the situation where\n     * {@link InputConnection#sendKeyEvent(KeyEvent)} needs to be implemented without relying on\n     * {@link BaseInputConnection}. Do not use this API for anything else.</p>\n     *\n     * @param targetView the default target view. If {@code null} is specified, then this method\n     * tries to find a good event target based on the current focus state.\n     * @param event the key event to be dispatched.\n     ",
+    "links" : [ "android.view.inputmethod.InputConnection#sendKeyEvent(KeyEvent)", "android.view.View", "android.view.inputmethod.BaseInputConnection" ]
+  }, {
+    "name" : " void sendInputEventAndReportResultOnMainLooper(PendingEvent p)",
+    "returnType" : "void",
+    "comment" : " Must be called on the main looper",
+    "links" : [ ]
+  }, {
+    "name" : " int sendInputEventOnMainLooperLocked(PendingEvent p)",
+    "returnType" : "int",
+    "comment" : " Must be called on the main looper",
+    "links" : [ ]
+  }, {
+    "name" : " void finishedInputEvent(int seq, boolean handled, boolean timeout)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void invokeFinishedInputEventCallback(PendingEvent p, boolean handled)",
+    "returnType" : "void",
+    "comment" : " Assumes the event has already been removed from the queue.",
+    "links" : [ ]
+  }, {
+    "name" : "private void flushPendingEventsLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private PendingEvent obtainPendingEventLocked(InputEvent event, Object token, String inputMethodId, FinishedInputEventCallback callback, Handler handler)",
+    "returnType" : "PendingEvent",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void recyclePendingEventLocked(PendingEvent p)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void showInputMethodPicker()",
+    "returnType" : "void",
+    "comment" : "\n     * Show IME picker popup window.\n     *\n     * <p>Requires the {@link PackageManager#FEATURE_INPUT_METHODS} feature which can be detected\n     * using {@link PackageManager#hasSystemFeature(String)}.\n     ",
+    "links" : [ "android.content.pm.PackageManager#hasSystemFeature(String)", "android.content.pm.PackageManager#FEATURE_INPUT_METHODS" ]
+  }, {
+    "name" : "public void showInputMethodPickerFromSystem(boolean showAuxiliarySubtypes, int displayId)",
+    "returnType" : "void",
+    "comment" : "\n     * Shows the input method chooser dialog from system.\n     *\n     * @param showAuxiliarySubtypes Set true to show auxiliary input methods.\n     * @param displayId The ID of the display where the chooser dialog should be shown.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void showInputMethodPickerLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInputMethodPickerShown()",
+    "returnType" : "boolean",
+    "comment" : "\n     * A test API for CTS to make sure that {@link #showInputMethodPicker()} works as expected.\n     *\n     * <p>When customizing the implementation of {@link #showInputMethodPicker()} API, make sure\n     * that this test API returns when and only while and only while\n     * {@link #showInputMethodPicker()} is showing UI. Otherwise your OS implementation may not\n     * pass CTS.</p>\n     *\n     * @return {@code true} while and only while {@link #showInputMethodPicker()} is showing UI.\n     * @hide\n     ",
+    "links" : [ "#showInputMethodPicker()" ]
+  }, {
+    "name" : "public void showInputMethodAndSubtypeEnabler(String imiId)",
+    "returnType" : "void",
+    "comment" : "\n     * Show the settings for enabling subtypes of the specified input method.\n     *\n     * @param imiId An input method, whose subtypes settings will be shown. If imiId is null,\n     * subtypes of all input methods will be shown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public InputMethodSubtype getCurrentInputMethodSubtype()",
+    "returnType" : "InputMethodSubtype",
+    "comment" : "\n     * Returns the current input method subtype. This subtype is one of the subtypes in\n     * the current input method. This method returns null when the current input method doesn't\n     * have any input method subtype.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setCurrentInputMethodSubtype(InputMethodSubtype subtype)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Switch to a new input method subtype of the current input method.\n     * @param subtype A new input method subtype to switch.\n     * @return true if the current subtype was successfully switched. When the specified subtype is\n     * null, this method returns false.\n     * @deprecated If the calling process is an IME, use\n     *             {@link InputMethodService#switchInputMethod(String, InputMethodSubtype)}, which\n     *             does not require any permission as long as the caller is the current IME.\n     *             If the calling process is some privileged app that already has\n     *             {@link android.Manifest.permission#WRITE_SECURE_SETTINGS} permission, just\n     *             directly update {@link Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE}.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#switchInputMethod(String", "android.Manifest.permission#WRITE_SECURE_SETTINGS", "Settings.Secure#SELECTED_INPUT_METHOD_SUBTYPE" ]
+  }, {
+    "name" : "public void notifyUserAction()",
+    "returnType" : "void",
+    "comment" : "\n     * Notify that a user took some action with this input method.\n     *\n     * @deprecated Just kept to avoid possible app compat issue.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map<InputMethodInfo, List<InputMethodSubtype>> getShortcutInputMethodsAndSubtypes()",
+    "returnType" : "Map<InputMethodInfo, List<InputMethodSubtype>>",
+    "comment" : "\n     * Returns a map of all shortcut input method info and their subtypes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getInputMethodWindowVisibleHeight()",
+    "returnType" : "int",
+    "comment" : "\n     * This is kept due to {@link android.compat.annotation.UnsupportedAppUsage}.\n     *\n     * <p>TODO(Bug 113914148): Check if we can remove this.  We have accidentally exposed\n     * WindowManagerInternal#getInputMethodWindowVisibleHeight to app developers and some of them\n     * started relying on it.</p>\n     *\n     * @return Something that is not well-defined.\n     * @hide\n     ",
+    "links" : [ "android.compat.annotation.UnsupportedAppUsage" ]
+  }, {
+    "name" : "public void reportActivityView(int childDisplayId, @Nullable Matrix matrix)",
+    "returnType" : "void",
+    "comment" : "\n     * An internal API for {@link android.app.ActivityView} to report where its embedded virtual\n     * display is placed.\n     *\n     * @param childDisplayId Display ID of the embedded virtual display.\n     * @param matrix {@link Matrix} to convert virtual display screen coordinates to\n     *               the host screen coordinates. {@code null} to clear the relationship.\n     * @hide\n     ",
+    "links" : [ "android.app.ActivityView", "android.graphics.Matrix" ]
+  }, {
+    "name" : "public boolean switchToLastInputMethod(IBinder imeToken)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Force switch to the last used input method and subtype. If the last input method didn't have\n     * any subtypes, the framework will simply switch to the last input method with no subtype\n     * specified.\n     * @param imeToken Supplies the identifying token given to an input method when it was started,\n     * which allows it to perform this operation on itself.\n     * @return true if the current input method and subtype was successfully switched to the last\n     * used input method and subtype.\n     * @deprecated Use {@link InputMethodService#switchToPreviousInputMethod()} instead. This method\n     * was intended for IME developers who should be accessing APIs through the service. APIs in\n     * this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#switchToPreviousInputMethod()" ]
+  }, {
+    "name" : "public boolean switchToNextInputMethod(IBinder imeToken, boolean onlyCurrentIme)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Force switch to the next input method and subtype. If there is no IME enabled except\n     * current IME and subtype, do nothing.\n     * @param imeToken Supplies the identifying token given to an input method when it was started,\n     * which allows it to perform this operation on itself.\n     * @param onlyCurrentIme if true, the framework will find the next subtype which\n     * belongs to the current IME\n     * @return true if the current input method and subtype was successfully switched to the next\n     * input method and subtype.\n     * @deprecated Use {@link InputMethodService#switchToNextInputMethod(boolean)} instead. This\n     * method was intended for IME developers who should be accessing APIs through the service.\n     * APIs in this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "android.inputmethodservice.InputMethodService#switchToNextInputMethod(boolean)" ]
+  }, {
+    "name" : "public boolean shouldOfferSwitchingToNextInputMethod(IBinder imeToken)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the current IME needs to offer the users ways to switch to a next input\n     * method (e.g. a globe key.).\n     * When an IME sets supportsSwitchingToNextInputMethod and this method returns true,\n     * the IME has to offer ways to to invoke {@link #switchToNextInputMethod} accordingly.\n     * <p> Note that the system determines the most appropriate next input method\n     * and subtype in order to provide the consistent user experience in switching\n     * between IMEs and subtypes.\n     * @param imeToken Supplies the identifying token given to an input method when it was started,\n     * which allows it to perform this operation on itself.\n     * @deprecated Use {@link InputMethodService#shouldOfferSwitchingToNextInputMethod()}\n     * instead. This method was intended for IME developers who should be accessing APIs through\n     * the service. APIs in this class are intended for app developers interacting with the IME.\n     ",
+    "links" : [ "#switchToNextInputMethod", "android.inputmethodservice.InputMethodService#shouldOfferSwitchingToNextInputMethod()" ]
+  }, {
+    "name" : "public void setAdditionalInputMethodSubtypes(String imiId, InputMethodSubtype[] subtypes)",
+    "returnType" : "void",
+    "comment" : "\n     * Set additional input method subtypes. Only a process which shares the same uid with the IME\n     * can add additional input method subtypes to the IME.\n     * Please note that a subtype's status is stored in the system.\n     * For example, enabled subtypes are remembered by the framework even after they are removed\n     * by using this method. If you re-add the same subtypes again,\n     * they will just get enabled. If you want to avoid such conflicts, for instance, you may\n     * want to create a \"different\" new subtype even with the same locale and mode,\n     * by changing its extra value. The different subtype won't get affected by the stored past\n     * status. (You may want to take a look at {@link InputMethodSubtype#hashCode()} to refer\n     * to the current implementation.)\n     *\n     * <p>NOTE: If the same subtype exists in both the manifest XML file and additional subtypes\n     * specified by {@code subtypes}, those multiple instances are automatically merged into one\n     * instance.</p>\n     *\n     * <p>CAVEAT: In API Level 23 and prior, the system may do nothing if an empty\n     * {@link InputMethodSubtype} is specified in {@code subtypes}, which prevents you from removing\n     * the last one entry of additional subtypes. If your IME statically defines one or more\n     * subtypes in the manifest XML file, you may be able to work around this limitation by\n     * specifying one of those statically defined subtypes in {@code subtypes}.</p>\n     *\n     * @param imiId Id of InputMethodInfo which additional input method subtypes will be added to.\n     * @param subtypes subtypes will be added as additional subtypes of the current input method.\n     * @deprecated For IMEs that have already implemented features like customizable/downloadable\n     *             keyboard layouts/languages, please start migration to other approaches. One idea\n     *             would be exposing only one unified {@link InputMethodSubtype} then implement\n     *             IME's own language switching mechanism within that unified subtype. The support\n     *             of \"Additional Subtype\" may be completely dropped in a future version of Android.\n     ",
+    "links" : [ "android.view.inputmethod.InputMethodSubtype#hashCode()", "android.view.inputmethod.InputMethodSubtype" ]
+  }, {
+    "name" : "public InputMethodSubtype getLastInputMethodSubtype()",
+    "returnType" : "InputMethodSubtype",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void maybeCallServedViewChangedLocked(EditorInfo tba)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getDisplayId()",
+    "returnType" : "int",
+    "comment" : "\n     * <p>This is used for CTS test only. Do not use this method outside of CTS package.<p/>\n     * @return the ID of this display which this {@link InputMethodManager} resides\n     * @hide\n     ",
+    "links" : [ "com.android.internal.view.IInputMethodManager" ]
+  }, {
+    "name" : " void doDump(FileDescriptor fd, PrintWriter fout, String[] args)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String dumpViewInfo(@Nullable final View view)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "DEBUG", "TAG", "PENDING_EVENT_COUNTER", "NOT_A_SUBTYPE_ID", "SUBTYPE_MODE_VOICE", "sLock", "sInstance", "sInstanceMap", "INPUT_METHOD_NOT_RESPONDING_TIMEOUT", "DISPATCH_IN_PROGRESS", "DISPATCH_NOT_HANDLED", "DISPATCH_HANDLED", "SHOW_IM_PICKER_MODE_AUTO", "SHOW_IM_PICKER_MODE_INCLUDE_AUXILIARY_SUBTYPES", "SHOW_IM_PICKER_MODE_EXCLUDE_AUXILIARY_SUBTYPES", "mService", "mMainLooper", "mH", "mIInputContext", "mDisplayId", "mActive", "mRestartOnNextWindowFocus", "mFullscreenMode", "mCurRootView", "mServedConnecting", "mCurrentTextBoxAttribute", "mServedInputConnectionWrapper", "mCompletions", "mTmpCursorRect", "mCursorRect", "mCursorSelStart", "mCursorSelEnd", "mCursorCandStart", "mCursorCandEnd", "mCursorAnchorInfo", "mActivityViewToScreenMatrix", "mBindSequence", "mCurId", "mCurMethod", "mCurChannel", "mCurSender", "REQUEST_UPDATE_CURSOR_ANCHOR_INFO_NONE", "mRequestUpdateCursorAnchorInfoMonitorMode", "mImeInsetsConsumer", "mPendingEventPool", "mPendingEvents", "mDelegate", "MSG_DUMP", "MSG_BIND", "MSG_UNBIND", "MSG_SET_ACTIVE", "MSG_SEND_INPUT_EVENT", "MSG_TIMEOUT_INPUT_EVENT", "MSG_FLUSH_INPUT_EVENT", "MSG_REPORT_FULLSCREEN_MODE", "MSG_REPORT_PRE_RENDERED", "MSG_APPLY_IME_VISIBILITY", "MSG_UPDATE_ACTIVITY_VIEW_TO_SCREEN_MATRIX", "mClient", "mDummyInputConnection", "SHOW_IMPLICIT", "SHOW_FORCED", "RESULT_UNCHANGED_SHOWN", "RESULT_UNCHANGED_HIDDEN", "RESULT_SHOWN", "RESULT_HIDDEN", "HIDE_IMPLICIT_ONLY", "HIDE_NOT_ALWAYS" ],
+  "methodNames" : [ "public static void ensureDefaultInstanceForDefaultDisplayIfNecessary()", "private static boolean isAutofillUIShowing(View servedView)", "private InputMethodManager getFallbackInputMethodManagerIfNecessary(@Nullable View view)", "private static boolean canStartInput(View servedView)", "public void reportPerceptible(IBinder windowToken, boolean perceptible)", "public DelegateImpl getDelegate()", "private View getServedViewLocked()", "private View getNextServedViewLocked()", "private void setServedViewLocked(View view)", "private void setNextServedViewLocked(View view)", "private ImeFocusController getFocusController()", "private boolean hasServedByInputMethodLocked(View view)", " static void tearDownEditMode()", "private static boolean isInEditMode()", "private static InputMethodManager createInstance(int displayId, Looper looper)", "private static InputMethodManager createRealInstance(int displayId, Looper looper)", "private static InputMethodManager createStubInstance(int displayId, Looper looper)", "public static InputMethodManager forContext(Context context)", "private static InputMethodManager forContextInternal(int displayId, Looper looper)", "public static InputMethodManager getInstance()", "public static InputMethodManager peekInstance()", "public IInputMethodClient getClient()", "public IInputContext getInputContext()", "public List<InputMethodInfo> getInputMethodList()", "public List<InputMethodInfo> getInputMethodListAsUser(@UserIdInt int userId)", "public List<InputMethodInfo> getEnabledInputMethodList()", "public List<InputMethodInfo> getEnabledInputMethodListAsUser(@UserIdInt int userId)", "public List<InputMethodSubtype> getEnabledInputMethodSubtypeList(InputMethodInfo imi, boolean allowsImplicitlySelectedSubtypes)", "public void showStatusIcon(IBinder imeToken, String packageName, @DrawableRes int iconId)", "public void hideStatusIcon(IBinder imeToken)", "public void registerSuggestionSpansForNotification(SuggestionSpan[] spans)", "public void notifySuggestionPicked(SuggestionSpan span, String originalString, int index)", "public boolean isFullscreenMode()", "public boolean isActive(View view)", "public boolean isActive()", "public boolean isAcceptingText()", " void clearBindingLocked()", " void setInputChannelLocked(InputChannel channel)", " void clearConnectionLocked()", " void finishInputLocked()", "public void displayCompletions(View view, CompletionInfo[] completions)", "public void updateExtractedText(View view, int token, ExtractedText text)", "public boolean showSoftInput(View view, int flags)", "public boolean showSoftInput(View view, int flags, ResultReceiver resultReceiver)", "public void showSoftInputUnchecked(int flags, ResultReceiver resultReceiver)", "public boolean hideSoftInputFromWindow(IBinder windowToken, int flags)", "public boolean hideSoftInputFromWindow(IBinder windowToken, int flags, ResultReceiver resultReceiver)", "public void toggleSoftInputFromWindow(IBinder windowToken, int showFlags, int hideFlags)", "public void toggleSoftInput(int showFlags, int hideFlags)", "public void restartInput(View view)", " boolean startInputInner(@StartInputReason int startInputReason, @Nullable IBinder windowGainingFocus, @StartInputFlags int startInputFlags, @SoftInputModeFlags int softInputMode, int windowFlags)", "public void windowDismissed(IBinder appWindowToken)", "private int getStartInputFlags(View focusedView, int startInputFlags)", "public void checkFocus()", " void closeCurrentInput()", "public void registerImeConsumer(@NonNull ImeInsetsSourceConsumer imeInsetsConsumer)", "public void unregisterImeConsumer(@NonNull ImeInsetsSourceConsumer imeInsetsConsumer)", "public boolean requestImeShow(IBinder windowToken)", "public void notifyImeHidden(IBinder windowToken)", "public void removeImeSurface(IBinder windowToken)", "public void updateSelection(View view, int selStart, int selEnd, int candidatesStart, int candidatesEnd)", "public void viewClicked(View view)", "public boolean isWatchingCursor(View view)", "public boolean isCursorAnchorInfoEnabled()", "public void setUpdateCursorAnchorInfoMode(int flags)", "public void updateCursor(View view, int left, int top, int right, int bottom)", "public void updateCursorAnchorInfo(View view, final CursorAnchorInfo cursorAnchorInfo)", "public void sendAppPrivateCommand(View view, String action, Bundle data)", "public void setInputMethod(IBinder token, String id)", "public void setInputMethodAndSubtype(@NonNull IBinder token, String id, InputMethodSubtype subtype)", "public void hideSoftInputFromInputMethod(IBinder token, int flags)", "public void showSoftInputFromInputMethod(IBinder token, int flags)", "public int dispatchInputEvent(InputEvent event, Object token, FinishedInputEventCallback callback, Handler handler)", "public void dispatchKeyEventFromInputMethod(@Nullable View targetView, @NonNull KeyEvent event)", " void sendInputEventAndReportResultOnMainLooper(PendingEvent p)", " int sendInputEventOnMainLooperLocked(PendingEvent p)", " void finishedInputEvent(int seq, boolean handled, boolean timeout)", " void invokeFinishedInputEventCallback(PendingEvent p, boolean handled)", "private void flushPendingEventsLocked()", "private PendingEvent obtainPendingEventLocked(InputEvent event, Object token, String inputMethodId, FinishedInputEventCallback callback, Handler handler)", "private void recyclePendingEventLocked(PendingEvent p)", "public void showInputMethodPicker()", "public void showInputMethodPickerFromSystem(boolean showAuxiliarySubtypes, int displayId)", "private void showInputMethodPickerLocked()", "public boolean isInputMethodPickerShown()", "public void showInputMethodAndSubtypeEnabler(String imiId)", "public InputMethodSubtype getCurrentInputMethodSubtype()", "public boolean setCurrentInputMethodSubtype(InputMethodSubtype subtype)", "public void notifyUserAction()", "public Map<InputMethodInfo, List<InputMethodSubtype>> getShortcutInputMethodsAndSubtypes()", "public int getInputMethodWindowVisibleHeight()", "public void reportActivityView(int childDisplayId, @Nullable Matrix matrix)", "public boolean switchToLastInputMethod(IBinder imeToken)", "public boolean switchToNextInputMethod(IBinder imeToken, boolean onlyCurrentIme)", "public boolean shouldOfferSwitchingToNextInputMethod(IBinder imeToken)", "public void setAdditionalInputMethodSubtypes(String imiId, InputMethodSubtype[] subtypes)", "public InputMethodSubtype getLastInputMethodSubtype()", "private void maybeCallServedViewChangedLocked(EditorInfo tba)", "public int getDisplayId()", " void doDump(FileDescriptor fd, PrintWriter fout, String[] args)", "private static String dumpViewInfo(@Nullable final View view)" ]
+}

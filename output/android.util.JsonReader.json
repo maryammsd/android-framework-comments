@@ -1,0 +1,310 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/util/JsonReader.java",
+  "packageName" : "android.util",
+  "className" : "JsonReader",
+  "comment" : "\n * Reads a JSON (<a href=\"http://www.ietf.org/rfc/rfc4627.txt\">RFC 4627</a>)\n * encoded value as a stream of tokens. This stream includes both literal\n * values (strings, numbers, booleans, and nulls) as well as the begin and\n * end delimiters of objects and arrays. The tokens are traversed in\n * depth-first order, the same order that they appear in the JSON document.\n * Within JSON objects, name/value pairs are represented by a single token.\n *\n * <h3>Parsing JSON</h3>\n * To create a recursive descent parser for your own JSON streams, first create\n * an entry point method that creates a {@code JsonReader}.\n *\n * <p>Next, create handler methods for each structure in your JSON text. You'll\n * need a method for each object type and for each array type.\n * <ul>\n *   <li>Within <strong>array handling</strong> methods, first call {@link\n *       #beginArray} to consume the array's opening bracket. Then create a\n *       while loop that accumulates values, terminating when {@link #hasNext}\n *       is false. Finally, read the array's closing bracket by calling {@link\n *       #endArray}.\n *   <li>Within <strong>object handling</strong> methods, first call {@link\n *       #beginObject} to consume the object's opening brace. Then create a\n *       while loop that assigns values to local variables based on their name.\n *       This loop should terminate when {@link #hasNext} is false. Finally,\n *       read the object's closing brace by calling {@link #endObject}.\n * </ul>\n * <p>When a nested object or array is encountered, delegate to the\n * corresponding handler method.\n *\n * <p>When an unknown name is encountered, strict parsers should fail with an\n * exception. Lenient parsers should call {@link #skipValue()} to recursively\n * skip the value's nested tokens, which may otherwise conflict.\n *\n * <p>If a value may be null, you should first check using {@link #peek()}.\n * Null literals can be consumed using either {@link #nextNull()} or {@link\n * #skipValue()}.\n *\n * <h3>Example</h3>\n * Suppose we'd like to parse a stream of messages such as the following: <pre> {@code\n * [\n *   {\n *     \"id\": 912345678901,\n *     \"text\": \"How do I read JSON on Android?\",\n *     \"geo\": null,\n *     \"user\": {\n *       \"name\": \"android_newb\",\n *       \"followers_count\": 41\n *      }\n *   },\n *   {\n *     \"id\": 912345678902,\n *     \"text\": \"@android_newb just use android.util.JsonReader!\",\n *     \"geo\": [50.454722, -104.606667],\n *     \"user\": {\n *       \"name\": \"jesse\",\n *       \"followers_count\": 2\n *     }\n *   }\n * ]}</pre>\n * This code implements the parser for the above structure: <pre>   {@code\n *\n *   public List<Message> readJsonStream(InputStream in) throws IOException {\n *     JsonReader reader = new JsonReader(new InputStreamReader(in, \"UTF-8\"));\n *     try {\n *       return readMessagesArray(reader);\n *     } finally {\n *       reader.close();\n *     }\n *   }\n *\n *   public List<Message> readMessagesArray(JsonReader reader) throws IOException {\n *     List<Message> messages = new ArrayList<Message>();\n *\n *     reader.beginArray();\n *     while (reader.hasNext()) {\n *       messages.add(readMessage(reader));\n *     }\n *     reader.endArray();\n *     return messages;\n *   }\n *\n *   public Message readMessage(JsonReader reader) throws IOException {\n *     long id = -1;\n *     String text = null;\n *     User user = null;\n *     List<Double> geo = null;\n *\n *     reader.beginObject();\n *     while (reader.hasNext()) {\n *       String name = reader.nextName();\n *       if (name.equals(\"id\")) {\n *         id = reader.nextLong();\n *       } else if (name.equals(\"text\")) {\n *         text = reader.nextString();\n *       } else if (name.equals(\"geo\") && reader.peek() != JsonToken.NULL) {\n *         geo = readDoublesArray(reader);\n *       } else if (name.equals(\"user\")) {\n *         user = readUser(reader);\n *       } else {\n *         reader.skipValue();\n *       }\n *     }\n *     reader.endObject();\n *     return new Message(id, text, user, geo);\n *   }\n *\n *   public List<Double> readDoublesArray(JsonReader reader) throws IOException {\n *     List<Double> doubles = new ArrayList<Double>();\n *\n *     reader.beginArray();\n *     while (reader.hasNext()) {\n *       doubles.add(reader.nextDouble());\n *     }\n *     reader.endArray();\n *     return doubles;\n *   }\n *\n *   public User readUser(JsonReader reader) throws IOException {\n *     String username = null;\n *     int followersCount = -1;\n *\n *     reader.beginObject();\n *     while (reader.hasNext()) {\n *       String name = reader.nextName();\n *       if (name.equals(\"name\")) {\n *         username = reader.nextString();\n *       } else if (name.equals(\"followers_count\")) {\n *         followersCount = reader.nextInt();\n *       } else {\n *         reader.skipValue();\n *       }\n *     }\n *     reader.endObject();\n *     return new User(username, followersCount);\n *   }}</pre>\n *\n * <h3>Number Handling</h3>\n * This reader permits numeric values to be read as strings and string values to\n * be read as numbers. For example, both elements of the JSON array {@code\n * [1, \"1\"]} may be read using either {@link #nextInt} or {@link #nextString}.\n * This behavior is intended to prevent lossy numeric conversions: double is\n * JavaScript's only numeric type and very large values like {@code\n * 9007199254740993} cannot be represented exactly on that platform. To minimize\n * precision loss, extremely large values should be written and read as strings\n * in JSON.\n *\n * <p>Each {@code JsonReader} may be used to read a single JSON stream. Instances\n * of this class are not thread safe.\n ",
+  "variables" : [ {
+    "name" : "TRUE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FALSE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "stringPool",
+    "type" : "StringPool",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "in",
+    "type" : "Reader",
+    "comment" : " The input JSON. ",
+    "links" : [ ]
+  }, {
+    "name" : "lenient",
+    "type" : "boolean",
+    "comment" : " True to accept non-spec compliant JSON ",
+    "links" : [ ]
+  }, {
+    "name" : "buffer",
+    "type" : "char[]",
+    "comment" : "\n     * Use a manual buffer to easily read and unread upcoming characters, and\n     * also so we can create strings without an intermediate StringBuilder.\n     * We decode literals directly out of this buffer, so it must be at least as\n     * long as the longest token that can be reported as a number.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "pos",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "limit",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "bufferStartLine",
+    "type" : "int",
+    "comment" : "\n     * The offset of the first character in the buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "bufferStartColumn",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "stack",
+    "type" : "List<JsonScope>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "token",
+    "type" : "JsonToken",
+    "comment" : "\n     * The type of the next token to be returned by {@link #peek} and {@link\n     * #advance}. If null, peek() will assign a value.\n     ",
+    "links" : [ "#advance", "#peek" ]
+  }, {
+    "name" : "name",
+    "type" : "String",
+    "comment" : " The text of the next name. ",
+    "links" : [ ]
+  }, {
+    "name" : "value",
+    "type" : "String",
+    "comment" : "\n     * For the next literal value, we may have the text value, or the position\n     * and length in the buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "valuePos",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "valueLength",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "skipping",
+    "type" : "boolean",
+    "comment" : " True if we're currently handling a skipValue() call. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void setLenient(boolean lenient)",
+    "returnType" : "void",
+    "comment" : "\n     * Configure this parser to be  be liberal in what it accepts. By default,\n     * this parser is strict and only accepts JSON as specified by <a\n     * href=\"http://www.ietf.org/rfc/rfc4627.txt\">RFC 4627</a>. Setting the\n     * parser to lenient causes it to ignore the following syntax errors:\n     *\n     * <ul>\n     *   <li>End of line comments starting with {@code //} or {@code #} and\n     *       ending with a newline character.\n     *   <li>C-style comments starting with {@code /*} and ending with\n     *       {@code *}{@code /}. Such comments may not be nested.\n     *   <li>Names that are unquoted or {@code 'single quoted'}.\n     *   <li>Strings that are unquoted or {@code 'single quoted'}.\n     *   <li>Array elements separated by {@code ;} instead of {@code ,}.\n     *   <li>Unnecessary array separators. These are interpreted as if null\n     *       was the omitted value.\n     *   <li>Names and values separated by {@code =} or {@code =>} instead of\n     *       {@code :}.\n     *   <li>Name/value pairs separated by {@code ;} instead of {@code ,}.\n     * </ul>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLenient()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this parser is liberal in what it accepts.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginArray() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes the next token from the JSON stream and asserts that it is the\n     * beginning of a new array.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endArray() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes the next token from the JSON stream and asserts that it is the\n     * end of the current array.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void beginObject() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes the next token from the JSON stream and asserts that it is the\n     * beginning of a new object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endObject() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes the next token from the JSON stream and asserts that it is the\n     * end of the current object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void expect(JsonToken expected) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes {@code expected}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasNext() throws IOException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the current array or object has another element.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public JsonToken peek() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "\n     * Returns the type of the next token without consuming it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken advance() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "\n     * Advances the cursor in the JSON stream to the next token.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String nextName() throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the next token, a {@link JsonToken#NAME property name}, and\n     * consumes it.\n     *\n     * @throws IOException if the next token in the stream is not a property\n     *     name.\n     ",
+    "links" : [ "android.util.JsonToken#NAME" ]
+  }, {
+    "name" : "public String nextString() throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the {@link JsonToken#STRING string} value of the next token,\n     * consuming it. If the next token is a number, this method will return its\n     * string form.\n     *\n     * @throws IllegalStateException if the next token is not a string or if\n     *     this reader is closed.\n     ",
+    "links" : [ "android.util.JsonToken#STRING" ]
+  }, {
+    "name" : "public boolean nextBoolean() throws IOException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns the {@link JsonToken#BOOLEAN boolean} value of the next token,\n     * consuming it.\n     *\n     * @throws IllegalStateException if the next token is not a boolean or if\n     *     this reader is closed.\n     ",
+    "links" : [ "android.util.JsonToken#BOOLEAN" ]
+  }, {
+    "name" : "public void nextNull() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Consumes the next token from the JSON stream and asserts that it is a\n     * literal null.\n     *\n     * @throws IllegalStateException if the next token is not null or if this\n     *     reader is closed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double nextDouble() throws IOException",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the {@link JsonToken#NUMBER double} value of the next token,\n     * consuming it. If the next token is a string, this method will attempt to\n     * parse it as a double using {@link Double#parseDouble(String)}.\n     *\n     * @throws IllegalStateException if the next token is not a literal value.\n     ",
+    "links" : [ "android.util.JsonToken#NUMBER", "#parseDouble(String)" ]
+  }, {
+    "name" : "public long nextLong() throws IOException",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the {@link JsonToken#NUMBER long} value of the next token,\n     * consuming it. If the next token is a string, this method will attempt to\n     * parse it as a long. If the next token's numeric value cannot be exactly\n     * represented by a Java {@code long}, this method throws.\n     *\n     * @throws IllegalStateException if the next token is not a literal value.\n     * @throws NumberFormatException if the next literal value cannot be parsed\n     *     as a number, or exactly represented as a long.\n     ",
+    "links" : [ "android.util.JsonToken#NUMBER" ]
+  }, {
+    "name" : "public int nextInt() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the {@link JsonToken#NUMBER int} value of the next token,\n     * consuming it. If the next token is a string, this method will attempt to\n     * parse it as an int. If the next token's numeric value cannot be exactly\n     * represented by a Java {@code int}, this method throws.\n     *\n     * @throws IllegalStateException if the next token is not a literal value.\n     * @throws NumberFormatException if the next literal value cannot be parsed\n     *     as a number, or exactly represented as an int.\n     ",
+    "links" : [ "android.util.JsonToken#NUMBER" ]
+  }, {
+    "name" : "public void close() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Closes this JSON reader and the underlying {@link Reader}.\n     ",
+    "links" : [ "java.io.Reader" ]
+  }, {
+    "name" : "public void skipValue() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Skips the next value recursively. If it is an object or array, all nested\n     * elements are skipped. This method is intended for use when the JSON token\n     * stream contains unrecognized or unhandled values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonScope peekStack()",
+    "returnType" : "JsonScope",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonScope pop()",
+    "returnType" : "JsonScope",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void push(JsonScope newTop)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void replaceTop(JsonScope newTop)",
+    "returnType" : "void",
+    "comment" : "\n     * Replace the value on the top of the stack with the given value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken nextInArray(boolean firstElement) throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken nextInObject(boolean firstElement) throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken objectValue() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken nextValue() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean fillBuffer(int minimum) throws IOException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true once {@code limit - pos >= minimum}. If the data is\n     * exhausted before that many characters are available, this returns\n     * false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getLineNumber()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getColumnNumber()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int nextNonWhitespace() throws IOException",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkLenient() throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void skipToEndOfLine() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Advances the position until after the next newline character. If the line\n     * is terminated by \"\\r\\n\", the '\\n' must be consumed as whitespace by the\n     * caller.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean skipTo(String toFind) throws IOException",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String nextString(char quote) throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the string up to but not including {@code quote}, unescaping any\n     * character escape sequences encountered along the way. The opening quote\n     * should have already been read. This consumes the closing quote, but does\n     * not include it in the returned string.\n     *\n     * @param quote either ' or \".\n     * @throws NumberFormatException if any unicode escape sequences are\n     *     malformed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String nextLiteral(boolean assignOffsetsOnly) throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Reads the value up to but not including any delimiter characters. This\n     * does not consume the delimiter character.\n     *\n     * @param assignOffsetsOnly true for this method to only set the valuePos\n     *     and valueLength fields and return a null result. This only works if\n     *     the literal is short; a string is returned otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private char readEscapeCharacter() throws IOException",
+    "returnType" : "char",
+    "comment" : "\n     * Unescapes the character identified by the character or characters that\n     * immediately follow a backslash. The backslash '\\' should have already\n     * been read. This supports both unicode escapes \"u000A\" and two-character\n     * escapes \"\\n\".\n     *\n     * @throws NumberFormatException if any unicode escape sequences are\n     *     malformed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken readLiteral() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "\n     * Reads a null, boolean, numeric or unquoted string literal value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken decodeLiteral() throws IOException",
+    "returnType" : "JsonToken",
+    "comment" : "\n     * Assigns {@code nextToken} based on the value of {@code nextValue}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private JsonToken decodeNumber(char[] chars, int offset, int length)",
+    "returnType" : "JsonToken",
+    "comment" : "\n     * Determine whether the characters is a JSON number. Numbers are of the\n     * form -12.34e+56. Fractional and exponential parts are optional. Leading\n     * zeroes are not allowed in the value or exponential part, but are allowed\n     * in the fraction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private IOException syntaxError(String message) throws IOException",
+    "returnType" : "IOException",
+    "comment" : "\n     * Throws a new IO exception with the given message and a context snippet\n     * with this reader's content.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private CharSequence getSnippet()",
+    "returnType" : "CharSequence",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TRUE", "FALSE", "stringPool", "in", "lenient", "buffer", "pos", "limit", "bufferStartLine", "bufferStartColumn", "stack", "token", "name", "value", "valuePos", "valueLength", "skipping" ],
+  "methodNames" : [ "public void setLenient(boolean lenient)", "public boolean isLenient()", "public void beginArray() throws IOException", "public void endArray() throws IOException", "public void beginObject() throws IOException", "public void endObject() throws IOException", "private void expect(JsonToken expected) throws IOException", "public boolean hasNext() throws IOException", "public JsonToken peek() throws IOException", "private JsonToken advance() throws IOException", "public String nextName() throws IOException", "public String nextString() throws IOException", "public boolean nextBoolean() throws IOException", "public void nextNull() throws IOException", "public double nextDouble() throws IOException", "public long nextLong() throws IOException", "public int nextInt() throws IOException", "public void close() throws IOException", "public void skipValue() throws IOException", "private JsonScope peekStack()", "private JsonScope pop()", "private void push(JsonScope newTop)", "private void replaceTop(JsonScope newTop)", "private JsonToken nextInArray(boolean firstElement) throws IOException", "private JsonToken nextInObject(boolean firstElement) throws IOException", "private JsonToken objectValue() throws IOException", "private JsonToken nextValue() throws IOException", "private boolean fillBuffer(int minimum) throws IOException", "private int getLineNumber()", "private int getColumnNumber()", "private int nextNonWhitespace() throws IOException", "private void checkLenient() throws IOException", "private void skipToEndOfLine() throws IOException", "private boolean skipTo(String toFind) throws IOException", "private String nextString(char quote) throws IOException", "private String nextLiteral(boolean assignOffsetsOnly) throws IOException", "public String toString()", "private char readEscapeCharacter() throws IOException", "private JsonToken readLiteral() throws IOException", "private JsonToken decodeLiteral() throws IOException", "private JsonToken decodeNumber(char[] chars, int offset, int length)", "private IOException syntaxError(String message) throws IOException", "private CharSequence getSnippet()" ]
+}

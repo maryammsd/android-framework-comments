@@ -1,0 +1,105 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/QueuedWork.java",
+  "packageName" : "android.app",
+  "className" : "QueuedWork",
+  "comment" : "\n * Internal utility class to keep track of process-global work that's outstanding and hasn't been\n * finished yet.\n *\n * New work will be {@link #queue queued}.\n *\n * It is possible to add 'finisher'-runnables that are {@link #waitToFinish guaranteed to be run}.\n * This is used to make sure the work has been finished.\n *\n * This was created for writing SharedPreference edits out asynchronously so we'd have a mechanism\n * to wait for the writes in Activity.onPause and similar places, but we may use this mechanism for\n * other things in the future.\n *\n * The queued asynchronous work is performed on a separate, dedicated thread.\n *\n * @hide\n ",
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DELAY",
+    "type" : "long",
+    "comment" : " Delay for delayed runnables, as big as possible but low enough to be barely perceivable ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_WAIT_TIME_MILLIS",
+    "type" : "long",
+    "comment" : " If a {@link #waitToFinish()} takes more than {@value #MAX_WAIT_TIME_MILLIS} ms, warn ",
+    "links" : [ "#waitToFinish()" ]
+  }, {
+    "name" : "sLock",
+    "type" : "Object",
+    "comment" : " Lock for this class ",
+    "links" : [ ]
+  }, {
+    "name" : "sProcessingWork",
+    "type" : "Object",
+    "comment" : "\n     * Used to make sure that only one thread is processing work items at a time. This means that\n     * they are processed in the order added.\n     *\n     * This is separate from {@link #sLock} as this is held the whole time while work is processed\n     * and we do not want to stall the whole class.\n     ",
+    "links" : [ "#sLock" ]
+  }, {
+    "name" : "sFinishers",
+    "type" : "LinkedList<Runnable>",
+    "comment" : " Finishers {@link #addFinisher added} and not yet {@link #removeFinisher removed} ",
+    "links" : [ "#removeFinisher", "#addFinisher" ]
+  }, {
+    "name" : "sHandler",
+    "type" : "Handler",
+    "comment" : " {@link #getHandler() Lazily} created handler ",
+    "links" : [ "#getHandler()" ]
+  }, {
+    "name" : "sWork",
+    "type" : "LinkedList<Runnable>",
+    "comment" : " Work queued via {@link #queue} ",
+    "links" : [ "#queue" ]
+  }, {
+    "name" : "sCanDelay",
+    "type" : "boolean",
+    "comment" : " If new work can be delayed or not ",
+    "links" : [ ]
+  }, {
+    "name" : "mWaitTimes",
+    "type" : "ExponentiallyBucketedHistogram",
+    "comment" : " Time (and number of instances) waited for work to get processed ",
+    "links" : [ ]
+  }, {
+    "name" : "mNumWaits",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static Handler getHandler()",
+    "returnType" : "Handler",
+    "comment" : "\n     * Lazily create a handler on a separate thread.\n     *\n     * @return the handler\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void addFinisher(Runnable finisher)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a finisher-runnable to wait for {@link #queue asynchronously processed work}.\n     *\n     * Used by SharedPreferences$Editor#startCommit().\n     *\n     * Note that this doesn't actually start it running.  This is just a scratch set for callers\n     * doing async work to keep updated with what's in-flight. In the common case, caller code\n     * (e.g. SharedPreferences) will pretty quickly call remove() after an add(). The only time\n     * these Runnables are run is from {@link #waitToFinish}.\n     *\n     * @param finisher The runnable to add as finisher\n     ",
+    "links" : [ "#queue", "#waitToFinish" ]
+  }, {
+    "name" : "public static void removeFinisher(Runnable finisher)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a previously {@link #addFinisher added} finisher-runnable.\n     *\n     * @param finisher The runnable to remove.\n     ",
+    "links" : [ "#addFinisher" ]
+  }, {
+    "name" : "public static void waitToFinish()",
+    "returnType" : "void",
+    "comment" : "\n     * Trigger queued work to be processed immediately. The queued work is processed on a separate\n     * thread asynchronous. While doing that run and process all finishers on this thread. The\n     * finishers can be implemented in a way to check weather the queued work is finished.\n     *\n     * Is called from the Activity base class's onPause(), after BroadcastReceiver's onReceive,\n     * after Service command handling, etc. (so async work is never lost)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void queue(Runnable work, boolean shouldDelay)",
+    "returnType" : "void",
+    "comment" : "\n     * Queue a work-runnable for processing asynchronously.\n     *\n     * @param work The new runnable to process\n     * @param shouldDelay If the message should be delayed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean hasPendingWork()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return True iff there is any {@link #queue async work queued}.\n     ",
+    "links" : [ "#queue" ]
+  }, {
+    "name" : "private static void processPendingWork()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "LOG_TAG", "DEBUG", "DELAY", "MAX_WAIT_TIME_MILLIS", "sLock", "sProcessingWork", "sFinishers", "sHandler", "sWork", "sCanDelay", "mWaitTimes", "mNumWaits" ],
+  "methodNames" : [ "private static Handler getHandler()", "public static void addFinisher(Runnable finisher)", "public static void removeFinisher(Runnable finisher)", "public static void waitToFinish()", "public static void queue(Runnable work, boolean shouldDelay)", "public static boolean hasPendingWork()", "private static void processPendingWork()" ]
+}

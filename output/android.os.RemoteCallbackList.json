@@ -1,0 +1,125 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/RemoteCallbackList.java",
+  "packageName" : "android.os",
+  "className" : "RemoteCallbackList",
+  "comment" : "\n * Takes care of the grunt work of maintaining a list of remote interfaces,\n * typically for the use of performing callbacks from a\n * {@link android.app.Service} to its clients.  In particular, this:\n *\n * <ul>\n * <li> Keeps track of a set of registered {@link IInterface} callbacks,\n * taking care to identify them through their underlying unique {@link IBinder}\n * (by calling {@link IInterface#asBinder IInterface.asBinder()}.\n * <li> Attaches a {@link IBinder.DeathRecipient IBinder.DeathRecipient} to\n * each registered interface, so that it can be cleaned out of the list if its\n * process goes away.\n * <li> Performs locking of the underlying list of interfaces to deal with\n * multithreaded incoming calls, and a thread-safe way to iterate over a\n * snapshot of the list without holding its lock.\n * </ul>\n *\n * <p>To use this class, simply create a single instance along with your\n * service, and call its {@link #register} and {@link #unregister} methods\n * as client register and unregister with your service.  To call back on to\n * the registered clients, use {@link #beginBroadcast},\n * {@link #getBroadcastItem}, and {@link #finishBroadcast}.\n *\n * <p>If a registered callback's process goes away, this class will take\n * care of automatically removing it from the list.  If you want to do\n * additional work in this situation, you can create a subclass that\n * implements the {@link #onCallbackDied} method.\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallbacks",
+    "type" : "ArrayMap<IBinder, Callback>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActiveBroadcast",
+    "type" : "Object[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBroadcastCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mKilled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRecentCallers",
+    "type" : "StringBuilder",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean register(E callback)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Simple version of {@link RemoteCallbackList#register(E, Object)}\n     * that does not take a cookie object.\n     ",
+    "links" : [ "android.os.RemoteCallbackList#register(E" ]
+  }, {
+    "name" : "public boolean register(E callback, Object cookie)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Add a new callback to the list.  This callback will remain in the list\n     * until a corresponding call to {@link #unregister} or its hosting process\n     * goes away.  If the callback was already registered (determined by\n     * checking to see if the {@link IInterface#asBinder callback.asBinder()}\n     * object is already in the list), then it will be left as-is.\n     * Registrations are not counted; a single call to {@link #unregister}\n     * will remove a callback after any number calls to register it.\n     *\n     * @param callback The callback interface to be added to the list.  Must\n     * not be null -- passing null here will cause a NullPointerException.\n     * Most services will want to check for null before calling this with\n     * an object given from a client, so that clients can't crash the\n     * service with bad data.\n     *\n     * @param cookie Optional additional data to be associated with this\n     * callback.\n     * \n     * @return Returns true if the callback was successfully added to the list.\n     * Returns false if it was not added, either because {@link #kill} had\n     * previously been called or the callback's process has gone away.\n     *\n     * @see #unregister\n     * @see #kill\n     * @see #onCallbackDied\n     ",
+    "links" : [ "android.os.IInterface#asBinder", "#unregister", "#kill" ]
+  }, {
+    "name" : "public boolean unregister(E callback)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Remove from the list a callback that was previously added with\n     * {@link #register}.  This uses the\n     * {@link IInterface#asBinder callback.asBinder()} object to correctly\n     * find the previous registration.\n     * Registrations are not counted; a single unregister call will remove\n     * a callback after any number calls to {@link #register} for it.\n     *\n     * @param callback The callback to be removed from the list.  Passing\n     * null here will cause a NullPointerException, so you will generally want\n     * to check for null before calling.\n     *\n     * @return Returns true if the callback was found and unregistered.  Returns\n     * false if the given callback was not found on the list.\n     *\n     * @see #register\n     ",
+    "links" : [ "#register", "android.os.IInterface#asBinder" ]
+  }, {
+    "name" : "public void kill()",
+    "returnType" : "void",
+    "comment" : "\n     * Disable this callback list.  All registered callbacks are unregistered,\n     * and the list is disabled so that future calls to {@link #register} will\n     * fail.  This should be used when a Service is stopping, to prevent clients\n     * from registering callbacks after it is stopped.\n     *\n     * @see #register\n     ",
+    "links" : [ "#register" ]
+  }, {
+    "name" : "public void onCallbackDied(E callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Old version of {@link #onCallbackDied(E, Object)} that\n     * does not provide a cookie.\n     ",
+    "links" : [ "#onCallbackDied(E" ]
+  }, {
+    "name" : "public void onCallbackDied(E callback, Object cookie)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the process hosting a callback in the list has gone away.\n     * The default implementation calls {@link #onCallbackDied(E)}\n     * for backwards compatibility.\n     * \n     * @param callback The callback whose process has died.  Note that, since\n     * its process has died, you can not make any calls on to this interface.\n     * You can, however, retrieve its IBinder and compare it with another\n     * IBinder to see if it is the same object.\n     * @param cookie The cookie object original provided to\n     * {@link #register(E, Object)}.\n     * \n     * @see #register\n     ",
+    "links" : [ "#register(E", "#onCallbackDied(E)" ]
+  }, {
+    "name" : "public int beginBroadcast()",
+    "returnType" : "int",
+    "comment" : "\n     * Prepare to start making calls to the currently registered callbacks.\n     * This creates a copy of the callback list, which you can retrieve items\n     * from using {@link #getBroadcastItem}.  Note that only one broadcast can\n     * be active at a time, so you must be sure to always call this from the\n     * same thread (usually by scheduling with {@link Handler}) or\n     * do your own synchronization.  You must call {@link #finishBroadcast}\n     * when done.\n     *\n     * <p>A typical loop delivering a broadcast looks like this:\n     *\n     * <pre>\n     * int i = callbacks.beginBroadcast();\n     * while (i &gt; 0) {\n     *     i--;\n     *     try {\n     *         callbacks.getBroadcastItem(i).somethingHappened();\n     *     } catch (RemoteException e) {\n     *         // The RemoteCallbackList will take care of removing\n     *         // the dead object for us.\n     *     }\n     * }\n     * callbacks.finishBroadcast();</pre>\n     *\n     * @return Returns the number of callbacks in the broadcast, to be used\n     * with {@link #getBroadcastItem} to determine the range of indices you\n     * can supply.\n     *\n     * @see #getBroadcastItem\n     * @see #finishBroadcast\n     ",
+    "links" : [ "android.os.Handler", "#getBroadcastItem", "#finishBroadcast" ]
+  }, {
+    "name" : "public E getBroadcastItem(int index)",
+    "returnType" : "E",
+    "comment" : "\n     * Retrieve an item in the active broadcast that was previously started\n     * with {@link #beginBroadcast}.  This can <em>only</em> be called after\n     * the broadcast is started, and its data is no longer valid after\n     * calling {@link #finishBroadcast}.\n     *\n     * <p>Note that it is possible for the process of one of the returned\n     * callbacks to go away before you call it, so you will need to catch\n     * {@link RemoteException} when calling on to the returned object.\n     * The callback list itself, however, will take care of unregistering\n     * these objects once it detects that it is no longer valid, so you can\n     * handle such an exception by simply ignoring it.\n     *\n     * @param index Which of the registered callbacks you would like to\n     * retrieve.  Ranges from 0 to 1-{@link #beginBroadcast}.\n     *\n     * @return Returns the callback interface that you can call.  This will\n     * always be non-null.\n     *\n     * @see #beginBroadcast\n     ",
+    "links" : [ "#beginBroadcast", "android.os.RemoteException", "#finishBroadcast" ]
+  }, {
+    "name" : "public Object getBroadcastCookie(int index)",
+    "returnType" : "Object",
+    "comment" : "\n     * Retrieve the cookie associated with the item\n     * returned by {@link #getBroadcastItem(int)}.\n     * \n     * @see #getBroadcastItem\n     ",
+    "links" : [ "#getBroadcastItem(int)" ]
+  }, {
+    "name" : "public void finishBroadcast()",
+    "returnType" : "void",
+    "comment" : "\n     * Clean up the state of a broadcast previously initiated by calling\n     * {@link #beginBroadcast}.  This must always be called when you are done\n     * with a broadcast.\n     *\n     * @see #beginBroadcast\n     ",
+    "links" : [ "#beginBroadcast" ]
+  }, {
+    "name" : "public void broadcast(Consumer<E> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs {@code action} on each callback, calling\n     * {@link #beginBroadcast()}/{@link #finishBroadcast()} before/after looping\n     *\n     * @hide\n     ",
+    "links" : [ "#finishBroadcast()", "#beginBroadcast()" ]
+  }, {
+    "name" : "public void broadcastForEachCookie(Consumer<C> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs {@code action} for each cookie associated with a callback, calling\n     * {@link #beginBroadcast()}/{@link #finishBroadcast()} before/after looping\n     *\n     * @hide\n     ",
+    "links" : [ "#finishBroadcast()", "#beginBroadcast()" ]
+  }, {
+    "name" : "public int getRegisteredCallbackCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of registered callbacks. Note that the number of registered\n     * callbacks may differ from the value returned by {@link #beginBroadcast()} since\n     * the former returns the number of callbacks registered at the time of the call\n     * and the second the number of callback to which the broadcast will be delivered.\n     * <p>\n     * This function is useful to decide whether to schedule a broadcast if this\n     * requires doing some work which otherwise would not be performed.\n     * </p>\n     *\n     * @return The size.\n     ",
+    "links" : [ "#beginBroadcast()" ]
+  }, {
+    "name" : "public E getRegisteredCallbackItem(int index)",
+    "returnType" : "E",
+    "comment" : "\n     * Return a currently registered callback.  Note that this is\n     * <em>not</em> the same as {@link #getBroadcastItem} and should not be used\n     * interchangeably with it.  This method returns the registered callback at the given\n     * index, not the current broadcast state.  This means that it is not itself thread-safe:\n     * any call to {@link #register} or {@link #unregister} will change these indices, so you\n     * must do your own thread safety between these to protect from such changes.\n     *\n     * @param index Index of which callback registration to return, from 0 to\n     * {@link #getRegisteredCallbackCount()} - 1.\n     *\n     * @return Returns whatever callback is associated with this index, or null if\n     * {@link #kill()} has been called.\n     ",
+    "links" : [ "#register", "#unregister", "#getBroadcastItem", "#kill()", "#getRegisteredCallbackCount()" ]
+  }, {
+    "name" : "public Object getRegisteredCallbackCookie(int index)",
+    "returnType" : "Object",
+    "comment" : "\n     * Return any cookie associated with a currently registered callback.  Note that this is\n     * <em>not</em> the same as {@link #getBroadcastCookie} and should not be used\n     * interchangeably with it.  This method returns the current cookie registered at the given\n     * index, not the current broadcast state.  This means that it is not itself thread-safe:\n     * any call to {@link #register} or {@link #unregister} will change these indices, so you\n     * must do your own thread safety between these to protect from such changes.\n     *\n     * @param index Index of which registration cookie to return, from 0 to\n     * {@link #getRegisteredCallbackCount()} - 1.\n     *\n     * @return Returns whatever cookie object is associated with this index, or null if\n     * {@link #kill()} has been called.\n     ",
+    "links" : [ "#register", "#unregister", "#kill()", "#getBroadcastCookie", "#getRegisteredCallbackCount()" ]
+  }, {
+    "name" : "public void dump(PrintWriter pw, String prefix)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logExcessiveCallbacks()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "mCallbacks", "mActiveBroadcast", "mBroadcastCount", "mKilled", "mRecentCallers" ],
+  "methodNames" : [ "public boolean register(E callback)", "public boolean register(E callback, Object cookie)", "public boolean unregister(E callback)", "public void kill()", "public void onCallbackDied(E callback)", "public void onCallbackDied(E callback, Object cookie)", "public int beginBroadcast()", "public E getBroadcastItem(int index)", "public Object getBroadcastCookie(int index)", "public void finishBroadcast()", "public void broadcast(Consumer<E> action)", "public void broadcastForEachCookie(Consumer<C> action)", "public int getRegisteredCallbackCount()", "public E getRegisteredCallbackItem(int index)", "public Object getRegisteredCallbackCookie(int index)", "public void dump(PrintWriter pw, String prefix)", "private void logExcessiveCallbacks()" ]
+}

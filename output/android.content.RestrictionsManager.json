@@ -1,0 +1,235 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/content/RestrictionsManager.java",
+  "packageName" : "android.content",
+  "className" : "RestrictionsManager",
+  "comment" : "\n * Provides a mechanism for apps to query restrictions imposed by an entity that\n * manages the user. Apps can also send permission requests to a local or remote\n * device administrator to override default app-specific restrictions or any other\n * operation that needs explicit authorization from the administrator.\n * <p>\n * Apps can expose a set of restrictions via an XML file specified in the manifest.\n * <p>\n * If the user has an active Restrictions Provider, dynamic requests can be made in\n * addition to the statically imposed restrictions. Dynamic requests are app-specific\n * and can be expressed via a predefined set of request types.\n * <p>\n * The RestrictionsManager forwards the dynamic requests to the active\n * Restrictions Provider. The Restrictions Provider can respond back to requests by calling\n * {@link #notifyPermissionResponse(String, PersistableBundle)}, when\n * a response is received from the administrator of the device or user.\n * The response is relayed back to the application via a protected broadcast,\n * {@link #ACTION_PERMISSION_RESPONSE_RECEIVED}.\n * <p>\n * Static restrictions are specified by an XML file referenced by a meta-data attribute\n * in the manifest. This enables applications as well as any web administration consoles\n * to be able to read the list of available restrictions from the apk.\n * <p>\n * The syntax of the XML format is as follows:\n * <pre>\n * &lt;?xml version=\"1.0\" encoding=\"utf-8\"?&gt;\n * &lt;restrictions xmlns:android=\"http://schemas.android.com/apk/res/android\" &gt;\n *     &lt;restriction\n *         android:key=\"string\"\n *         android:title=\"string resource\"\n *         android:restrictionType=[\"bool\" | \"string\" | \"integer\"\n *                                         | \"choice\" | \"multi-select\" | \"hidden\"\n *                                         | \"bundle\" | \"bundle_array\"]\n *         android:description=\"string resource\"\n *         android:entries=\"string-array resource\"\n *         android:entryValues=\"string-array resource\"\n *         android:defaultValue=\"reference\" &gt;\n *             &lt;restriction ... /&gt;\n *             ...\n *     &lt;/restriction&gt;\n *     &lt;restriction ... /&gt;\n *     ...\n * &lt;/restrictions&gt;\n * </pre>\n * <p>\n * The attributes for each restriction depend on the restriction type.\n * <p>\n * <ul>\n * <li><code>key</code>, <code>title</code> and <code>restrictionType</code> are mandatory.</li>\n * <li><code>entries</code> and <code>entryValues</code> are required if <code>restrictionType\n * </code> is <code>choice</code> or <code>multi-select</code>.</li>\n * <li><code>defaultValue</code> is optional and its type depends on the\n * <code>restrictionType</code></li>\n * <li><code>hidden</code> type must have a <code>defaultValue</code> and will\n * not be shown to the administrator. It can be used to pass along data that cannot be modified,\n * such as a version code.</li>\n * <li><code>description</code> is meant to describe the restriction in more detail to the\n * administrator controlling the values, if the title is not sufficient.</li>\n * </ul>\n * <p>\n * Only restrictions of type {@code bundle} and {@code bundle_array} can have one or multiple nested\n * restriction elements.\n * <p>\n * In your manifest's <code>application</code> section, add the meta-data tag to point to\n * the restrictions XML file as shown below:\n * <pre>\n * &lt;application ... &gt;\n *     &lt;meta-data android:name=\"android.content.APP_RESTRICTIONS\"\n *                   android:resource=\"@xml/app_restrictions\" /&gt;\n *     ...\n * &lt;/application&gt;\n * </pre>\n *\n * @see RestrictionEntry\n * @see RestrictionsReceiver\n * @see DevicePolicyManager#setRestrictionsProvider(ComponentName, ComponentName)\n * @see DevicePolicyManager#setApplicationRestrictions(ComponentName, String, Bundle)\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_PERMISSION_RESPONSE_RECEIVED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent delivered when a response is received for a permission request. The\n     * application should not interrupt the user by coming to the foreground if it isn't\n     * currently in the foreground. It can either post a notification informing\n     * the user of the response or wait until the next time the user launches the app.\n     * <p>\n     * For instance, if the user requested permission to make an in-app purchase,\n     * the app can post a notification that the request had been approved or denied.\n     * <p>\n     * The broadcast Intent carries the following extra:\n     * {@link #EXTRA_RESPONSE_BUNDLE}.\n     ",
+    "links" : [ "#EXTRA_RESPONSE_BUNDLE" ]
+  }, {
+    "name" : "ACTION_REQUEST_PERMISSION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent sent to the Restrictions Provider to handle a permission request from\n     * an app. It will have the following extras: {@link #EXTRA_PACKAGE_NAME},\n     * {@link #EXTRA_REQUEST_TYPE}, {@link #EXTRA_REQUEST_ID} and {@link #EXTRA_REQUEST_BUNDLE}.\n     * The Restrictions Provider will handle the request and respond back to the\n     * RestrictionsManager, when a response is available, by calling\n     * {@link #notifyPermissionResponse}.\n     * <p>\n     * The BroadcastReceiver must require the {@link android.Manifest.permission#BIND_DEVICE_ADMIN}\n     * permission to ensure that only the system can send the broadcast.\n     ",
+    "links" : [ "#EXTRA_PACKAGE_NAME", "#EXTRA_REQUEST_ID", "#EXTRA_REQUEST_BUNDLE", "android.Manifest.permission#BIND_DEVICE_ADMIN", "#notifyPermissionResponse", "#EXTRA_REQUEST_TYPE" ]
+  }, {
+    "name" : "ACTION_REQUEST_LOCAL_APPROVAL",
+    "type" : "String",
+    "comment" : "\n     * Activity intent that is optionally implemented by the Restrictions Provider package\n     * to challenge for an administrator PIN or password locally on the device. Apps will\n     * call this intent using {@link Activity#startActivityForResult}. On a successful\n     * response, {@link Activity#onActivityResult} will return a resultCode of\n     * {@link Activity#RESULT_OK}.\n     * <p>\n     * The intent must contain {@link #EXTRA_REQUEST_BUNDLE} as an extra and the bundle must\n     * contain at least {@link #REQUEST_KEY_MESSAGE} for the activity to display.\n     * <p>\n     * @see #createLocalApprovalIntent()\n     ",
+    "links" : [ "#REQUEST_KEY_MESSAGE", "android.app.Activity#RESULT_OK", "#EXTRA_REQUEST_BUNDLE", "android.app.Activity#startActivityForResult", "android.app.Activity#onActivityResult" ]
+  }, {
+    "name" : "EXTRA_PACKAGE_NAME",
+    "type" : "String",
+    "comment" : "\n     * The package name of the application making the request.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_REQUEST_TYPE",
+    "type" : "String",
+    "comment" : "\n     * The request type passed in the {@link #ACTION_REQUEST_PERMISSION} broadcast.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ "#ACTION_REQUEST_PERMISSION" ]
+  }, {
+    "name" : "EXTRA_REQUEST_ID",
+    "type" : "String",
+    "comment" : "\n     * The request ID passed in the {@link #ACTION_REQUEST_PERMISSION} broadcast.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ "#ACTION_REQUEST_PERMISSION" ]
+  }, {
+    "name" : "EXTRA_REQUEST_BUNDLE",
+    "type" : "String",
+    "comment" : "\n     * The request bundle passed in the {@link #ACTION_REQUEST_PERMISSION} broadcast.\n     * <p>\n     * Type: {@link PersistableBundle}\n     ",
+    "links" : [ "#ACTION_REQUEST_PERMISSION", "android.os.PersistableBundle" ]
+  }, {
+    "name" : "EXTRA_RESPONSE_BUNDLE",
+    "type" : "String",
+    "comment" : "\n     * Contains a response from the administrator for specific request.\n     * The bundle contains the following information, at least:\n     * <ul>\n     * <li>{@link #REQUEST_KEY_ID}: The request ID.</li>\n     * <li>{@link #RESPONSE_KEY_RESULT}: The response result.</li>\n     * </ul>\n     * <p>\n     * Type: {@link PersistableBundle}\n     ",
+    "links" : [ "#REQUEST_KEY_ID", "android.os.PersistableBundle", "#RESPONSE_KEY_RESULT" ]
+  }, {
+    "name" : "REQUEST_TYPE_APPROVAL",
+    "type" : "String",
+    "comment" : "\n     * Request type for a simple question, with a possible title and icon.\n     * <p>\n     * Required keys are: {@link #REQUEST_KEY_MESSAGE}\n     * <p>\n     * Optional keys are\n     * {@link #REQUEST_KEY_DATA}, {@link #REQUEST_KEY_ICON}, {@link #REQUEST_KEY_TITLE},\n     * {@link #REQUEST_KEY_APPROVE_LABEL} and {@link #REQUEST_KEY_DENY_LABEL}.\n     ",
+    "links" : [ "#REQUEST_KEY_ICON", "#REQUEST_KEY_MESSAGE", "#REQUEST_KEY_APPROVE_LABEL", "#REQUEST_KEY_DATA", "#REQUEST_KEY_DENY_LABEL", "#REQUEST_KEY_TITLE" ]
+  }, {
+    "name" : "REQUEST_KEY_ID",
+    "type" : "String",
+    "comment" : "\n     * Key for request ID contained in the request bundle.\n     * <p>\n     * App-generated request ID to identify the specific request when receiving\n     * a response. This value is returned in the {@link #EXTRA_RESPONSE_BUNDLE}.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ "#EXTRA_RESPONSE_BUNDLE" ]
+  }, {
+    "name" : "REQUEST_KEY_DATA",
+    "type" : "String",
+    "comment" : "\n     * Key for request data contained in the request bundle.\n     * <p>\n     * Optional, typically used to identify the specific data that is being referred to,\n     * such as the unique identifier for a movie or book. This is not used for display\n     * purposes and is more like a cookie. This value is returned in the\n     * {@link #EXTRA_RESPONSE_BUNDLE}.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ "#EXTRA_RESPONSE_BUNDLE" ]
+  }, {
+    "name" : "REQUEST_KEY_TITLE",
+    "type" : "String",
+    "comment" : "\n     * Key for request title contained in the request bundle.\n     * <p>\n     * Optional, typically used as the title of any notification or dialog presented\n     * to the administrator who approves the request.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_KEY_MESSAGE",
+    "type" : "String",
+    "comment" : "\n     * Key for request message contained in the request bundle.\n     * <p>\n     * Required, shown as the actual message in a notification or dialog presented\n     * to the administrator who approves the request.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_KEY_ICON",
+    "type" : "String",
+    "comment" : "\n     * Key for request icon contained in the request bundle.\n     * <p>\n     * Optional, shown alongside the request message presented to the administrator\n     * who approves the request. The content must be a compressed image such as a\n     * PNG or JPEG, as a byte array.\n     * <p>\n     * Type: byte[]\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_KEY_APPROVE_LABEL",
+    "type" : "String",
+    "comment" : "\n     * Key for request approval button label contained in the request bundle.\n     * <p>\n     * Optional, may be shown as a label on the positive button in a dialog or\n     * notification presented to the administrator who approves the request.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_KEY_DENY_LABEL",
+    "type" : "String",
+    "comment" : "\n     * Key for request rejection button label contained in the request bundle.\n     * <p>\n     * Optional, may be shown as a label on the negative button in a dialog or\n     * notification presented to the administrator who approves the request.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_KEY_NEW_REQUEST",
+    "type" : "String",
+    "comment" : "\n     * Key for issuing a new request, contained in the request bundle. If this is set to true,\n     * the Restrictions Provider must make a new request. If it is false or not specified, then\n     * the Restrictions Provider can return a cached response that has the same requestId, if\n     * available. If there's no cached response, it will issue a new one to the administrator.\n     * <p>\n     * Type: boolean\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_KEY_RESULT",
+    "type" : "String",
+    "comment" : "\n     * Key for the response result in the response bundle sent to the application, for a permission\n     * request. It indicates the status of the request. In some cases an additional message might\n     * be available in {@link #RESPONSE_KEY_MESSAGE}, to be displayed to the user.\n     * <p>\n     * Type: int\n     * <p>\n     * Possible values: {@link #RESULT_APPROVED}, {@link #RESULT_DENIED},\n     * {@link #RESULT_NO_RESPONSE}, {@link #RESULT_UNKNOWN_REQUEST} or\n     * {@link #RESULT_ERROR}.\n     ",
+    "links" : [ "#RESULT_APPROVED", "#RESULT_NO_RESPONSE", "#RESPONSE_KEY_MESSAGE", "#RESULT_UNKNOWN_REQUEST", "#RESULT_DENIED", "#RESULT_ERROR" ]
+  }, {
+    "name" : "RESULT_APPROVED",
+    "type" : "int",
+    "comment" : "\n     * Response result value indicating that the request was approved.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_DENIED",
+    "type" : "int",
+    "comment" : "\n     * Response result value indicating that the request was denied.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_NO_RESPONSE",
+    "type" : "int",
+    "comment" : "\n     * Response result value indicating that the request has not received a response yet.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_UNKNOWN_REQUEST",
+    "type" : "int",
+    "comment" : "\n     * Response result value indicating that the request is unknown, when it's not a new\n     * request.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Response result value indicating an error condition. Additional error code might be available\n     * in the response bundle, for the key {@link #RESPONSE_KEY_ERROR_CODE}. There might also be\n     * an associated error message in the response bundle, for the key\n     * {@link #RESPONSE_KEY_MESSAGE}.\n     ",
+    "links" : [ "#RESPONSE_KEY_ERROR_CODE", "#RESPONSE_KEY_MESSAGE" ]
+  }, {
+    "name" : "RESULT_ERROR_BAD_REQUEST",
+    "type" : "int",
+    "comment" : "\n     * Error code indicating that there was a problem with the request.\n     * <p>\n     * Stored in {@link #RESPONSE_KEY_ERROR_CODE} field in the response bundle.\n     ",
+    "links" : [ "#RESPONSE_KEY_ERROR_CODE" ]
+  }, {
+    "name" : "RESULT_ERROR_NETWORK",
+    "type" : "int",
+    "comment" : "\n     * Error code indicating that there was a problem with the network.\n     * <p>\n     * Stored in {@link #RESPONSE_KEY_ERROR_CODE} field in the response bundle.\n     ",
+    "links" : [ "#RESPONSE_KEY_ERROR_CODE" ]
+  }, {
+    "name" : "RESULT_ERROR_INTERNAL",
+    "type" : "int",
+    "comment" : "\n     * Error code indicating that there was an internal error.\n     * <p>\n     * Stored in {@link #RESPONSE_KEY_ERROR_CODE} field in the response bundle.\n     ",
+    "links" : [ "#RESPONSE_KEY_ERROR_CODE" ]
+  }, {
+    "name" : "RESPONSE_KEY_ERROR_CODE",
+    "type" : "String",
+    "comment" : "\n     * Key for the optional error code in the response bundle sent to the application.\n     * <p>\n     * Type: int\n     * <p>\n     * Possible values: {@link #RESULT_ERROR_BAD_REQUEST}, {@link #RESULT_ERROR_NETWORK} or\n     * {@link #RESULT_ERROR_INTERNAL}.\n     ",
+    "links" : [ "#RESULT_ERROR_INTERNAL", "#RESULT_ERROR_BAD_REQUEST", "#RESULT_ERROR_NETWORK" ]
+  }, {
+    "name" : "RESPONSE_KEY_MESSAGE",
+    "type" : "String",
+    "comment" : "\n     * Key for the optional message in the response bundle sent to the application.\n     * <p>\n     * Type: String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_KEY_RESPONSE_TIMESTAMP",
+    "type" : "String",
+    "comment" : "\n     * Key for the optional timestamp of when the administrator responded to the permission\n     * request. It is an represented in milliseconds since January 1, 1970 00:00:00.0 UTC.\n     * <p>\n     * Type: long\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "META_DATA_APP_RESTRICTIONS",
+    "type" : "String",
+    "comment" : "\n     * Name of the meta-data entry in the manifest that points to the XML file containing the\n     * application's available restrictions.\n     * @see #getManifestRestrictions(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_RESTRICTION",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IRestrictionsManager",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public Bundle getApplicationRestrictions()",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Returns any available set of application-specific restrictions applicable\n     * to this application.\n     * @return the application restrictions as a Bundle. Returns null if there\n     * are no restrictions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasRestrictionsProvider()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called by an application to check if there is an active Restrictions Provider. If\n     * there isn't, {@link #requestPermission(String, String, PersistableBundle)} is not available.\n     *\n     * @return whether there is an active Restrictions Provider.\n     ",
+    "links" : [ "#requestPermission(String" ]
+  }, {
+    "name" : "public void requestPermission(String requestType, String requestId, PersistableBundle request)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by an application to request permission for an operation. The contents of the\n     * request are passed in a Bundle that contains several pieces of data depending on the\n     * chosen request type.\n     *\n     * @param requestType The type of request. The type could be one of the\n     * predefined types specified here or a custom type that the specific\n     * Restrictions Provider might understand. For custom types, the type name should be\n     * namespaced to avoid collisions with predefined types and types specified by\n     * other Restrictions Providers.\n     * @param requestId A unique id generated by the app that contains sufficient information\n     * to identify the parameters of the request when it receives the id in the response.\n     * @param request A PersistableBundle containing the data corresponding to the specified request\n     * type. The keys for the data in the bundle depend on the request type.\n     *\n     * @throws IllegalArgumentException if any of the required parameters are missing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Intent createLocalApprovalIntent()",
+    "returnType" : "Intent",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyPermissionResponse(String packageName, PersistableBundle response)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by the Restrictions Provider to deliver a response to an application.\n     *\n     * @param packageName the application to deliver the response to. Cannot be null.\n     * @param response the bundle containing the response status, request ID and other information.\n     *                 Cannot be null.\n     *\n     * @throws IllegalArgumentException if any of the required parameters are missing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<RestrictionEntry> getManifestRestrictions(String packageName)",
+    "returnType" : "List<RestrictionEntry>",
+    "comment" : "\n     * Parse and return the list of restrictions defined in the manifest for the specified\n     * package, if any.\n     *\n     * @param packageName The application for which to fetch the restrictions list.\n     * @return The list of RestrictionEntry objects created from the XML file specified\n     * in the manifest, or null if none was specified.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private List<RestrictionEntry> loadManifestRestrictions(String packageName, XmlResourceParser xml)",
+    "returnType" : "List<RestrictionEntry>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private RestrictionEntry loadRestrictionElement(Context appContext, XmlResourceParser xml) throws IOException, XmlPullParserException",
+    "returnType" : "RestrictionEntry",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private RestrictionEntry loadRestriction(Context appContext, TypedArray a, XmlResourceParser xml) throws IOException, XmlPullParserException",
+    "returnType" : "RestrictionEntry",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Bundle convertRestrictionsToBundle(List<RestrictionEntry> entries)",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Converts a list of restrictions to the corresponding bundle, using the following mapping:\n     * <table>\n     *     <tr><th>RestrictionEntry</th><th>Bundle</th></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_BOOLEAN}</td><td>{@link Bundle#putBoolean}</td></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_CHOICE},\n     *     {@link RestrictionEntry#TYPE_MULTI_SELECT}</td>\n     *     <td>{@link Bundle#putStringArray}</td></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_INTEGER}</td><td>{@link Bundle#putInt}</td></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_STRING}</td><td>{@link Bundle#putString}</td></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_BUNDLE}</td><td>{@link Bundle#putBundle}</td></tr>\n     *     <tr><td>{@link RestrictionEntry#TYPE_BUNDLE_ARRAY}</td>\n     *     <td>{@link Bundle#putParcelableArray}</td></tr>\n     * </table>\n     * @param entries list of restrictions\n     ",
+    "links" : [ "android.content.RestrictionEntry#TYPE_INTEGER", "android.content.RestrictionEntry#TYPE_STRING", "android.os.Bundle#putString", "android.content.RestrictionEntry#TYPE_BOOLEAN", "android.os.Bundle#putInt", "android.content.RestrictionEntry#TYPE_CHOICE", "android.content.RestrictionEntry#TYPE_BUNDLE_ARRAY", "android.os.Bundle#putParcelableArray", "android.content.RestrictionEntry#TYPE_BUNDLE", "android.os.Bundle#putBoolean", "android.os.Bundle#putStringArray", "android.os.Bundle#putBundle", "android.content.RestrictionEntry#TYPE_MULTI_SELECT" ]
+  }, {
+    "name" : "private static Bundle addRestrictionToBundle(Bundle bundle, RestrictionEntry entry)",
+    "returnType" : "Bundle",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "ACTION_PERMISSION_RESPONSE_RECEIVED", "ACTION_REQUEST_PERMISSION", "ACTION_REQUEST_LOCAL_APPROVAL", "EXTRA_PACKAGE_NAME", "EXTRA_REQUEST_TYPE", "EXTRA_REQUEST_ID", "EXTRA_REQUEST_BUNDLE", "EXTRA_RESPONSE_BUNDLE", "REQUEST_TYPE_APPROVAL", "REQUEST_KEY_ID", "REQUEST_KEY_DATA", "REQUEST_KEY_TITLE", "REQUEST_KEY_MESSAGE", "REQUEST_KEY_ICON", "REQUEST_KEY_APPROVE_LABEL", "REQUEST_KEY_DENY_LABEL", "REQUEST_KEY_NEW_REQUEST", "RESPONSE_KEY_RESULT", "RESULT_APPROVED", "RESULT_DENIED", "RESULT_NO_RESPONSE", "RESULT_UNKNOWN_REQUEST", "RESULT_ERROR", "RESULT_ERROR_BAD_REQUEST", "RESULT_ERROR_NETWORK", "RESULT_ERROR_INTERNAL", "RESPONSE_KEY_ERROR_CODE", "RESPONSE_KEY_MESSAGE", "RESPONSE_KEY_RESPONSE_TIMESTAMP", "META_DATA_APP_RESTRICTIONS", "TAG_RESTRICTION", "mContext", "mService" ],
+  "methodNames" : [ "public Bundle getApplicationRestrictions()", "public boolean hasRestrictionsProvider()", "public void requestPermission(String requestType, String requestId, PersistableBundle request)", "public Intent createLocalApprovalIntent()", "public void notifyPermissionResponse(String packageName, PersistableBundle response)", "public List<RestrictionEntry> getManifestRestrictions(String packageName)", "private List<RestrictionEntry> loadManifestRestrictions(String packageName, XmlResourceParser xml)", "private RestrictionEntry loadRestrictionElement(Context appContext, XmlResourceParser xml) throws IOException, XmlPullParserException", "private RestrictionEntry loadRestriction(Context appContext, TypedArray a, XmlResourceParser xml) throws IOException, XmlPullParserException", "public static Bundle convertRestrictionsToBundle(List<RestrictionEntry> entries)", "private static Bundle addRestrictionToBundle(Bundle bundle, RestrictionEntry entry)" ]
+}

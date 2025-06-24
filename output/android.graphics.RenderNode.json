@@ -1,0 +1,915 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/graphics/RenderNode.java",
+  "packageName" : "android.graphics",
+  "className" : "RenderNode",
+  "comment" : "\n * <p>RenderNode is used to build hardware accelerated rendering hierarchies. Each RenderNode\n * contains both a display list as well as a set of properties that affect the rendering of the\n * display list. RenderNodes are used internally for all Views by default and are not typically\n * used directly.</p>\n *\n * <p>RenderNodes are used to divide up the rendering content of a complex scene into smaller\n * pieces that can then be updated individually more cheaply. Updating part of the scene only needs\n * to update the display list or properties of a small number of RenderNode instead of redrawing\n * everything from scratch. A RenderNode only needs its display list re-recorded when its content\n * alone should be changed. RenderNodes can also be transformed without re-recording the display\n * list through the transform properties.</p>\n *\n * <p>A text editor might for instance store each paragraph into its own RenderNode.\n * Thus when the user inserts or removes characters, only the display list of the\n * affected paragraph needs to be recorded again.</p>\n *\n * <h3>Hardware acceleration</h3>\n * <p>RenderNodes can be drawn using a {@link RecordingCanvas}. They are not\n * supported in software. Always make sure that the {@link android.graphics.Canvas}\n * you are using to render a display list is hardware accelerated using\n * {@link android.graphics.Canvas#isHardwareAccelerated()}.</p>\n *\n * <h3>Creating a RenderNode</h3>\n * <pre class=\"prettyprint\">\n *     RenderNode renderNode = new RenderNode(\"myRenderNode\");\n *     renderNode.setPosition(0, 0, 50, 50); // Set the size to 50x50\n *     RecordingCanvas canvas = renderNode.beginRecording();\n *     try {\n *         // Draw with the canvas\n *         canvas.drawRect(...);\n *     } finally {\n *         renderNode.endRecording();\n *     }</pre>\n *\n * <h3>Drawing a RenderNode in a View</h3>\n * <pre class=\"prettyprint\">\n *     protected void onDraw(Canvas canvas) {\n *         if (canvas.isHardwareAccelerated()) {\n *             // Check that the RenderNode has a display list, re-recording it if it does not.\n *             if (!myRenderNode.hasDisplayList()) {\n *                 updateDisplayList(myRenderNode);\n *             }\n *             // Draw the RenderNode into this canvas.\n *             canvas.drawRenderNode(myRenderNode);\n *         }\n *     }</pre>\n *\n * <h3>Releasing resources</h3>\n * <p>This step is not mandatory but recommended if you want to release resources\n * held by a display list as soon as possible. Most significantly any bitmaps it may contain.</p>\n * <pre class=\"prettyprint\">\n *     // Discards the display list content allowing for any held resources to be released.\n *     // After calling this\n *     renderNode.discardDisplayList();</pre>\n *\n *\n * <h3>Properties</h3>\n * <p>In addition, a RenderNode offers several properties, such as\n * {@link #setScaleX(float)} or {@link #setTranslationX(float)}, that can be used to affect all\n * the drawing commands recorded within. For instance, these properties can be used\n * to move around a large number of images without re-issuing all the individual\n * <code>canvas.drawBitmap()</code> calls.</p>\n *\n * <pre class=\"prettyprint\">\n *     private void createDisplayList() {\n *         mRenderNode = new RenderNode(\"MyRenderNode\");\n *         mRenderNode.setPosition(0, 0, width, height);\n *         RecordingCanvas canvas = mRenderNode.beginRecording();\n *         try {\n *             for (Bitmap b : mBitmaps) {\n *                 canvas.drawBitmap(b, 0.0f, 0.0f, null);\n *                 canvas.translate(0.0f, b.getHeight());\n *             }\n *         } finally {\n *             mRenderNode.endRecording();\n *         }\n *     }\n *\n *     protected void onDraw(Canvas canvas) {\n *         if (canvas.isHardwareAccelerated())\n *             canvas.drawRenderNode(mRenderNode);\n *         }\n *     }\n *\n *     private void moveContentBy(int x) {\n *          // This will move all the bitmaps recorded inside the display list\n *          // by x pixels to the right and redraw this view. All the commands\n *          // recorded in createDisplayList() won't be re-issued, only onDraw()\n *          // will be invoked and will execute very quickly\n *          mRenderNode.offsetLeftAndRight(x);\n *          invalidate();\n *     }</pre>\n *\n * <p>A few of the properties may at first appear redundant, such as {@link #setElevation(float)}\n * and {@link #setTranslationZ(float)}. The reason for these duplicates are to allow for a\n * separation between static & transient usages. For example consider a button that raises from 2dp\n * to 8dp when pressed. To achieve that an application may decide to setElevation(2dip), and then\n * on press to animate setTranslationZ to 6dip. Combined this achieves the final desired 8dip\n * value, but the animation need only concern itself with animating the lift from press without\n * needing to know the initial starting value. {@link #setTranslationX(float)} and\n * {@link #setTranslationY(float)} are similarly provided for animation uses despite the functional\n * overlap with {@link #setPosition(Rect)}.\n *\n * <p>The RenderNode's transform matrix is computed at render time as follows:\n * <pre class=\"prettyprint\">\n *     Matrix transform = new Matrix();\n *     transform.setTranslate(renderNode.getTranslationX(), renderNode.getTranslationY());\n *     transform.preRotate(renderNode.getRotationZ(),\n *             renderNode.getPivotX(), renderNode.getPivotY());\n *     transform.preScale(renderNode.getScaleX(), renderNode.getScaleY(),\n *             renderNode.getPivotX(), renderNode.getPivotY());</pre>\n * The current canvas transform matrix, which is translated to the RenderNode's position,\n * is then multiplied by the RenderNode's transform matrix. Therefore the ordering of calling\n * property setters does not affect the result. That is to say that:\n *\n * <pre class=\"prettyprint\">\n *     renderNode.setTranslationX(100);\n *     renderNode.setScaleX(100);</pre>\n *\n * is equivalent to:\n *\n * <pre class=\"prettyprint\">\n *     renderNode.setScaleX(100);\n *     renderNode.setTranslationX(100);</pre>\n *\n * <h3>Threading</h3>\n * <p>RenderNode may be created and used on any thread but they are not thread-safe. Only\n * a single thread may interact with a RenderNode at any given time. It is critical\n * that the RenderNode is only used on the same thread it is drawn with. For example when using\n * RenderNode with a custom View, then that RenderNode must only be used from the UI thread.</p>\n *\n * <h3>When to re-render</h3>\n * <p>Many of the RenderNode mutation methods, such as {@link #setTranslationX(float)}, return\n * a boolean indicating if the value actually changed or not. This is useful in detecting\n * if a new frame should be rendered or not. A typical usage would look like:\n * <pre class=\"prettyprint\">\n *     public void translateTo(int x, int y) {\n *         boolean needsUpdate = myRenderNode.setTranslationX(x);\n *         needsUpdate |= myRenderNode.setTranslationY(y);\n *         if (needsUpdate) {\n *             myOwningView.invalidate();\n *         }\n *     }</pre>\n * This is marginally faster than doing a more explicit up-front check if the value changed by\n * comparing the desired value against {@link #getTranslationX()} as it minimizes JNI transitions.\n * The actual mechanism of requesting a new frame to be rendered will depend on how this\n * RenderNode is being drawn. If it's drawn to a containing View, as in the above snippet,\n * then simply invalidating that View works. If instead the RenderNode is being drawn to a Canvas\n * directly such as with {@link Surface#lockHardwareCanvas()} then a new frame needs to be drawn\n * by calling {@link Surface#lockHardwareCanvas()}, re-drawing the root RenderNode or whatever\n * top-level content is desired, and finally calling {@link Surface#unlockCanvasAndPost(Canvas)}.\n * </p>\n ",
+  "variables" : [ {
+    "name" : "mNativeRenderNode",
+    "type" : "long",
+    "comment" : "\n     * Not for general use; use only if you are ThreadedRenderer or RecordingCanvas.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mAnimationHost",
+    "type" : "AnimationHost",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentRecordingCanvas",
+    "type" : "RecordingCanvas",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCompositePositionUpdateListener",
+    "type" : "CompositePositionUpdateListener",
+    "comment" : " Will be null if not currently registered",
+    "links" : [ ]
+  }, {
+    "name" : "USAGE_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * The default usage hint\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "USAGE_BACKGROUND",
+    "type" : "int",
+    "comment" : "\n     * Usage is background content\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static RenderNode create(String name, @Nullable AnimationHost animationHost)",
+    "returnType" : "RenderNode",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static RenderNode adopt(long nativePtr)",
+    "returnType" : "RenderNode",
+    "comment" : "\n     * Adopts an existing native render node.\n     *\n     * Note: This will *NOT* incRef() on the native object, however it will\n     * decRef() when it is destroyed. The caller should have already incRef'd it\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addPositionUpdateListener(@NonNull PositionUpdateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable callbacks for position changes. Call only from the UI thread or with\n     * external synchronization.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removePositionUpdateListener(@NonNull PositionUpdateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable a callback for position changes. Call only from the UI thread or with\n     * external synchronization.\n     *\n     * @param listener Callback to remove\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RecordingCanvas beginRecording(int width, int height)",
+    "returnType" : "RecordingCanvas",
+    "comment" : "\n     * Starts recording a display list for the render node. All\n     * operations performed on the returned canvas are recorded and\n     * stored in this display list.\n     *\n     * {@link #endRecording()} must be called when the recording is finished in order to apply\n     * the updated display list. Failing to call {@link #endRecording()} will result in an\n     * {@link IllegalStateException} if {@link #beginRecording(int, int)} is called again.\n     *\n     * @param width  The width of the recording viewport. This will not alter the width of the\n     *               RenderNode itself, that must be set with {@link #setPosition(Rect)}.\n     * @param height The height of the recording viewport. This will not alter the height of the\n     *               RenderNode itself, that must be set with {@link #setPosition(Rect)}.\n     * @return A canvas to record drawing operations.\n     * @throws IllegalStateException If a recording is already in progress. That is, the previous\n     * call to {@link #beginRecording(int, int)} did not call {@link #endRecording()}.\n     * @see #endRecording()\n     * @see #hasDisplayList()\n     ",
+    "links" : [ "#endRecording()", "IllegalStateException", "#setPosition(Rect)", "#beginRecording(int" ]
+  }, {
+    "name" : "public RecordingCanvas beginRecording()",
+    "returnType" : "RecordingCanvas",
+    "comment" : "\n     * Same as {@link #beginRecording(int, int)} with the width & height set\n     * to the RenderNode's own width & height. The RenderNode's width & height may be set\n     * with {@link #setPosition(int, int, int, int)}.\n     *\n     * @return A canvas to record drawing operations.\n     * @throws IllegalStateException If a recording is already in progress. That is, the previous\n     * call to {@link #beginRecording(int, int)} did not call {@link #endRecording()}.\n     * @see #endRecording()\n     * @see #hasDisplayList()\n     ",
+    "links" : [ "#endRecording()", "#beginRecording(int", "#setPosition(int" ]
+  }, {
+    "name" : "public void endRecording()",
+    "returnType" : "void",
+    "comment" : "\n     * `\n     * Ends the recording for this display list. Calling this method marks\n     * the display list valid and {@link #hasDisplayList()} will return true.\n     *\n     * @see #beginRecording(int, int)\n     * @see #hasDisplayList()\n     ",
+    "links" : [ "#hasDisplayList()" ]
+  }, {
+    "name" : "public RecordingCanvas start(int width, int height)",
+    "returnType" : "RecordingCanvas",
+    "comment" : "\n     * @hide\n     * @deprecated use {@link #beginRecording(int, int)} instead\n     ",
+    "links" : [ "#beginRecording(int" ]
+  }, {
+    "name" : "public void end(RecordingCanvas canvas)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     * @deprecated use {@link #endRecording()} instead\n     ",
+    "links" : [ "#endRecording()" ]
+  }, {
+    "name" : "public void discardDisplayList()",
+    "returnType" : "void",
+    "comment" : "\n     * Reset native resources. This is called when cleaning up the state of display lists\n     * during destruction of hardware resources, to ensure that we do not hold onto\n     * obsolete resources after related resources are gone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasDisplayList()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether the RenderNode has a display list. If this returns false, the RenderNode\n     * should be re-recorded with {@link #beginRecording()} and {@link #endRecording()}.\n     *\n     * A RenderNode without a display list may still be drawn, however it will have no impact\n     * on the rendering content until its display list is updated.\n     *\n     * When a RenderNode is no longer drawn by anything the system may automatically\n     * invoke {@link #discardDisplayList()}. It is therefore important to ensure that\n     * {@link #hasDisplayList()} is true on a RenderNode prior to drawing it.\n     *\n     * See {@link #discardDisplayList()}\n     *\n     * @return boolean true if this RenderNode has a display list, false otherwise.\n     ",
+    "links" : [ "#endRecording()", "#hasDisplayList()", "#discardDisplayList()", "#beginRecording()" ]
+  }, {
+    "name" : "public boolean hasIdentityMatrix()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Whether or not the RenderNode has an identity transform. This is a faster\n     * way to do the otherwise equivalent {@link #getMatrix(Matrix)} {@link Matrix#isIdentity()}\n     * as it doesn't require copying the Matrix first, thus minimizing overhead.\n     *\n     * @return true if the RenderNode has an identity transform, false otherwise\n     ",
+    "links" : [ "#getMatrix(Matrix)", "android.graphics.Matrix#isIdentity()" ]
+  }, {
+    "name" : "public void getMatrix(@NonNull Matrix outMatrix)",
+    "returnType" : "void",
+    "comment" : "\n     * Gets the current transform matrix\n     *\n     * @param outMatrix The matrix to store the transform of the RenderNode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getInverseMatrix(@NonNull Matrix outMatrix)",
+    "returnType" : "void",
+    "comment" : "\n     * Gets the current transform inverted. This is a faster way to do the otherwise\n     * equivalent {@link #getMatrix(Matrix)} followed by {@link Matrix#invert(Matrix)}\n     *\n     * @param outMatrix The matrix to store the inverse transform of the RenderNode\n     ",
+    "links" : [ "#getMatrix(Matrix)", "android.graphics.Matrix#invert(Matrix)" ]
+  }, {
+    "name" : "public boolean setLayerType(int layerType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     * @deprecated use {@link #setUseCompositingLayer(boolean, Paint)} instead\n     ",
+    "links" : [ "#setUseCompositingLayer(boolean" ]
+  }, {
+    "name" : "public boolean setLayerPaint(@Nullable Paint paint)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     * @deprecated use {@link #setUseCompositingLayer(boolean, Paint)} instead\n     ",
+    "links" : [ "#setUseCompositingLayer(boolean" ]
+  }, {
+    "name" : "public boolean setUseCompositingLayer(boolean forceToLayer, @Nullable Paint paint)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Controls whether or not to force this RenderNode to render to an intermediate buffer.\n     * Internally RenderNode will already promote itself to a composition layer if it's useful\n     * for performance or required for the current combination of {@link #setAlpha(float)} and\n     * {@link #setHasOverlappingRendering(boolean)}.\n     *\n     * <p>The usage of this is instead to allow for either overriding of the internal behavior\n     * if it's measured to be necessary for the particular rendering content in question or, more\n     * usefully, to add a composition effect to the RenderNode via the optional paint parameter.\n     *\n     * <p>Note: When a RenderNode is using a compositing layer it will also result in\n     * clipToBounds=true behavior.\n     *\n     * @param forceToLayer if true this forces the RenderNode to use an intermediate buffer.\n     *                     Default & generally recommended value is false.\n     * @param paint        The blend mode, alpha, and ColorFilter to apply to the compositing layer.\n     *                     Only applies if forceToLayer is true. The paint's alpha is multiplied\n     *                     with {@link #getAlpha()} to resolve the final alpha of the RenderNode.\n     *                     If null then no additional composition effects are applied on top of the\n     *                     composition layer.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "#setAlpha(float)", "#getAlpha()", "#setHasOverlappingRendering(boolean)" ]
+  }, {
+    "name" : "public boolean getUseCompositingLayer()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Gets whether or not a compositing layer is forced to be used. The default & recommended\n     * is false, as it is typically faster to avoid using compositing layers.\n     * See {@link #setUseCompositingLayer(boolean, Paint)}.\n     *\n     * @return true if a compositing layer is forced, false otherwise\n     ",
+    "links" : [ "#setUseCompositingLayer(boolean" ]
+  }, {
+    "name" : "public boolean setClipRect(@Nullable Rect rect)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets an additional clip on the RenderNode. If null, the extra clip is removed from the\n     * RenderNode. If non-null, the RenderNode will be clipped to this rect. In addition  if\n     * {@link #setClipToBounds(boolean)} is true, then the RenderNode will be clipped to the\n     * intersection of this rectangle and the bounds of the render node, which is set with\n     * {@link #setPosition(Rect)}.\n     *\n     * <p>This is equivalent to do a {@link Canvas#clipRect(Rect)} at the start of this\n     * RenderNode's display list. However, as this is a property of the RenderNode instead\n     * of part of the display list it can be more easily animated for transient additional\n     * clipping. An example usage of this would be the {@link android.transition.ChangeBounds}\n     * transition animation with the resizeClip=true option.\n     *\n     * @param rect the bounds to clip to. If null, the additional clip is removed.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "android.transition.ChangeBounds", "#setPosition(Rect)", "#setClipToBounds(boolean)", "android.graphics.Canvas#clipRect(Rect)" ]
+  }, {
+    "name" : "public boolean setClipToBounds(boolean clipToBounds)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Set whether the Render node should clip itself to its bounds. This defaults to true,\n     * and is useful to the renderer in enable quick-rejection of chunks of the tree as well as\n     * better partial invalidation support. Clipping can be further restricted or controlled\n     * through the combination of this property as well as {@link #setClipRect(Rect)}, which\n     * allows for a different clipping rectangle to be used in addition to or instead of the\n     * {@link #setPosition(int, int, int, int)} or the RenderNode.\n     *\n     * @param clipToBounds true if the display list should clip to its bounds, false otherwise.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "#setClipRect(Rect)", "#setPosition(int" ]
+  }, {
+    "name" : "public boolean getClipToBounds()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether or not the RenderNode is clipping to its bounds. See\n     * {@link #setClipToBounds(boolean)} and {@link #setPosition(int, int, int, int)}\n     *\n     * @return true if the render node clips to its bounds, false otherwise.\n     ",
+    "links" : [ "#setClipToBounds(boolean)", "#setPosition(int" ]
+  }, {
+    "name" : "public boolean setProjectBackwards(boolean shouldProject)",
+    "returnType" : "boolean",
+    "comment" : "\n     * <p>Sets whether the RenderNode should be drawn immediately after the\n     * closest ancestor RenderNode containing a projection receiver.\n     *\n     * <p>The default is false, and the rendering of this node happens in the typical draw order.\n     *\n     * <p>If true, then at rendering time this rendernode will not be drawn in order with the\n     * {@link Canvas#drawRenderNode(RenderNode)} command that drew this RenderNode, but instead\n     * it will be re-positioned in the RenderNode tree to be drawn on the closet ancestor with a\n     * child rendernode that has {@link #setProjectionReceiver(boolean)} as true.\n     *\n     * <p>The typical usage of this is to allow a child RenderNode to draw on a parent's background,\n     * such as the platform's usage with {@link android.graphics.drawable.RippleDrawable}. Consider\n     * the following structure, built out of which RenderNode called drawRenderNode on a different\n     * RenderNode:\n     *\n     * <pre>\n     *        +-------------+\n     *        |RenderNode: P|\n     *        +-+----------++\n     *          |          |\n     *          v          v\n     *  +-------+-----+  +-+--------------+\n     *  |RenderNode: C|  |RenderNode: P'BG|\n     *  +-------+-----+  +----------------+\n     *          |\n     *          |\n     * +--------+-------+\n     * |RenderNode: C'BG|\n     * +----------------+\n     * </pre>\n     *\n     * If P'BG is a projection receiver, and C'BG is set to project backwards then C'BG will\n     * behave as if it was drawn directly by P'BG instead of by C. This includes inheriting P'BG's\n     * clip instead of C's clip.\n     *\n     * @param shouldProject true if the display list should be projected onto a\n     *                      containing volume. Default is false.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "#setProjectionReceiver(boolean)", "android.graphics.drawable.RippleDrawable", "android.graphics.Canvas#drawRenderNode(RenderNode)" ]
+  }, {
+    "name" : "public boolean setProjectionReceiver(boolean shouldRecieve)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets whether the RenderNode is a projection receiver. If true then this RenderNode's parent\n     * should draw any descendant RenderNodes with ProjectBackwards=true directly on top of it.\n     * Default value is false. See\n     * {@link #setProjectBackwards(boolean)} for a description of what this entails.\n     *\n     * @param shouldRecieve True if this RenderNode is a projection receiver, false otherwise.\n     *                      Default is false.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "#setProjectBackwards(boolean)" ]
+  }, {
+    "name" : "public boolean setOutline(@Nullable Outline outline)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the outline, defining the shape that casts a shadow, and the path to\n     * be clipped if setClipToOutline is set.\n     *\n     * This will make a copy of the provided {@link Outline}, so any future modifications\n     * to the outline will need to call {@link #setOutline(Outline)} with the modified\n     * outline for those changes to be applied.\n     *\n     * @param outline The outline to use for this RenderNode.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "android.graphics.Outline", "#setOutline(Outline)" ]
+  }, {
+    "name" : "public boolean hasShadow()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the RenderNode has a shadow. That is, if the combination of {@link #getElevation()}\n     * and {@link #getTranslationZ()} is greater than zero, there is an {@link Outline} set with\n     * a valid shadow caster path, and the provided outline has a non-zero\n     * {@link Outline#getAlpha()}.\n     *\n     * @return True if this RenderNode has a shadow, false otherwise\n     ",
+    "links" : [ "android.graphics.Outline", "android.graphics.Outline#getAlpha()", "#getTranslationZ()", "#getElevation()" ]
+  }, {
+    "name" : "public boolean setSpotShadowColor(@ColorInt int color)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the color of the spot shadow that is drawn when the RenderNode has a positive Z or\n     * elevation value and is drawn inside of a {@link Canvas#enableZ()} section.\n     * <p>\n     * By default the shadow color is black. Generally, this color will be opaque so the intensity\n     * of the shadow is consistent between different RenderNodes with different colors.\n     * <p>\n     * The opacity of the final spot shadow is a function of the shadow caster height, the\n     * alpha channel of the outlineSpotShadowColor (typically opaque), and the\n     * {@link android.R.attr#spotShadowAlpha} theme attribute\n     *\n     * @param color The color this RenderNode will cast for its elevation spot shadow.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "android.R.attr#spotShadowAlpha", "android.graphics.Canvas#enableZ()" ]
+  }, {
+    "name" : "public int getSpotShadowColor()",
+    "returnType" : "int",
+    "comment" : "\n     * @return The shadow color set by {@link #setSpotShadowColor(int)}, or black if nothing\n     * was set\n     ",
+    "links" : [ "#setSpotShadowColor(int)" ]
+  }, {
+    "name" : "public boolean setAmbientShadowColor(@ColorInt int color)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the color of the ambient shadow that is drawn when the RenderNode has a positive Z or\n     * elevation value and is drawn inside of a {@link Canvas#enableZ()} section.\n     * <p>\n     * By default the shadow color is black. Generally, this color will be opaque so the intensity\n     * of the shadow is consistent between different RenderNodes with different colors.\n     * <p>\n     * The opacity of the final ambient shadow is a function of the shadow caster height, the\n     * alpha channel of the outlineAmbientShadowColor (typically opaque), and the\n     * {@link android.R.attr#ambientShadowAlpha} theme attribute.\n     *\n     * @param color The color this RenderNode will cast for its elevation shadow.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "android.R.attr#ambientShadowAlpha", "android.graphics.Canvas#enableZ()" ]
+  }, {
+    "name" : "public int getAmbientShadowColor()",
+    "returnType" : "int",
+    "comment" : "\n     * @return The shadow color set by {@link #setAmbientShadowColor(int)}, or black if\n     * nothing was set\n     ",
+    "links" : [ "#setAmbientShadowColor(int)" ]
+  }, {
+    "name" : "public boolean setClipToOutline(boolean clipToOutline)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Enables or disables clipping to the outline.\n     *\n     * @param clipToOutline true if clipping to the outline.\n     * @return True if the clipToOutline value changed, false if previous value matched the new\n     *         value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getClipToOutline()",
+    "returnType" : "boolean",
+    "comment" : "\n     * See {@link #setClipToOutline(boolean)}\n     *\n     * @return True if this RenderNode clips to its outline, false otherwise\n     ",
+    "links" : [ "#setClipToOutline(boolean)" ]
+  }, {
+    "name" : "public boolean setRevealClip(boolean shouldClip, float x, float y, float radius)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Controls the RenderNode's circular reveal clip.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setStaticMatrix(Matrix matrix)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Set the static matrix on the display list. The specified matrix is combined with other\n     * transforms (such as {@link #setScaleX(float)}, {@link #setRotationZ(float)}, etc.)\n     *\n     * @param matrix A transform matrix to apply to this display list\n     * @hide TODO Do we want this?\n     ",
+    "links" : [ "#setRotationZ(float)", "#setScaleX(float)" ]
+  }, {
+    "name" : "public boolean setAnimationMatrix(@Nullable Matrix matrix)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Set the Animation matrix on the display list. This matrix exists if an Animation is\n     * currently playing on a View, and is set on the display list during at draw() time. When\n     * the Animation finishes, the matrix should be cleared by sending <code>null</code>\n     * for the matrix parameter.\n     *\n     * @param matrix The matrix, null indicates that the matrix should be cleared.\n     * @see #getAnimationMatrix()\n     *\n     * @hide TODO Do we want this?\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Matrix getAnimationMatrix()",
+    "returnType" : "Matrix",
+    "comment" : "\n     * Returns the previously set Animation matrix. This matrix exists if an Animation is\n     * currently playing on a View, and is set on the display list during at draw() time.\n     * Returns <code>null</code> when there is no transformation provided by\n     * {@link #setAnimationMatrix(Matrix)}.\n     *\n     * @return the current Animation matrix.\n     * @see #setAnimationMatrix(Matrix)\n     *\n     * @hide\n     ",
+    "links" : [ "#setAnimationMatrix(Matrix)" ]
+  }, {
+    "name" : "public boolean setAlpha(float alpha)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the translucency level for the display list.\n     *\n     * @param alpha The translucency of the display list, must be a value between 0.0f and 1.0f\n     * @see View#setAlpha(float)\n     * @see #getAlpha()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getAlpha()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the translucency level of this display list.\n     *\n     * @return A value between 0.0f and 1.0f\n     * @see #setAlpha(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setHasOverlappingRendering(boolean hasOverlappingRendering)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets whether the display list renders content which overlaps. Non-overlapping rendering\n     * can use a fast path for alpha that avoids rendering to an offscreen buffer. By default\n     * display lists consider they do not have overlapping content.\n     *\n     * @param hasOverlappingRendering False if the content is guaranteed to be non-overlapping,\n     *                                true otherwise.\n     * @see android.view.View#hasOverlappingRendering()\n     * @see #hasOverlappingRendering()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUsageHint(@UsageHint int usageHint)",
+    "returnType" : "void",
+    "comment" : "\n     * Provides a hint on what this RenderNode's display list content contains. This hint is used\n     * for automatic content transforms to improve accessibility or similar.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasOverlappingRendering()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Indicates whether the content of this display list overlaps.\n     *\n     * @return True if this display list renders content which overlaps, false otherwise.\n     * @see #setHasOverlappingRendering(boolean)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setElevation(float lift)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the base elevation of this RenderNode in pixels\n     *\n     * @param lift the elevation in pixels\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getElevation()",
+    "returnType" : "float",
+    "comment" : "\n     * See {@link #setElevation(float)}\n     *\n     * @return The RenderNode's current elevation\n     ",
+    "links" : [ "#setElevation(float)" ]
+  }, {
+    "name" : "public boolean setTranslationX(float translationX)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the translation value for the display list on the X axis.\n     *\n     * @param translationX The X axis translation value of the display list, in pixels\n     * @see View#setTranslationX(float)\n     * @see #getTranslationX()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getTranslationX()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the translation value for this display list on the X axis, in pixels.\n     *\n     * @see #setTranslationX(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setTranslationY(float translationY)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the translation value for the display list on the Y axis.\n     *\n     * @param translationY The Y axis translation value of the display list, in pixels\n     * @see View#setTranslationY(float)\n     * @see #getTranslationY()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getTranslationY()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the translation value for this display list on the Y axis, in pixels.\n     *\n     * @see #setTranslationY(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setTranslationZ(float translationZ)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the translation value for the display list on the Z axis.\n     *\n     * @see View#setTranslationZ(float)\n     * @see #getTranslationZ()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getTranslationZ()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the translation value for this display list on the Z axis.\n     *\n     * @see #setTranslationZ(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setRotationZ(float rotation)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the rotation value for the display list around the Z axis.\n     *\n     * @param rotation The rotation value of the display list, in degrees\n     * @see View#setRotation(float)\n     * @see #getRotationZ()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getRotationZ()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the rotation value for this display list around the Z axis, in degrees.\n     *\n     * @see #setRotationZ(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setRotationX(float rotationX)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the rotation value for the display list around the X axis.\n     *\n     * @param rotationX The rotation value of the display list, in degrees\n     * @see View#setRotationX(float)\n     * @see #getRotationX()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getRotationX()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the rotation value for this display list around the X axis, in degrees.\n     *\n     * @see #setRotationX(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setRotationY(float rotationY)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the rotation value for the display list around the Y axis.\n     *\n     * @param rotationY The rotation value of the display list, in degrees\n     * @see View#setRotationY(float)\n     * @see #getRotationY()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getRotationY()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the rotation value for this display list around the Y axis, in degrees.\n     *\n     * @see #setRotationY(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setScaleX(float scaleX)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the scale value for the display list on the X axis.\n     *\n     * @param scaleX The scale value of the display list\n     * @see View#setScaleX(float)\n     * @see #getScaleX()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getScaleX()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the scale value for this display list on the X axis.\n     *\n     * @see #setScaleX(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setScaleY(float scaleY)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the scale value for the display list on the Y axis.\n     *\n     * @param scaleY The scale value of the display list\n     * @see View#setScaleY(float)\n     * @see #getScaleY()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getScaleY()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the scale value for this display list on the Y axis.\n     *\n     * @see #setScaleY(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setPivotX(float pivotX)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the pivot value for the display list on the X axis\n     *\n     * @param pivotX The pivot value of the display list on the X axis, in pixels\n     * @see View#setPivotX(float)\n     * @see #getPivotX()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getPivotX()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the pivot value for this display list on the X axis, in pixels.\n     *\n     * @see #setPivotX(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setPivotY(float pivotY)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the pivot value for the display list on the Y axis\n     *\n     * @param pivotY The pivot value of the display list on the Y axis, in pixels\n     * @see View#setPivotY(float)\n     * @see #getPivotY()\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getPivotY()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the pivot value for this display list on the Y axis, in pixels.\n     *\n     * @see #setPivotY(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isPivotExplicitlySet()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return Whether or not a pivot was explicitly set with {@link #setPivotX(float)} or\n     * {@link #setPivotY(float)}. If no pivot has been set then the pivot will be the center\n     * of the RenderNode.\n     ",
+    "links" : [ "#setPivotY(float)", "#setPivotX(float)" ]
+  }, {
+    "name" : "public boolean resetPivot()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Clears any pivot previously set by a call to  {@link #setPivotX(float)} or\n     * {@link #setPivotY(float)}. After calling this {@link #isPivotExplicitlySet()} will be false\n     * and the pivot used for rotation will return to default of being centered on the view.\n     *\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ "#setPivotY(float)", "#setPivotX(float)", "#isPivotExplicitlySet()" ]
+  }, {
+    "name" : "public boolean setCameraDistance(@FloatRange(from = 0.0f, to = Float.MAX_VALUE) float distance)",
+    "returnType" : "boolean",
+    "comment" : "\n     * <p>Sets the distance along the Z axis (orthogonal to the X/Y plane on which\n     * RenderNodes are drawn) from the camera to this RenderNode. The camera's distance\n     * affects 3D transformations, for instance rotations around the X and Y\n     * axis. If the rotationX or rotationY properties are changed and this view is\n     * large (more than half the size of the screen), it is recommended to always\n     * use a camera distance that's greater than the height (X axis rotation) or\n     * the width (Y axis rotation) of this view.</p>\n     *\n     * <p>The distance of the camera from the drawing plane can have an affect on the\n     * perspective distortion of the RenderNode when it is rotated around the x or y axis.\n     * For example, a large distance will result in a large viewing angle, and there\n     * will not be much perspective distortion of the view as it rotates. A short\n     * distance may cause much more perspective distortion upon rotation, and can\n     * also result in some drawing artifacts if the rotated view ends up partially\n     * behind the camera (which is why the recommendation is to use a distance at\n     * least as far as the size of the view, if the view is to be rotated.)</p>\n     *\n     * <p>The distance is expressed in pixels and must always be positive</p>\n     *\n     * @param distance The distance in pixels, must always be positive\n     * @see #setRotationX(float)\n     * @see #setRotationY(float)\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getCameraDistance()",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the distance in Z of the camera for this RenderNode\n     *\n     * @return the distance along the Z axis in pixels.\n     * @see #setCameraDistance(float)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setLeft(int left)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the left position for the RenderNode.\n     *\n     * @param left The left position, in pixels, of the RenderNode\n     * @return true if the value changed, false otherwise\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setTop(int top)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the top position for the RenderNode.\n     *\n     * @param top The top position, in pixels, of the RenderNode\n     * @return true if the value changed, false otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setRight(int right)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the right position for the RenderNode.\n     *\n     * @param right The right position, in pixels, of the RenderNode\n     * @return true if the value changed, false otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setBottom(int bottom)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the bottom position for the RenderNode.\n     *\n     * @param bottom The bottom position, in pixels, of the RenderNode\n     * @return true if the value changed, false otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getLeft()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the left position for the RenderNode.\n     *\n     * @return the left position in pixels\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getTop()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the top position for the RenderNode.\n     *\n     * @return the top position in pixels\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRight()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the right position for the RenderNode.\n     *\n     * @return the right position in pixels\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getBottom()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the bottom position for the RenderNode.\n     *\n     * @return the bottom position in pixels\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWidth()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the width of the RenderNode, which is the right - left.\n     *\n     * @return the width of the RenderNode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHeight()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the height of the RenderNode, which is the bottom - top.\n     *\n     * @return the height of the RenderNode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setLeftTopRightBottom(int left, int top, int right, int bottom)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the left, top, right, and bottom of the RenderNode.\n     *\n     * @param left   The left position of the RenderNode, in pixels\n     * @param top    The top position of the RenderNode, in pixels\n     * @param right  The right position of the RenderNode, in pixels\n     * @param bottom The bottom position of the RenderNode, in pixels\n     * @return true if any values changed, false otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setPosition(int left, int top, int right, int bottom)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the position of the RenderNode.\n     *\n     * @param left   The left position of the RenderNode, in pixels\n     * @param top    The top position of the RenderNode, in pixels\n     * @param right  The right position of the RenderNode, in pixels\n     * @param bottom The bottom position of the RenderNode, in pixels\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setPosition(@NonNull Rect position)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the position of the RenderNode.\n     *\n     * @param position The position rectangle in pixels\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean offsetLeftAndRight(int offset)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Offsets the left and right positions for the RenderNode\n     *\n     * @param offset The amount that the left and right positions are offset in pixels\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean offsetTopAndBottom(int offset)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Offsets the top and bottom values for the RenderNode\n     *\n     * @param offset The amount that the left and right positions are offset in pixels\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void output()",
+    "returnType" : "void",
+    "comment" : "\n     * Outputs the RenderNode to the log. This method exists for use by\n     * tools to output display lists for selected nodes to the log.\n     *\n     * @hide TODO: Expose? Should the shape of this be different than forced dump to logcat?\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long computeApproximateMemoryUsage()",
+    "returnType" : "long",
+    "comment" : "\n     * Gets the approximate memory usage of the RenderNode for debug purposes. Does not include\n     * the memory usage of any child RenderNodes nor any bitmaps, only the memory usage of\n     * this RenderNode and any data it owns.\n     *\n     * @return Approximate memory usage in bytes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long computeApproximateMemoryAllocated()",
+    "returnType" : "long",
+    "comment" : "\n     * Gets the approximate amount of memory allocated for the RenderNode for debug purposes.\n     * Does not include the memory allocated by any child RenderNodes nor any bitmaps, only the\n     * memory allocated for this RenderNode and any data it owns.\n     *\n     * The difference between this and {@link #computeApproximateMemoryUsage()} is this includes\n     * memory allocated but not used. In particular structures such as DisplayLists are similar\n     * to things like ArrayLists - they need to resize as commands are added to them. As such,\n     * memory used can be less than memory allocated.\n     *\n     * @hide ",
+    "links" : [ "#computeApproximateMemoryUsage()" ]
+  }, {
+    "name" : "public boolean setForceDarkAllowed(boolean allow)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets whether or not to allow force dark to apply to this RenderNode.\n     *\n     * Setting this to false will disable the auto-dark feature on everything this RenderNode\n     * draws, including any descendants.\n     *\n     * Setting this to true will allow this RenderNode to be automatically made dark, however\n     * a value of 'true' will not override any 'false' value in its parent chain nor will\n     * it prevent any 'false' in any of its children.\n     *\n     * @param allow Whether or not to allow force dark.\n     * @return True if the value changed, false if the new value was the same as the previous value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isForceDarkAllowed()",
+    "returnType" : "boolean",
+    "comment" : "\n     * See {@link #setForceDarkAllowed(boolean)}\n     *\n     * @return true if force dark is allowed (default), false if it is disabled\n     ",
+    "links" : [ "#setForceDarkAllowed(boolean)" ]
+  }, {
+    "name" : "public long getUniqueId()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the unique ID that identifies this RenderNode. This ID is unique for the\n     * lifetime of the process. IDs are reset on process death, and are unique only within\n     * the process.\n     *\n     * This ID is intended to be used with debugging tools to associate a particular\n     * RenderNode across different debug dumping & inspection tools. For example\n     * a View layout inspector should include the unique ID for any RenderNodes that it owns\n     * to associate the drawing content with the layout content.\n     *\n     * @return the unique ID for this RenderNode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addAnimator(RenderNodeAnimator animator)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAttached()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerVectorDrawableAnimator(NativeVectorDrawableAnimator animatorSet)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endAllAnimators()",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nCreate(String name)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nGetNativeFinalizer()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nOutput(long renderNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetUsageSize(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetAllocatedSize(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nRequestPositionUpdates(long renderNode, PositionUpdateListener callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nAddAnimator(long renderNode, long animatorPtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nEndAllAnimators(long renderNode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetDisplayList(long renderNode, long newData)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nIsValid(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nGetTransformMatrix(long renderNode, long nativeMatrix)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nGetInverseTransformMatrix(long renderNode, long nativeMatrix)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nHasIdentityMatrix(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nOffsetTopAndBottom(long renderNode, int offset)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nOffsetLeftAndRight(long renderNode, int offset)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetLeftTopRightBottom(long renderNode, int left, int top, int right, int bottom)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetLeft(long renderNode, int left)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetTop(long renderNode, int top)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetRight(long renderNode, int right)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetBottom(long renderNode, int bottom)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetLeft(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetTop(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetRight(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetBottom(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetCameraDistance(long renderNode, float distance)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetPivotY(long renderNode, float pivotY)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetPivotX(long renderNode, float pivotX)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nResetPivot(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetLayerType(long renderNode, int layerType)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetLayerType(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetLayerPaint(long renderNode, long paint)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetClipToBounds(long renderNode, boolean clipToBounds)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nGetClipToBounds(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetClipBounds(long renderNode, int left, int top, int right, int bottom)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetClipBoundsEmpty(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetProjectBackwards(long renderNode, boolean shouldProject)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetProjectionReceiver(long renderNode, boolean shouldRecieve)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetOutlineRoundRect(long renderNode, int left, int top, int right, int bottom, float radius, float alpha)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetOutlinePath(long renderNode, long nativePath, float alpha)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetOutlineEmpty(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetOutlineNone(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nHasShadow(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetSpotShadowColor(long renderNode, int color)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetAmbientShadowColor(long renderNode, int color)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetSpotShadowColor(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetAmbientShadowColor(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetClipToOutline(long renderNode, boolean clipToOutline)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetRevealClip(long renderNode, boolean shouldClip, float x, float y, float radius)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetAlpha(long renderNode, float alpha)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetHasOverlappingRendering(long renderNode, boolean hasOverlappingRendering)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nSetUsageHint(long renderNode, int usageHint)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetElevation(long renderNode, float lift)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetTranslationX(long renderNode, float translationX)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetTranslationY(long renderNode, float translationY)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetTranslationZ(long renderNode, float translationZ)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetRotation(long renderNode, float rotation)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetRotationX(long renderNode, float rotationX)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetRotationY(long renderNode, float rotationY)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetScaleX(long renderNode, float scaleX)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetScaleY(long renderNode, float scaleY)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetStaticMatrix(long renderNode, long nativeMatrix)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetAnimationMatrix(long renderNode, long animationMatrix)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nHasOverlappingRendering(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nGetAnimationMatrix(long renderNode, long animationMatrix)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nGetClipToOutline(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetAlpha(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetCameraDistance(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetScaleX(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetScaleY(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetElevation(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetTranslationX(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetTranslationY(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetTranslationZ(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetRotation(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetRotationX(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetRotationY(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nIsPivotExplicitlySet(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetPivotX(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nGetPivotY(long renderNode)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetWidth(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nGetHeight(long renderNode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nSetAllowForceDark(long renderNode, boolean allowForceDark)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nGetAllowForceDark(long renderNode)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nGetUniqueId(long renderNode)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "mNativeRenderNode", "mAnimationHost", "mCurrentRecordingCanvas", "mCompositePositionUpdateListener", "USAGE_UNKNOWN", "USAGE_BACKGROUND" ],
+  "methodNames" : [ "public static RenderNode create(String name, @Nullable AnimationHost animationHost)", "public static RenderNode adopt(long nativePtr)", "public void addPositionUpdateListener(@NonNull PositionUpdateListener listener)", "public void removePositionUpdateListener(@NonNull PositionUpdateListener listener)", "public RecordingCanvas beginRecording(int width, int height)", "public RecordingCanvas beginRecording()", "public void endRecording()", "public RecordingCanvas start(int width, int height)", "public void end(RecordingCanvas canvas)", "public void discardDisplayList()", "public boolean hasDisplayList()", "public boolean hasIdentityMatrix()", "public void getMatrix(@NonNull Matrix outMatrix)", "public void getInverseMatrix(@NonNull Matrix outMatrix)", "public boolean setLayerType(int layerType)", "public boolean setLayerPaint(@Nullable Paint paint)", "public boolean setUseCompositingLayer(boolean forceToLayer, @Nullable Paint paint)", "public boolean getUseCompositingLayer()", "public boolean setClipRect(@Nullable Rect rect)", "public boolean setClipToBounds(boolean clipToBounds)", "public boolean getClipToBounds()", "public boolean setProjectBackwards(boolean shouldProject)", "public boolean setProjectionReceiver(boolean shouldRecieve)", "public boolean setOutline(@Nullable Outline outline)", "public boolean hasShadow()", "public boolean setSpotShadowColor(@ColorInt int color)", "public int getSpotShadowColor()", "public boolean setAmbientShadowColor(@ColorInt int color)", "public int getAmbientShadowColor()", "public boolean setClipToOutline(boolean clipToOutline)", "public boolean getClipToOutline()", "public boolean setRevealClip(boolean shouldClip, float x, float y, float radius)", "public boolean setStaticMatrix(Matrix matrix)", "public boolean setAnimationMatrix(@Nullable Matrix matrix)", "public Matrix getAnimationMatrix()", "public boolean setAlpha(float alpha)", "public float getAlpha()", "public boolean setHasOverlappingRendering(boolean hasOverlappingRendering)", "public void setUsageHint(@UsageHint int usageHint)", "public boolean hasOverlappingRendering()", "public boolean setElevation(float lift)", "public float getElevation()", "public boolean setTranslationX(float translationX)", "public float getTranslationX()", "public boolean setTranslationY(float translationY)", "public float getTranslationY()", "public boolean setTranslationZ(float translationZ)", "public float getTranslationZ()", "public boolean setRotationZ(float rotation)", "public float getRotationZ()", "public boolean setRotationX(float rotationX)", "public float getRotationX()", "public boolean setRotationY(float rotationY)", "public float getRotationY()", "public boolean setScaleX(float scaleX)", "public float getScaleX()", "public boolean setScaleY(float scaleY)", "public float getScaleY()", "public boolean setPivotX(float pivotX)", "public float getPivotX()", "public boolean setPivotY(float pivotY)", "public float getPivotY()", "public boolean isPivotExplicitlySet()", "public boolean resetPivot()", "public boolean setCameraDistance(@FloatRange(from = 0.0f, to = Float.MAX_VALUE) float distance)", "public float getCameraDistance()", "public boolean setLeft(int left)", "public boolean setTop(int top)", "public boolean setRight(int right)", "public boolean setBottom(int bottom)", "public int getLeft()", "public int getTop()", "public int getRight()", "public int getBottom()", "public int getWidth()", "public int getHeight()", "public boolean setLeftTopRightBottom(int left, int top, int right, int bottom)", "public boolean setPosition(int left, int top, int right, int bottom)", "public boolean setPosition(@NonNull Rect position)", "public boolean offsetLeftAndRight(int offset)", "public boolean offsetTopAndBottom(int offset)", "public void output()", "public long computeApproximateMemoryUsage()", "public long computeApproximateMemoryAllocated()", "public boolean setForceDarkAllowed(boolean allow)", "public boolean isForceDarkAllowed()", "public long getUniqueId()", "public void addAnimator(RenderNodeAnimator animator)", "public boolean isAttached()", "public void registerVectorDrawableAnimator(NativeVectorDrawableAnimator animatorSet)", "public void endAllAnimators()", "private static native long nCreate(String name)", "private static native long nGetNativeFinalizer()", "private static native void nOutput(long renderNode)", "private static native int nGetUsageSize(long renderNode)", "private static native int nGetAllocatedSize(long renderNode)", "private static native void nRequestPositionUpdates(long renderNode, PositionUpdateListener callback)", "private static native void nAddAnimator(long renderNode, long animatorPtr)", "private static native void nEndAllAnimators(long renderNode)", "private static native void nSetDisplayList(long renderNode, long newData)", "private static native boolean nIsValid(long renderNode)", "private static native void nGetTransformMatrix(long renderNode, long nativeMatrix)", "private static native void nGetInverseTransformMatrix(long renderNode, long nativeMatrix)", "private static native boolean nHasIdentityMatrix(long renderNode)", "private static native boolean nOffsetTopAndBottom(long renderNode, int offset)", "private static native boolean nOffsetLeftAndRight(long renderNode, int offset)", "private static native boolean nSetLeftTopRightBottom(long renderNode, int left, int top, int right, int bottom)", "private static native boolean nSetLeft(long renderNode, int left)", "private static native boolean nSetTop(long renderNode, int top)", "private static native boolean nSetRight(long renderNode, int right)", "private static native boolean nSetBottom(long renderNode, int bottom)", "private static native int nGetLeft(long renderNode)", "private static native int nGetTop(long renderNode)", "private static native int nGetRight(long renderNode)", "private static native int nGetBottom(long renderNode)", "private static native boolean nSetCameraDistance(long renderNode, float distance)", "private static native boolean nSetPivotY(long renderNode, float pivotY)", "private static native boolean nSetPivotX(long renderNode, float pivotX)", "private static native boolean nResetPivot(long renderNode)", "private static native boolean nSetLayerType(long renderNode, int layerType)", "private static native int nGetLayerType(long renderNode)", "private static native boolean nSetLayerPaint(long renderNode, long paint)", "private static native boolean nSetClipToBounds(long renderNode, boolean clipToBounds)", "private static native boolean nGetClipToBounds(long renderNode)", "private static native boolean nSetClipBounds(long renderNode, int left, int top, int right, int bottom)", "private static native boolean nSetClipBoundsEmpty(long renderNode)", "private static native boolean nSetProjectBackwards(long renderNode, boolean shouldProject)", "private static native boolean nSetProjectionReceiver(long renderNode, boolean shouldRecieve)", "private static native boolean nSetOutlineRoundRect(long renderNode, int left, int top, int right, int bottom, float radius, float alpha)", "private static native boolean nSetOutlinePath(long renderNode, long nativePath, float alpha)", "private static native boolean nSetOutlineEmpty(long renderNode)", "private static native boolean nSetOutlineNone(long renderNode)", "private static native boolean nHasShadow(long renderNode)", "private static native boolean nSetSpotShadowColor(long renderNode, int color)", "private static native boolean nSetAmbientShadowColor(long renderNode, int color)", "private static native int nGetSpotShadowColor(long renderNode)", "private static native int nGetAmbientShadowColor(long renderNode)", "private static native boolean nSetClipToOutline(long renderNode, boolean clipToOutline)", "private static native boolean nSetRevealClip(long renderNode, boolean shouldClip, float x, float y, float radius)", "private static native boolean nSetAlpha(long renderNode, float alpha)", "private static native boolean nSetHasOverlappingRendering(long renderNode, boolean hasOverlappingRendering)", "private static native void nSetUsageHint(long renderNode, int usageHint)", "private static native boolean nSetElevation(long renderNode, float lift)", "private static native boolean nSetTranslationX(long renderNode, float translationX)", "private static native boolean nSetTranslationY(long renderNode, float translationY)", "private static native boolean nSetTranslationZ(long renderNode, float translationZ)", "private static native boolean nSetRotation(long renderNode, float rotation)", "private static native boolean nSetRotationX(long renderNode, float rotationX)", "private static native boolean nSetRotationY(long renderNode, float rotationY)", "private static native boolean nSetScaleX(long renderNode, float scaleX)", "private static native boolean nSetScaleY(long renderNode, float scaleY)", "private static native boolean nSetStaticMatrix(long renderNode, long nativeMatrix)", "private static native boolean nSetAnimationMatrix(long renderNode, long animationMatrix)", "private static native boolean nHasOverlappingRendering(long renderNode)", "private static native boolean nGetAnimationMatrix(long renderNode, long animationMatrix)", "private static native boolean nGetClipToOutline(long renderNode)", "private static native float nGetAlpha(long renderNode)", "private static native float nGetCameraDistance(long renderNode)", "private static native float nGetScaleX(long renderNode)", "private static native float nGetScaleY(long renderNode)", "private static native float nGetElevation(long renderNode)", "private static native float nGetTranslationX(long renderNode)", "private static native float nGetTranslationY(long renderNode)", "private static native float nGetTranslationZ(long renderNode)", "private static native float nGetRotation(long renderNode)", "private static native float nGetRotationX(long renderNode)", "private static native float nGetRotationY(long renderNode)", "private static native boolean nIsPivotExplicitlySet(long renderNode)", "private static native float nGetPivotX(long renderNode)", "private static native float nGetPivotY(long renderNode)", "private static native int nGetWidth(long renderNode)", "private static native int nGetHeight(long renderNode)", "private static native boolean nSetAllowForceDark(long renderNode, boolean allowForceDark)", "private static native boolean nGetAllowForceDark(long renderNode)", "private static native long nGetUniqueId(long renderNode)" ]
+}

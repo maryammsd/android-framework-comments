@@ -1,0 +1,885 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/wifi/p2p/WifiP2pManager.java",
+  "packageName" : "android.net.wifi.p2p",
+  "className" : "WifiP2pManager",
+  "comment" : "\n * This class provides the API for managing Wi-Fi peer-to-peer connectivity. This lets an\n * application discover available peers, setup connection to peers and query for the list of peers.\n * When a p2p connection is formed over wifi, the device continues to maintain the uplink\n * connection over mobile or any other available network for internet connectivity on the device.\n *\n * <p> The API is asynchronous and responses to requests from an application are on listener\n * callbacks provided by the application. The application needs to do an initialization with\n * {@link #initialize} before doing any p2p operation.\n *\n * <p> Most application calls need a {@link ActionListener} instance for receiving callbacks\n * {@link ActionListener#onSuccess} or {@link ActionListener#onFailure}. Action callbacks\n * indicate whether the initiation of the action was a success or a failure.\n * Upon failure, the reason of failure can be one of {@link #ERROR}, {@link #P2P_UNSUPPORTED}\n * or {@link #BUSY}.\n *\n * <p> An application can initiate discovery of peers with {@link #discoverPeers}. An initiated\n * discovery request from an application stays active until the device starts connecting to a peer\n * ,forms a p2p group or there is an explicit {@link #stopPeerDiscovery}.\n * Applications can listen to {@link #WIFI_P2P_DISCOVERY_CHANGED_ACTION} to know if a peer-to-peer\n * discovery is running or stopped. Additionally, {@link #WIFI_P2P_PEERS_CHANGED_ACTION} indicates\n * if the peer list has changed.\n *\n * <p> When an application needs to fetch the current list of peers, it can request the list\n * of peers with {@link #requestPeers}. When the peer list is available\n * {@link PeerListListener#onPeersAvailable} is called with the device list.\n *\n * <p> An application can initiate a connection request to a peer through {@link #connect}. See\n * {@link WifiP2pConfig} for details on setting up the configuration. For communication with legacy\n * Wi-Fi devices that do not support p2p, an app can create a group using {@link #createGroup}\n * which creates an access point whose details can be fetched with {@link #requestGroupInfo}.\n *\n * <p> After a successful group formation through {@link #createGroup} or through {@link #connect},\n * use {@link #requestConnectionInfo} to fetch the connection details. The connection info\n * {@link WifiP2pInfo} contains the address of the group owner\n * {@link WifiP2pInfo#groupOwnerAddress} and a flag {@link WifiP2pInfo#isGroupOwner} to indicate\n * if the current device is a p2p group owner. A p2p client can thus communicate with\n * the p2p group owner through a socket connection. If the current device is the p2p group owner,\n * {@link WifiP2pInfo#groupOwnerAddress} is anonymized unless the caller holds the\n * {@code android.Manifest.permission#LOCAL_MAC_ADDRESS} permission.\n *\n * <p> With peer discovery using {@link  #discoverPeers}, an application discovers the neighboring\n * peers, but has no good way to figure out which peer to establish a connection with. For example,\n * if a game application is interested in finding all the neighboring peers that are also running\n * the same game, it has no way to find out until after the connection is setup. Pre-association\n * service discovery is meant to address this issue of filtering the peers based on the running\n * services.\n *\n * <p>With pre-association service discovery, an application can advertise a service for a\n * application on a peer device prior to a connection setup between the devices.\n * Currently, DNS based service discovery (Bonjour) and Upnp are the higher layer protocols\n * supported. Get Bonjour resources at dns-sd.org and Upnp resources at upnp.org\n * As an example, a video application can discover a Upnp capable media renderer\n * prior to setting up a Wi-fi p2p connection with the device.\n *\n * <p> An application can advertise a Upnp or a Bonjour service with a call to\n * {@link #addLocalService}. After a local service is added,\n * the framework automatically responds to a peer application discovering the service prior\n * to establishing a p2p connection. A call to {@link #removeLocalService} removes a local\n * service and {@link #clearLocalServices} can be used to clear all local services.\n *\n * <p> An application that is looking for peer devices that support certain services\n * can do so with a call to  {@link #discoverServices}. Prior to initiating the discovery,\n * application can add service discovery request with a call to {@link #addServiceRequest},\n * remove a service discovery request with a call to {@link #removeServiceRequest} or clear\n * all requests with a call to {@link #clearServiceRequests}. When no service requests remain,\n * a previously running service discovery will stop.\n *\n * The application is notified of a result of service discovery request through listener callbacks\n * set through {@link #setDnsSdResponseListeners} for Bonjour or\n * {@link #setUpnpServiceResponseListener} for Upnp.\n *\n * <p class=\"note\"><strong>Note:</strong>\n * Registering an application handler with {@link #initialize} requires the permissions\n * {@link android.Manifest.permission#ACCESS_WIFI_STATE} and\n * {@link android.Manifest.permission#CHANGE_WIFI_STATE} to perform any further peer-to-peer\n * operations.\n *\n * {@see WifiP2pConfig}\n * {@see WifiP2pInfo}\n * {@see WifiP2pGroup}\n * {@see WifiP2pDevice}\n * {@see WifiP2pDeviceList}\n * {@see android.net.wifi.WpsInfo}\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "WIFI_P2P_STATE_CHANGED_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action to indicate whether Wi-Fi p2p is enabled or disabled. An\n     * extra {@link #EXTRA_WIFI_STATE} provides the state information as int.\n     *\n     * @see #EXTRA_WIFI_STATE\n     ",
+    "links" : [ "#EXTRA_WIFI_STATE" ]
+  }, {
+    "name" : "EXTRA_WIFI_STATE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for an int that indicates whether Wi-Fi p2p is enabled or disabled.\n     * Retrieve it with {@link android.content.Intent#getIntExtra(String,int)}.\n     *\n     * @see #WIFI_P2P_STATE_DISABLED\n     * @see #WIFI_P2P_STATE_ENABLED\n     ",
+    "links" : [ "android.content.Intent#getIntExtra(String" ]
+  }, {
+    "name" : "WIFI_P2P_STATE_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Wi-Fi p2p is disabled.\n     *\n     * @see #WIFI_P2P_STATE_CHANGED_ACTION\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WIFI_P2P_STATE_ENABLED",
+    "type" : "int",
+    "comment" : "\n     * Wi-Fi p2p is enabled.\n     *\n     * @see #WIFI_P2P_STATE_CHANGED_ACTION\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WIFI_P2P_CONNECTION_CHANGED_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action indicating that the state of Wi-Fi p2p connectivity\n     * has changed. One extra {@link #EXTRA_WIFI_P2P_INFO} provides the p2p connection info in\n     * the form of a {@link WifiP2pInfo} object. Another extra {@link #EXTRA_NETWORK_INFO} provides\n     * the network info in the form of a {@link android.net.NetworkInfo}. A third extra provides\n     * the details of the group and may contain a {@code null}.\n     *\n     * All of these permissions are required to receive this broadcast:\n     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION} and\n     * {@link android.Manifest.permission#ACCESS_WIFI_STATE}\n     *\n     * @see #EXTRA_WIFI_P2P_INFO\n     * @see #EXTRA_NETWORK_INFO\n     * @see #EXTRA_WIFI_P2P_GROUP\n     ",
+    "links" : [ "android.Manifest.permission#ACCESS_FINE_LOCATION", "#EXTRA_WIFI_P2P_INFO", "#EXTRA_NETWORK_INFO", "android.Manifest.permission#ACCESS_WIFI_STATE", "android.net.NetworkInfo", "android.net.wifi.p2p.WifiP2pInfo" ]
+  }, {
+    "name" : "EXTRA_WIFI_P2P_INFO",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link android.net.wifi.p2p.WifiP2pInfo} object\n     * Retrieve with {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "android.content.Intent#getParcelableExtra(String)", "android.net.wifi.p2p.WifiP2pInfo" ]
+  }, {
+    "name" : "EXTRA_NETWORK_INFO",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link android.net.NetworkInfo} object associated with the\n     * p2p network. Retrieve with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "android.net.NetworkInfo", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "EXTRA_WIFI_P2P_GROUP",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link android.net.wifi.p2p.WifiP2pGroup} object\n     * associated with the p2p network. Retrieve with\n     * {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "android.net.wifi.p2p.WifiP2pGroup", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "WIFI_P2P_PEERS_CHANGED_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action indicating that the available peer list has changed. This\n     * can be sent as a result of peers being found, lost or updated.\n     *\n     * All of these permissions are required to receive this broadcast:\n     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION} and\n     * {@link android.Manifest.permission#ACCESS_WIFI_STATE}\n     *\n     * <p> An extra {@link #EXTRA_P2P_DEVICE_LIST} provides the full list of\n     * current peers. The full list of peers can also be obtained any time with\n     * {@link #requestPeers}.\n     *\n     * @see #EXTRA_P2P_DEVICE_LIST\n     ",
+    "links" : [ "#EXTRA_P2P_DEVICE_LIST", "android.Manifest.permission#ACCESS_FINE_LOCATION", "android.Manifest.permission#ACCESS_WIFI_STATE", "#requestPeers" ]
+  }, {
+    "name" : "EXTRA_P2P_DEVICE_LIST",
+    "type" : "String",
+    "comment" : "\n      * The lookup key for a {@link android.net.wifi.p2p.WifiP2pDeviceList} object representing\n      * the new peer list when {@link #WIFI_P2P_PEERS_CHANGED_ACTION} broadcast is sent.\n      *\n      * <p>Retrieve with {@link android.content.Intent#getParcelableExtra(String)}.\n      ",
+    "links" : [ "android.net.wifi.p2p.WifiP2pDeviceList", "#WIFI_P2P_PEERS_CHANGED_ACTION", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "WIFI_P2P_DISCOVERY_CHANGED_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action indicating that peer discovery has either started or stopped.\n     * One extra {@link #EXTRA_DISCOVERY_STATE} indicates whether discovery has started\n     * or stopped.\n     *\n     * <p>Note that discovery will be stopped during a connection setup. If the application tries\n     * to re-initiate discovery during this time, it can fail.\n     ",
+    "links" : [ "#EXTRA_DISCOVERY_STATE" ]
+  }, {
+    "name" : "EXTRA_DISCOVERY_STATE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for an int that indicates whether p2p discovery has started or stopped.\n     * Retrieve it with {@link android.content.Intent#getIntExtra(String,int)}.\n     *\n     * @see #WIFI_P2P_DISCOVERY_STARTED\n     * @see #WIFI_P2P_DISCOVERY_STOPPED\n     ",
+    "links" : [ "android.content.Intent#getIntExtra(String" ]
+  }, {
+    "name" : "WIFI_P2P_DISCOVERY_STOPPED",
+    "type" : "int",
+    "comment" : "\n     * p2p discovery has stopped\n     *\n     * @see #WIFI_P2P_DISCOVERY_CHANGED_ACTION\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WIFI_P2P_DISCOVERY_STARTED",
+    "type" : "int",
+    "comment" : "\n     * p2p discovery has started\n     *\n     * @see #WIFI_P2P_DISCOVERY_CHANGED_ACTION\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WIFI_P2P_THIS_DEVICE_CHANGED_ACTION",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action indicating that this device details have changed.\n     *\n     * <p> An extra {@link #EXTRA_WIFI_P2P_DEVICE} provides this device details.\n     * The valid device details can also be obtained with\n     * {@link #requestDeviceInfo(Channel, DeviceInfoListener)} when p2p is enabled.\n     * To get information notifications on P2P getting enabled refers\n     * {@link #WIFI_P2P_STATE_ENABLED}.\n     *\n     * <p> The {@link #EXTRA_WIFI_P2P_DEVICE} extra contains an anonymized version of the device's\n     * MAC address. Callers holding the {@code android.Manifest.permission#LOCAL_MAC_ADDRESS}\n     * permission can use {@link #requestDeviceInfo} to obtain the actual MAC address of this\n     * device.\n     *\n     * All of these permissions are required to receive this broadcast:\n     * {@link android.Manifest.permission#ACCESS_FINE_LOCATION} and\n     * {@link android.Manifest.permission#ACCESS_WIFI_STATE}\n     *\n     * @see #EXTRA_WIFI_P2P_DEVICE\n     ",
+    "links" : [ "#requestDeviceInfo(Channel", "android.Manifest.permission#ACCESS_FINE_LOCATION", "#requestDeviceInfo", "android.Manifest.permission#ACCESS_WIFI_STATE", "#WIFI_P2P_STATE_ENABLED", "#EXTRA_WIFI_P2P_DEVICE" ]
+  }, {
+    "name" : "EXTRA_WIFI_P2P_DEVICE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a {@link android.net.wifi.p2p.WifiP2pDevice} object\n     * Retrieve with {@link android.content.Intent#getParcelableExtra(String)}.\n     ",
+    "links" : [ "android.net.wifi.p2p.WifiP2pDevice", "android.content.Intent#getParcelableExtra(String)" ]
+  }, {
+    "name" : "ACTION_WIFI_P2P_PERSISTENT_GROUPS_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Broadcast intent action indicating that remembered persistent groups have changed.\n     *\n     * You can <em>not</em> receive this through components declared\n     * in manifests, only by explicitly registering for it with\n     * {@link android.content.Context#registerReceiver(android.content.BroadcastReceiver,\n     * android.content.IntentFilter) Context.registerReceiver()}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.content.Context#registerReceiver(android.content.BroadcastReceiver" ]
+  }, {
+    "name" : "EXTRA_HANDOVER_MESSAGE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a handover message returned by the WifiP2pService.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLING_PACKAGE",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a calling package name from WifiP2pManager\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLING_FEATURE_ID",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a calling feature id from WifiP2pManager\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CALLING_BINDER",
+    "type" : "String",
+    "comment" : "\n     * The lookup key for a calling package binder from WifiP2pManager\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IWifiP2pManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_PEERS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_PEERS_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_PEERS_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_DISCOVERY_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECT_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CONNECT_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CANCEL_CONNECT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CANCEL_CONNECT_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CANCEL_CONNECT_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CREATE_GROUP",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CREATE_GROUP_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CREATE_GROUP_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_GROUP",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_GROUP_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_GROUP_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_PEERS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_PEERS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_CONNECTION_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_CONNECTION_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_GROUP_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_GROUP_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_LOCAL_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_LOCAL_SERVICE_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_LOCAL_SERVICE_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_LOCAL_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_LOCAL_SERVICE_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_LOCAL_SERVICE_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_LOCAL_SERVICES",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_LOCAL_SERVICES_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_LOCAL_SERVICES_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_SERVICE_REQUEST",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_SERVICE_REQUEST_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_SERVICE_REQUEST_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_SERVICE_REQUEST",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_SERVICE_REQUEST_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE_SERVICE_REQUEST_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_SERVICE_REQUESTS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_SERVICE_REQUESTS_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAR_SERVICE_REQUESTS_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DISCOVER_SERVICES_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "PING",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_DEVICE_NAME",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_DEVICE_NAME_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_DEVICE_NAME_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DELETE_PERSISTENT_GROUP",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DELETE_PERSISTENT_GROUP_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DELETE_PERSISTENT_GROUP_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_PERSISTENT_GROUP_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_PERSISTENT_GROUP_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_WFD_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_WFD_INFO_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_WFD_INFO_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_WPS",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_WPS_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_WPS_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_LISTEN",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_LISTEN_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "START_LISTEN_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_LISTEN",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_LISTEN_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_LISTEN_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_CHANNEL",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_CHANNEL_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_CHANNEL_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "GET_HANDOVER_REQUEST",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "GET_HANDOVER_SELECT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_GET_HANDOVER_MESSAGE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "INITIATOR_REPORT_NFC_HANDOVER",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONDER_REPORT_NFC_HANDOVER",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REPORT_NFC_HANDOVER_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REPORT_NFC_HANDOVER_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FACTORY_RESET",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FACTORY_RESET_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FACTORY_RESET_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_ONGOING_PEER_CONFIG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_ONGOING_PEER_CONFIG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_ONGOING_PEER_CONFIG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_ONGOING_PEER_CONFIG_FAILED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_ONGOING_PEER_CONFIG_SUCCEEDED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_P2P_STATE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_P2P_STATE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_DISCOVERY_STATE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_DISCOVERY_STATE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_NETWORK_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_NETWORK_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "UPDATE_CHANNEL_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REQUEST_DEVICE_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESPONSE_DEVICE_INFO",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR",
+    "type" : "int",
+    "comment" : "\n     * Passed with {@link ActionListener#onFailure}.\n     * Indicates that the operation failed due to an internal error.\n     ",
+    "links" : [ "#onFailure" ]
+  }, {
+    "name" : "P2P_UNSUPPORTED",
+    "type" : "int",
+    "comment" : "\n     * Passed with {@link ActionListener#onFailure}.\n     * Indicates that the operation failed because p2p is unsupported on the device.\n     ",
+    "links" : [ "#onFailure" ]
+  }, {
+    "name" : "BUSY",
+    "type" : "int",
+    "comment" : "\n     * Passed with {@link ActionListener#onFailure}.\n     * Indicates that the operation failed because the framework is busy and\n     * unable to service the request\n     ",
+    "links" : [ "#onFailure" ]
+  }, {
+    "name" : "NO_SERVICE_REQUESTS",
+    "type" : "int",
+    "comment" : "\n     * Passed with {@link ActionListener#onFailure}.\n     * Indicates that the {@link #discoverServices} failed because no service\n     * requests are added. Use {@link #addServiceRequest} to add a service\n     * request.\n     ",
+    "links" : [ "#onFailure", "#discoverServices", "#addServiceRequest" ]
+  }, {
+    "name" : "MIRACAST_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Miracast is disabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIRACAST_SOURCE",
+    "type" : "int",
+    "comment" : "\n     * Device acts as a Miracast source.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIRACAST_SINK",
+    "type" : "int",
+    "comment" : "\n     * Device acts as a Miracast sink.\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static void checkChannel(Channel c)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkServiceInfo(WifiP2pServiceInfo info)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkServiceRequest(WifiP2pServiceRequest req)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkP2pConfig(WifiP2pConfig c)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Channel initialize(Context srcContext, Looper srcLooper, ChannelListener listener)",
+    "returnType" : "Channel",
+    "comment" : "\n     * Registers the application with the Wi-Fi framework. This function\n     * must be the first to be called before any p2p operations are performed.\n     *\n     * @param srcContext is the context of the source\n     * @param srcLooper is the Looper on which the callbacks are receivied\n     * @param listener for callback at loss of framework communication. Can be null.\n     * @return Channel instance that is necessary for performing any further p2p operations\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Channel initializeInternal(Context srcContext, Looper srcLooper, ChannelListener listener)",
+    "returnType" : "Channel",
+    "comment" : "\n     * Registers the application with the Wi-Fi framework. Enables system-only functionality.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Channel initalizeChannel(Context srcContext, Looper srcLooper, ChannelListener listener, Messenger messenger, Binder binder)",
+    "returnType" : "Channel",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void discoverPeers(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Initiate peer discovery. A discovery process involves scanning for available Wi-Fi peers\n     * for the purpose of establishing a connection.\n     *\n     * <p> The function call immediately returns after sending a discovery request\n     * to the framework. The application is notified of a success or failure to initiate\n     * discovery through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p> The discovery remains active until a connection is initiated or\n     * a p2p group is formed. Register for {@link #WIFI_P2P_PEERS_CHANGED_ACTION} intent to\n     * determine when the framework notifies of a change as peers are discovered.\n     *\n     * <p> Upon receiving a {@link #WIFI_P2P_PEERS_CHANGED_ACTION} intent, an application\n     * can request for the list of peers using {@link #requestPeers}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure", "#requestPeers", "#WIFI_P2P_PEERS_CHANGED_ACTION" ]
+  }, {
+    "name" : "public void stopPeerDiscovery(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Stop an ongoing peer discovery\n     *\n     * <p> The function call immediately returns after sending a stop request\n     * to the framework. The application is notified of a success or failure to initiate\n     * stop through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void connect(Channel c, WifiP2pConfig config, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Start a p2p connection to a device with the specified configuration.\n     *\n     * <p> The function call immediately returns after sending a connection request\n     * to the framework. The application is notified of a success or failure to initiate\n     * connect through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p> Register for {@link #WIFI_P2P_CONNECTION_CHANGED_ACTION} intent to\n     * determine when the framework notifies of a change in connectivity.\n     *\n     * <p> If the current device is not part of a p2p group, a connect request initiates\n     * a group negotiation with the peer.\n     *\n     * <p> If the current device is part of an existing p2p group or has created\n     * a p2p group with {@link #createGroup}, an invitation to join the group is sent to\n     * the peer device.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param config options as described in {@link WifiP2pConfig} class\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#WIFI_P2P_CONNECTION_CHANGED_ACTION", "#initialize", "#onSuccess", "#onFailure", "android.net.wifi.p2p.WifiP2pConfig", "#createGroup" ]
+  }, {
+    "name" : "public void cancelConnect(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Cancel any ongoing p2p group negotiation\n     *\n     * <p> The function call immediately returns after sending a connection cancellation request\n     * to the framework. The application is notified of a success or failure to initiate\n     * cancellation through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void createGroup(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Create a p2p group with the current device as the group owner. This essentially creates\n     * an access point that can accept connections from legacy clients as well as other p2p\n     * devices.\n     *\n     * <p class=\"note\"><strong>Note:</strong>\n     * This function would normally not be used unless the current device needs\n     * to form a p2p connection with a legacy client\n     *\n     * <p> The function call immediately returns after sending a group creation request\n     * to the framework. The application is notified of a success or failure to initiate\n     * group creation through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p> Application can request for the group details with {@link #requestGroupInfo}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure", "#requestGroupInfo" ]
+  }, {
+    "name" : "public void createGroup(@NonNull Channel c, @Nullable WifiP2pConfig config, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Create a p2p group with the current device as the group owner. This essentially creates\n     * an access point that can accept connections from legacy clients as well as other p2p\n     * devices.\n     *\n     * <p> An app should use {@link WifiP2pConfig.Builder} to build the configuration\n     * for a group.\n     *\n     * <p class=\"note\"><strong>Note:</strong>\n     * This function would normally not be used unless the current device needs\n     * to form a p2p group as a Group Owner and allow peers to join it as either\n     * Group Clients or legacy Wi-Fi STAs.\n     *\n     * <p> The function call immediately returns after sending a group creation request\n     * to the framework. The application is notified of a success or failure to initiate\n     * group creation through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p> Application can request for the group details with {@link #requestGroupInfo}.\n     *\n     * @param c is the channel created at {@link #initialize}.\n     * @param config the configuration of a p2p group.\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure", "WifiP2pConfig.Builder", "#requestGroupInfo" ]
+  }, {
+    "name" : "public void removeGroup(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove the current p2p group.\n     *\n     * <p> The function call immediately returns after sending a group removal request\n     * to the framework. The application is notified of a success or failure to initiate\n     * group removal through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void startListening(@NonNull Channel c, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Force p2p to enter listen state\n     *\n     * @param c is the channel created at {@link #initialize(Context, Looper, ChannelListener)}\n     * @param listener for callbacks on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize(Context" ]
+  }, {
+    "name" : "public void stopListening(@NonNull Channel c, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Force p2p to exit listen state\n     *\n     * @param c is the channel created at {@link #initialize(Context, Looper, ChannelListener)}\n     * @param listener for callbacks on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize(Context" ]
+  }, {
+    "name" : "public void setWifiP2pChannels(@NonNull Channel c, int listeningChannel, int operatingChannel, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Set P2P listening and operating channel.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listeningChannel the listening channel's Wifi channel number. e.g. 1, 6, 11.\n     * @param operatingChannel the operating channel's Wifi channel number. e.g. 1, 6, 11.\n     * @param listener for callbacks on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void startWps(Channel c, WpsInfo wps, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Start a Wi-Fi Protected Setup (WPS) session.\n     *\n     * <p> The function call immediately returns after sending a request to start a\n     * WPS session. Currently, this is only valid if the current device is running\n     * as a group owner to allow any new clients to join the group. The application\n     * is notified of a success or failure to initiate WPS through listener callbacks\n     * {@link ActionListener#onSuccess} or {@link ActionListener#onFailure}.\n     * @hide\n     ",
+    "links" : [ "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void addLocalService(Channel c, WifiP2pServiceInfo servInfo, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a local service for service discovery. If a local service is registered,\n     * the framework automatically responds to a service discovery request from a peer.\n     *\n     * <p> The function call immediately returns after sending a request to add a local\n     * service to the framework. The application is notified of a success or failure to\n     * add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p>The service information is set through {@link WifiP2pServiceInfo}.<br>\n     * or its subclass calls  {@link WifiP2pUpnpServiceInfo#newInstance} or\n     *  {@link WifiP2pDnsSdServiceInfo#newInstance} for a Upnp or Bonjour service\n     * respectively\n     *\n     * <p>The service information can be cleared with calls to\n     *  {@link #removeLocalService} or {@link #clearLocalServices}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param servInfo is a local service information.\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "android.net.wifi.p2p.nsd.WifiP2pUpnpServiceInfo#newInstance", "android.net.wifi.p2p.nsd.WifiP2pServiceInfo", "#initialize", "#onSuccess", "#onFailure", "#removeLocalService", "android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo#newInstance", "#clearLocalServices" ]
+  }, {
+    "name" : "public void removeLocalService(Channel c, WifiP2pServiceInfo servInfo, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a registered local service added with {@link #addLocalService}\n     *\n     * <p> The function call immediately returns after sending a request to remove a\n     * local service to the framework. The application is notified of a success or failure to\n     * add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param servInfo is the local service information.\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#addLocalService", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void clearLocalServices(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Clear all registered local services of service discovery.\n     *\n     * <p> The function call immediately returns after sending a request to clear all\n     * local services to the framework. The application is notified of a success or failure to\n     * add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void setServiceResponseListener(Channel c, ServiceResponseListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked on receiving service discovery response.\n     * Used only for vendor specific protocol right now. For Bonjour or Upnp, use\n     * {@link #setDnsSdResponseListeners} or {@link #setUpnpServiceResponseListener}\n     * respectively.\n     *\n     * <p> see {@link #discoverServices} for the detail.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on receiving service discovery response.\n     ",
+    "links" : [ "#setDnsSdResponseListeners", "#setUpnpServiceResponseListener", "#initialize", "#discoverServices" ]
+  }, {
+    "name" : "public void setDnsSdResponseListeners(Channel c, DnsSdServiceResponseListener servListener, DnsSdTxtRecordListener txtListener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked on receiving Bonjour service discovery\n     * response.\n     *\n     * <p> see {@link #discoverServices} for the detail.\n     *\n     * @param c\n     * @param servListener is for listening to a Bonjour service response\n     * @param txtListener is for listening to a Bonjour TXT record response\n     ",
+    "links" : [ "#discoverServices" ]
+  }, {
+    "name" : "public void setUpnpServiceResponseListener(Channel c, UpnpServiceResponseListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a callback to be invoked on receiving upnp service discovery\n     * response.\n     *\n     * <p> see {@link #discoverServices} for the detail.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on receiving service discovery response.\n     ",
+    "links" : [ "#initialize", "#discoverServices" ]
+  }, {
+    "name" : "public void discoverServices(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Initiate service discovery. A discovery process involves scanning for\n     * requested services for the purpose of establishing a connection to a peer\n     * that supports an available service.\n     *\n     * <p> The function call immediately returns after sending a request to start service\n     * discovery to the framework. The application is notified of a success or failure to initiate\n     * discovery through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p> The services to be discovered are specified with calls to {@link #addServiceRequest}.\n     *\n     * <p>The application is notified of the response against the service discovery request\n     * through listener callbacks registered by {@link #setServiceResponseListener} or\n     * {@link #setDnsSdResponseListeners}, or {@link #setUpnpServiceResponseListener}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#setDnsSdResponseListeners", "#setUpnpServiceResponseListener", "#initialize", "#onSuccess", "#onFailure", "#addServiceRequest", "#setServiceResponseListener" ]
+  }, {
+    "name" : "public void addServiceRequest(Channel c, WifiP2pServiceRequest req, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a service discovery request.\n     *\n     * <p> The function call immediately returns after sending a request to add service\n     * discovery request to the framework. The application is notified of a success or failure to\n     * add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p>After service discovery request is added, you can initiate service discovery by\n     * {@link #discoverServices}.\n     *\n     * <p>The added service requests can be cleared with calls to\n     * {@link #removeServiceRequest(Channel, WifiP2pServiceRequest, ActionListener)} or\n     * {@link #clearServiceRequests(Channel, ActionListener)}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param req is the service discovery request.\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#removeServiceRequest(Channel", "#initialize", "#onSuccess", "#onFailure", "#clearServiceRequests(Channel", "#discoverServices" ]
+  }, {
+    "name" : "public void removeServiceRequest(Channel c, WifiP2pServiceRequest req, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a specified service discovery request added with {@link #addServiceRequest}\n     *\n     * <p> The function call immediately returns after sending a request to remove service\n     * discovery request to the framework. The application is notified of a success or failure to\n     * add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param req is the service discovery request.\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure", "#addServiceRequest" ]
+  }, {
+    "name" : "public void clearServiceRequests(Channel c, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Clear all registered service discovery requests.\n     *\n     * <p> The function call immediately returns after sending a request to clear all\n     * service discovery requests to the framework. The application is notified of a success\n     * or failure to add service through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callbacks on success or failure. Can be null.\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure" ]
+  }, {
+    "name" : "public void requestPeers(Channel c, PeerListListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request the current list of peers.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when peer list is available. Can be null.\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void requestConnectionInfo(Channel c, ConnectionInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request device connection info.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when connection info is available. Can be null.\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void requestGroupInfo(Channel c, GroupInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request p2p group info.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when group info is available. Can be null.\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void setDeviceName(@NonNull Channel c, @NonNull String devName, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Set p2p device name.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when group info is available. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void setWfdInfo(@NonNull Channel c, @NonNull WifiP2pWfdInfo wfdInfo, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Set Wifi Display information.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param wfdInfo the Wifi Display information to set\n     * @param listener for callbacks on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void setWFDInfo(@NonNull Channel c, @NonNull WifiP2pWfdInfo wfdInfo, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void deletePersistentGroup(@NonNull Channel c, int netId, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Delete a stored persistent group from the system settings.\n     *\n     * <p> The function call immediately returns after sending a persistent group removal request\n     * to the framework. The application is notified of a success or failure to initiate\n     * group removal through listener callbacks {@link ActionListener#onSuccess} or\n     * {@link ActionListener#onFailure}.\n     *\n     * <p>The persistent p2p group list stored in the system can be obtained by\n     * {@link #requestPersistentGroupInfo(Channel, PersistentGroupInfoListener)} and\n     *  a network id can be obtained by {@link WifiP2pGroup#getNetworkId()}.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param netId the network id of the p2p group.\n     * @param listener for callbacks on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize", "#onSuccess", "#onFailure", "android.net.wifi.p2p.WifiP2pGroup#getNetworkId()", "#requestPersistentGroupInfo(Channel" ]
+  }, {
+    "name" : "public void requestPersistentGroupInfo(@NonNull Channel c, @Nullable PersistentGroupInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request a list of all the persistent p2p groups stored in system.\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when persistent group info list is available. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void setMiracastMode(@MiracastMode int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * This is used to provide information to drivers to optimize performance depending\n     * on the current mode of operation.\n     * {@link #MIRACAST_DISABLED} - disabled\n     * {@link #MIRACAST_SOURCE} - source operation\n     * {@link #MIRACAST_SINK} - sink operation\n     *\n     * As an example, the driver could reduce the channel dwell time during scanning\n     * when acting as a source or sink to minimize impact on Miracast.\n     *\n     * @param mode mode of operation. One of {@link #MIRACAST_DISABLED}, {@link #MIRACAST_SOURCE},\n     * or {@link #MIRACAST_SINK}\n     *\n     * @hide\n     ",
+    "links" : [ "#MIRACAST_SOURCE", "#MIRACAST_SINK", "#MIRACAST_DISABLED" ]
+  }, {
+    "name" : "public Messenger getMessenger(Binder binder)",
+    "returnType" : "Messenger",
+    "comment" : "\n     * Get a reference to WifiP2pService handler. This is used to establish\n     * an AsyncChannel communication with WifiService\n     *\n     * @param binder A binder for the service to associate with this client.\n     *\n     * @return Messenger pointing to the WifiP2pService handler\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Messenger getP2pStateMachineMessenger()",
+    "returnType" : "Messenger",
+    "comment" : "\n     * Get a reference to P2pStateMachine handler. This is used to establish\n     * a priveleged AsyncChannel communication with WifiP2pService.\n     *\n     * @return Messenger pointing to the WifiP2pService handler\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getNfcHandoverRequest(Channel c, HandoverMessageListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Get a handover request message for use in WFA NFC Handover transfer.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getNfcHandoverSelect(Channel c, HandoverMessageListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Get a handover select message for use in WFA NFC Handover transfer.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void initiatorReportNfcHandover(Channel c, String handoverSelect, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void responderReportNfcHandover(Channel c, String handoverRequest, ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void factoryReset(@NonNull Channel c, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes all saved p2p groups.\n     *\n     * @param c is the channel created at {@link #initialize}.\n     * @param listener for callback on success or failure. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void requestOngoingPeerConfig(@NonNull Channel c, @NonNull OngoingPeerInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request saved WifiP2pConfig which used for an ongoing peer connection\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param listener for callback when ongoing peer config updated. Can't be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void setOngoingPeerConfig(@NonNull Channel c, @NonNull WifiP2pConfig config, @Nullable ActionListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Set saved WifiP2pConfig which used for an ongoing peer connection\n     *\n     * @param c is the channel created at {@link #initialize}\n     * @param config used for change an ongoing peer connection\n     * @param listener for callback when ongoing peer config updated. Can be null.\n     *\n     * @hide\n     ",
+    "links" : [ "#initialize" ]
+  }, {
+    "name" : "public void requestP2pState(@NonNull Channel c, @NonNull P2pStateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request p2p enabled state.\n     *\n     * <p> This state indicates whether Wi-Fi p2p is enabled or disabled.\n     * The valid value is one of {@link #WIFI_P2P_STATE_DISABLED} or\n     * {@link #WIFI_P2P_STATE_ENABLED}. The state is returned using the\n     * {@link P2pStateListener} listener.\n     *\n     * <p> This state is also included in the {@link #WIFI_P2P_STATE_CHANGED_ACTION}\n     * broadcast event with extra {@link #EXTRA_WIFI_STATE}.\n     *\n     * @param c is the channel created at {@link #initialize}.\n     * @param listener for callback when p2p state is available..\n     ",
+    "links" : [ "#initialize", "#WIFI_P2P_STATE_DISABLED", "#WIFI_P2P_STATE_CHANGED_ACTION", "#WIFI_P2P_STATE_ENABLED", "#EXTRA_WIFI_STATE", "P2pStateListener" ]
+  }, {
+    "name" : "public void requestDiscoveryState(@NonNull Channel c, @NonNull DiscoveryStateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request p2p discovery state.\n     *\n     * <p> This state indicates whether p2p discovery has started or stopped.\n     * The valid value is one of {@link #WIFI_P2P_DISCOVERY_STARTED} or\n     * {@link #WIFI_P2P_DISCOVERY_STOPPED}. The state is returned using the\n     * {@link DiscoveryStateListener} listener.\n     *\n     * <p> This state is also included in the {@link #WIFI_P2P_DISCOVERY_CHANGED_ACTION}\n     * broadcast event with extra {@link #EXTRA_DISCOVERY_STATE}.\n     *\n     * @param c is the channel created at {@link #initialize}.\n     * @param listener for callback when discovery state is available..\n     ",
+    "links" : [ "#WIFI_P2P_DISCOVERY_STOPPED", "#initialize", "DiscoveryStateListener", "#WIFI_P2P_DISCOVERY_CHANGED_ACTION", "#EXTRA_DISCOVERY_STATE", "#WIFI_P2P_DISCOVERY_STARTED" ]
+  }, {
+    "name" : "public void requestNetworkInfo(@NonNull Channel c, @NonNull NetworkInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request network info.\n     *\n     * <p> This method provides the network info in the form of a {@link android.net.NetworkInfo}.\n     * {@link android.net.NetworkInfo#isAvailable()} indicates the p2p availability and\n     * {@link android.net.NetworkInfo#getDetailedState()} reports the current fine-grained state\n     * of the network. This {@link android.net.NetworkInfo} is returned using the\n     * {@link NetworkInfoListener} listener.\n     *\n     * <p> This information is also included in the {@link #WIFI_P2P_CONNECTION_CHANGED_ACTION}\n     * broadcast event with extra {@link #EXTRA_NETWORK_INFO}.\n     *\n     * @param c is the channel created at {@link #initialize}.\n     * @param listener for callback when network info is available..\n     ",
+    "links" : [ "#WIFI_P2P_CONNECTION_CHANGED_ACTION", "#initialize", "android.net.NetworkInfo#isAvailable()", "android.net.NetworkInfo#getDetailedState()", "#EXTRA_NETWORK_INFO", "android.net.NetworkInfo", "NetworkInfoListener" ]
+  }, {
+    "name" : "public void requestDeviceInfo(@NonNull Channel c, @NonNull DeviceInfoListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Request Device Info\n     *\n     * <p> This method provides the device info\n     * in the form of a {@link android.net.wifi.p2p.WifiP2pDevice}.\n     * Valid {@link android.net.wifi.p2p.WifiP2pDevice} is returned when p2p is enabled.\n     * To get information notifications on P2P getting enabled refers\n     * {@link #WIFI_P2P_STATE_ENABLED}.\n     *\n     * <p> This {@link android.net.wifi.p2p.WifiP2pDevice} is returned using the\n     * {@link DeviceInfoListener} listener.\n     *\n     * <p> {@link android.net.wifi.p2p.WifiP2pDevice#deviceAddress} is only available if the caller\n     * holds the {@code android.Manifest.permission#LOCAL_MAC_ADDRESS} permission, and holds the\n     * anonymized MAC address (02:00:00:00:00:00) otherwise.\n     *\n     * <p> This information is also included in the {@link #WIFI_P2P_THIS_DEVICE_CHANGED_ACTION}\n     * broadcast event with extra {@link #EXTRA_WIFI_P2P_DEVICE}.\n     *\n     * @param c is the channel created at {@link #initialize(Context, Looper, ChannelListener)}.\n     * @param listener for callback when network info is available.\n     ",
+    "links" : [ "DeviceInfoListener", "#initialize(Context", "android.net.wifi.p2p.WifiP2pDevice", "#WIFI_P2P_STATE_ENABLED", "#WIFI_P2P_THIS_DEVICE_CHANGED_ACTION", "android.net.wifi.p2p.WifiP2pDevice#deviceAddress", "#EXTRA_WIFI_P2P_DEVICE" ]
+  } ],
+  "variableNames" : [ "TAG", "WIFI_P2P_STATE_CHANGED_ACTION", "EXTRA_WIFI_STATE", "WIFI_P2P_STATE_DISABLED", "WIFI_P2P_STATE_ENABLED", "WIFI_P2P_CONNECTION_CHANGED_ACTION", "EXTRA_WIFI_P2P_INFO", "EXTRA_NETWORK_INFO", "EXTRA_WIFI_P2P_GROUP", "WIFI_P2P_PEERS_CHANGED_ACTION", "EXTRA_P2P_DEVICE_LIST", "WIFI_P2P_DISCOVERY_CHANGED_ACTION", "EXTRA_DISCOVERY_STATE", "WIFI_P2P_DISCOVERY_STOPPED", "WIFI_P2P_DISCOVERY_STARTED", "WIFI_P2P_THIS_DEVICE_CHANGED_ACTION", "EXTRA_WIFI_P2P_DEVICE", "ACTION_WIFI_P2P_PERSISTENT_GROUPS_CHANGED", "EXTRA_HANDOVER_MESSAGE", "CALLING_PACKAGE", "CALLING_FEATURE_ID", "CALLING_BINDER", "mService", "BASE", "DISCOVER_PEERS", "DISCOVER_PEERS_FAILED", "DISCOVER_PEERS_SUCCEEDED", "STOP_DISCOVERY", "STOP_DISCOVERY_FAILED", "STOP_DISCOVERY_SUCCEEDED", "CONNECT", "CONNECT_FAILED", "CONNECT_SUCCEEDED", "CANCEL_CONNECT", "CANCEL_CONNECT_FAILED", "CANCEL_CONNECT_SUCCEEDED", "CREATE_GROUP", "CREATE_GROUP_FAILED", "CREATE_GROUP_SUCCEEDED", "REMOVE_GROUP", "REMOVE_GROUP_FAILED", "REMOVE_GROUP_SUCCEEDED", "REQUEST_PEERS", "RESPONSE_PEERS", "REQUEST_CONNECTION_INFO", "RESPONSE_CONNECTION_INFO", "REQUEST_GROUP_INFO", "RESPONSE_GROUP_INFO", "ADD_LOCAL_SERVICE", "ADD_LOCAL_SERVICE_FAILED", "ADD_LOCAL_SERVICE_SUCCEEDED", "REMOVE_LOCAL_SERVICE", "REMOVE_LOCAL_SERVICE_FAILED", "REMOVE_LOCAL_SERVICE_SUCCEEDED", "CLEAR_LOCAL_SERVICES", "CLEAR_LOCAL_SERVICES_FAILED", "CLEAR_LOCAL_SERVICES_SUCCEEDED", "ADD_SERVICE_REQUEST", "ADD_SERVICE_REQUEST_FAILED", "ADD_SERVICE_REQUEST_SUCCEEDED", "REMOVE_SERVICE_REQUEST", "REMOVE_SERVICE_REQUEST_FAILED", "REMOVE_SERVICE_REQUEST_SUCCEEDED", "CLEAR_SERVICE_REQUESTS", "CLEAR_SERVICE_REQUESTS_FAILED", "CLEAR_SERVICE_REQUESTS_SUCCEEDED", "DISCOVER_SERVICES", "DISCOVER_SERVICES_FAILED", "DISCOVER_SERVICES_SUCCEEDED", "PING", "RESPONSE_SERVICE", "SET_DEVICE_NAME", "SET_DEVICE_NAME_FAILED", "SET_DEVICE_NAME_SUCCEEDED", "DELETE_PERSISTENT_GROUP", "DELETE_PERSISTENT_GROUP_FAILED", "DELETE_PERSISTENT_GROUP_SUCCEEDED", "REQUEST_PERSISTENT_GROUP_INFO", "RESPONSE_PERSISTENT_GROUP_INFO", "SET_WFD_INFO", "SET_WFD_INFO_FAILED", "SET_WFD_INFO_SUCCEEDED", "START_WPS", "START_WPS_FAILED", "START_WPS_SUCCEEDED", "START_LISTEN", "START_LISTEN_FAILED", "START_LISTEN_SUCCEEDED", "STOP_LISTEN", "STOP_LISTEN_FAILED", "STOP_LISTEN_SUCCEEDED", "SET_CHANNEL", "SET_CHANNEL_FAILED", "SET_CHANNEL_SUCCEEDED", "GET_HANDOVER_REQUEST", "GET_HANDOVER_SELECT", "RESPONSE_GET_HANDOVER_MESSAGE", "INITIATOR_REPORT_NFC_HANDOVER", "RESPONDER_REPORT_NFC_HANDOVER", "REPORT_NFC_HANDOVER_SUCCEEDED", "REPORT_NFC_HANDOVER_FAILED", "FACTORY_RESET", "FACTORY_RESET_FAILED", "FACTORY_RESET_SUCCEEDED", "REQUEST_ONGOING_PEER_CONFIG", "RESPONSE_ONGOING_PEER_CONFIG", "SET_ONGOING_PEER_CONFIG", "SET_ONGOING_PEER_CONFIG_FAILED", "SET_ONGOING_PEER_CONFIG_SUCCEEDED", "REQUEST_P2P_STATE", "RESPONSE_P2P_STATE", "REQUEST_DISCOVERY_STATE", "RESPONSE_DISCOVERY_STATE", "REQUEST_NETWORK_INFO", "RESPONSE_NETWORK_INFO", "UPDATE_CHANNEL_INFO", "REQUEST_DEVICE_INFO", "RESPONSE_DEVICE_INFO", "ERROR", "P2P_UNSUPPORTED", "BUSY", "NO_SERVICE_REQUESTS", "MIRACAST_DISABLED", "MIRACAST_SOURCE", "MIRACAST_SINK" ],
+  "methodNames" : [ "private static void checkChannel(Channel c)", "private static void checkServiceInfo(WifiP2pServiceInfo info)", "private static void checkServiceRequest(WifiP2pServiceRequest req)", "private static void checkP2pConfig(WifiP2pConfig c)", "public Channel initialize(Context srcContext, Looper srcLooper, ChannelListener listener)", "public Channel initializeInternal(Context srcContext, Looper srcLooper, ChannelListener listener)", "private Channel initalizeChannel(Context srcContext, Looper srcLooper, ChannelListener listener, Messenger messenger, Binder binder)", "public void discoverPeers(Channel c, ActionListener listener)", "public void stopPeerDiscovery(Channel c, ActionListener listener)", "public void connect(Channel c, WifiP2pConfig config, ActionListener listener)", "public void cancelConnect(Channel c, ActionListener listener)", "public void createGroup(Channel c, ActionListener listener)", "public void createGroup(@NonNull Channel c, @Nullable WifiP2pConfig config, @Nullable ActionListener listener)", "public void removeGroup(Channel c, ActionListener listener)", "public void startListening(@NonNull Channel c, @Nullable ActionListener listener)", "public void stopListening(@NonNull Channel c, @Nullable ActionListener listener)", "public void setWifiP2pChannels(@NonNull Channel c, int listeningChannel, int operatingChannel, @Nullable ActionListener listener)", "public void startWps(Channel c, WpsInfo wps, ActionListener listener)", "public void addLocalService(Channel c, WifiP2pServiceInfo servInfo, ActionListener listener)", "public void removeLocalService(Channel c, WifiP2pServiceInfo servInfo, ActionListener listener)", "public void clearLocalServices(Channel c, ActionListener listener)", "public void setServiceResponseListener(Channel c, ServiceResponseListener listener)", "public void setDnsSdResponseListeners(Channel c, DnsSdServiceResponseListener servListener, DnsSdTxtRecordListener txtListener)", "public void setUpnpServiceResponseListener(Channel c, UpnpServiceResponseListener listener)", "public void discoverServices(Channel c, ActionListener listener)", "public void addServiceRequest(Channel c, WifiP2pServiceRequest req, ActionListener listener)", "public void removeServiceRequest(Channel c, WifiP2pServiceRequest req, ActionListener listener)", "public void clearServiceRequests(Channel c, ActionListener listener)", "public void requestPeers(Channel c, PeerListListener listener)", "public void requestConnectionInfo(Channel c, ConnectionInfoListener listener)", "public void requestGroupInfo(Channel c, GroupInfoListener listener)", "public void setDeviceName(@NonNull Channel c, @NonNull String devName, @Nullable ActionListener listener)", "public void setWfdInfo(@NonNull Channel c, @NonNull WifiP2pWfdInfo wfdInfo, @Nullable ActionListener listener)", "public void setWFDInfo(@NonNull Channel c, @NonNull WifiP2pWfdInfo wfdInfo, @Nullable ActionListener listener)", "public void deletePersistentGroup(@NonNull Channel c, int netId, @Nullable ActionListener listener)", "public void requestPersistentGroupInfo(@NonNull Channel c, @Nullable PersistentGroupInfoListener listener)", "public void setMiracastMode(@MiracastMode int mode)", "public Messenger getMessenger(Binder binder)", "public Messenger getP2pStateMachineMessenger()", "public void getNfcHandoverRequest(Channel c, HandoverMessageListener listener)", "public void getNfcHandoverSelect(Channel c, HandoverMessageListener listener)", "public void initiatorReportNfcHandover(Channel c, String handoverSelect, ActionListener listener)", "public void responderReportNfcHandover(Channel c, String handoverRequest, ActionListener listener)", "public void factoryReset(@NonNull Channel c, @Nullable ActionListener listener)", "public void requestOngoingPeerConfig(@NonNull Channel c, @NonNull OngoingPeerInfoListener listener)", "public void setOngoingPeerConfig(@NonNull Channel c, @NonNull WifiP2pConfig config, @Nullable ActionListener listener)", "public void requestP2pState(@NonNull Channel c, @NonNull P2pStateListener listener)", "public void requestDiscoveryState(@NonNull Channel c, @NonNull DiscoveryStateListener listener)", "public void requestNetworkInfo(@NonNull Channel c, @NonNull NetworkInfoListener listener)", "public void requestDeviceInfo(@NonNull Channel c, @NonNull DeviceInfoListener listener)" ]
+}

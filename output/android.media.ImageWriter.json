@@ -1,0 +1,150 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/ImageWriter.java",
+  "packageName" : "android.media",
+  "className" : "ImageWriter",
+  "comment" : "\n * <p>\n * The ImageWriter class allows an application to produce Image data into a\n * {@link android.view.Surface}, and have it be consumed by another component\n * like {@link android.hardware.camera2.CameraDevice CameraDevice}.\n * </p>\n * <p>\n * Several Android API classes can provide input {@link android.view.Surface\n * Surface} objects for ImageWriter to produce data into, including\n * {@link MediaCodec MediaCodec} (encoder),\n * {@link android.hardware.camera2.CameraCaptureSession CameraCaptureSession}\n * (reprocessing input), {@link ImageReader}, etc.\n * </p>\n * <p>\n * The input Image data is encapsulated in {@link Image} objects. To produce\n * Image data into a destination {@link android.view.Surface Surface}, the\n * application can get an input Image via {@link #dequeueInputImage} then write\n * Image data into it. Multiple such {@link Image} objects can be dequeued at\n * the same time and queued back in any order, up to the number specified by the\n * {@code maxImages} constructor parameter.\n * </p>\n * <p>\n * If the application already has an Image from {@link ImageReader}, the\n * application can directly queue this Image into the ImageWriter (via\n * {@link #queueInputImage}), potentially with zero buffer copies. This\n * even works if the image format of the ImageWriter is\n * {@link ImageFormat#PRIVATE PRIVATE}, and prior to Android P is the only\n * way to enqueue images into such an ImageWriter. Starting in Android P\n * private images may also be accessed through their hardware buffers\n * (when available) through the {@link Image#getHardwareBuffer()} method.\n * Attempting to access the planes of a private image, will return an\n * empty array.\n * </p>\n * <p>\n * Once new input Images are queued into an ImageWriter, it's up to the\n * downstream components (e.g. {@link ImageReader} or\n * {@link android.hardware.camera2.CameraDevice}) to consume the Images. If the\n * downstream components cannot consume the Images at least as fast as the\n * ImageWriter production rate, the {@link #dequeueInputImage} call will\n * eventually block and the application will have to drop input frames.\n * </p>\n * <p>\n * If the consumer component that provided the input {@link android.view.Surface Surface}\n * abandons the {@link android.view.Surface Surface}, {@link #queueInputImage queueing}\n * or {@link #dequeueInputImage dequeueing} an {@link Image} will throw an\n * {@link IllegalStateException}.\n * </p>\n ",
+  "variables" : [ {
+    "name" : "mListenerLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListener",
+    "type" : "OnImageReleasedListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListenerHandler",
+    "type" : "ListenerHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativeContext",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWriterFormat",
+    "type" : "int",
+    "comment" : " Field below is used by native code, do not access or modify.",
+    "links" : [ ]
+  }, {
+    "name" : "mMaxImages",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDequeuedImages",
+    "type" : "List<Image>",
+    "comment" : " could be closed by different threads (e.g., application thread and GC thread).",
+    "links" : [ ]
+  }, {
+    "name" : "mEstimatedNativeAllocBytes",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static ImageWriter newInstance(@NonNull Surface surface, @IntRange(from = 1) int maxImages)",
+    "returnType" : "ImageWriter",
+    "comment" : "\n     * <p>\n     * Create a new ImageWriter.\n     * </p>\n     * <p>\n     * The {@code maxImages} parameter determines the maximum number of\n     * {@link Image} objects that can be be dequeued from the\n     * {@code ImageWriter} simultaneously. Requesting more buffers will use up\n     * more memory, so it is important to use only the minimum number necessary.\n     * </p>\n     * <p>\n     * The input Image size and format depend on the Surface that is provided by\n     * the downstream consumer end-point.\n     * </p>\n     *\n     * @param surface The destination Surface this writer produces Image data\n     *            into.\n     * @param maxImages The maximum number of Images the user will want to\n     *            access simultaneously for producing Image data. This should be\n     *            as small as possible to limit memory use. Once maxImages\n     *            Images are dequeued by the user, one of them has to be queued\n     *            back before a new Image can be dequeued for access via\n     *            {@link #dequeueInputImage()}.\n     * @return a new ImageWriter instance.\n     ",
+    "links" : [ "#dequeueInputImage()", "android.media.Image" ]
+  }, {
+    "name" : "public static ImageWriter newInstance(@NonNull Surface surface, @IntRange(from = 1) int maxImages, @Format int format)",
+    "returnType" : "ImageWriter",
+    "comment" : "\n     * <p>\n     * Create a new ImageWriter with given number of max Images and format.\n     * </p>\n     * <p>\n     * The {@code maxImages} parameter determines the maximum number of\n     * {@link Image} objects that can be be dequeued from the\n     * {@code ImageWriter} simultaneously. Requesting more buffers will use up\n     * more memory, so it is important to use only the minimum number necessary.\n     * </p>\n     * <p>\n     * The format specifies the image format of this ImageWriter. The format\n     * from the {@code surface} will be overridden with this format. For example,\n     * if the surface is obtained from a {@link android.graphics.SurfaceTexture}, the default\n     * format may be {@link PixelFormat#RGBA_8888}. If the application creates an ImageWriter\n     * with this surface and {@link ImageFormat#PRIVATE}, this ImageWriter will be able to operate\n     * with {@link ImageFormat#PRIVATE} Images.\n     * </p>\n     * <p>\n     * Note that the consumer end-point may or may not be able to support Images with different\n     * format, for such case, the application should only use this method if the consumer is able\n     * to consume such images.\n     * </p>\n     * <p>\n     * The input Image size depends on the Surface that is provided by\n     * the downstream consumer end-point.\n     * </p>\n     *\n     * @param surface The destination Surface this writer produces Image data\n     *            into.\n     * @param maxImages The maximum number of Images the user will want to\n     *            access simultaneously for producing Image data. This should be\n     *            as small as possible to limit memory use. Once maxImages\n     *            Images are dequeued by the user, one of them has to be queued\n     *            back before a new Image can be dequeued for access via\n     *            {@link #dequeueInputImage()}.\n     * @param format The format of this ImageWriter. It can be any valid format specified by\n     *            {@link ImageFormat} or {@link PixelFormat}.\n     *\n     * @return a new ImageWriter instance.\n     ",
+    "links" : [ "android.graphics.SurfaceTexture", "android.graphics.ImageFormat#PRIVATE", "#dequeueInputImage()", "android.graphics.ImageFormat", "android.media.Image", "android.graphics.PixelFormat#RGBA_8888", "android.graphics.PixelFormat" ]
+  }, {
+    "name" : "public int getMaxImages()",
+    "returnType" : "int",
+    "comment" : "\n     * <p>\n     * Maximum number of Images that can be dequeued from the ImageWriter\n     * simultaneously (for example, with {@link #dequeueInputImage()}).\n     * </p>\n     * <p>\n     * An Image is considered dequeued after it's returned by\n     * {@link #dequeueInputImage()} from ImageWriter, and until the Image is\n     * sent back to ImageWriter via {@link #queueInputImage}, or\n     * {@link Image#close()}.\n     * </p>\n     * <p>\n     * Attempting to dequeue more than {@code maxImages} concurrently will\n     * result in the {@link #dequeueInputImage()} function throwing an\n     * {@link IllegalStateException}.\n     * </p>\n     *\n     * @return Maximum number of Images that can be dequeued from this\n     *         ImageWriter.\n     * @see #dequeueInputImage\n     * @see #queueInputImage\n     * @see Image#close\n     ",
+    "links" : [ "IllegalStateException", "#dequeueInputImage()", "android.media.Image#close()", "#queueInputImage" ]
+  }, {
+    "name" : "public Image dequeueInputImage()",
+    "returnType" : "Image",
+    "comment" : "\n     * <p>\n     * Dequeue the next available input Image for the application to produce\n     * data into.\n     * </p>\n     * <p>\n     * This method requests a new input Image from ImageWriter. The application\n     * owns this Image after this call. Once the application fills the Image\n     * data, it is expected to return this Image back to ImageWriter for\n     * downstream consumer components (e.g.\n     * {@link android.hardware.camera2.CameraDevice}) to consume. The Image can\n     * be returned to ImageWriter via {@link #queueInputImage} or\n     * {@link Image#close()}.\n     * </p>\n     * <p>\n     * This call will block if all available input images have been queued by\n     * the application and the downstream consumer has not yet consumed any.\n     * When an Image is consumed by the downstream consumer and released, an\n     * {@link OnImageReleasedListener#onImageReleased} callback will be fired,\n     * which indicates that there is one input Image available. For non-\n     * {@link ImageFormat#PRIVATE PRIVATE} formats (\n     * {@link ImageWriter#getFormat()} != {@link ImageFormat#PRIVATE}), it is\n     * recommended to dequeue the next Image only after this callback is fired,\n     * in the steady state.\n     * </p>\n     * <p>\n     * If the format of ImageWriter is {@link ImageFormat#PRIVATE PRIVATE} (\n     * {@link ImageWriter#getFormat()} == {@link ImageFormat#PRIVATE}), the\n     * image buffer is accessible to the application only through the hardware\n     * buffer obtained through {@link Image#getHardwareBuffer()}. (On Android\n     * versions prior to P, dequeueing private buffers will cause an\n     * {@link IllegalStateException} to be thrown). Alternatively,\n     * the application can acquire images from some other component (e.g. an\n     * {@link ImageReader}), and queue them directly to this ImageWriter via the\n     * {@link ImageWriter#queueInputImage queueInputImage()} method.\n     * </p>\n     *\n     * @return The next available input Image from this ImageWriter.\n     * @throws IllegalStateException if {@code maxImages} Images are currently\n     *             dequeued, or the input {@link android.view.Surface Surface}\n     *             has been abandoned by the consumer component that provided\n     *             the {@link android.view.Surface Surface}. Prior to Android\n     *             P, throws if the ImageWriter format is\n     *             {@link ImageFormat#PRIVATE PRIVATE}.\n     * @see #queueInputImage\n     * @see Image#close\n     ",
+    "links" : [ "IllegalStateException", "android.graphics.ImageFormat#PRIVATE", "android.media.ImageWriter#getFormat()", "android.media.Image#getHardwareBuffer()", "android.media.ImageWriter#queueInputImage", "#onImageReleased", "android.view.Surface", "android.hardware.camera2.CameraDevice", "android.media.Image#close()", "android.media.ImageReader", "#queueInputImage" ]
+  }, {
+    "name" : "public void queueInputImage(Image image)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>\n     * Queue an input {@link Image} back to ImageWriter for the downstream\n     * consumer to access.\n     * </p>\n     * <p>\n     * The input {@link Image} could be from ImageReader (acquired via\n     * {@link ImageReader#acquireNextImage} or\n     * {@link ImageReader#acquireLatestImage}), or from this ImageWriter\n     * (acquired via {@link #dequeueInputImage}). In the former case, the Image\n     * data will be moved to this ImageWriter. Note that the Image properties\n     * (size, format, strides, etc.) must be the same as the properties of the\n     * images dequeued from this ImageWriter, or this method will throw an\n     * {@link IllegalArgumentException}. In the latter case, the application has\n     * filled the input image with data. This method then passes the filled\n     * buffer to the downstream consumer. In both cases, it's up to the caller\n     * to ensure that the Image timestamp (in nanoseconds) is correctly set, as\n     * the downstream component may want to use it to indicate the Image data\n     * capture time.\n     * </p>\n     * <p>\n     * After this method is called and the downstream consumer consumes and\n     * releases the Image, an {@link OnImageReleasedListener#onImageReleased}\n     * callback will fire. The application can use this callback to avoid\n     * sending Images faster than the downstream consumer processing rate in\n     * steady state.\n     * </p>\n     * <p>\n     * Passing in an Image from some other component (e.g. an\n     * {@link ImageReader}) requires a free input Image from this ImageWriter as\n     * the destination. In this case, this call will block, as\n     * {@link #dequeueInputImage} does, if there are no free Images available.\n     * To avoid blocking, the application should ensure that there is at least\n     * one free Image available in this ImageWriter before calling this method.\n     * </p>\n     * <p>\n     * After this call, the input Image is no longer valid for further access,\n     * as if the Image is {@link Image#close closed}. Attempting to access the\n     * {@link ByteBuffer ByteBuffers} returned by an earlier\n     * {@link Image.Plane#getBuffer Plane#getBuffer} call will result in an\n     * {@link IllegalStateException}.\n     * </p>\n     *\n     * @param image The Image to be queued back to ImageWriter for future\n     *            consumption.\n     * @throws IllegalStateException if the image was already queued previously,\n     *            or the image was aborted previously, or the input\n     *            {@link android.view.Surface Surface} has been abandoned by the\n     *            consumer component that provided the\n     *            {@link android.view.Surface Surface}.\n     * @see #dequeueInputImage()\n     ",
+    "links" : [ "android.media.ImageReader#acquireNextImage", "IllegalStateException", "#dequeueInputImage", "android.media.Image#close", "android.media.Image", "#onImageReleased", "android.view.Surface", "android.media.ImageReader", "Image.Plane#getBuffer", "android.media.ImageReader#acquireLatestImage", "IllegalArgumentException", "java.nio.ByteBuffer" ]
+  }, {
+    "name" : "public int getFormat()",
+    "returnType" : "int",
+    "comment" : "\n     * Get the ImageWriter format.\n     * <p>\n     * This format may be different than the Image format returned by\n     * {@link Image#getFormat()}. However, if the ImageWriter format is\n     * {@link ImageFormat#PRIVATE PRIVATE}, calling {@link #dequeueInputImage()}\n     * will result in an {@link IllegalStateException}.\n     * </p>\n     *\n     * @return The ImageWriter format.\n     ",
+    "links" : [ "IllegalStateException", "android.graphics.ImageFormat#PRIVATE", "#dequeueInputImage()", "android.media.Image#getFormat()" ]
+  }, {
+    "name" : "public void setOnImageReleasedListener(OnImageReleasedListener listener, Handler handler)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a listener to be invoked when an input Image is returned to the\n     * ImageWriter.\n     *\n     * @param listener The listener that will be run.\n     * @param handler The handler on which the listener should be invoked, or\n     *            null if the listener should be invoked on the calling thread's\n     *            looper.\n     * @throws IllegalArgumentException If no handler specified and the calling\n     *             thread has no looper.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Free up all the resources associated with this ImageWriter.\n     * <p>\n     * After calling this method, this ImageWriter cannot be used. Calling any\n     * methods on this ImageWriter and Images previously provided by\n     * {@link #dequeueInputImage()} will result in an\n     * {@link IllegalStateException}, and attempting to write into\n     * {@link ByteBuffer ByteBuffers} returned by an earlier\n     * {@link Image.Plane#getBuffer Plane#getBuffer} call will have undefined\n     * behavior.\n     * </p>\n     ",
+    "links" : [ "IllegalStateException", "#dequeueInputImage()", "Image.Plane#getBuffer", "java.nio.ByteBuffer" ]
+  }, {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void attachAndQueueInputImage(Image image)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>\n     * Attach and queue input Image to this ImageWriter.\n     * </p>\n     * <p>\n     * When the format of an Image is {@link ImageFormat#PRIVATE PRIVATE}, or\n     * the source Image is so large that copying its data is too expensive, this\n     * method can be used to migrate the source Image into ImageWriter without a\n     * data copy, and then queue it to this ImageWriter. The source Image must\n     * be detached from its previous owner already, or this call will throw an\n     * {@link IllegalStateException}.\n     * </p>\n     * <p>\n     * After this call, the ImageWriter takes ownership of this Image. This\n     * ownership will automatically be removed from this writer after the\n     * consumer releases this Image, that is, after\n     * {@link OnImageReleasedListener#onImageReleased}. The caller is responsible for\n     * closing this Image through {@link Image#close()} to free up the resources\n     * held by this Image.\n     * </p>\n     *\n     * @param image The source Image to be attached and queued into this\n     *            ImageWriter for downstream consumer to use.\n     * @throws IllegalStateException if the Image is not detached from its\n     *             previous owner, or the Image is already attached to this\n     *             ImageWriter, or the source Image is invalid.\n     ",
+    "links" : [ "IllegalStateException", "android.graphics.ImageFormat#PRIVATE", "#onImageReleased", "android.media.Image#close()" ]
+  }, {
+    "name" : "private static void postEventFromNative(Object selfRef)",
+    "returnType" : "void",
+    "comment" : "\n     * Called from Native code when an Event happens. This may be called from an\n     * arbitrary Binder thread, so access to the ImageWriter must be\n     * synchronized appropriately.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void abortImage(Image image)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>\n     * Abort the Images that were dequeued from this ImageWriter, and return\n     * them to this writer for reuse.\n     * </p>\n     * <p>\n     * This method is used for the cases where the application dequeued the\n     * Image, may have filled the data, but does not want the downstream\n     * component to consume it. The Image will be returned to this ImageWriter\n     * for reuse after this call, and the ImageWriter will immediately have an\n     * Image available to be dequeued. This aborted Image will be invisible to\n     * the downstream consumer, as if nothing happened.\n     * </p>\n     *\n     * @param image The Image to be aborted.\n     * @see #dequeueInputImage()\n     * @see Image#close()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isImageOwnedByMe(Image image)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized long nativeInit(Object weakSelf, Surface surface, int maxImgs, int format)",
+    "returnType" : "long",
+    "comment" : " Native implemented ImageWriter methods.",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized void nativeClose(long nativeCtx)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized void nativeDequeueInputImage(long nativeCtx, Image wi)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized void nativeQueueInputImage(long nativeCtx, Image image, long timestampNs, int left, int top, int right, int bottom, int transform, int scalingMode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized int nativeAttachAndQueueImage(long nativeCtx, long imageNativeBuffer, int imageFormat, long timestampNs, int left, int top, int right, int bottom, int transform, int scalingMode)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native synchronized void cancelImage(long nativeCtx, Image image)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeClassInit()",
+    "returnType" : "void",
+    "comment" : "\n     * We use a class initializer to allow the native code to cache some field\n     * offsets.\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "mListenerLock", "mListener", "mListenerHandler", "mNativeContext", "mWriterFormat", "mMaxImages", "mDequeuedImages", "mEstimatedNativeAllocBytes" ],
+  "methodNames" : [ "public static ImageWriter newInstance(@NonNull Surface surface, @IntRange(from = 1) int maxImages)", "public static ImageWriter newInstance(@NonNull Surface surface, @IntRange(from = 1) int maxImages, @Format int format)", "public int getMaxImages()", "public Image dequeueInputImage()", "public void queueInputImage(Image image)", "public int getFormat()", "public void setOnImageReleasedListener(OnImageReleasedListener listener, Handler handler)", "public void close()", "protected void finalize() throws Throwable", "private void attachAndQueueInputImage(Image image)", "private static void postEventFromNative(Object selfRef)", "private void abortImage(Image image)", "private boolean isImageOwnedByMe(Image image)", "private native synchronized long nativeInit(Object weakSelf, Surface surface, int maxImgs, int format)", "private native synchronized void nativeClose(long nativeCtx)", "private native synchronized void nativeDequeueInputImage(long nativeCtx, Image wi)", "private native synchronized void nativeQueueInputImage(long nativeCtx, Image image, long timestampNs, int left, int top, int right, int bottom, int transform, int scalingMode)", "private native synchronized int nativeAttachAndQueueImage(long nativeCtx, long imageNativeBuffer, int imageFormat, long timestampNs, int left, int top, int right, int bottom, int transform, int scalingMode)", "private native synchronized void cancelImage(long nativeCtx, Image image)", "private static native void nativeClassInit()" ]
+}

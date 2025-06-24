@@ -9,6 +9,7 @@ import com.github.javaparser.ast.type.Type;
 
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.sql.Time;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Optional;
 import com.fasterxml.jackson.databind.ObjectMapper;
 // This is a simple Java application that uses JavaParser to analyze Java source files.
@@ -71,6 +73,7 @@ public class JavaSourceAnalyzer {
                 .filter(file -> file.toString().endsWith(FILE_EXTENSION))
                 .forEach(file -> {
                     try {
+                        System.out.println("Processing file: " + file);
                         JavaParser parser = new JavaParser();
                         ParseResult<CompilationUnit> result = parser.parse(file);
 
@@ -94,7 +97,9 @@ public class JavaSourceAnalyzer {
                                         packageName, 
                                         file.toString(), 
                                         cls.getComment().map(Comment::getContent).orElse(""));
-                                    NUM_OF_LINKS_CLASS += extractLinkReferences(classInfo.getComment()).size();
+                                    
+                                    List<String> imports = getImportList(cu);
+                                    NUM_OF_LINKS_CLASS += extractLinkReferences(classInfo.getComment(),imports,packageName).size();
                                     // Extract fields in the class
                                     cls.getFields().forEach(field -> {
                                         printFieldDetails(field);
@@ -104,7 +109,7 @@ public class JavaSourceAnalyzer {
                                             Type variableType = variable.getType();
                                             Optional<Comment> comment = field.getComment();
                                             String commentText = comment.isPresent() ? comment.get().getContent() : "";
-                                            List<String> variableLinks = extractLinkReferences(commentText);
+                                            List<String> variableLinks = extractLinkReferences(commentText,imports,packageName);
                                             NUMBER_OF_LINKS_VARS += variableLinks.size();
                                             classInfo.addVariable(variableName, variableType.toString(), commentText, variableLinks);
                                         });
@@ -118,7 +123,7 @@ public class JavaSourceAnalyzer {
                                         Optional<Comment> comment = method.getComment();
                                         String commentText = comment.isPresent() ? comment.get().getContent() : "";             
                                         
-                                        List<String> methodLinks = extractLinkReferences(commentText);
+                                        List<String> methodLinks = extractLinkReferences(commentText,imports,packageName);
                                         NUM_OF_LINKS_METHOD += methodLinks.size();
                                         classInfo.addMethod(methodSignature, methodReturnType.toString(), commentText, methodLinks);
                                     });
@@ -129,7 +134,7 @@ public class JavaSourceAnalyzer {
                                     System.out.println("Number of Fields: " + num_of_fields[0]);
                                     classInfoList.add(classInfo);
                                     // Save class information to JSON
-                                    String outputFilePath = "./output/" + packageName+className + ".json";
+                                    String outputFilePath = "./output/" + packageName+"."+className + ".json";
                                     saveClassInfoToJson(classInfo, outputFilePath);
                                 }
 
@@ -176,16 +181,115 @@ public class JavaSourceAnalyzer {
         });
     }
 
-    private static List<String> extractLinkReferences(String comment) {
-    List<String> links = new ArrayList<>();
-    String regex = "@link\\s+([\\w.#]+)";
-    Pattern pattern = Pattern.compile(regex);
-    Matcher matcher = pattern.matcher(comment);
+    private static List<String> extractLinkReferences(String comment, List<String> imports, String packageName) {
+        Set<String> links = new HashSet<>();
+        // Preprocess the comment to handle multi-line @link annotations
+         // Preprocess the comment to handle multi-line @link annotations
+        String processedComment = comment
+        // Remove leading '*' characters in Javadoc comments
+        .replaceAll("(?m)^\\s*\\*", "")
+        // Collapse multi-line @link annotations into a single line
+        .replaceAll("\\{@link\\s+([\\w.#]+)#\\s*\\n\\s*([\\w.#()]+)", "{@link $1#$2}")
+        .replaceAll("\\{@link\\s+([\\w.#]+)\\s*\\n\\s*([\\w.#()]+)", "{@link $1$2}");
+    
+        String regex = "@link\\s+([\\w.#()]+)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(processedComment);
+        while (matcher.find()) {
+            String reference = matcher.group(1); // Extract the reference after @link
+            System.out.println("Found reference: " + reference);
+            if (reference.contains("#")) {
+                String[] parts = reference.split("#");
+                String value1 = parts[0]; // The part before #, that is class name 
+                String value2 = parts[1]; // The part after #, that is method or variable name
+                System.out.println("Found reference: " + value1 + " and " + value2);
+                // Resolve value1 using the import list
+                if(!value1.isEmpty()) {
+                    String fullyQualifiedName = resolveFullyQualifiedName(value1, imports,packageName);
+                    if (!fullyQualifiedName.isEmpty()) {
+                        links.add(fullyQualifiedName + "#" + value2);
+                    } else {
+                        // If not resolved, add as-is
+                        links.add("#" + value2);
+                    }
+                }else{
+                    // If value1 is empty, just add the method or variable name
+                    if (!value2.isEmpty()) {
+                        links.add("#" + value2);
+                    }else{
 
-    while (matcher.find()) {
-        links.add(matcher.group(1)); // Extract the reference after @link
+                    }
+                }
+               
+            } else {
+                System.out.println("Found reference without #: " + reference);
+                // No #, treat as a standalone class or variable
+                String fullyQualifiedName = resolveFullyQualifiedName(reference, imports, packageName);
+                if (!fullyQualifiedName.isEmpty()) {
+                    links.add(fullyQualifiedName);
+                } else {
+                    // If not resolved, add as-is
+                    System.out.println("Adding unresolved reference: " + reference);
+                    links.add(reference);
+                }
+            }
+        }
+        //System.out.println("Extracted links: " + links);
+        return new ArrayList<>(links);
     }
 
-    return links;
-}
+    private static String resolveFullyQualifiedName(String value, List<String> imports, String packageName) {
+        // Check if value matches any import
+        //System.out.println("Resolving fully qualified name for: " + value);
+        if (value == null || value.isEmpty()) {
+            return ""; // Return empty string if value is null or empty
+        }
+         // Check if value already contains a package (e.g., android.telephony.TelephonyManager)
+        if (value.contains(".")) {
+            System.out.println("Value already contains a package: " + value);
+            return value; // Treat it as a fully qualified name
+        }
+
+
+        for (String importEntry : imports) {
+            if (importEntry.endsWith(value)) {
+                System.out.println("Value already imported: " + importEntry);
+                return importEntry; // Fully qualified name found
+            }
+        }
+        // Check if value is in the same package
+        if (classExistsInPackage(value, packageName)) {
+            System.out.println("Value already in same package: " + value);
+            return packageName + "." + value;
+        }
+        
+        // If not found, return null
+        return "";
+    }
+
+
+    private static boolean classExistsInPackage(String className, String packageName) {
+        // Construct the fully qualified class name
+        try {
+            String package_path  = packageName.substring(packageName.indexOf('.') + 1);
+            // Convert package name to directory structure
+            Path packagePath = Paths.get(SOURCE_DIR, package_path.replace('.', '/'));
+            System.out.println("Scanning package path: " + packagePath+"."+className);
+            // Check if the class file exists in the package directory
+            return Files.walk(packagePath)
+                    .filter(Files::isRegularFile)
+                    .anyMatch(file -> file.getFileName().toString().equals(className + ".java"));
+        } catch (IOException e) {
+            System.err.println("Error scanning source files: " + e.getMessage());
+            return false;
+        }
+    }
+
+    private static List<String> getImportList(CompilationUnit cu) {
+        List<String> imports = new ArrayList<>();
+        cu.getImports().forEach(importDeclaration -> {
+            imports.add(importDeclaration.getNameAsString());
+        });
+        return imports;
+    }
 }

@@ -1,0 +1,890 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/view/autofill/AutofillManager.java",
+  "packageName" : "android.view.autofill",
+  "className" : "AutofillManager",
+  "comment" : "\n * <p>The {@link AutofillManager} class provides ways for apps and custom views to\n * integrate with the Autofill Framework lifecycle.\n *\n * <p>To learn about using Autofill in your app, read\n * the <a href=\"/guide/topics/text/autofill\">Autofill Framework</a> guides.\n *\n * <h3 id=\"autofill-lifecycle\">Autofill lifecycle</h3>\n *\n * <p>The autofill lifecycle starts with the creation of an autofill context associated with an\n * activity context. The autofill context is created when one of the following methods is called for\n * the first time in an activity context, and the current user has an enabled autofill service:\n *\n * <ul>\n *   <li>{@link #notifyViewEntered(View)}\n *   <li>{@link #notifyViewEntered(View, int, Rect)}\n *   <li>{@link #requestAutofill(View)}\n * </ul>\n *\n * <p>Typically, the context is automatically created when the first view of the activity is\n * focused because {@code View.onFocusChanged()} indirectly calls\n * {@link #notifyViewEntered(View)}. App developers can call {@link #requestAutofill(View)} to\n * explicitly create it (for example, a custom view developer could offer a contextual menu action\n * in a text-field view to let users manually request autofill).\n *\n * <p>After the context is created, the Android System creates a {@link android.view.ViewStructure}\n * that represents the view hierarchy by calling\n * {@link View#dispatchProvideAutofillStructure(android.view.ViewStructure, int)} in the root views\n * of all application windows. By default, {@code dispatchProvideAutofillStructure()} results in\n * subsequent calls to {@link View#onProvideAutofillStructure(android.view.ViewStructure, int)} and\n * {@link View#onProvideAutofillVirtualStructure(android.view.ViewStructure, int)} for each view in\n * the hierarchy.\n *\n * <p>The resulting {@link android.view.ViewStructure} is then passed to the autofill service, which\n * parses it looking for views that can be autofilled. If the service finds such views, it returns\n * a data structure to the Android System containing the following optional info:\n *\n * <ul>\n *   <li>Datasets used to autofill subsets of views in the activity.\n *   <li>Id of views that the service can save their values for future autofilling.\n * </ul>\n *\n * <p>When the service returns datasets, the Android System displays an autofill dataset picker\n * UI associated with the view, when the view is focused on and is part of a dataset.\n * The application can be notified when the UI is shown by registering an\n * {@link AutofillCallback} through {@link #registerCallback(AutofillCallback)}. When the user\n * selects a dataset from the UI, all views present in the dataset are autofilled, through\n * calls to {@link View#autofill(AutofillValue)} or {@link View#autofill(SparseArray)}.\n *\n * <p>When the service returns ids of savable views, the Android System keeps track of changes\n * made to these views, so they can be used to determine if the autofill save UI is shown later.\n *\n * <p>The context is then finished when one of the following occurs:\n *\n * <ul>\n *   <li>{@link #commit()} is called or all savable views are gone.\n *   <li>{@link #cancel()} is called.\n * </ul>\n *\n * <p>Finally, after the autofill context is commited (i.e., not cancelled), the Android System\n * shows an autofill save UI if the value of savable views have changed. If the user selects the\n * option to Save, the current value of the views is then sent to the autofill service.\n *\n * <h3 id=\"additional-notes\">Additional notes</h3>\n *\n * <p>It is safe to call <code>AutofillManager</code> methods from any thread.\n ",
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_ASSIST_STRUCTURE",
+    "type" : "String",
+    "comment" : "\n     * Intent extra: The assist structure which captures the filled screen.\n     *\n     * <p>\n     * Type: {@link android.app.assist.AssistStructure}\n     ",
+    "links" : [ "android.app.assist.AssistStructure" ]
+  }, {
+    "name" : "EXTRA_AUTHENTICATION_RESULT",
+    "type" : "String",
+    "comment" : "\n     * Intent extra: The result of an authentication operation. It is\n     * either a fully populated {@link android.service.autofill.FillResponse}\n     * or a fully populated {@link android.service.autofill.Dataset} if\n     * a response or a dataset is being authenticated respectively.\n     *\n     * <p>\n     * Type: {@link android.service.autofill.FillResponse} or a\n     * {@link android.service.autofill.Dataset}\n     ",
+    "links" : [ "android.service.autofill.Dataset", "android.service.autofill.FillResponse" ]
+  }, {
+    "name" : "EXTRA_CLIENT_STATE",
+    "type" : "String",
+    "comment" : "\n     * Intent extra: The optional extras provided by the\n     * {@link android.service.autofill.AutofillService}.\n     *\n     * <p>For example, when the service responds to a {@link\n     * android.service.autofill.FillCallback#onSuccess(android.service.autofill.FillResponse)} with\n     * a {@code FillResponse} that requires authentication, the Intent that launches the\n     * service authentication will contain the Bundle set by\n     * {@link android.service.autofill.FillResponse.Builder#setClientState(Bundle)} on this extra.\n     *\n     * <p>On Android {@link android.os.Build.VERSION_CODES#P} and higher, the autofill service\n     * can also add this bundle to the {@link Intent} set as the\n     * {@link android.app.Activity#setResult(int, Intent) result} for an authentication request,\n     * so the bundle can be recovered later on\n     * {@link android.service.autofill.SaveRequest#getClientState()}.\n     *\n     * <p>\n     * Type: {@link android.os.Bundle}\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#P", "android.os.Bundle", "android.service.autofill.FillResponse.Builder#setClientState(Bundle)", "android.content.Intent", "android.service.autofill.AutofillService", "android.service.autofill.FillCallback#onSuccess(android.service.autofill.FillResponse)", "android.app.Activity#setResult(int", "android.service.autofill.SaveRequest#getClientState()" ]
+  }, {
+    "name" : "EXTRA_RESTORE_SESSION_TOKEN",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_RESTORE_CROSS_ACTIVITY",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_AUGMENTED_AUTOFILL_CLIENT",
+    "type" : "String",
+    "comment" : "\n     * Internal extra used to pass a binder to the {@link IAugmentedAutofillManagerClient}.\n     *\n     * @hide\n     ",
+    "links" : [ "IAugmentedAutofillManagerClient" ]
+  }, {
+    "name" : "SESSION_ID_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAST_AUTOFILLED_DATA_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_START_SESSION",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_VIEW_ENTERED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_VIEW_EXITED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_VALUE_CHANGED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_RESPONSE_EXPIRED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "NO_LOGGING",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ADD_CLIENT_ENABLED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ADD_CLIENT_DEBUG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ADD_CLIENT_VERBOSE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ADD_CLIENT_ENABLED_FOR_AUGMENTED_AUTOFILL_ONLY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RECEIVER_FLAG_SESSION_FOR_AUGMENTED_AUTOFILL_ONLY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_LOGGING_LEVEL",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_MAX_PARTITIONS_SIZE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "AUTHENTICATION_ID_DATASET_ID_MASK",
+    "type" : "int",
+    "comment" : " Which bits in an authentication id are used for the dataset id ",
+    "links" : [ ]
+  }, {
+    "name" : "AUTHENTICATION_ID_DATASET_ID_SHIFT",
+    "type" : "int",
+    "comment" : " How many bits in an authentication id are used for the dataset id ",
+    "links" : [ ]
+  }, {
+    "name" : "AUTHENTICATION_ID_DATASET_ID_UNDEFINED",
+    "type" : "int",
+    "comment" : " @hide The index for an undefined data set ",
+    "links" : [ ]
+  }, {
+    "name" : "PENDING_UI_OPERATION_CANCEL",
+    "type" : "int",
+    "comment" : "\n     * Used on {@link #onPendingSaveUi(int, IBinder)} to cancel the pending UI.\n     *\n     * @hide\n     ",
+    "links" : [ "#onPendingSaveUi(int" ]
+  }, {
+    "name" : "PENDING_UI_OPERATION_RESTORE",
+    "type" : "int",
+    "comment" : "\n     * Used on {@link #onPendingSaveUi(int, IBinder)} to restore the pending UI.\n     *\n     * @hide\n     ",
+    "links" : [ "#onPendingSaveUi(int" ]
+  }, {
+    "name" : "STATE_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * Initial state of the autofill context, set when there is no session (i.e., when\n     * {@link #mSessionId} is {@link #NO_SESSION}).\n     *\n     * <p>In this state, app callbacks (such as {@link #notifyViewEntered(View)}) are notified to\n     * the server.\n     *\n     * @hide\n     ",
+    "links" : [ "#mSessionId", "#notifyViewEntered(View)", "#NO_SESSION" ]
+  }, {
+    "name" : "STATE_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * State where the autofill context hasn't been {@link #commit() finished} nor\n     * {@link #cancel() canceled} yet.\n     *\n     * @hide\n     ",
+    "links" : [ "#cancel()", "#commit()" ]
+  }, {
+    "name" : "STATE_FINISHED",
+    "type" : "int",
+    "comment" : "\n     * State where the autofill context was finished by the server because the autofill\n     * service could not autofill the activity.\n     *\n     * <p>In this state, most apps callback (such as {@link #notifyViewEntered(View)}) are ignored,\n     * exception {@link #requestAutofill(View)} (and {@link #requestAutofill(View, int, Rect)}).\n     *\n     * @hide\n     ",
+    "links" : [ "#requestAutofill(View", "#notifyViewEntered(View)", "#requestAutofill(View)" ]
+  }, {
+    "name" : "STATE_SHOWING_SAVE_UI",
+    "type" : "int",
+    "comment" : "\n     * State where the autofill context has been {@link #commit() finished} but the server still has\n     * a session because the Save UI hasn't been dismissed yet.\n     *\n     * @hide\n     ",
+    "links" : [ "#commit()" ]
+  }, {
+    "name" : "STATE_DISABLED_BY_SERVICE",
+    "type" : "int",
+    "comment" : "\n     * State where the autofill is disabled because the service cannot autofill the activity at all.\n     *\n     * <p>In this state, every call is ignored, even {@link #requestAutofill(View)}\n     * (and {@link #requestAutofill(View, int, Rect)}).\n     *\n     * @hide\n     ",
+    "links" : [ "#requestAutofill(View", "#requestAutofill(View)" ]
+  }, {
+    "name" : "STATE_UNKNOWN_COMPAT_MODE",
+    "type" : "int",
+    "comment" : "\n     * Same as {@link #STATE_UNKNOWN}, but used on\n     * {@link AutofillManagerClient#setSessionFinished(int, List)} when the session was finished\n     * because the URL bar changed on client mode\n     *\n     * @hide\n     ",
+    "links" : [ "#STATE_UNKNOWN", "#setSessionFinished(int" ]
+  }, {
+    "name" : "STATE_UNKNOWN_FAILED",
+    "type" : "int",
+    "comment" : "\n     * Same as {@link #STATE_UNKNOWN}, but used on\n     * {@link AutofillManagerClient#setSessionFinished(int, List)} when the session was finished\n     * because the service failed to fullfil a request.\n     *\n     * @hide\n     ",
+    "links" : [ "#STATE_UNKNOWN", "#setSessionFinished(int" ]
+  }, {
+    "name" : "FC_SERVICE_TIMEOUT",
+    "type" : "int",
+    "comment" : "\n     * Timeout in ms for calls to the field classification service.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC_CALLS_TIMEOUT_MS",
+    "type" : "int",
+    "comment" : "\n     * Timeout for calls to system_server.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_TEMP_AUGMENTED_SERVICE_DURATION_MS",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_SMART_SUGGESTION_OFF",
+    "type" : "int",
+    "comment" : "\n     * Disables Augmented Autofill.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_SMART_SUGGESTION_SYSTEM",
+    "type" : "int",
+    "comment" : "\n     * Displays the Augment Autofill window using the same mechanism (such as a popup-window\n     * attached to the focused view) as the standard autofill.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEVICE_CONFIG_AUTOFILL_SMART_SUGGESTION_SUPPORTED_MODES",
+    "type" : "String",
+    "comment" : "\n     * {@code DeviceConfig} property used to set which Smart Suggestion modes for Augmented Autofill\n     * are available.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEVICE_CONFIG_AUGMENTED_SERVICE_IDLE_UNBIND_TIMEOUT",
+    "type" : "String",
+    "comment" : "\n     * Sets how long (in ms) the augmented autofill service is bound while idle.\n     *\n     * <p>Use {@code 0} to keep it permanently bound.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEVICE_CONFIG_AUGMENTED_SERVICE_REQUEST_TIMEOUT",
+    "type" : "String",
+    "comment" : "\n     * Sets how long (in ms) the augmented autofill service request is killed if not replied.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_OK",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT_CODE_NOT_SERVICE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "mMetricsLogger",
+    "type" : "MetricsLogger",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NO_SESSION",
+    "type" : "int",
+    "comment" : "\n     * There is currently no session running.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IAutoFillManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mServiceClient",
+    "type" : "IAutoFillManagerClient",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mServiceClientCleaner",
+    "type" : "Cleaner",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAugmentedAutofillServiceClient",
+    "type" : "IAugmentedAutofillManagerClient",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallback",
+    "type" : "AutofillCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSessionId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mState",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEnabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastAutofilledData",
+    "type" : "ParcelableMap",
+    "comment" : " If a view changes to this mapping the autofill operation was successful ",
+    "links" : [ ]
+  }, {
+    "name" : "mTrackedViews",
+    "type" : "TrackedViews",
+    "comment" : " If view tracking is enabled, contains the tracking state ",
+    "links" : [ ]
+  }, {
+    "name" : "mFillableIds",
+    "type" : "ArraySet<AutofillId>",
+    "comment" : " Views that are only tracked because they are fillable and could be anchoring the UI. ",
+    "links" : [ ]
+  }, {
+    "name" : "mIdShownFillUi",
+    "type" : "AutofillId",
+    "comment" : " id of last requested autofill ui ",
+    "links" : [ ]
+  }, {
+    "name" : "mEnteredIds",
+    "type" : "ArraySet<AutofillId>",
+    "comment" : "\n     * Views that were already \"entered\" - if they're entered again when the session is not active,\n     * they're ignored\n     * ",
+    "links" : [ ]
+  }, {
+    "name" : "mEnteredForAugmentedAutofillIds",
+    "type" : "Set<AutofillId>",
+    "comment" : "\n     * Views that were otherwised not important for autofill but triggered a session because the\n     * context is whitelisted for augmented autofill.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSaveTriggerId",
+    "type" : "AutofillId",
+    "comment" : " If set, session is commited when the field is clicked. ",
+    "links" : [ ]
+  }, {
+    "name" : "mOnInvisibleCalled",
+    "type" : "boolean",
+    "comment" : " set to true when onInvisibleForAutofill is called, used by onAuthenticationResult ",
+    "links" : [ ]
+  }, {
+    "name" : "mSaveOnFinish",
+    "type" : "boolean",
+    "comment" : " If set, session is commited when the activity is finished; otherwise session is canceled. ",
+    "links" : [ ]
+  }, {
+    "name" : "mCompatibilityBridge",
+    "type" : "CompatibilityBridge",
+    "comment" : " If compatibility mode is enabled - this is a bridge to interact with a11y ",
+    "links" : [ ]
+  }, {
+    "name" : "mOptions",
+    "type" : "AutofillOptions",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mForAugmentedAutofillOnly",
+    "type" : "boolean",
+    "comment" : " When set, session is only used for augmented autofill requests. ",
+    "links" : [ ]
+  }, {
+    "name" : "mEnabledForAugmentedAutofillOnly",
+    "type" : "boolean",
+    "comment" : "\n     * When set, standard autofill is disabled, but sessions can still be created for augmented\n     * autofill only.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_ENABLED",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_RESET_SESSION",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_RESET_CLIENT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_DEBUG",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_VERBOSE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "SET_STATE_FLAG_FOR_AUTOFILL_ONLY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static int makeAuthenticationId(int requestId, int datasetId)",
+    "returnType" : "int",
+    "comment" : "\n     * Makes an authentication id from a request id and a dataset id.\n     *\n     * @param requestId The request id.\n     * @param datasetId The dataset id.\n     * @return The authentication id.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getRequestIdFromAuthenticationId(int authRequestId)",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the request id from an authentication id.\n     *\n     * @param authRequestId The authentication id.\n     * @return The request id.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getDatasetIdFromAuthenticationId(int authRequestId)",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the dataset id from an authentication id.\n     *\n     * @param authRequestId The authentication id.\n     * @return The dataset id.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void enableCompatibilityMode()",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onCreate(Bundle savedInstanceState)",
+    "returnType" : "void",
+    "comment" : "\n     * Restore state after activity lifecycle\n     *\n     * @param savedInstanceState The state to be restored\n     *\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onVisibleForAutofill()",
+    "returnType" : "void",
+    "comment" : "\n     * Called once the client becomes visible.\n     *\n     * @see AutofillClient#autofillClientIsVisibleForAutofill()\n     *\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onInvisibleForAutofill(boolean isExpiredResponse)",
+    "returnType" : "void",
+    "comment" : "\n     * Called once the client becomes invisible.\n     *\n     * @see AutofillClient#autofillClientIsVisibleForAutofill()\n     *\n     * @param isExpiredResponse The response has expired or not\n     *\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onSaveInstanceState(Bundle outState)",
+    "returnType" : "void",
+    "comment" : "\n     * Save state before activity lifecycle\n     *\n     * @param outState Place to store the state\n     *\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isCompatibilityModeEnabledLocked()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks whether autofill is enabled for the current user.\n     *\n     * <p>Typically used to determine whether the option to explicitly request autofill should\n     * be offered - see {@link #requestAutofill(View)}.\n     *\n     * @return whether autofill is enabled for the current user.\n     ",
+    "links" : [ "#requestAutofill(View)" ]
+  }, {
+    "name" : "public FillEventHistory getFillEventHistory()",
+    "returnType" : "FillEventHistory",
+    "comment" : "\n     * Should always be called from {@link AutofillService#getFillEventHistory()}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.service.autofill.AutofillService#getFillEventHistory()" ]
+  }, {
+    "name" : "public void requestAutofill(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Explicitly requests a new autofill context.\n     *\n     * <p>Normally, the autofill context is automatically started if necessary when\n     * {@link #notifyViewEntered(View)} is called, but this method should be used in the\n     * cases where it must be explicitly started. For example, when the view offers an AUTOFILL\n     * option on its contextual overflow menu, and the user selects it.\n     *\n     * @param view view requesting the new autofill context.\n     ",
+    "links" : [ "#notifyViewEntered(View)" ]
+  }, {
+    "name" : " void requestAutofillFromNewSession(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Explicitly cancels the current session and requests a new autofill context.\n     *\n     * <p>Normally, the autofill context is automatically started if necessary when\n     * {@link #notifyViewEntered(View)} is called, but this method should be used in\n     * cases where it must be explicitly started or restarted. Currently, this method should only\n     * be called by\n     * {@link android.service.autofill.augmented.AugmentedAutofillService#requestAutofill(\n     * ComponentName, AutofillId)} to cancel the current session and trigger the autofill flow in\n     * a new session, giving the autofill service or the augmented autofill service a chance to\n     * send updated suggestions.\n     *\n     * @param view view requesting the new autofill context.\n     ",
+    "links" : [ "android.service.autofill.augmented.AugmentedAutofillService#requestAutofill(", "#notifyViewEntered(View)" ]
+  }, {
+    "name" : "public void requestAutofill(@NonNull View view, int virtualId, @NonNull Rect absBounds)",
+    "returnType" : "void",
+    "comment" : "\n     * Explicitly requests a new autofill context for virtual views.\n     *\n     * <p>Normally, the autofill context is automatically started if necessary when\n     * {@link #notifyViewEntered(View, int, Rect)} is called, but this method should be used in the\n     * cases where it must be explicitly started. For example, when the virtual view offers an\n     * AUTOFILL option on its contextual overflow menu, and the user selects it.\n     *\n     * <p>The virtual view boundaries must be absolute screen coordinates. For example, if the\n     * parent view uses {@code bounds} to draw the virtual view inside its Canvas,\n     * the absolute bounds could be calculated by:\n     *\n     * <pre class=\"prettyprint\">\n     *   int offset[] = new int[2];\n     *   getLocationOnScreen(offset);\n     *   Rect absBounds = new Rect(bounds.left + offset[0],\n     *       bounds.top + offset[1],\n     *       bounds.right + offset[0], bounds.bottom + offset[1]);\n     * </pre>\n     *\n     * @param view the virtual view parent.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     * @param absBounds absolute boundaries of the virtual view in the screen.\n     ",
+    "links" : [ "#notifyViewEntered(View" ]
+  }, {
+    "name" : "public void notifyViewEntered(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a {@link View} that supports autofill is entered.\n     *\n     * @param view {@link View} that was entered.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "private boolean shouldIgnoreViewEnteredLocked(@NonNull AutofillId id, int flags)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isClientVisibleForAutofillLocked()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isClientDisablingEnterExitEvent()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyViewEntered(@NonNull View view, int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private AutofillCallback notifyViewEnteredLocked(@NonNull View view, int flags)",
+    "returnType" : "AutofillCallback",
+    "comment" : " Returns AutofillCallback if need fire EVENT_INPUT_UNAVAILABLE ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyViewExited(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a {@link View} that supports autofill is exited.\n     *\n     * @param view {@link View} that was exited.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : " void notifyViewExitedLocked(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyViewVisibilityChanged(@NonNull View view, boolean isVisible)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a {@link View view's} visibility changed.\n     *\n     * @param view {@link View} that was exited.\n     * @param isVisible visible if the view is visible in the view hierarchy.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "public void notifyViewVisibilityChanged(@NonNull View view, int virtualId, boolean isVisible)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a virtual view's visibility changed.\n     *\n     * @param view {@link View} that was exited.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     * @param isVisible visible if the view is visible in the view hierarchy.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "private void notifyViewVisibilityChangedInternal(@NonNull View view, int virtualId, boolean isVisible, boolean virtual)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a view/virtual view's visibility changed.\n     *\n     * @param view {@link View} that was exited.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     * @param isVisible visible if the view is visible in the view hierarchy.\n     * @param virtual Whether the view is virtual.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "public void notifyViewEntered(@NonNull View view, int virtualId, @NonNull Rect absBounds)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a virtual view that supports autofill is entered.\n     *\n     * <p>The virtual view boundaries must be absolute screen coordinates. For example, if the\n     * parent, non-virtual view uses {@code bounds} to draw the virtual view inside its Canvas,\n     * the absolute bounds could be calculated by:\n     *\n     * <pre class=\"prettyprint\">\n     *   int offset[] = new int[2];\n     *   getLocationOnScreen(offset);\n     *   Rect absBounds = new Rect(bounds.left + offset[0],\n     *       bounds.top + offset[1],\n     *       bounds.right + offset[0], bounds.bottom + offset[1]);\n     * </pre>\n     *\n     * @param view the virtual view parent.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     * @param absBounds absolute boundaries of the virtual view in the screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyViewEntered(View view, int virtualId, Rect bounds, int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private AutofillCallback notifyViewEnteredLocked(View view, int virtualId, Rect bounds, int flags)",
+    "returnType" : "AutofillCallback",
+    "comment" : " Returns AutofillCallback if need fire EVENT_INPUT_UNAVAILABLE ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addEnteredIdLocked(@NonNull AutofillId id)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyViewExited(@NonNull View view, int virtualId)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a virtual view that supports autofill is exited.\n     *\n     * @param view the virtual view parent.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyViewExitedLocked(@NonNull View view, int virtualId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyValueChanged(View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate the value of an autofillable {@link View} changed.\n     *\n     * @param view view whose value changed.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "public void notifyValueChanged(View view, int virtualId, AutofillValue value)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate the value of an autofillable virtual view has changed.\n     *\n     * @param view the virtual view parent.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     * @param value new value of the child.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyViewClicked(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate a {@link View} is clicked.\n     *\n     * @param view view that has been clicked.\n     ",
+    "links" : [ "android.view.View" ]
+  }, {
+    "name" : "public void notifyViewClicked(@NonNull View view, int virtualId)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate a virtual view has been clicked.\n     *\n     * @param view the virtual view parent.\n     * @param virtualId id identifying the virtual child inside the parent view.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyViewClicked(AutofillId id)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onActivityFinishing()",
+    "returnType" : "void",
+    "comment" : "\n     * Called by {@link android.app.Activity} to commit or cancel the session on finish.\n     *\n     * @hide\n     ",
+    "links" : [ "android.app.Activity" ]
+  }, {
+    "name" : "public void commit()",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate the current autofill context should be commited.\n     *\n     * <p>This method is typically called by {@link View Views} that manage virtual views; for\n     * example, when the view is rendering an {@code HTML} page with a form and virtual views\n     * that represent the HTML elements, it should call this method after the form is submitted and\n     * another page is rendered.\n     *\n     * <p><b>Note:</b> This method does not need to be called on regular application lifecycle\n     * methods such as {@link android.app.Activity#finish()}.\n     ",
+    "links" : [ "android.app.Activity#finish()", "android.view.View" ]
+  }, {
+    "name" : "private void commitLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void cancel()",
+    "returnType" : "void",
+    "comment" : "\n     * Called to indicate the current autofill context should be cancelled.\n     *\n     * <p>This method is typically called by {@link View Views} that manage virtual views; for\n     * example, when the view is rendering an {@code HTML} page with a form and virtual views\n     * that represent the HTML elements, it should call this method if the user does not post the\n     * form but moves to another form in this page.\n     *\n     * <p><b>Note:</b> This method does not need to be called on regular application lifecycle\n     * methods such as {@link android.app.Activity#finish()}.\n     ",
+    "links" : [ "android.app.Activity#finish()", "android.view.View" ]
+  }, {
+    "name" : "private void cancelLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void disableOwnedAutofillServices()",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disableAutofillServices()",
+    "returnType" : "void",
+    "comment" : "\n     * If the app calling this API has enabled autofill services they\n     * will be disabled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasEnabledAutofillServices()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if the calling application provides a {@link AutofillService} that is\n     * enabled for the current user, or {@code false} otherwise.\n     ",
+    "links" : [ "android.service.autofill.AutofillService" ]
+  }, {
+    "name" : "public ComponentName getAutofillServiceComponentName()",
+    "returnType" : "ComponentName",
+    "comment" : "\n     * Returns the component name of the {@link AutofillService} that is enabled for the current\n     * user.\n     ",
+    "links" : [ "android.service.autofill.AutofillService" ]
+  }, {
+    "name" : "public String getUserDataId()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets the id of the {@link UserData} used for\n     * <a href=\"AutofillService.html#FieldClassification\">field classification</a>.\n     *\n     * <p>This method is useful when the service must check the status of the {@link UserData} in\n     * the device without fetching the whole object.\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it's ignored if the caller currently doesn't have an enabled autofill service for\n     * the user.\n     *\n     * @return id of the {@link UserData} previously set by {@link #setUserData(UserData)}\n     * or {@code null} if it was reset or if the caller currently does not have an enabled autofill\n     * service for the user.\n     ",
+    "links" : [ "#setUserData(UserData)", "android.service.autofill.UserData" ]
+  }, {
+    "name" : "public UserData getUserData()",
+    "returnType" : "UserData",
+    "comment" : "\n     * Gets the user data used for\n     * <a href=\"AutofillService.html#FieldClassification\">field classification</a>.\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it's ignored if the caller currently doesn't have an enabled autofill service for\n     * the user.\n     *\n     * @return value previously set by {@link #setUserData(UserData)} or {@code null} if it was\n     * reset or if the caller currently does not have an enabled autofill service for the user.\n     ",
+    "links" : [ "#setUserData(UserData)" ]
+  }, {
+    "name" : "public void setUserData(@Nullable UserData userData)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the {@link UserData} used for\n     * <a href=\"AutofillService.html#FieldClassification\">field classification</a>\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it's ignored if the caller currently doesn't have an enabled autofill service for\n     * the user.\n     ",
+    "links" : [ "android.service.autofill.UserData" ]
+  }, {
+    "name" : "public boolean isFieldClassificationEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if <a href=\"AutofillService.html#FieldClassification\">field classification</a> is\n     * enabled.\n     *\n     * <p>As field classification is an expensive operation, it could be disabled, either\n     * temporarily (for example, because the service exceeded a rate-limit threshold) or\n     * permanently (for example, because the device is a low-level device).\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it's ignored if the caller currently doesn't have an enabled autofill service for\n     * the user.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getDefaultFieldClassificationAlgorithm()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets the name of the default algorithm used for\n     * <a href=\"AutofillService.html#FieldClassification\">field classification</a>.\n     *\n     * <p>The default algorithm is used when the algorithm on {@link UserData} is invalid or not\n     * set.\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it's ignored if the caller currently doesn't have an enabled autofill service for\n     * the user.\n     ",
+    "links" : [ "android.service.autofill.UserData" ]
+  }, {
+    "name" : "public List<String> getAvailableFieldClassificationAlgorithms()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Gets the name of all algorithms currently available for\n     * <a href=\"AutofillService.html#FieldClassification\">field classification</a>.\n     *\n     * <p><b>Note:</b> This method should only be called by an app providing an autofill service,\n     * and it returns an empty list if the caller currently doesn't have an enabled autofill service\n     * for the user.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAutofillSupported()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if autofill is supported by the current device and\n     * is supported for this user.\n     *\n     * <p>Autofill is typically supported, but it could be unsupported in cases like:\n     * <ol>\n     *     <li>Low-end devices.\n     *     <li>Device policy rules that forbid its usage.\n     * </ol>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private AutofillClient getClient()",
+    "returnType" : "AutofillClient",
+    "comment" : " Note: don't need to use locked suffix because mContext is final.",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAutofillUiShowing()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check if autofill ui is showing, must be called on UI thread.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAuthenticationResult(int authenticationId, Intent data, View focusView)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public AutofillId getNextAutofillId()",
+    "returnType" : "AutofillId",
+    "comment" : "\n     * Gets the next unique autofill ID for the activity context.\n     *\n     * <p>Typically used to manage views whose content is recycled - see\n     * {@link View#setAutofillId(AutofillId)} for more info.\n     *\n     * @return An ID that is unique in the activity, or {@code null} if autofill is not supported in\n     * the {@link Context} associated with this {@link AutofillManager}.\n     ",
+    "links" : [ "android.content.Context", "android.view.View#setAutofillId(AutofillId)", "android.view.autofill.AutofillManager" ]
+  }, {
+    "name" : "private static AutofillId getAutofillId(View parent, int virtualId)",
+    "returnType" : "AutofillId",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void startSessionLocked(@NonNull AutofillId id, @NonNull Rect bounds, @NonNull AutofillValue value, int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void finishSessionLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void cancelSessionLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void resetSessionLocked(boolean resetEnteredIds)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateSessionLocked(AutofillId id, Rect bounds, AutofillValue value, int action, int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureServiceClientAddedIfNeededLocked()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean startAutofillIfNeededLocked(View view)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerCallback(@Nullable AutofillCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a {@link AutofillCallback} to receive autofill events.\n     *\n     * @param callback callback to receive events.\n     ",
+    "links" : [ "AutofillCallback" ]
+  }, {
+    "name" : "public void unregisterCallback(@Nullable AutofillCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters a {@link AutofillCallback} to receive autofill events.\n     *\n     * @param callback callback to stop receiving events.\n     ",
+    "links" : [ "AutofillCallback" ]
+  }, {
+    "name" : "public void setAugmentedAutofillWhitelist(@Nullable Set<String> packages, @Nullable Set<ComponentName> activities)",
+    "returnType" : "void",
+    "comment" : "\n     * Explicitly limits augmented autofill to the given packages and activities.\n     *\n     * <p>To reset the whitelist, call it passing {@code null} to both arguments.\n     *\n     * <p>Useful when the service wants to restrict augmented autofill to a category of apps, like\n     * apps that uses addresses. For example, if the service wants to support augmented autofill on\n     * all activities of app {@code AddressApp1} and just activities {@code act1} and {@code act2}\n     * of {@code AddressApp2}, it would call:\n     * {@code setAugmentedAutofillWhitelist(Arrays.asList(\"AddressApp1\"),\n     * Arrays.asList(new ComponentName(\"AddressApp2\", \"act1\"),\n     * new ComponentName(\"AddressApp2\", \"act2\")));}\n     *\n     * <p><b>Note:</b> This method should only be called by the app providing the augmented autofill\n     * service, and it's ignored if the caller isn't it.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyViewEnteredForAugmentedAutofill(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies that a non-autofillable view was entered because the activity is whitelisted for\n     * augmented autofill.\n     *\n     * <p>This method is necessary to set the right flag on start, so the server-side session\n     * doesn't trigger the standard autofill workflow, but the augmented's instead.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void requestShowFillUi(int sessionId, AutofillId id, int width, int height, Rect anchorBounds, IAutofillWindowPresenter presenter)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void authenticate(int sessionId, int authenticationId, IntentSender intent, Intent fillInIntent, boolean authenticateInline)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispatchUnhandledKey(int sessionId, AutofillId id, KeyEvent keyEvent)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setState(int flags)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setAutofilledIfValuesIs(@NonNull View view, @Nullable AutofillValue targetValue, boolean hideHighlight)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets a view as autofilled if the current value is the {code targetValue}.\n     *\n     * @param view The view that is to be autofilled\n     * @param targetValue The value we want to fill into view\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void autofill(int sessionId, List<AutofillId> ids, List<AutofillValue> values, boolean hideHighlight)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private LogMaker newLog(int category)",
+    "returnType" : "LogMaker",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setTrackedViews(int sessionId, @Nullable AutofillId[] trackedIds, boolean saveOnAllViewsInvisible, boolean saveOnFinish, @Nullable AutofillId[] fillableIds, @Nullable AutofillId saveTriggerId)",
+    "returnType" : "void",
+    "comment" : "\n     *  Set the tracked views.\n     *\n     * @param trackedIds The views to be tracked.\n     * @param saveOnAllViewsInvisible Finish the session once all tracked views are invisible.\n     * @param saveOnFinish Finish the session once the activity is finished.\n     * @param fillableIds Views that might anchor FillUI.\n     * @param saveTriggerId View that when clicked triggers commit().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setNotifyOnClickLocked(@NonNull AutofillId id, boolean notify)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSaveUiState(int sessionId, boolean shown)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSessionFinished(int newState, @Nullable List<AutofillId> autofillableIds)",
+    "returnType" : "void",
+    "comment" : "\n     * Marks the state of the session as finished.\n     *\n     * @param newState {@link #STATE_FINISHED} (because the autofill service returned a {@code null}\n     *  FillResponse), {@link #STATE_UNKNOWN} (because the session was removed),\n     *  {@link #STATE_UNKNOWN_COMPAT_MODE} (beucase the session was finished when the URL bar\n     *  changed on compat mode), {@link #STATE_UNKNOWN_FAILED} (because the session was finished\n     *  when the service failed to fullfil the request, or {@link #STATE_DISABLED_BY_SERVICE}\n     *  (because the autofill service or {@link #STATE_DISABLED_BY_SERVICE} (because the autofill\n     *  service disabled further autofill requests for the activity).\n     * @param autofillableIds list of ids that could trigger autofill, use to not handle a new\n     *  session when they're entered.\n     ",
+    "links" : [ "#STATE_DISABLED_BY_SERVICE", "#STATE_UNKNOWN_COMPAT_MODE", "#STATE_FINISHED", "#STATE_UNKNOWN_FAILED", "#STATE_UNKNOWN" ]
+  }, {
+    "name" : "private void getAugmentedAutofillClient(@NonNull IResultReceiver result)",
+    "returnType" : "void",
+    "comment" : "\n     * Gets a {@link AugmentedAutofillManagerClient} for this {@link AutofillManagerClient}.\n     *\n     * <p>These are 2 distinct objects because we need to restrict what the Augmented Autofill\n     * service can do (which is defined by {@code IAugmentedAutofillManagerClient.aidl}).\n     ",
+    "links" : [ "AutofillManagerClient", "AugmentedAutofillManagerClient" ]
+  }, {
+    "name" : "private void requestShowSoftInput(@NonNull AutofillId id)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void requestShowSoftInputInViewThread(@NonNull View view)",
+    "returnType" : "void",
+    "comment" : " This method must be called from within the View thread.",
+    "links" : [ ]
+  }, {
+    "name" : "public void requestHideFillUi()",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void requestHideFillUi(AutofillId id, boolean force)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void requestHideFillUi(AutofillId id, View anchor)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyDisableAutofill(long disableDuration, ComponentName componentName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void notifyReenableAutofill()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyNoFillUi(int sessionId, AutofillId id, int sessionFinishedState)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyCallback(int sessionId, AutofillId id, @AutofillCallback.AutofillEventType int event)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private View findView(@NonNull AutofillId autofillId)",
+    "returnType" : "View",
+    "comment" : "\n     * Find a single view by its id.\n     *\n     * @param autofillId The autofill id of the view\n     *\n     * @return The view or {@code null} if view was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasAutofillFeature()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onPendingSaveUi(int operation, IBinder token)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(String outerPrefix, PrintWriter pw)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private String getStateAsStringLocked()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getStateAsString(int state)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getSmartSuggestionModeToString(@SmartSuggestionMode int flags)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isActiveLocked()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isDisabledByServiceLocked()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isFinishedLocked()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void post(Runnable runnable)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "TAG", "EXTRA_ASSIST_STRUCTURE", "EXTRA_AUTHENTICATION_RESULT", "EXTRA_CLIENT_STATE", "EXTRA_RESTORE_SESSION_TOKEN", "EXTRA_RESTORE_CROSS_ACTIVITY", "EXTRA_AUGMENTED_AUTOFILL_CLIENT", "SESSION_ID_TAG", "STATE_TAG", "LAST_AUTOFILLED_DATA_TAG", "ACTION_START_SESSION", "ACTION_VIEW_ENTERED", "ACTION_VIEW_EXITED", "ACTION_VALUE_CHANGED", "ACTION_RESPONSE_EXPIRED", "NO_LOGGING", "FLAG_ADD_CLIENT_ENABLED", "FLAG_ADD_CLIENT_DEBUG", "FLAG_ADD_CLIENT_VERBOSE", "FLAG_ADD_CLIENT_ENABLED_FOR_AUGMENTED_AUTOFILL_ONLY", "RECEIVER_FLAG_SESSION_FOR_AUGMENTED_AUTOFILL_ONLY", "DEFAULT_LOGGING_LEVEL", "DEFAULT_MAX_PARTITIONS_SIZE", "AUTHENTICATION_ID_DATASET_ID_MASK", "AUTHENTICATION_ID_DATASET_ID_SHIFT", "AUTHENTICATION_ID_DATASET_ID_UNDEFINED", "PENDING_UI_OPERATION_CANCEL", "PENDING_UI_OPERATION_RESTORE", "STATE_UNKNOWN", "STATE_ACTIVE", "STATE_FINISHED", "STATE_SHOWING_SAVE_UI", "STATE_DISABLED_BY_SERVICE", "STATE_UNKNOWN_COMPAT_MODE", "STATE_UNKNOWN_FAILED", "FC_SERVICE_TIMEOUT", "SYNC_CALLS_TIMEOUT_MS", "MAX_TEMP_AUGMENTED_SERVICE_DURATION_MS", "FLAG_SMART_SUGGESTION_OFF", "FLAG_SMART_SUGGESTION_SYSTEM", "DEVICE_CONFIG_AUTOFILL_SMART_SUGGESTION_SUPPORTED_MODES", "DEVICE_CONFIG_AUGMENTED_SERVICE_IDLE_UNBIND_TIMEOUT", "DEVICE_CONFIG_AUGMENTED_SERVICE_REQUEST_TIMEOUT", "RESULT_OK", "RESULT_CODE_NOT_SERVICE", "mMetricsLogger", "NO_SESSION", "mService", "mLock", "mServiceClient", "mServiceClientCleaner", "mAugmentedAutofillServiceClient", "mCallback", "mContext", "mSessionId", "mState", "mEnabled", "mLastAutofilledData", "mTrackedViews", "mFillableIds", "mIdShownFillUi", "mEnteredIds", "mEnteredForAugmentedAutofillIds", "mSaveTriggerId", "mOnInvisibleCalled", "mSaveOnFinish", "mCompatibilityBridge", "mOptions", "mForAugmentedAutofillOnly", "mEnabledForAugmentedAutofillOnly", "SET_STATE_FLAG_ENABLED", "SET_STATE_FLAG_RESET_SESSION", "SET_STATE_FLAG_RESET_CLIENT", "SET_STATE_FLAG_DEBUG", "SET_STATE_FLAG_VERBOSE", "SET_STATE_FLAG_FOR_AUTOFILL_ONLY" ],
+  "methodNames" : [ "public static int makeAuthenticationId(int requestId, int datasetId)", "public static int getRequestIdFromAuthenticationId(int authRequestId)", "public static int getDatasetIdFromAuthenticationId(int authRequestId)", "public void enableCompatibilityMode()", "public void onCreate(Bundle savedInstanceState)", "public void onVisibleForAutofill()", "public void onInvisibleForAutofill(boolean isExpiredResponse)", "public void onSaveInstanceState(Bundle outState)", "public boolean isCompatibilityModeEnabledLocked()", "public boolean isEnabled()", "public FillEventHistory getFillEventHistory()", "public void requestAutofill(@NonNull View view)", " void requestAutofillFromNewSession(@NonNull View view)", "public void requestAutofill(@NonNull View view, int virtualId, @NonNull Rect absBounds)", "public void notifyViewEntered(@NonNull View view)", "private boolean shouldIgnoreViewEnteredLocked(@NonNull AutofillId id, int flags)", "private boolean isClientVisibleForAutofillLocked()", "private boolean isClientDisablingEnterExitEvent()", "private void notifyViewEntered(@NonNull View view, int flags)", "private AutofillCallback notifyViewEnteredLocked(@NonNull View view, int flags)", "public void notifyViewExited(@NonNull View view)", " void notifyViewExitedLocked(@NonNull View view)", "public void notifyViewVisibilityChanged(@NonNull View view, boolean isVisible)", "public void notifyViewVisibilityChanged(@NonNull View view, int virtualId, boolean isVisible)", "private void notifyViewVisibilityChangedInternal(@NonNull View view, int virtualId, boolean isVisible, boolean virtual)", "public void notifyViewEntered(@NonNull View view, int virtualId, @NonNull Rect absBounds)", "private void notifyViewEntered(View view, int virtualId, Rect bounds, int flags)", "private AutofillCallback notifyViewEnteredLocked(View view, int virtualId, Rect bounds, int flags)", "private void addEnteredIdLocked(@NonNull AutofillId id)", "public void notifyViewExited(@NonNull View view, int virtualId)", "private void notifyViewExitedLocked(@NonNull View view, int virtualId)", "public void notifyValueChanged(View view)", "public void notifyValueChanged(View view, int virtualId, AutofillValue value)", "public void notifyViewClicked(@NonNull View view)", "public void notifyViewClicked(@NonNull View view, int virtualId)", "private void notifyViewClicked(AutofillId id)", "public void onActivityFinishing()", "public void commit()", "private void commitLocked()", "public void cancel()", "private void cancelLocked()", "public void disableOwnedAutofillServices()", "public void disableAutofillServices()", "public boolean hasEnabledAutofillServices()", "public ComponentName getAutofillServiceComponentName()", "public String getUserDataId()", "public UserData getUserData()", "public void setUserData(@Nullable UserData userData)", "public boolean isFieldClassificationEnabled()", "public String getDefaultFieldClassificationAlgorithm()", "public List<String> getAvailableFieldClassificationAlgorithms()", "public boolean isAutofillSupported()", "private AutofillClient getClient()", "public boolean isAutofillUiShowing()", "public void onAuthenticationResult(int authenticationId, Intent data, View focusView)", "public AutofillId getNextAutofillId()", "private static AutofillId getAutofillId(View parent, int virtualId)", "private void startSessionLocked(@NonNull AutofillId id, @NonNull Rect bounds, @NonNull AutofillValue value, int flags)", "private void finishSessionLocked()", "private void cancelSessionLocked()", "private void resetSessionLocked(boolean resetEnteredIds)", "private void updateSessionLocked(AutofillId id, Rect bounds, AutofillValue value, int action, int flags)", "private void ensureServiceClientAddedIfNeededLocked()", "private boolean startAutofillIfNeededLocked(View view)", "public void registerCallback(@Nullable AutofillCallback callback)", "public void unregisterCallback(@Nullable AutofillCallback callback)", "public void setAugmentedAutofillWhitelist(@Nullable Set<String> packages, @Nullable Set<ComponentName> activities)", "public void notifyViewEnteredForAugmentedAutofill(@NonNull View view)", "private void requestShowFillUi(int sessionId, AutofillId id, int width, int height, Rect anchorBounds, IAutofillWindowPresenter presenter)", "private void authenticate(int sessionId, int authenticationId, IntentSender intent, Intent fillInIntent, boolean authenticateInline)", "private void dispatchUnhandledKey(int sessionId, AutofillId id, KeyEvent keyEvent)", "private void setState(int flags)", "private void setAutofilledIfValuesIs(@NonNull View view, @Nullable AutofillValue targetValue, boolean hideHighlight)", "private void autofill(int sessionId, List<AutofillId> ids, List<AutofillValue> values, boolean hideHighlight)", "private LogMaker newLog(int category)", "private void setTrackedViews(int sessionId, @Nullable AutofillId[] trackedIds, boolean saveOnAllViewsInvisible, boolean saveOnFinish, @Nullable AutofillId[] fillableIds, @Nullable AutofillId saveTriggerId)", "private void setNotifyOnClickLocked(@NonNull AutofillId id, boolean notify)", "private void setSaveUiState(int sessionId, boolean shown)", "private void setSessionFinished(int newState, @Nullable List<AutofillId> autofillableIds)", "private void getAugmentedAutofillClient(@NonNull IResultReceiver result)", "private void requestShowSoftInput(@NonNull AutofillId id)", "private static void requestShowSoftInputInViewThread(@NonNull View view)", "public void requestHideFillUi()", "private void requestHideFillUi(AutofillId id, boolean force)", "private void requestHideFillUi(AutofillId id, View anchor)", "private void notifyDisableAutofill(long disableDuration, ComponentName componentName)", " void notifyReenableAutofill()", "private void notifyNoFillUi(int sessionId, AutofillId id, int sessionFinishedState)", "private void notifyCallback(int sessionId, AutofillId id, @AutofillCallback.AutofillEventType int event)", "private View findView(@NonNull AutofillId autofillId)", "public boolean hasAutofillFeature()", "public void onPendingSaveUi(int operation, IBinder token)", "public void dump(String outerPrefix, PrintWriter pw)", "private String getStateAsStringLocked()", "private static String getStateAsString(int state)", "public static String getSmartSuggestionModeToString(@SmartSuggestionMode int flags)", "private boolean isActiveLocked()", "private boolean isDisabledByServiceLocked()", "private boolean isFinishedLocked()", "private void post(Runnable runnable)" ]
+}

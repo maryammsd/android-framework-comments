@@ -1,0 +1,1560 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/Parcel.java",
+  "packageName" : "android.os",
+  "className" : "Parcel",
+  "comment" : "\n * Container for a message (data and object references) that can\n * be sent through an IBinder.  A Parcel can contain both flattened data\n * that will be unflattened on the other side of the IPC (using the various\n * methods here for writing specific types, or the general\n * {@link Parcelable} interface), and references to live {@link IBinder}\n * objects that will result in the other side receiving a proxy IBinder\n * connected with the original IBinder in the Parcel.\n *\n * <p class=\"note\">Parcel is <strong>not</strong> a general-purpose\n * serialization mechanism.  This class (and the corresponding\n * {@link Parcelable} API for placing arbitrary objects into a Parcel) is\n * designed as a high-performance IPC transport.  As such, it is not\n * appropriate to place any Parcel data in to persistent storage: changes\n * in the underlying implementation of any of the data in the Parcel can\n * render older data unreadable.</p>\n *\n * <p>The bulk of the Parcel API revolves around reading and writing data\n * of various types.  There are six major classes of such functions available.</p>\n *\n * <h3>Primitives</h3>\n *\n * <p>The most basic data functions are for writing and reading primitive\n * data types: {@link #writeByte}, {@link #readByte}, {@link #writeDouble},\n * {@link #readDouble}, {@link #writeFloat}, {@link #readFloat}, {@link #writeInt},\n * {@link #readInt}, {@link #writeLong}, {@link #readLong},\n * {@link #writeString}, {@link #readString}.  Most other\n * data operations are built on top of these.  The given data is written and\n * read using the endianess of the host CPU.</p>\n *\n * <h3>Primitive Arrays</h3>\n *\n * <p>There are a variety of methods for reading and writing raw arrays\n * of primitive objects, which generally result in writing a 4-byte length\n * followed by the primitive data items.  The methods for reading can either\n * read the data into an existing array, or create and return a new array.\n * These available types are:</p>\n *\n * <ul>\n * <li> {@link #writeBooleanArray(boolean[])},\n * {@link #readBooleanArray(boolean[])}, {@link #createBooleanArray()}\n * <li> {@link #writeByteArray(byte[])},\n * {@link #writeByteArray(byte[], int, int)}, {@link #readByteArray(byte[])},\n * {@link #createByteArray()}\n * <li> {@link #writeCharArray(char[])}, {@link #readCharArray(char[])},\n * {@link #createCharArray()}\n * <li> {@link #writeDoubleArray(double[])}, {@link #readDoubleArray(double[])},\n * {@link #createDoubleArray()}\n * <li> {@link #writeFloatArray(float[])}, {@link #readFloatArray(float[])},\n * {@link #createFloatArray()}\n * <li> {@link #writeIntArray(int[])}, {@link #readIntArray(int[])},\n * {@link #createIntArray()}\n * <li> {@link #writeLongArray(long[])}, {@link #readLongArray(long[])},\n * {@link #createLongArray()}\n * <li> {@link #writeStringArray(String[])}, {@link #readStringArray(String[])},\n * {@link #createStringArray()}.\n * <li> {@link #writeSparseBooleanArray(SparseBooleanArray)},\n * {@link #readSparseBooleanArray()}.\n * </ul>\n *\n * <h3>Parcelables</h3>\n *\n * <p>The {@link Parcelable} protocol provides an extremely efficient (but\n * low-level) protocol for objects to write and read themselves from Parcels.\n * You can use the direct methods {@link #writeParcelable(Parcelable, int)}\n * and {@link #readParcelable(ClassLoader)} or\n * {@link #writeParcelableArray} and\n * {@link #readParcelableArray(ClassLoader)} to write or read.  These\n * methods write both the class type and its data to the Parcel, allowing\n * that class to be reconstructed from the appropriate class loader when\n * later reading.</p>\n *\n * <p>There are also some methods that provide a more efficient way to work\n * with Parcelables: {@link #writeTypedObject}, {@link #writeTypedArray},\n * {@link #writeTypedList}, {@link #readTypedObject},\n * {@link #createTypedArray} and {@link #createTypedArrayList}.  These methods\n * do not write the class information of the original object: instead, the\n * caller of the read function must know what type to expect and pass in the\n * appropriate {@link Parcelable.Creator Parcelable.Creator} instead to\n * properly construct the new object and read its data.  (To more efficient\n * write and read a single Parcelable object that is not null, you can directly\n * call {@link Parcelable#writeToParcel Parcelable.writeToParcel} and\n * {@link Parcelable.Creator#createFromParcel Parcelable.Creator.createFromParcel}\n * yourself.)</p>\n *\n * <h3>Bundles</h3>\n *\n * <p>A special type-safe container, called {@link Bundle}, is available\n * for key/value maps of heterogeneous values.  This has many optimizations\n * for improved performance when reading and writing data, and its type-safe\n * API avoids difficult to debug type errors when finally marshalling the\n * data contents into a Parcel.  The methods to use are\n * {@link #writeBundle(Bundle)}, {@link #readBundle()}, and\n * {@link #readBundle(ClassLoader)}.\n *\n * <h3>Active Objects</h3>\n *\n * <p>An unusual feature of Parcel is the ability to read and write active\n * objects.  For these objects the actual contents of the object is not\n * written, rather a special token referencing the object is written.  When\n * reading the object back from the Parcel, you do not get a new instance of\n * the object, but rather a handle that operates on the exact same object that\n * was originally written.  There are two forms of active objects available.</p>\n *\n * <p>{@link Binder} objects are a core facility of Android's general cross-process\n * communication system.  The {@link IBinder} interface describes an abstract\n * protocol with a Binder object.  Any such interface can be written in to\n * a Parcel, and upon reading you will receive either the original object\n * implementing that interface or a special proxy implementation\n * that communicates calls back to the original object.  The methods to use are\n * {@link #writeStrongBinder(IBinder)},\n * {@link #writeStrongInterface(IInterface)}, {@link #readStrongBinder()},\n * {@link #writeBinderArray(IBinder[])}, {@link #readBinderArray(IBinder[])},\n * {@link #createBinderArray()},\n * {@link #writeBinderList(List)}, {@link #readBinderList(List)},\n * {@link #createBinderArrayList()}.</p>\n *\n * <p>FileDescriptor objects, representing raw Linux file descriptor identifiers,\n * can be written and {@link ParcelFileDescriptor} objects returned to operate\n * on the original file descriptor.  The returned file descriptor is a dup\n * of the original file descriptor: the object and fd is different, but\n * operating on the same underlying file stream, with the same position, etc.\n * The methods to use are {@link #writeFileDescriptor(FileDescriptor)},\n * {@link #readFileDescriptor()}.\n *\n * <h3>Untyped Containers</h3>\n *\n * <p>A final class of methods are for writing and reading standard Java\n * containers of arbitrary types.  These all revolve around the\n * {@link #writeValue(Object)} and {@link #readValue(ClassLoader)} methods\n * which define the types of objects allowed.  The container methods are\n * {@link #writeArray(Object[])}, {@link #readArray(ClassLoader)},\n * {@link #writeList(List)}, {@link #readList(List, ClassLoader)},\n * {@link #readArrayList(ClassLoader)},\n * {@link #writeMap(Map)}, {@link #readMap(Map, ClassLoader)},\n * {@link #writeSparseArray(SparseArray)},\n * {@link #readSparseArray(ClassLoader)}.\n ",
+  "variables" : [ {
+    "name" : "DEBUG_RECYCLE",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_ARRAY_MAP",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNativePtr",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOwnsNativeParcelObject",
+    "type" : "boolean",
+    "comment" : "\n     * Flag indicating if {@link #mNativePtr} was allocated by this object,\n     * indicating that we're responsible for its lifecycle.\n     ",
+    "links" : [ "#mNativePtr" ]
+  }, {
+    "name" : "mNativeSize",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClassCookies",
+    "type" : "ArrayMap<Class, Object>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStack",
+    "type" : "RuntimeException",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sParcelExceptionStackTrace",
+    "type" : "boolean",
+    "comment" : "\n     * Whether or not to parcel the stack trace of an exception. This has a performance\n     * impact, so should only be included in specific processes and only on debug builds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "POOL_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sOwnedPool",
+    "type" : "Parcel[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sHolderPool",
+    "type" : "Parcel[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_NULL",
+    "type" : "int",
+    "comment" : " Keep in sync with frameworks/native/include/private/binder/ParcelValTypes.h.",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_STRING",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_INTEGER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_MAP",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_BUNDLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_PARCELABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SHORT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_LONG",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_FLOAT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_DOUBLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_BOOLEAN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_CHARSEQUENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_LIST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SPARSEARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_BYTEARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_STRINGARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_IBINDER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_PARCELABLEARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_OBJECTARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_INTARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_LONGARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_BYTE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SERIALIZABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SPARSEBOOLEANARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_BOOLEANARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_CHARSEQUENCEARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_PERSISTABLEBUNDLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_SIZEF",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL_DOUBLEARRAY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_SECURITY",
+    "type" : "int",
+    "comment" : " Keep these in sync with libbinder's binder/Status.h.",
+    "links" : [ ]
+  }, {
+    "name" : "EX_BAD_PARCELABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_ILLEGAL_ARGUMENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_NULL_POINTER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_ILLEGAL_STATE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_NETWORK_MAIN_THREAD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_UNSUPPORTED_OPERATION",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_SERVICE_SPECIFIC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_PARCELABLE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EX_HAS_NOTED_APPOPS_REPLY_HEADER",
+    "type" : "int",
+    "comment" : " special; see below",
+    "links" : [ ]
+  }, {
+    "name" : "EX_HAS_STRICTMODE_REPLY_HEADER",
+    "type" : "int",
+    "comment" : " special; see below",
+    "links" : [ ]
+  }, {
+    "name" : "EX_TRANSACTION_FAILED",
+    "type" : "int",
+    "comment" : " see libbinder's binder/Status.h",
+    "links" : [ ]
+  }, {
+    "name" : "sLastWriteExceptionStackTrace",
+    "type" : "long",
+    "comment" : " Last time exception with a stack trace was written ",
+    "links" : [ ]
+  }, {
+    "name" : "WRITE_EXCEPTION_STACK_TRACE_THRESHOLD_MS",
+    "type" : "int",
+    "comment" : " Used for throttling of writing stack trace, which is costly ",
+    "links" : [ ]
+  }, {
+    "name" : "STRING_CREATOR",
+    "type" : "Parcelable.Creator<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReadWriteHelper",
+    "type" : "ReadWriteHelper",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWrittenSquashableParcelables",
+    "type" : "ArrayMap<Parcelable, Integer>",
+    "comment" : "\n     * A map used by {@link #maybeWriteSquashed} to keep track of what parcelables have\n     * been seen, and what positions they were written. The value is the absolute position of\n     * each parcelable.\n     ",
+    "links" : [ "#maybeWriteSquashed" ]
+  }, {
+    "name" : "mAllowSquashing",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReadSquashableParcelables",
+    "type" : "ArrayMap<Integer, Parcelable>",
+    "comment" : "\n     * A map used by {@link #readSquashed} to cache parcelables. It's a map from\n     * an absolute position in a Parcel to the parcelable stored at the position.\n     ",
+    "links" : [ "#readSquashed" ]
+  }, {
+    "name" : "mCreators",
+    "type" : "HashMap<ClassLoader, HashMap<String, Parcelable.Creator<?>>>",
+    "comment" : " Method objects.",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static native int nativeDataSize(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeDataAvail(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeDataPosition(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeDataCapacity(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeSetDataSize(long nativePtr, int size)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeSetDataPosition(long nativePtr, int pos)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeSetDataCapacity(long nativePtr, int size)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativePushAllowFds(long nativePtr, boolean allowFds)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeRestoreAllowFds(long nativePtr, boolean lastValue)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteByteArray(long nativePtr, byte[] b, int offset, int len)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteBlob(long nativePtr, byte[] b, int offset, int len)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteInt(long nativePtr, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteLong(long nativePtr, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteFloat(long nativePtr, float val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteDouble(long nativePtr, double val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteString8(long nativePtr, String val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteString16(long nativePtr, String val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteStrongBinder(long nativePtr, IBinder val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeWriteFileDescriptor(long nativePtr, FileDescriptor val)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native byte[] nativeCreateByteArray(long nativePtr)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeReadByteArray(long nativePtr, byte[] dest, int destLen)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native byte[] nativeReadBlob(long nativePtr)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeReadInt(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeReadLong(long nativePtr)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native float nativeReadFloat(long nativePtr)",
+    "returnType" : "float",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native double nativeReadDouble(long nativePtr)",
+    "returnType" : "double",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeReadString8(long nativePtr)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeReadString16(long nativePtr)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native IBinder nativeReadStrongBinder(long nativePtr)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native FileDescriptor nativeReadFileDescriptor(long nativePtr)",
+    "returnType" : "FileDescriptor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeCreate()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeFreeBuffer(long nativePtr)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeDestroy(long nativePtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native byte[] nativeMarshall(long nativePtr)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeUnmarshall(long nativePtr, byte[] data, int offset, int length)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeCompareData(long thisNativePtr, long otherNativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeAppendFrom(long thisNativePtr, long otherNativePtr, int offset, int length)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeHasFileDescriptors(long nativePtr)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeWriteInterfaceToken(long nativePtr, String interfaceName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeEnforceInterface(long nativePtr, String interfaceName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeReplaceCallingWorkSourceUid(long nativePtr, int workSourceUid)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeReadCallingWorkSourceUid(long nativePtr)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeGetBlobAshmemSize(long nativePtr)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Parcel obtain()",
+    "returnType" : "Parcel",
+    "comment" : "\n     * Retrieve a new Parcel object from the pool.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void recycle()",
+    "returnType" : "void",
+    "comment" : "\n     * Put a Parcel object back into the pool.  You must not touch\n     * the object after this call.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setReadWriteHelper(@Nullable ReadWriteHelper helper)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a {@link ReadWriteHelper}, which can be used to avoid having duplicate strings, for\n     * example.\n     *\n     * @hide\n     ",
+    "links" : [ "ReadWriteHelper" ]
+  }, {
+    "name" : "public boolean hasReadWriteHelper()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return whether this parcel has a {@link ReadWriteHelper}.\n     *\n     * @hide\n     ",
+    "links" : [ "ReadWriteHelper" ]
+  }, {
+    "name" : "public static native long getGlobalAllocSize()",
+    "returnType" : "long",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static native long getGlobalAllocCount()",
+    "returnType" : "long",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int dataSize()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the total amount of data contained in the parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int dataAvail()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the amount of data remaining to be read from the\n     * parcel.  That is, {@link #dataSize}-{@link #dataPosition}.\n     ",
+    "links" : [ "#dataSize", "#dataPosition" ]
+  }, {
+    "name" : "public final int dataPosition()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the current position in the parcel data.  Never\n     * more than {@link #dataSize}.\n     ",
+    "links" : [ "#dataSize" ]
+  }, {
+    "name" : "public final int dataCapacity()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the total amount of space in the parcel.  This is always\n     * >= {@link #dataSize}.  The difference between it and dataSize() is the\n     * amount of room left until the parcel needs to re-allocate its\n     * data buffer.\n     ",
+    "links" : [ "#dataSize" ]
+  }, {
+    "name" : "public final void setDataSize(int size)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the amount of data in the parcel.  Can be either smaller or\n     * larger than the current size.  If larger than the current capacity,\n     * more memory will be allocated.\n     *\n     * @param size The new number of bytes in the Parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setDataPosition(int pos)",
+    "returnType" : "void",
+    "comment" : "\n     * Move the current read/write position in the parcel.\n     * @param pos New offset in the parcel; must be between 0 and\n     * {@link #dataSize}.\n     ",
+    "links" : [ "#dataSize" ]
+  }, {
+    "name" : "public final void setDataCapacity(int size)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the capacity (current available space) of the parcel.\n     *\n     * @param size The new capacity of the parcel, in bytes.  Can not be\n     * less than {@link #dataSize} -- that is, you can not drop existing data\n     * with this method.\n     ",
+    "links" : [ "#dataSize" ]
+  }, {
+    "name" : "public final boolean pushAllowFds(boolean allowFds)",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void restoreAllowFds(boolean lastValue)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final byte[] marshall()",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Returns the raw bytes of the parcel.\n     *\n     * <p class=\"note\">The data you retrieve here <strong>must not</strong>\n     * be placed in any kind of persistent storage (on local disk, across\n     * a network, etc).  For that, you should use standard serialization\n     * or another kind of general serialization mechanism.  The Parcel\n     * marshalled representation is highly optimized for local IPC, and as\n     * such does not attempt to maintain compatibility with data created\n     * in different versions of the platform.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void unmarshall(@NonNull byte[] data, int offset, int length)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the bytes in data to be the raw bytes of this Parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void appendFrom(Parcel parcel, int offset, int length)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int compareData(Parcel other)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setClassCookie(Class clz, Object cookie)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Object getClassCookie(Class clz)",
+    "returnType" : "Object",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void adoptClassCookies(Parcel from)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map<Class, Object> copyClassCookies()",
+    "returnType" : "Map<Class, Object>",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void putClassCookies(Map<Class, Object> cookies)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean hasFileDescriptors()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Report whether the parcel contains any marshalled file descriptors.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeInterfaceToken(String interfaceName)",
+    "returnType" : "void",
+    "comment" : "\n     * Store or read an IBinder interface token in the parcel at the current\n     * {@link #dataPosition}.  This is used to validate that the marshalled\n     * transaction is intended for the target interface.\n     ",
+    "links" : [ "#dataPosition" ]
+  }, {
+    "name" : "public final void enforceInterface(String interfaceName)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean replaceCallingWorkSourceUid(int workSourceUid)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Writes the work source uid to the request headers.\n     *\n     * <p>It requires the headers to have been written/read already to replace the work source.\n     *\n     * @return true if the request headers have been updated.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int readCallingWorkSourceUid()",
+    "returnType" : "int",
+    "comment" : "\n     * Reads the work source uid from the request headers.\n     *\n     * <p>Unlike other read methods, this method does not read the parcel at the current\n     * {@link #dataPosition}. It will set the {@link #dataPosition} before the read and restore the\n     * position after reading the request header.\n     *\n     * @return the work source uid or {@link Binder#UNSET_WORKSOURCE} if headers have not been\n     * written/parsed yet.\n     *\n     * @hide\n     ",
+    "links" : [ "android.os.Binder#UNSET_WORKSOURCE", "#dataPosition" ]
+  }, {
+    "name" : "public final void writeByteArray(@Nullable byte[] b)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a byte array into the parcel at the current {@link #dataPosition},\n     * growing {@link #dataCapacity} if needed.\n     * @param b Bytes to place into the parcel.\n     ",
+    "links" : [ "#dataCapacity", "#dataPosition" ]
+  }, {
+    "name" : "public final void writeByteArray(@Nullable byte[] b, int offset, int len)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a byte array into the parcel at the current {@link #dataPosition},\n     * growing {@link #dataCapacity} if needed.\n     * @param b Bytes to place into the parcel.\n     * @param offset Index of first byte to be written.\n     * @param len Number of bytes to write.\n     ",
+    "links" : [ "#dataCapacity", "#dataPosition" ]
+  }, {
+    "name" : "public final void writeBlob(@Nullable byte[] b)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a blob of data into the parcel at the current {@link #dataPosition},\n     * growing {@link #dataCapacity} if needed.\n     * @param b Bytes to place into the parcel.\n     * {@hide}\n     * {@SystemApi}\n     ",
+    "links" : [ "#dataCapacity", "#dataPosition" ]
+  }, {
+    "name" : "public final void writeBlob(@Nullable byte[] b, int offset, int len)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a blob of data into the parcel at the current {@link #dataPosition},\n     * growing {@link #dataCapacity} if needed.\n     * @param b Bytes to place into the parcel.\n     * @param offset Index of first byte to be written.\n     * @param len Number of bytes to write.\n     * {@hide}\n     * {@SystemApi}\n     ",
+    "links" : [ "#dataCapacity", "#dataPosition" ]
+  }, {
+    "name" : "public final void writeInt(int val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an integer value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeLong(long val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a long integer value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeFloat(float val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a floating point value into the parcel at the current\n     * dataPosition(), growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeDouble(double val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a double precision floating point value into the parcel at the\n     * current dataPosition(), growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeString(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a string value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeString8(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeString16(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeStringNoHelper(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a string without going though a {@link ReadWriteHelper}.  Subclasses of\n     * {@link ReadWriteHelper} must use this method instead of {@link #writeString} to avoid\n     * infinity recursive calls.\n     *\n     * @hide\n     ",
+    "links" : [ "ReadWriteHelper", "#writeString" ]
+  }, {
+    "name" : "public void writeString8NoHelper(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeString16NoHelper(@Nullable String val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeBoolean(boolean val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a boolean value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     *\n     * <p>Note: This method currently delegates to writeInt with a value of 1 or 0\n     * for true or false, respectively, but may change in the future.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeCharSequence(@Nullable CharSequence val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a CharSequence value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeStrongBinder(IBinder val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an object into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeStrongInterface(IInterface val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an object into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeFileDescriptor(@NonNull FileDescriptor val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a FileDescriptor into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     *\n     * <p class=\"caution\">The file descriptor will not be closed, which may\n     * result in file descriptor leaks when objects are returned from Binder\n     * calls.  Use {@link ParcelFileDescriptor#writeToParcel} instead, which\n     * accepts contextual flags and will close the original file descriptor\n     * if {@link Parcelable#PARCELABLE_WRITE_RETURN_VALUE} is set.</p>\n     ",
+    "links" : [ "android.os.Parcelable#PARCELABLE_WRITE_RETURN_VALUE", "android.os.ParcelFileDescriptor#writeToParcel" ]
+  }, {
+    "name" : "private void updateNativeSize(long newNativeSize)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawFileDescriptor(@NonNull FileDescriptor val)",
+    "returnType" : "void",
+    "comment" : "\n     * {@hide}\n     * This will be the new name for writeFileDescriptor, for consistency.\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawFileDescriptorArray(@Nullable FileDescriptor[] value)",
+    "returnType" : "void",
+    "comment" : "\n     * {@hide}\n     * Write an array of FileDescriptor objects into the Parcel.\n     *\n     * @param value The array of objects to be written.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeByte(byte val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a byte value into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     *\n     * <p>Note: This method currently delegates to writeInt but may change in\n     * the future.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeMap(@Nullable Map val)",
+    "returnType" : "void",
+    "comment" : "\n     * Please use {@link #writeBundle} instead.  Flattens a Map into the parcel\n     * at the current dataPosition(),\n     * growing dataCapacity() if needed.  The Map keys must be String objects.\n     * The Map values are written using {@link #writeValue} and must follow\n     * the specification there.\n     *\n     * <p>It is strongly recommended to use {@link #writeBundle} instead of\n     * this method, since the Bundle class provides a type-safe API that\n     * allows you to avoid mysterious type errors at the point of marshalling.\n     ",
+    "links" : [ "#writeValue", "#writeBundle" ]
+  }, {
+    "name" : " void writeMapInternal(@Nullable Map<String, Object> val)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : " void writeArrayMapInternal(@Nullable ArrayMap<String, Object> val)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeArrayMap(@Nullable ArrayMap<String, Object> val)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide For testing only.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeTypedArrayMap(@Nullable ArrayMap<String, T> val, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten an {@link ArrayMap} with string keys containing a particular object\n     * type into the parcel at the current dataPosition() and growing dataCapacity()\n     * if needed. The type of the objects in the array must be one that implements\n     * Parcelable. Only the raw data of the objects is written and not their type,\n     * so you must use the corresponding {@link #createTypedArrayMap(Parcelable.Creator)}\n     *\n     * @param val The map of objects to be written.\n     * @param parcelableFlags The parcelable flags to use.\n     *\n     * @see #createTypedArrayMap(Parcelable.Creator)\n     * @see Parcelable\n     ",
+    "links" : [ "android.util.ArrayMap", "#createTypedArrayMap(Parcelable.Creator)" ]
+  }, {
+    "name" : "public void writeArraySet(@Nullable ArraySet<? extends Object> val)",
+    "returnType" : "void",
+    "comment" : "\n     * Write an array set to the parcel.\n     *\n     * @param val The array set to write.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeBundle(@Nullable Bundle val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a Bundle into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writePersistableBundle(@Nullable PersistableBundle val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a PersistableBundle into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSize(@NonNull Size val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a Size into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSizeF(@NonNull SizeF val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a SizeF into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeList(@Nullable List val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a List into the parcel at the current dataPosition(), growing\n     * dataCapacity() if needed.  The List values are written using\n     * {@link #writeValue} and must follow the specification there.\n     ",
+    "links" : [ "#writeValue" ]
+  }, {
+    "name" : "public final void writeArray(@Nullable Object[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten an Object array into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.  The array values are written using\n     * {@link #writeValue} and must follow the specification there.\n     ",
+    "links" : [ "#writeValue" ]
+  }, {
+    "name" : "public final void writeSparseArray(@Nullable SparseArray<T> val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a generic SparseArray into the parcel at the current\n     * dataPosition(), growing dataCapacity() if needed.  The SparseArray\n     * values are written using {@link #writeValue} and must follow the\n     * specification there.\n     ",
+    "links" : [ "#writeValue" ]
+  }, {
+    "name" : "public final void writeSparseBooleanArray(@Nullable SparseBooleanArray val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSparseIntArray(@Nullable SparseIntArray val)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeBooleanArray(@Nullable boolean[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean[] createBooleanArray()",
+    "returnType" : "boolean[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readBooleanArray(@NonNull boolean[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeCharArray(@Nullable char[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final char[] createCharArray()",
+    "returnType" : "char[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readCharArray(@NonNull char[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeIntArray(@Nullable int[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int[] createIntArray()",
+    "returnType" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readIntArray(@NonNull int[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeLongArray(@Nullable long[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final long[] createLongArray()",
+    "returnType" : "long[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readLongArray(@NonNull long[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeFloatArray(@Nullable float[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final float[] createFloatArray()",
+    "returnType" : "float[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readFloatArray(@NonNull float[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeDoubleArray(@Nullable double[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final double[] createDoubleArray()",
+    "returnType" : "double[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readDoubleArray(@NonNull double[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeStringArray(@Nullable String[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final String[] createStringArray()",
+    "returnType" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readStringArray(@NonNull String[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeString8Array(@Nullable String[] val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String[] createString8Array()",
+    "returnType" : "String[]",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readString8Array(@NonNull String[] val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeString16Array(@Nullable String[] val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String[] createString16Array()",
+    "returnType" : "String[]",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readString16Array(@NonNull String[] val)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeBinderArray(@Nullable IBinder[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeCharSequenceArray(@Nullable CharSequence[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeCharSequenceList(@Nullable ArrayList<CharSequence> val)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IBinder[] createBinderArray()",
+    "returnType" : "IBinder[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readBinderArray(@NonNull IBinder[] val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeTypedList(@Nullable List<T> val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a List containing a particular object type into the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  The\n     * type of the objects in the list must be one that implements Parcelable.\n     * Unlike the generic writeList() method, however, only the raw data of the\n     * objects is written and not their type, so you must use the corresponding\n     * readTypedList() to unmarshall them.\n     *\n     * @param val The list of objects to be written.\n     *\n     * @see #createTypedArrayList\n     * @see #readTypedList\n     * @see Parcelable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeTypedSparseArray(@Nullable SparseArray<T> val, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a {@link SparseArray} containing a particular object type into the parcel\n     * at the current dataPosition() and growing dataCapacity() if needed. The\n     * type of the objects in the array must be one that implements Parcelable.\n     * Unlike the generic {@link #writeSparseArray(SparseArray)} method, however, only\n     * the raw data of the objects is written and not their type, so you must use the\n     * corresponding {@link #createTypedSparseArray(Parcelable.Creator)}.\n     *\n     * @param val The list of objects to be written.\n     * @param parcelableFlags The parcelable flags to use.\n     *\n     * @see #createTypedSparseArray(Parcelable.Creator)\n     * @see Parcelable\n     ",
+    "links" : [ "android.util.SparseArray", "#writeSparseArray(SparseArray)", "#createTypedSparseArray(Parcelable.Creator)" ]
+  }, {
+    "name" : "public void writeTypedList(@Nullable List<T> val, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeStringList(@Nullable List<String> val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a List containing String objects into the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  They\n     * can later be retrieved with {@link #createStringArrayList} or\n     * {@link #readStringList}.\n     *\n     * @param val The list of strings to be written.\n     *\n     * @see #createStringArrayList\n     * @see #readStringList\n     ",
+    "links" : [ "#createStringArrayList", "#readStringList" ]
+  }, {
+    "name" : "public final void writeBinderList(@Nullable List<IBinder> val)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a List containing IBinder objects into the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  They\n     * can later be retrieved with {@link #createBinderArrayList} or\n     * {@link #readBinderList}.\n     *\n     * @param val The list of strings to be written.\n     *\n     * @see #createBinderArrayList\n     * @see #readBinderList\n     ",
+    "links" : [ "#createBinderArrayList", "#readBinderList" ]
+  }, {
+    "name" : "public final void writeParcelableList(@Nullable List<T> val, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a {@code List} containing arbitrary {@code Parcelable} objects into this parcel\n     * at the current position. They can later be retrieved using\n     * {@link #readParcelableList(List, ClassLoader)} if required.\n     *\n     * @see #readParcelableList(List, ClassLoader)\n     ",
+    "links" : [ "#readParcelableList(List" ]
+  }, {
+    "name" : "public final void writeTypedArray(@Nullable T[] val, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a homogeneous array containing a particular object type into\n     * the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  The\n     * type of the objects in the array must be one that implements Parcelable.\n     * Unlike the {@link #writeParcelableArray} method, however, only the\n     * raw data of the objects is written and not their type, so you must use\n     * {@link #readTypedArray} with the correct corresponding\n     * {@link Parcelable.Creator} implementation to unmarshall them.\n     *\n     * @param val The array of objects to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #readTypedArray\n     * @see #writeParcelableArray\n     * @see Parcelable.Creator\n     ",
+    "links" : [ "android.os.Parcelable#writeToParcel(Parcel", "#writeParcelableArray", "#readTypedArray", "Parcelable.Creator" ]
+  }, {
+    "name" : "public final void writeTypedObject(@Nullable T val, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten the Parcelable object into the parcel.\n     *\n     * @param val The Parcelable object to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #readTypedObject\n     ",
+    "links" : [ "android.os.Parcelable#writeToParcel(Parcel" ]
+  }, {
+    "name" : "public final void writeValue(@Nullable Object v)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten a generic object in to a parcel.  The given Object value may\n     * currently be one of the following types:\n     *\n     * <ul>\n     * <li> null\n     * <li> String\n     * <li> Byte\n     * <li> Short\n     * <li> Integer\n     * <li> Long\n     * <li> Float\n     * <li> Double\n     * <li> Boolean\n     * <li> String[]\n     * <li> boolean[]\n     * <li> byte[]\n     * <li> int[]\n     * <li> long[]\n     * <li> Object[] (supporting objects of the same type defined here).\n     * <li> {@link Bundle}\n     * <li> Map (as supported by {@link #writeMap}).\n     * <li> Any object that implements the {@link Parcelable} protocol.\n     * <li> Parcelable[]\n     * <li> CharSequence (as supported by {@link TextUtils#writeToParcel}).\n     * <li> List (as supported by {@link #writeList}).\n     * <li> {@link SparseArray} (as supported by {@link #writeSparseArray(SparseArray)}).\n     * <li> {@link IBinder}\n     * <li> Any object that implements Serializable (but see\n     *      {@link #writeSerializable} for caveats).  Note that all of the\n     *      previous types have relatively efficient implementations for\n     *      writing to a Parcel; having to rely on the generic serialization\n     *      approach is much less efficient and should be avoided whenever\n     *      possible.\n     * </ul>\n     *\n     * <p class=\"caution\">{@link Parcelable} objects are written with\n     * {@link Parcelable#writeToParcel} using contextual flags of 0.  When\n     * serializing objects containing {@link ParcelFileDescriptor}s,\n     * this may result in file descriptor leaks when they are returned from\n     * Binder calls (where {@link Parcelable#PARCELABLE_WRITE_RETURN_VALUE}\n     * should be used).</p>\n     ",
+    "links" : [ "android.util.SparseArray", "#writeSerializable", "android.os.Parcelable#PARCELABLE_WRITE_RETURN_VALUE", "android.os.Bundle", "android.os.Parcelable", "android.os.ParcelFileDescriptor", "android.text.TextUtils#writeToParcel", "#writeList", "#writeSparseArray(SparseArray)", "#writeMap", "android.os.Parcelable#writeToParcel", "android.os.IBinder" ]
+  }, {
+    "name" : "public final void writeParcelable(@Nullable Parcelable p, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten the name of the class of the Parcelable and its contents\n     * into the parcel.\n     *\n     * @param p The Parcelable object to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     ",
+    "links" : [ "android.os.Parcelable#writeToParcel(Parcel" ]
+  }, {
+    "name" : "public final void writeParcelableCreator(@NonNull Parcelable p)",
+    "returnType" : "void",
+    "comment" : "\n     * Flatten the name of the class of the Parcelable into this Parcel.\n     *\n     * @param p The Parcelable object to be written.\n     * @see #readParcelableCreator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureWrittenSquashableParcelables()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean allowSquashing()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Allow \"squashing\" writes in {@link #maybeWriteSquashed}. This allows subsequent calls to\n     * {@link #maybeWriteSquashed(Parcelable)} to \"squash\" the same instances into one in a Parcel.\n     *\n     * Typically, this method is called at the beginning of {@link Parcelable#writeToParcel}. The\n     * caller must retain the return value from this method and call {@link #restoreAllowSquashing}\n     * with it.\n     *\n     * See {@link #maybeWriteSquashed(Parcelable)} for the details.\n     *\n     * @see #restoreAllowSquashing(boolean)\n     * @see #maybeWriteSquashed(Parcelable)\n     * @see #readSquashed(SquashReadHelper)\n     *\n     * @hide\n     ",
+    "links" : [ "#maybeWriteSquashed(Parcelable)", "#restoreAllowSquashing", "#maybeWriteSquashed", "android.os.Parcelable#writeToParcel" ]
+  }, {
+    "name" : "public void restoreAllowSquashing(boolean previous)",
+    "returnType" : "void",
+    "comment" : "\n     * @see #allowSquashing()\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void resetSqaushingState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureReadSquashableParcelables()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean maybeWriteSquashed(@NonNull Parcelable p)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Write a parcelable with \"squash\" -- that is, when the same instance is written to the\n     * same Parcelable multiple times, instead of writing the entire instance multiple times,\n     * only write it once, and in subsequent writes we'll only write the offset to the original\n     * object.\n     *\n     * This approach does not work of the resulting Parcel is copied with {@link #appendFrom} with\n     * a non-zero offset, so we do not enable this behavior by default. Instead, we only enable\n     * it between {@link #allowSquashing} and {@link #restoreAllowSquashing}, in order to make sure\n     * we only do so within each \"top level\" Parcelable.\n     *\n     * Usage: Use this method in {@link Parcelable#writeToParcel}.\n     * If this method returns TRUE, it's a subsequent call, and the offset is already written,\n     * so the caller doesn't have to do anything. If this method returns FALSE, it's the first\n     * time for the instance to be written to this parcel. The caller has to proceed with its\n     * {@link Parcelable#writeToParcel}.\n     *\n     * (See {@code ApplicationInfo} for the example.)\n     *\n     * @param p the target Parcelable to write.\n     *\n     * @see #allowSquashing()\n     * @see #restoreAllowSquashing(boolean)\n     * @see #readSquashed(SquashReadHelper)\n     *\n     * @hide\n     ",
+    "links" : [ "#allowSquashing", "#restoreAllowSquashing", "android.os.Parcelable#writeToParcel", "#appendFrom" ]
+  }, {
+    "name" : "public T readSquashed(SquashReadHelper<T> reader)",
+    "returnType" : "T",
+    "comment" : "\n     * Read a {@link Parcelable} that's written with {@link #maybeWriteSquashed}.\n     *\n     * @param reader a callback function that instantiates an instance from a parcel.\n     * Typicallly, a lambda to the instructor that takes a {@link Parcel} is passed.\n     *\n     * @see #maybeWriteSquashed(Parcelable)\n     *\n     * @hide\n     ",
+    "links" : [ "android.os.Parcelable", "#maybeWriteSquashed", "android.os.Parcel" ]
+  }, {
+    "name" : "public final void writeSerializable(@Nullable Serializable s)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a generic serializable object in to a Parcel.  It is strongly\n     * recommended that this method be avoided, since the serialization\n     * overhead is extremely large, and this approach will be much slower than\n     * using the other approaches to writing data in to a Parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setStackTraceParceling(boolean enabled)",
+    "returnType" : "void",
+    "comment" : " @hide For debugging purposes ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeException(@NonNull Exception e)",
+    "returnType" : "void",
+    "comment" : "\n     * Special function for writing an exception result at the header of\n     * a parcel, to be used when returning an exception from a transaction.\n     * Note that this currently only supports a few exception types; any other\n     * exception will be re-thrown by this function as a RuntimeException\n     * (to be caught by the system's last-resort exception handling when\n     * dispatching a transaction).\n     *\n     * <p>The supported exception types are:\n     * <ul>\n     * <li>{@link BadParcelableException}\n     * <li>{@link IllegalArgumentException}\n     * <li>{@link IllegalStateException}\n     * <li>{@link NullPointerException}\n     * <li>{@link SecurityException}\n     * <li>{@link UnsupportedOperationException}\n     * <li>{@link NetworkOnMainThreadException}\n     * </ul>\n     *\n     * @param e The Exception to be written.\n     *\n     * @see #writeNoException\n     * @see #readException\n     ",
+    "links" : [ "IllegalStateException", "NullPointerException", "android.os.BadParcelableException", "SecurityException", "android.os.NetworkOnMainThreadException", "IllegalArgumentException", "UnsupportedOperationException" ]
+  }, {
+    "name" : "public static int getExceptionCode(@NonNull Throwable e)",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeStackTrace(@NonNull Throwable e)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeNoException()",
+    "returnType" : "void",
+    "comment" : "\n     * Special function for writing information at the front of the Parcel\n     * indicating that no exception occurred.\n     *\n     * @see #writeException\n     * @see #readException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readException()",
+    "returnType" : "void",
+    "comment" : "\n     * Special function for reading an exception result from the header of\n     * a parcel, to be used after receiving the result of a transaction.  This\n     * will throw the exception for you if it had been written to the Parcel,\n     * otherwise return and let you read the normal result data from the Parcel.\n     *\n     * @see #writeException\n     * @see #writeNoException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int readExceptionCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Parses the header of a Binder call's response Parcel and\n     * returns the exception code.  Deals with lite or fat headers.\n     * In the common successful case, this header is generally zero.\n     * In less common cases, it's a small negative number and will be\n     * followed by an error string.\n     *\n     * This exists purely for android.database.DatabaseUtils and\n     * insulating it from having to handle fat headers as returned by\n     * e.g. StrictMode-induced RPC responses.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readException(int code, String msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Throw an exception with the given message. Not intended for use\n     * outside the Parcel class.\n     *\n     * @param code Used to determine which exception class to throw.\n     * @param msg The exception message.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Exception createException(int code, String msg)",
+    "returnType" : "Exception",
+    "comment" : "\n     * Creates an exception with the given message.\n     *\n     * @param code Used to determine which exception class to throw.\n     * @param msg The exception message.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Exception createExceptionOrNull(int code, String msg)",
+    "returnType" : "Exception",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int readInt()",
+    "returnType" : "int",
+    "comment" : "\n     * Read an integer value from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final long readLong()",
+    "returnType" : "long",
+    "comment" : "\n     * Read a long integer value from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final float readFloat()",
+    "returnType" : "float",
+    "comment" : "\n     * Read a floating point value from the parcel at the current\n     * dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final double readDouble()",
+    "returnType" : "double",
+    "comment" : "\n     * Read a double precision floating point value from the parcel at the\n     * current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String readString()",
+    "returnType" : "String",
+    "comment" : "\n     * Read a string value from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String readString8()",
+    "returnType" : "String",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String readString16()",
+    "returnType" : "String",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public String readStringNoHelper()",
+    "returnType" : "String",
+    "comment" : "\n     * Read a string without going though a {@link ReadWriteHelper}.  Subclasses of\n     * {@link ReadWriteHelper} must use this method instead of {@link #readString} to avoid\n     * infinity recursive calls.\n     *\n     * @hide\n     ",
+    "links" : [ "ReadWriteHelper", "#readString" ]
+  }, {
+    "name" : "public String readString8NoHelper()",
+    "returnType" : "String",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public String readString16NoHelper()",
+    "returnType" : "String",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean readBoolean()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Read a boolean value from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final CharSequence readCharSequence()",
+    "returnType" : "CharSequence",
+    "comment" : "\n     * Read a CharSequence value from the parcel at the current dataPosition().\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IBinder readStrongBinder()",
+    "returnType" : "IBinder",
+    "comment" : "\n     * Read an object from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ParcelFileDescriptor readFileDescriptor()",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * Read a FileDescriptor from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final FileDescriptor readRawFileDescriptor()",
+    "returnType" : "FileDescriptor",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public final FileDescriptor[] createRawFileDescriptorArray()",
+    "returnType" : "FileDescriptor[]",
+    "comment" : "\n     * {@hide}\n     * Read and return a new array of FileDescriptors from the parcel.\n     * @return the FileDescriptor array, or null if the array is null.\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readRawFileDescriptorArray(FileDescriptor[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * {@hide}\n     * Read an array of FileDescriptors from a parcel.\n     * The passed array must be exactly the length of the array in the parcel.\n     * @return the FileDescriptor array, or null if the array is null.\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "public final byte readByte()",
+    "returnType" : "byte",
+    "comment" : "\n     * Read a byte value from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readMap(@NonNull Map outVal, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "\n     * Please use {@link #readBundle(ClassLoader)} instead (whose data must have\n     * been written with {@link #writeBundle}.  Read into an existing Map object\n     * from the parcel at the current dataPosition().\n     ",
+    "links" : [ "#writeBundle", "#readBundle(ClassLoader)" ]
+  }, {
+    "name" : "public final void readList(@NonNull List outVal, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "\n     * Read into an existing List object from the parcel at the current\n     * dataPosition(), using the given class loader to load any enclosed\n     * Parcelables.  If it is null, the default class loader is used.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final HashMap readHashMap(@Nullable ClassLoader loader)",
+    "returnType" : "HashMap",
+    "comment" : "\n     * Please use {@link #readBundle(ClassLoader)} instead (whose data must have\n     * been written with {@link #writeBundle}.  Read and return a new HashMap\n     * object from the parcel at the current dataPosition(), using the given\n     * class loader to load any enclosed Parcelables.  Returns null if\n     * the previously written map object was null.\n     ",
+    "links" : [ "#writeBundle", "#readBundle(ClassLoader)" ]
+  }, {
+    "name" : "public final Bundle readBundle()",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Read and return a new Bundle object from the parcel at the current\n     * dataPosition().  Returns null if the previously written Bundle object was\n     * null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Bundle readBundle(@Nullable ClassLoader loader)",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Read and return a new Bundle object from the parcel at the current\n     * dataPosition(), using the given class loader to initialize the class\n     * loader of the Bundle for later retrieval of Parcelable objects.\n     * Returns null if the previously written Bundle object was null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final PersistableBundle readPersistableBundle()",
+    "returnType" : "PersistableBundle",
+    "comment" : "\n     * Read and return a new Bundle object from the parcel at the current\n     * dataPosition().  Returns null if the previously written Bundle object was\n     * null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final PersistableBundle readPersistableBundle(@Nullable ClassLoader loader)",
+    "returnType" : "PersistableBundle",
+    "comment" : "\n     * Read and return a new Bundle object from the parcel at the current\n     * dataPosition(), using the given class loader to initialize the class\n     * loader of the Bundle for later retrieval of Parcelable objects.\n     * Returns null if the previously written Bundle object was null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Size readSize()",
+    "returnType" : "Size",
+    "comment" : "\n     * Read a Size from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final SizeF readSizeF()",
+    "returnType" : "SizeF",
+    "comment" : "\n     * Read a SizeF from the parcel at the current dataPosition().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final byte[] createByteArray()",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Read and return a byte[] object from the parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void readByteArray(@NonNull byte[] val)",
+    "returnType" : "void",
+    "comment" : "\n     * Read a byte[] object from the parcel and copy it into the\n     * given byte array.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final byte[] readBlob()",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Read a blob of data from the parcel and return it as a byte array.\n     * {@hide}\n     * {@SystemApi}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String[] readStringArray()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Read and return a String[] object from the parcel.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final CharSequence[] readCharSequenceArray()",
+    "returnType" : "CharSequence[]",
+    "comment" : "\n     * Read and return a CharSequence[] object from the parcel.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ArrayList<CharSequence> readCharSequenceList()",
+    "returnType" : "ArrayList<CharSequence>",
+    "comment" : "\n     * Read and return an ArrayList&lt;CharSequence&gt; object from the parcel.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ArrayList readArrayList(@Nullable ClassLoader loader)",
+    "returnType" : "ArrayList",
+    "comment" : "\n     * Read and return a new ArrayList object from the parcel at the current\n     * dataPosition().  Returns null if the previously written list object was\n     * null.  The given class loader will be used to load any enclosed\n     * Parcelables.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Object[] readArray(@Nullable ClassLoader loader)",
+    "returnType" : "Object[]",
+    "comment" : "\n     * Read and return a new Object array from the parcel at the current\n     * dataPosition().  Returns null if the previously written array was\n     * null.  The given class loader will be used to load any enclosed\n     * Parcelables.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final SparseArray<T> readSparseArray(@Nullable ClassLoader loader)",
+    "returnType" : "SparseArray<T>",
+    "comment" : "\n     * Read and return a new SparseArray object from the parcel at the current\n     * dataPosition().  Returns null if the previously written list object was\n     * null.  The given class loader will be used to load any enclosed\n     * Parcelables.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final SparseBooleanArray readSparseBooleanArray()",
+    "returnType" : "SparseBooleanArray",
+    "comment" : "\n     * Read and return a new SparseBooleanArray object from the parcel at the current\n     * dataPosition().  Returns null if the previously written list object was\n     * null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final SparseIntArray readSparseIntArray()",
+    "returnType" : "SparseIntArray",
+    "comment" : "\n     * Read and return a new SparseIntArray object from the parcel at the current\n     * dataPosition(). Returns null if the previously written array object was null.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ArrayList<T> createTypedArrayList(@NonNull Parcelable.Creator<T> c)",
+    "returnType" : "ArrayList<T>",
+    "comment" : "\n     * Read and return a new ArrayList containing a particular object type from\n     * the parcel that was written with {@link #writeTypedList} at the\n     * current dataPosition().  Returns null if the\n     * previously written list object was null.  The list <em>must</em> have\n     * previously been written via {@link #writeTypedList} with the same object\n     * type.\n     *\n     * @return A newly created ArrayList containing objects with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeTypedList\n     ",
+    "links" : [ "#writeTypedList" ]
+  }, {
+    "name" : "public final void readTypedList(@NonNull List<T> list, @NonNull Parcelable.Creator<T> c)",
+    "returnType" : "void",
+    "comment" : "\n     * Read into the given List items containing a particular object type\n     * that were written with {@link #writeTypedList} at the\n     * current dataPosition().  The list <em>must</em> have\n     * previously been written via {@link #writeTypedList} with the same object\n     * type.\n     *\n     * @return A newly created ArrayList containing objects with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeTypedList\n     ",
+    "links" : [ "#writeTypedList" ]
+  }, {
+    "name" : "public final SparseArray<T> createTypedSparseArray(@NonNull Parcelable.Creator<T> creator)",
+    "returnType" : "SparseArray<T>",
+    "comment" : "\n     * Read into a new {@link SparseArray} items containing a particular object type\n     * that were written with {@link #writeTypedSparseArray(SparseArray, int)} at the\n     * current dataPosition().  The list <em>must</em> have previously been written\n     * via {@link #writeTypedSparseArray(SparseArray, int)} with the same object type.\n     *\n     * @param creator The creator to use when for instantiation.\n     *\n     * @return A newly created {@link SparseArray} containing objects with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeTypedSparseArray(SparseArray, int)\n     ",
+    "links" : [ "android.util.SparseArray", "#writeTypedSparseArray(SparseArray" ]
+  }, {
+    "name" : "public final ArrayMap<String, T> createTypedArrayMap(@NonNull Parcelable.Creator<T> creator)",
+    "returnType" : "ArrayMap<String, T>",
+    "comment" : "\n     * Read into a new {@link ArrayMap} with string keys items containing a particular\n     * object type that were written with {@link #writeTypedArrayMap(ArrayMap, int)} at the\n     * current dataPosition().  The list <em>must</em> have previously been written\n     * via {@link #writeTypedArrayMap(ArrayMap, int)} with the same object type.\n     *\n     * @param creator The creator to use when for instantiation.\n     *\n     * @return A newly created {@link ArrayMap} containing objects with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeTypedArrayMap(ArrayMap, int)\n     ",
+    "links" : [ "#writeTypedArrayMap(ArrayMap", "android.util.ArrayMap" ]
+  }, {
+    "name" : "public final ArrayList<String> createStringArrayList()",
+    "returnType" : "ArrayList<String>",
+    "comment" : "\n     * Read and return a new ArrayList containing String objects from\n     * the parcel that was written with {@link #writeStringList} at the\n     * current dataPosition().  Returns null if the\n     * previously written list object was null.\n     *\n     * @return A newly created ArrayList containing strings with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeStringList\n     ",
+    "links" : [ "#writeStringList" ]
+  }, {
+    "name" : "public final ArrayList<IBinder> createBinderArrayList()",
+    "returnType" : "ArrayList<IBinder>",
+    "comment" : "\n     * Read and return a new ArrayList containing IBinder objects from\n     * the parcel that was written with {@link #writeBinderList} at the\n     * current dataPosition().  Returns null if the\n     * previously written list object was null.\n     *\n     * @return A newly created ArrayList containing strings with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeBinderList\n     ",
+    "links" : [ "#writeBinderList" ]
+  }, {
+    "name" : "public final void readStringList(@NonNull List<String> list)",
+    "returnType" : "void",
+    "comment" : "\n     * Read into the given List items String objects that were written with\n     * {@link #writeStringList} at the current dataPosition().\n     *\n     * @see #writeStringList\n     ",
+    "links" : [ "#writeStringList" ]
+  }, {
+    "name" : "public final void readBinderList(@NonNull List<IBinder> list)",
+    "returnType" : "void",
+    "comment" : "\n     * Read into the given List items IBinder objects that were written with\n     * {@link #writeBinderList} at the current dataPosition().\n     *\n     * @see #writeBinderList\n     ",
+    "links" : [ "#writeBinderList" ]
+  }, {
+    "name" : "public final List<T> readParcelableList(@NonNull List<T> list, @Nullable ClassLoader cl)",
+    "returnType" : "List<T>",
+    "comment" : "\n     * Read the list of {@code Parcelable} objects at the current data position into the\n     * given {@code list}. The contents of the {@code list} are replaced. If the serialized\n     * list was {@code null}, {@code list} is cleared.\n     *\n     * @see #writeParcelableList(List, int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final T[] createTypedArray(@NonNull Parcelable.Creator<T> c)",
+    "returnType" : "T[]",
+    "comment" : "\n     * Read and return a new array containing a particular object type from\n     * the parcel at the current dataPosition().  Returns null if the\n     * previously written array was null.  The array <em>must</em> have\n     * previously been written via {@link #writeTypedArray} with the same\n     * object type.\n     *\n     * @return A newly created array containing objects with the same data\n     *         as those that were previously written.\n     *\n     * @see #writeTypedArray\n     ",
+    "links" : [ "#writeTypedArray" ]
+  }, {
+    "name" : "public final void readTypedArray(@NonNull T[] val, @NonNull Parcelable.Creator<T> c)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final T[] readTypedArray(Parcelable.Creator<T> c)",
+    "returnType" : "T[]",
+    "comment" : "\n     * @deprecated\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final T readTypedObject(@NonNull Parcelable.Creator<T> c)",
+    "returnType" : "T",
+    "comment" : "\n     * Read and return a typed Parcelable object from a parcel.\n     * Returns null if the previous written object was null.\n     * The object <em>must</em> have previous been written via\n     * {@link #writeTypedObject} with the same object type.\n     *\n     * @return A newly created object of the type that was previously\n     *         written.\n     *\n     * @see #writeTypedObject\n     ",
+    "links" : [ "#writeTypedObject" ]
+  }, {
+    "name" : "public final void writeParcelableArray(@Nullable T[] value, int parcelableFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Write a heterogeneous array of Parcelable objects into the Parcel.\n     * Each object in the array is written along with its class name, so\n     * that the correct class can later be instantiated.  As a result, this\n     * has significantly more overhead than {@link #writeTypedArray}, but will\n     * correctly handle an array containing more than one type of object.\n     *\n     * @param value The array of objects to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #writeTypedArray\n     ",
+    "links" : [ "android.os.Parcelable#writeToParcel(Parcel", "#writeTypedArray" ]
+  }, {
+    "name" : "public final Object readValue(@Nullable ClassLoader loader)",
+    "returnType" : "Object",
+    "comment" : "\n     * Read a typed object from a parcel.  The given class loader will be\n     * used to load any enclosed Parcelables.  If it is null, the default class\n     * loader will be used.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final T readParcelable(@Nullable ClassLoader loader)",
+    "returnType" : "T",
+    "comment" : "\n     * Read and return a new Parcelable from the parcel.  The given class loader\n     * will be used to load any enclosed Parcelables.  If it is null, the default\n     * class loader will be used.\n     * @param loader A ClassLoader from which to instantiate the Parcelable\n     * object, or null for the default class loader.\n     * @return Returns the newly created Parcelable, or null if a null\n     * object has been written.\n     * @throws BadParcelableException Throws BadParcelableException if there\n     * was an error trying to instantiate the Parcelable.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final T readCreator(@NonNull Parcelable.Creator<?> creator, @Nullable ClassLoader loader)",
+    "returnType" : "T",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Parcelable.Creator<?> readParcelableCreator(@Nullable ClassLoader loader)",
+    "returnType" : "Parcelable.Creator<?>",
+    "comment" : "\n     * Read and return a Parcelable.Creator from the parcel. The given class loader will be used to\n     * load the {@link Parcelable.Creator}. If it is null, the default class loader will be used.\n     *\n     * @param loader A ClassLoader from which to instantiate the {@link Parcelable.Creator}\n     * object, or null for the default class loader.\n     * @return the previously written {@link Parcelable.Creator}, or null if a null Creator was\n     * written.\n     * @throws BadParcelableException Throws BadParcelableException if there was an error trying to\n     * read the {@link Parcelable.Creator}.\n     *\n     * @see #writeParcelableCreator\n     ",
+    "links" : [ "Parcelable.Creator" ]
+  }, {
+    "name" : "public final Parcelable[] readParcelableArray(@Nullable ClassLoader loader)",
+    "returnType" : "Parcelable[]",
+    "comment" : "\n     * Read and return a new Parcelable array from the parcel.\n     * The given class loader will be used to load any enclosed\n     * Parcelables.\n     * @return the Parcelable array, or null if the array is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final T[] readParcelableArray(@Nullable ClassLoader loader, @NonNull Class<T> clazz)",
+    "returnType" : "T[]",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Serializable readSerializable()",
+    "returnType" : "Serializable",
+    "comment" : "\n     * Read and return a new Serializable object from the parcel.\n     * @return the Serializable object, or null if the Serializable name\n     * wasn't found in the parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final Serializable readSerializable(@Nullable final ClassLoader loader)",
+    "returnType" : "Serializable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final Parcel obtain(int obj)",
+    "returnType" : "Parcel",
+    "comment" : " @hide for internal use only. ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final Parcel obtain(long obj)",
+    "returnType" : "Parcel",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void init(long nativePtr)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void freeBuffer()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void destroy()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void finalize() throws Throwable",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void readMapInternal(@NonNull Map outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : " void readArrayMapInternal(@NonNull ArrayMap outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : " void readArrayMapSafelyInternal(@NonNull ArrayMap outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "public void readArrayMap(@NonNull ArrayMap outVal, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide For testing only.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ArraySet<? extends Object> readArraySet(@Nullable ClassLoader loader)",
+    "returnType" : "ArraySet<? extends Object>",
+    "comment" : "\n     * Reads an array set.\n     *\n     * @param loader The class loader to use.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readListInternal(@NonNull List outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readArrayInternal(@NonNull Object[] outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readSparseArrayInternal(@NonNull SparseArray outVal, int N, @Nullable ClassLoader loader)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readSparseBooleanArrayInternal(@NonNull SparseBooleanArray outVal, int N)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readSparseIntArrayInternal(@NonNull SparseIntArray outVal, int N)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public long getBlobAshmemSize()",
+    "returnType" : "long",
+    "comment" : "\n     * @hide For testing\n     ",
+    "links" : [ ]
+  } ],
+  "variableNames" : [ "DEBUG_RECYCLE", "DEBUG_ARRAY_MAP", "TAG", "mNativePtr", "mOwnsNativeParcelObject", "mNativeSize", "mClassCookies", "mStack", "sParcelExceptionStackTrace", "POOL_SIZE", "sOwnedPool", "sHolderPool", "VAL_NULL", "VAL_STRING", "VAL_INTEGER", "VAL_MAP", "VAL_BUNDLE", "VAL_PARCELABLE", "VAL_SHORT", "VAL_LONG", "VAL_FLOAT", "VAL_DOUBLE", "VAL_BOOLEAN", "VAL_CHARSEQUENCE", "VAL_LIST", "VAL_SPARSEARRAY", "VAL_BYTEARRAY", "VAL_STRINGARRAY", "VAL_IBINDER", "VAL_PARCELABLEARRAY", "VAL_OBJECTARRAY", "VAL_INTARRAY", "VAL_LONGARRAY", "VAL_BYTE", "VAL_SERIALIZABLE", "VAL_SPARSEBOOLEANARRAY", "VAL_BOOLEANARRAY", "VAL_CHARSEQUENCEARRAY", "VAL_PERSISTABLEBUNDLE", "VAL_SIZE", "VAL_SIZEF", "VAL_DOUBLEARRAY", "EX_SECURITY", "EX_BAD_PARCELABLE", "EX_ILLEGAL_ARGUMENT", "EX_NULL_POINTER", "EX_ILLEGAL_STATE", "EX_NETWORK_MAIN_THREAD", "EX_UNSUPPORTED_OPERATION", "EX_SERVICE_SPECIFIC", "EX_PARCELABLE", "EX_HAS_NOTED_APPOPS_REPLY_HEADER", "EX_HAS_STRICTMODE_REPLY_HEADER", "EX_TRANSACTION_FAILED", "sLastWriteExceptionStackTrace", "WRITE_EXCEPTION_STACK_TRACE_THRESHOLD_MS", "STRING_CREATOR", "mReadWriteHelper", "mWrittenSquashableParcelables", "mAllowSquashing", "mReadSquashableParcelables", "mCreators" ],
+  "methodNames" : [ "private static native int nativeDataSize(long nativePtr)", "private static native int nativeDataAvail(long nativePtr)", "private static native int nativeDataPosition(long nativePtr)", "private static native int nativeDataCapacity(long nativePtr)", "private static native long nativeSetDataSize(long nativePtr, int size)", "private static native void nativeSetDataPosition(long nativePtr, int pos)", "private static native void nativeSetDataCapacity(long nativePtr, int size)", "private static native boolean nativePushAllowFds(long nativePtr, boolean allowFds)", "private static native void nativeRestoreAllowFds(long nativePtr, boolean lastValue)", "private static native void nativeWriteByteArray(long nativePtr, byte[] b, int offset, int len)", "private static native void nativeWriteBlob(long nativePtr, byte[] b, int offset, int len)", "private static native void nativeWriteInt(long nativePtr, int val)", "private static native void nativeWriteLong(long nativePtr, long val)", "private static native void nativeWriteFloat(long nativePtr, float val)", "private static native void nativeWriteDouble(long nativePtr, double val)", "private static native void nativeWriteString8(long nativePtr, String val)", "private static native void nativeWriteString16(long nativePtr, String val)", "private static native void nativeWriteStrongBinder(long nativePtr, IBinder val)", "private static native long nativeWriteFileDescriptor(long nativePtr, FileDescriptor val)", "private static native byte[] nativeCreateByteArray(long nativePtr)", "private static native boolean nativeReadByteArray(long nativePtr, byte[] dest, int destLen)", "private static native byte[] nativeReadBlob(long nativePtr)", "private static native int nativeReadInt(long nativePtr)", "private static native long nativeReadLong(long nativePtr)", "private static native float nativeReadFloat(long nativePtr)", "private static native double nativeReadDouble(long nativePtr)", "private static native String nativeReadString8(long nativePtr)", "private static native String nativeReadString16(long nativePtr)", "private static native IBinder nativeReadStrongBinder(long nativePtr)", "private static native FileDescriptor nativeReadFileDescriptor(long nativePtr)", "private static native long nativeCreate()", "private static native long nativeFreeBuffer(long nativePtr)", "private static native void nativeDestroy(long nativePtr)", "private static native byte[] nativeMarshall(long nativePtr)", "private static native long nativeUnmarshall(long nativePtr, byte[] data, int offset, int length)", "private static native int nativeCompareData(long thisNativePtr, long otherNativePtr)", "private static native long nativeAppendFrom(long thisNativePtr, long otherNativePtr, int offset, int length)", "private static native boolean nativeHasFileDescriptors(long nativePtr)", "private static native void nativeWriteInterfaceToken(long nativePtr, String interfaceName)", "private static native void nativeEnforceInterface(long nativePtr, String interfaceName)", "private static native boolean nativeReplaceCallingWorkSourceUid(long nativePtr, int workSourceUid)", "private static native int nativeReadCallingWorkSourceUid(long nativePtr)", "private static native long nativeGetBlobAshmemSize(long nativePtr)", "public static Parcel obtain()", "public final void recycle()", "public void setReadWriteHelper(@Nullable ReadWriteHelper helper)", "public boolean hasReadWriteHelper()", "public static native long getGlobalAllocSize()", "public static native long getGlobalAllocCount()", "public final int dataSize()", "public final int dataAvail()", "public final int dataPosition()", "public final int dataCapacity()", "public final void setDataSize(int size)", "public final void setDataPosition(int pos)", "public final void setDataCapacity(int size)", "public final boolean pushAllowFds(boolean allowFds)", "public final void restoreAllowFds(boolean lastValue)", "public final byte[] marshall()", "public final void unmarshall(@NonNull byte[] data, int offset, int length)", "public final void appendFrom(Parcel parcel, int offset, int length)", "public final int compareData(Parcel other)", "public final void setClassCookie(Class clz, Object cookie)", "public final Object getClassCookie(Class clz)", "public final void adoptClassCookies(Parcel from)", "public Map<Class, Object> copyClassCookies()", "public void putClassCookies(Map<Class, Object> cookies)", "public final boolean hasFileDescriptors()", "public final void writeInterfaceToken(String interfaceName)", "public final void enforceInterface(String interfaceName)", "public boolean replaceCallingWorkSourceUid(int workSourceUid)", "public int readCallingWorkSourceUid()", "public final void writeByteArray(@Nullable byte[] b)", "public final void writeByteArray(@Nullable byte[] b, int offset, int len)", "public final void writeBlob(@Nullable byte[] b)", "public final void writeBlob(@Nullable byte[] b, int offset, int len)", "public final void writeInt(int val)", "public final void writeLong(long val)", "public final void writeFloat(float val)", "public final void writeDouble(double val)", "public final void writeString(@Nullable String val)", "public final void writeString8(@Nullable String val)", "public final void writeString16(@Nullable String val)", "public void writeStringNoHelper(@Nullable String val)", "public void writeString8NoHelper(@Nullable String val)", "public void writeString16NoHelper(@Nullable String val)", "public final void writeBoolean(boolean val)", "public final void writeCharSequence(@Nullable CharSequence val)", "public final void writeStrongBinder(IBinder val)", "public final void writeStrongInterface(IInterface val)", "public final void writeFileDescriptor(@NonNull FileDescriptor val)", "private void updateNativeSize(long newNativeSize)", "public final void writeRawFileDescriptor(@NonNull FileDescriptor val)", "public final void writeRawFileDescriptorArray(@Nullable FileDescriptor[] value)", "public final void writeByte(byte val)", "public final void writeMap(@Nullable Map val)", " void writeMapInternal(@Nullable Map<String, Object> val)", " void writeArrayMapInternal(@Nullable ArrayMap<String, Object> val)", "public void writeArrayMap(@Nullable ArrayMap<String, Object> val)", "public void writeTypedArrayMap(@Nullable ArrayMap<String, T> val, int parcelableFlags)", "public void writeArraySet(@Nullable ArraySet<? extends Object> val)", "public final void writeBundle(@Nullable Bundle val)", "public final void writePersistableBundle(@Nullable PersistableBundle val)", "public final void writeSize(@NonNull Size val)", "public final void writeSizeF(@NonNull SizeF val)", "public final void writeList(@Nullable List val)", "public final void writeArray(@Nullable Object[] val)", "public final void writeSparseArray(@Nullable SparseArray<T> val)", "public final void writeSparseBooleanArray(@Nullable SparseBooleanArray val)", "public final void writeSparseIntArray(@Nullable SparseIntArray val)", "public final void writeBooleanArray(@Nullable boolean[] val)", "public final boolean[] createBooleanArray()", "public final void readBooleanArray(@NonNull boolean[] val)", "public final void writeCharArray(@Nullable char[] val)", "public final char[] createCharArray()", "public final void readCharArray(@NonNull char[] val)", "public final void writeIntArray(@Nullable int[] val)", "public final int[] createIntArray()", "public final void readIntArray(@NonNull int[] val)", "public final void writeLongArray(@Nullable long[] val)", "public final long[] createLongArray()", "public final void readLongArray(@NonNull long[] val)", "public final void writeFloatArray(@Nullable float[] val)", "public final float[] createFloatArray()", "public final void readFloatArray(@NonNull float[] val)", "public final void writeDoubleArray(@Nullable double[] val)", "public final double[] createDoubleArray()", "public final void readDoubleArray(@NonNull double[] val)", "public final void writeStringArray(@Nullable String[] val)", "public final String[] createStringArray()", "public final void readStringArray(@NonNull String[] val)", "public final void writeString8Array(@Nullable String[] val)", "public final String[] createString8Array()", "public final void readString8Array(@NonNull String[] val)", "public final void writeString16Array(@Nullable String[] val)", "public final String[] createString16Array()", "public final void readString16Array(@NonNull String[] val)", "public final void writeBinderArray(@Nullable IBinder[] val)", "public final void writeCharSequenceArray(@Nullable CharSequence[] val)", "public final void writeCharSequenceList(@Nullable ArrayList<CharSequence> val)", "public final IBinder[] createBinderArray()", "public final void readBinderArray(@NonNull IBinder[] val)", "public final void writeTypedList(@Nullable List<T> val)", "public final void writeTypedSparseArray(@Nullable SparseArray<T> val, int parcelableFlags)", "public void writeTypedList(@Nullable List<T> val, int parcelableFlags)", "public final void writeStringList(@Nullable List<String> val)", "public final void writeBinderList(@Nullable List<IBinder> val)", "public final void writeParcelableList(@Nullable List<T> val, int flags)", "public final void writeTypedArray(@Nullable T[] val, int parcelableFlags)", "public final void writeTypedObject(@Nullable T val, int parcelableFlags)", "public final void writeValue(@Nullable Object v)", "public final void writeParcelable(@Nullable Parcelable p, int parcelableFlags)", "public final void writeParcelableCreator(@NonNull Parcelable p)", "private void ensureWrittenSquashableParcelables()", "public boolean allowSquashing()", "public void restoreAllowSquashing(boolean previous)", "private void resetSqaushingState()", "private void ensureReadSquashableParcelables()", "public boolean maybeWriteSquashed(@NonNull Parcelable p)", "public T readSquashed(SquashReadHelper<T> reader)", "public final void writeSerializable(@Nullable Serializable s)", "public static void setStackTraceParceling(boolean enabled)", "public final void writeException(@NonNull Exception e)", "public static int getExceptionCode(@NonNull Throwable e)", "public void writeStackTrace(@NonNull Throwable e)", "public final void writeNoException()", "public final void readException()", "public final int readExceptionCode()", "public final void readException(int code, String msg)", "private Exception createException(int code, String msg)", "public Exception createExceptionOrNull(int code, String msg)", "public final int readInt()", "public final long readLong()", "public final float readFloat()", "public final double readDouble()", "public final String readString()", "public final String readString8()", "public final String readString16()", "public String readStringNoHelper()", "public String readString8NoHelper()", "public String readString16NoHelper()", "public final boolean readBoolean()", "public final CharSequence readCharSequence()", "public final IBinder readStrongBinder()", "public final ParcelFileDescriptor readFileDescriptor()", "public final FileDescriptor readRawFileDescriptor()", "public final FileDescriptor[] createRawFileDescriptorArray()", "public final void readRawFileDescriptorArray(FileDescriptor[] val)", "public final byte readByte()", "public final void readMap(@NonNull Map outVal, @Nullable ClassLoader loader)", "public final void readList(@NonNull List outVal, @Nullable ClassLoader loader)", "public final HashMap readHashMap(@Nullable ClassLoader loader)", "public final Bundle readBundle()", "public final Bundle readBundle(@Nullable ClassLoader loader)", "public final PersistableBundle readPersistableBundle()", "public final PersistableBundle readPersistableBundle(@Nullable ClassLoader loader)", "public final Size readSize()", "public final SizeF readSizeF()", "public final byte[] createByteArray()", "public final void readByteArray(@NonNull byte[] val)", "public final byte[] readBlob()", "public final String[] readStringArray()", "public final CharSequence[] readCharSequenceArray()", "public final ArrayList<CharSequence> readCharSequenceList()", "public final ArrayList readArrayList(@Nullable ClassLoader loader)", "public final Object[] readArray(@Nullable ClassLoader loader)", "public final SparseArray<T> readSparseArray(@Nullable ClassLoader loader)", "public final SparseBooleanArray readSparseBooleanArray()", "public final SparseIntArray readSparseIntArray()", "public final ArrayList<T> createTypedArrayList(@NonNull Parcelable.Creator<T> c)", "public final void readTypedList(@NonNull List<T> list, @NonNull Parcelable.Creator<T> c)", "public final SparseArray<T> createTypedSparseArray(@NonNull Parcelable.Creator<T> creator)", "public final ArrayMap<String, T> createTypedArrayMap(@NonNull Parcelable.Creator<T> creator)", "public final ArrayList<String> createStringArrayList()", "public final ArrayList<IBinder> createBinderArrayList()", "public final void readStringList(@NonNull List<String> list)", "public final void readBinderList(@NonNull List<IBinder> list)", "public final List<T> readParcelableList(@NonNull List<T> list, @Nullable ClassLoader cl)", "public final T[] createTypedArray(@NonNull Parcelable.Creator<T> c)", "public final void readTypedArray(@NonNull T[] val, @NonNull Parcelable.Creator<T> c)", "public final T[] readTypedArray(Parcelable.Creator<T> c)", "public final T readTypedObject(@NonNull Parcelable.Creator<T> c)", "public final void writeParcelableArray(@Nullable T[] value, int parcelableFlags)", "public final Object readValue(@Nullable ClassLoader loader)", "public final T readParcelable(@Nullable ClassLoader loader)", "public final T readCreator(@NonNull Parcelable.Creator<?> creator, @Nullable ClassLoader loader)", "public final Parcelable.Creator<?> readParcelableCreator(@Nullable ClassLoader loader)", "public final Parcelable[] readParcelableArray(@Nullable ClassLoader loader)", "public final T[] readParcelableArray(@Nullable ClassLoader loader, @NonNull Class<T> clazz)", "public final Serializable readSerializable()", "private final Serializable readSerializable(@Nullable final ClassLoader loader)", "protected static final Parcel obtain(int obj)", "protected static final Parcel obtain(long obj)", "private void init(long nativePtr)", "private void freeBuffer()", "private void destroy()", "protected void finalize() throws Throwable", " void readMapInternal(@NonNull Map outVal, int N, @Nullable ClassLoader loader)", " void readArrayMapInternal(@NonNull ArrayMap outVal, int N, @Nullable ClassLoader loader)", " void readArrayMapSafelyInternal(@NonNull ArrayMap outVal, int N, @Nullable ClassLoader loader)", "public void readArrayMap(@NonNull ArrayMap outVal, @Nullable ClassLoader loader)", "public ArraySet<? extends Object> readArraySet(@Nullable ClassLoader loader)", "private void readListInternal(@NonNull List outVal, int N, @Nullable ClassLoader loader)", "private void readArrayInternal(@NonNull Object[] outVal, int N, @Nullable ClassLoader loader)", "private void readSparseArrayInternal(@NonNull SparseArray outVal, int N, @Nullable ClassLoader loader)", "private void readSparseBooleanArrayInternal(@NonNull SparseBooleanArray outVal, int N)", "private void readSparseIntArrayInternal(@NonNull SparseIntArray outVal, int N)", "public long getBlobAshmemSize()" ]
+}
