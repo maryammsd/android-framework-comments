@@ -1,0 +1,1406 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/util/Calendar.java",
+  "packageName" : "android.icu.util",
+  "className" : "Calendar",
+  "comment" : "\n * <strong>[icu enhancement]</strong> ICU's replacement for {@link java.util.Calendar}.&nbsp;Methods, fields, and other functionality specific to ICU are labeled '<strong>[icu]</strong>'.\n *\n * <p><code>Calendar</code> is an abstract base class for converting between\n * a <code>Date</code> object and a set of integer fields such as\n * <code>YEAR</code>, <code>MONTH</code>, <code>DAY</code>, <code>HOUR</code>,\n * and so on. (A <code>Date</code> object represents a specific instant in\n * time with millisecond precision. See\n * {@link Date}\n * for information about the <code>Date</code> class.)\n *\n * <p>Subclasses of <code>Calendar</code> interpret a <code>Date</code>\n * according to the rules of a specific calendar system.  ICU4J contains\n * several subclasses implementing different international calendar systems.\n *\n * <p>\n * Like other locale-sensitive classes, <code>Calendar</code> provides a\n * class method, <code>getInstance</code>, for getting a generally useful\n * object of this type. <code>Calendar</code>'s <code>getInstance</code> method\n * returns a calendar of a type appropriate to the locale, whose\n * time fields have been initialized with the current date and time:\n * <blockquote>\n * <pre>Calendar rightNow = Calendar.getInstance()</pre>\n * </blockquote>\n *\n * <p>When a <code>ULocale</code> is used by <code>getInstance</code>, its\n * '<code>calendar</code>' tag and value are retrieved if present.  If a recognized\n * value is supplied, a calendar is provided and configured as appropriate.\n * Currently recognized tags are \"buddhist\", \"chinese\", \"coptic\", \"ethiopic\",\n * \"gregorian\", \"hebrew\", \"islamic\", \"islamic-civil\", \"japanese\", and \"roc\".  For\n * example: <blockquote>\n * <pre>Calendar cal = Calendar.getInstance(new ULocale(\"en_US@calendar=japanese\"));</pre>\n * </blockquote> will return an instance of JapaneseCalendar (using en_US conventions for\n * minimum days in first week, start day of week, et cetera).\n *\n * <p>A <code>Calendar</code> object can produce all the time field values\n * needed to implement the date-time formatting for a particular language and\n * calendar style (for example, Japanese-Gregorian, Japanese-Traditional).\n * <code>Calendar</code> defines the range of values returned by certain fields,\n * as well as their meaning.  For example, the first month of the year has value\n * <code>MONTH</code> == <code>JANUARY</code> for all calendars.  Other values\n * are defined by the concrete subclass, such as <code>ERA</code> and\n * <code>YEAR</code>.  See individual field documentation and subclass\n * documentation for details.\n *\n * <p>When a <code>Calendar</code> is <em>lenient</em>, it accepts a wider range\n * of field values than it produces.  For example, a lenient\n * <code>GregorianCalendar</code> interprets <code>MONTH</code> ==\n * <code>JANUARY</code>, <code>DAY_OF_MONTH</code> == 32 as February 1.  A\n * non-lenient <code>GregorianCalendar</code> throws an exception when given\n * out-of-range field settings.  When calendars recompute field values for\n * return by <code>get()</code>, they normalize them.  For example, a\n * <code>GregorianCalendar</code> always produces <code>DAY_OF_MONTH</code>\n * values between 1 and the length of the month.\n *\n * <p><code>Calendar</code> defines a locale-specific seven day week using two\n * parameters: the first day of the week and the minimal days in first week\n * (from 1 to 7).  These numbers are taken from the locale resource data when a\n * <code>Calendar</code> is constructed.  They may also be specified explicitly\n * through the API.\n *\n * <p>When setting or getting the <code>WEEK_OF_MONTH</code> or\n * <code>WEEK_OF_YEAR</code> fields, <code>Calendar</code> must determine the\n * first week of the month or year as a reference point.  The first week of a\n * month or year is defined as the earliest seven day period beginning on\n * <code>getFirstDayOfWeek()</code> and containing at least\n * <code>getMinimalDaysInFirstWeek()</code> days of that month or year.  Weeks\n * numbered ..., -1, 0 precede the first week; weeks numbered 2, 3,... follow\n * it.  Note that the normalized numbering returned by <code>get()</code> may be\n * different.  For example, a specific <code>Calendar</code> subclass may\n * designate the week before week 1 of a year as week <em>n</em> of the previous\n * year.\n *\n * <p> When computing a <code>Date</code> from time fields, some special\n * circumstances may arise: there may be insufficient information to compute the\n * <code>Date</code> (such as only year and month but no day in the month),\n * there may be inconsistent information (such as \"Tuesday, July 15, 1996\" --\n * July 15, 1996 is actually a Monday), or the input time might be ambiguous\n * because of time zone transition.\n *\n * <p><strong>Insufficient information.</strong> The calendar will use default\n * information to specify the missing fields. This may vary by calendar; for\n * the Gregorian calendar, the default for a field is the same as that of the\n * start of the epoch: i.e., YEAR = 1970, MONTH = JANUARY, DATE = 1, etc.\n *\n * <p><strong>Inconsistent information.</strong> If fields conflict, the calendar\n * will give preference to fields set more recently. For example, when\n * determining the day, the calendar will look for one of the following\n * combinations of fields.  The most recent combination, as determined by the\n * most recently set single field, will be used.\n *\n * <blockquote>\n * <pre>\n * MONTH + DAY_OF_MONTH\n * MONTH + WEEK_OF_MONTH + DAY_OF_WEEK\n * MONTH + DAY_OF_WEEK_IN_MONTH + DAY_OF_WEEK\n * DAY_OF_YEAR\n * DAY_OF_WEEK + WEEK_OF_YEAR</pre>\n * </blockquote>\n *\n * For the time of day:\n *\n * <blockquote>\n * <pre>\n * HOUR_OF_DAY\n * AM_PM + HOUR</pre>\n * </blockquote>\n *\n * <p><strong>Ambiguous Wall Clock Time.</strong> When time offset from UTC has\n * changed, it produces an ambiguous time slot around the transition. For example,\n * many US locations observe daylight saving time. On the date switching to daylight\n * saving time in US, wall clock time jumps from 12:59 AM (standard) to 2:00 AM\n * (daylight). Therefore, wall clock time from 1:00 AM to 1:59 AM do not exist on\n * the date. When the input wall time fall into this missing time slot, the ICU\n * Calendar resolves the time using the UTC offset before the transition by default.\n * In this example, 1:30 AM is interpreted as 1:30 AM standard time (non-exist),\n * so the final result will be 2:30 AM daylight time.\n *\n * <p>On the date switching back to standard time, wall clock time is moved back one\n * hour at 2:00 AM. So wall clock time from 1:00 AM to 1:59 AM occur twice. In this\n * case, the ICU Calendar resolves the time using the UTC offset after the transition\n * by default. For example, 1:30 AM on the date is resolved as 1:30 AM standard time.\n *\n * <p>Ambiguous wall clock time resolution behaviors can be customized by Calendar APIs\n * {@link #setRepeatedWallTimeOption(int)} and {@link #setSkippedWallTimeOption(int)}.\n * These methods are available in ICU 49 or later versions.\n *\n * <p><strong>Note:</strong> for some non-Gregorian calendars, different\n * fields may be necessary for complete disambiguation. For example, a full\n * specification of the historial Arabic astronomical calendar requires year,\n * month, day-of-month <em>and</em> day-of-week in some cases.\n *\n * <p><strong>Note:</strong> There are certain possible ambiguities in\n * interpretation of certain singular times, which are resolved in the\n * following ways:\n * <ol>\n *     <li> 24:00:00 \"belongs\" to the following day. That is,\n *          23:59 on Dec 31, 1969 &lt; 24:00 on Jan 1, 1970 &lt; 24:01:00 on Jan 1, 1970\n *\n *     <li> Although historically not precise, midnight also belongs to \"am\",\n *          and noon belongs to \"pm\", so on the same day,\n *          12:00 am (midnight) &lt; 12:01 am, and 12:00 pm (noon) &lt; 12:01 pm\n * </ol>\n *\n * <p>The date or time format strings are not part of the definition of a\n * calendar, as those must be modifiable or overridable by the user at\n * runtime. Use {@link DateFormat}\n * to format dates.\n *\n * <p><strong>Field manipulation methods</strong></p>\n *\n * <p><code>Calendar</code> fields can be changed using three methods:\n * <code>set()</code>, <code>add()</code>, and <code>roll()</code>.</p>\n *\n * <p><strong><code>set(f, value)</code></strong> changes field\n * <code>f</code> to <code>value</code>.  In addition, it sets an\n * internal member variable to indicate that field <code>f</code> has\n * been changed. Although field <code>f</code> is changed immediately,\n * the calendar's milliseconds is not recomputed until the next call to\n * <code>get()</code>, <code>getTime()</code>, or\n * <code>getTimeInMillis()</code> is made. Thus, multiple calls to\n * <code>set()</code> do not trigger multiple, unnecessary\n * computations. As a result of changing a field using\n * <code>set()</code>, other fields may also change, depending on the\n * field, the field value, and the calendar system. In addition,\n * <code>get(f)</code> will not necessarily return <code>value</code>\n * after the fields have been recomputed. The specifics are determined by\n * the concrete calendar class.</p>\n *\n * <p><em>Example</em>: Consider a <code>GregorianCalendar</code>\n * originally set to August 31, 1999. Calling <code>set(Calendar.MONTH,\n * Calendar.SEPTEMBER)</code> sets the calendar to September 31,\n * 1999. This is a temporary internal representation that resolves to\n * October 1, 1999 if <code>getTime()</code>is then called. However, a\n * call to <code>set(Calendar.DAY_OF_MONTH, 30)</code> before the call to\n * <code>getTime()</code> sets the calendar to September 30, 1999, since\n * no recomputation occurs after <code>set()</code> itself.</p>\n *\n * <p><strong><code>add(f, delta)</code></strong> adds <code>delta</code>\n * to field <code>f</code>.  This is equivalent to calling <code>set(f,\n * get(f) + delta)</code> with two adjustments:</p>\n *\n * <blockquote>\n *   <p><strong>Add rule 1</strong>. The value of field <code>f</code>\n *   after the call minus the value of field <code>f</code> before the\n *   call is <code>delta</code>, modulo any overflow that has occurred in\n *   field <code>f</code>. Overflow occurs when a field value exceeds its\n *   range and, as a result, the next larger field is incremented or\n *   decremented and the field value is adjusted back into its range.</p>\n *\n *   <p><strong>Add rule 2</strong>. If a smaller field is expected to be\n *   invariant, but &nbsp; it is impossible for it to be equal to its\n *   prior value because of changes in its minimum or maximum after field\n *   <code>f</code> is changed, then its value is adjusted to be as close\n *   as possible to its expected value. A smaller field represents a\n *   smaller unit of time. <code>HOUR</code> is a smaller field than\n *   <code>DAY_OF_MONTH</code>. No adjustment is made to smaller fields\n *   that are not expected to be invariant. The calendar system\n *   determines what fields are expected to be invariant.</p>\n * </blockquote>\n *\n * <p>In addition, unlike <code>set()</code>, <code>add()</code> forces\n * an immediate recomputation of the calendar's milliseconds and all\n * fields.</p>\n *\n * <p><em>Example</em>: Consider a <code>GregorianCalendar</code>\n * originally set to August 31, 1999. Calling <code>add(Calendar.MONTH,\n * 13)</code> sets the calendar to September 30, 2000. <strong>Add rule\n * 1</strong> sets the <code>MONTH</code> field to September, since\n * adding 13 months to August gives September of the next year. Since\n * <code>DAY_OF_MONTH</code> cannot be 31 in September in a\n * <code>GregorianCalendar</code>, <strong>add rule 2</strong> sets the\n * <code>DAY_OF_MONTH</code> to 30, the closest possible value. Although\n * it is a smaller field, <code>DAY_OF_WEEK</code> is not adjusted by\n * rule 2, since it is expected to change when the month changes in a\n * <code>GregorianCalendar</code>.</p>\n *\n * <p><strong><code>roll(f, delta)</code></strong> adds\n * <code>delta</code> to field <code>f</code> without changing larger\n * fields. This is equivalent to calling <code>add(f, delta)</code> with\n * the following adjustment:</p>\n *\n * <blockquote>\n *   <p><strong>Roll rule</strong>. Larger fields are unchanged after the\n *   call. A larger field represents a larger unit of\n *   time. <code>DAY_OF_MONTH</code> is a larger field than\n *   <code>HOUR</code>.</p>\n * </blockquote>\n *\n * <p><em>Example</em>: Consider a <code>GregorianCalendar</code>\n * originally set to August 31, 1999. Calling <code>roll(Calendar.MONTH,\n * 8)</code> sets the calendar to April 30, <strong>1999</strong>.  Add\n * rule 1 sets the <code>MONTH</code> field to April. Using a\n * <code>GregorianCalendar</code>, the <code>DAY_OF_MONTH</code> cannot\n * be 31 in the month April. Add rule 2 sets it to the closest possible\n * value, 30. Finally, the <strong>roll rule</strong> maintains the\n * <code>YEAR</code> field value of 1999.</p>\n *\n * <p><em>Example</em>: Consider a <code>GregorianCalendar</code>\n * originally set to Sunday June 6, 1999. Calling\n * <code>roll(Calendar.WEEK_OF_MONTH, -1)</code> sets the calendar to\n * Tuesday June 1, 1999, whereas calling\n * <code>add(Calendar.WEEK_OF_MONTH, -1)</code> sets the calendar to\n * Sunday May 30, 1999. This is because the roll rule imposes an\n * additional constraint: The <code>MONTH</code> must not change when the\n * <code>WEEK_OF_MONTH</code> is rolled. Taken together with add rule 1,\n * the resultant date must be between Tuesday June 1 and Saturday June\n * 5. According to add rule 2, the <code>DAY_OF_WEEK</code>, an invariant\n * when changing the <code>WEEK_OF_MONTH</code>, is set to Tuesday, the\n * closest possible value to Sunday (where Sunday is the first day of the\n * week).</p>\n *\n * <p><strong>Usage model</strong>. To motivate the behavior of\n * <code>add()</code> and <code>roll()</code>, consider a user interface\n * component with increment and decrement buttons for the month, day, and\n * year, and an underlying <code>GregorianCalendar</code>. If the\n * interface reads January 31, 1999 and the user presses the month\n * increment button, what should it read? If the underlying\n * implementation uses <code>set()</code>, it might read March 3, 1999. A\n * better result would be February 28, 1999. Furthermore, if the user\n * presses the month increment button again, it should read March 31,\n * 1999, not March 28, 1999. By saving the original date and using either\n * <code>add()</code> or <code>roll()</code>, depending on whether larger\n * fields should be affected, the user interface can behave as most users\n * will intuitively expect.</p>\n *\n * <p><b>Note:</b> You should always use {@link #roll roll} and {@link #add add} rather\n * than attempting to perform arithmetic operations directly on the fields\n * of a <tt>Calendar</tt>.  It is quite possible for <tt>Calendar</tt> subclasses\n * to have fields with non-linear behavior, for example missing months\n * or days during non-leap years.  The subclasses' <tt>add</tt> and <tt>roll</tt>\n * methods will take this into account, while simple arithmetic manipulations\n * may give invalid results.\n *\n * <p><big><big><b>Calendar Architecture in ICU4J</b></big></big></p>\n *\n * <p>Recently the implementation of <code>Calendar</code> has changed\n * significantly in order to better support subclassing. The original\n * <code>Calendar</code> class was designed to support subclassing, but\n * it had only one implemented subclass, <code>GregorianCalendar</code>.\n * With the implementation of several new calendar subclasses, including\n * the <code>BuddhistCalendar</code>, <code>ChineseCalendar</code>,\n * <code>HebrewCalendar</code>, <code>IslamicCalendar</code>, and\n * <code>JapaneseCalendar</code>, the subclassing API has been reworked\n * thoroughly. This section details the new subclassing API and other\n * ways in which <code>android.icu.util.Calendar</code> differs from\n * <code>java.util.Calendar</code>.\n * </p>\n *\n * <p><big><b>Changes</b></big></p>\n *\n * <p>Overview of changes between the classic <code>Calendar</code>\n * architecture and the new architecture.\n *\n * <ul>\n *\n *   <li>The <code>fields[]</code> array is <code>private</code> now\n *     instead of <code>protected</code>.  Subclasses must access it\n *     using the methods {@link #internalSet} and\n *     {@link #internalGet}.  <b>Motivation:</b> Subclasses should\n *     not directly access data members.</li>\n *\n *   <li>The <code>time</code> long word is <code>private</code> now\n *     instead of <code>protected</code>.  Subclasses may access it using\n *     the method {@link #internalGetTimeInMillis}, which does not\n *     provoke an update. <b>Motivation:</b> Subclasses should not\n *     directly access data members.</li>\n *\n *   <li>The scope of responsibility of subclasses has been drastically\n *     reduced. As much functionality as possible is implemented in the\n *     <code>Calendar</code> base class. As a result, it is much easier\n *     to subclass <code>Calendar</code>. <b>Motivation:</b> Subclasses\n *     should not have to reimplement common code. Certain behaviors are\n *     common across calendar systems: The definition and behavior of\n *     week-related fields and time fields, the arithmetic\n *     ({@link #add(int, int) add} and {@link #roll(int, int) roll}) behavior of many\n *     fields, and the field validation system.</li>\n *\n *   <li>The subclassing API has been completely redesigned.</li>\n *\n *   <li>The <code>Calendar</code> base class contains some Gregorian\n *     calendar algorithmic support that subclasses can use (specifically\n *     in {@link #handleComputeFields}).  Subclasses can use the\n *     methods <code>getGregorianXxx()</code> to obtain precomputed\n *     values. <b>Motivation:</b> This is required by all\n *     <code>Calendar</code> subclasses in order to implement consistent\n *     time zone behavior, and Gregorian-derived systems can use the\n *     already computed data.</li>\n *\n *   <li>The <code>FIELD_COUNT</code> constant has been removed. Use\n *     {@link #getFieldCount}.  In addition, framework API has been\n *     added to allow subclasses to define additional fields.\n *     <b>Motivation: </b>The number of fields is not constant across\n *     calendar systems.</li>\n *\n *   <li>The range of handled dates has been narrowed from +/-\n *     ~300,000,000 years to +/- ~5,000,000 years. In practical terms\n *     this should not affect clients. However, it does mean that client\n *     code cannot be guaranteed well-behaved results with dates such as\n *     <code>Date(Long.MIN_VALUE)</code> or\n *     <code>Date(Long.MAX_VALUE)</code>. Instead, the\n *     <code>Calendar</code> protected constants should be used.\n *     <b>Motivation:</b> With\n *     the addition of the {@link #JULIAN_DAY} field, Julian day\n *     numbers must be restricted to a 32-bit <code>int</code>.  This\n *     restricts the overall supported range. Furthermore, restricting\n *     the supported range simplifies the computations by removing\n *     special case code that was used to accommodate arithmetic overflow\n *     at millis near <code>Long.MIN_VALUE</code> and\n *     <code>Long.MAX_VALUE</code>.</li>\n *\n *   <li>New fields are implemented: {@link #JULIAN_DAY} defines\n *     single-field specification of the\n *     date. {@link #MILLISECONDS_IN_DAY} defines a single-field\n *     specification of the wall time. {@link #DOW_LOCAL} and\n *     {@link #YEAR_WOY} implement localized day-of-week and\n *     week-of-year behavior.</li>\n *\n *   <li>Subclasses can access protected millisecond constants\n *   defined in <code>Calendar</code>.</li>\n *\n *   <li>New API has been added to support calendar-specific subclasses\n *     of <code>DateFormat</code>.</li>\n *\n *   <li>Several subclasses have been implemented, representing\n *     various international calendar systems.</li>\n *\n * </ul>\n *\n * <p><big><b>Subclass API</b></big></p>\n *\n * <p>The original <code>Calendar</code> API was based on the experience\n * of implementing a only a single subclass,\n * <code>GregorianCalendar</code>. As a result, all of the subclassing\n * kinks had not been worked out. The new subclassing API has been\n * refined based on several implemented subclasses. This includes methods\n * that must be overridden and methods for subclasses to call. Subclasses\n * no longer have direct access to <code>fields</code> and\n * <code>stamp</code>. Instead, they have new API to access\n * these. Subclasses are able to allocate the <code>fields</code> array\n * through a protected framework method; this allows subclasses to\n * specify additional fields. </p>\n *\n * <p>More functionality has been moved into the base class. The base\n * class now contains much of the computational machinery to support the\n * Gregorian calendar. This is based on two things: (1) Many calendars\n * are based on the Gregorian calendar (such as the Buddhist and Japanese\n * imperial calendars). (2) <em>All</em> calendars require basic\n * Gregorian support in order to handle timezone computations. </p>\n *\n * <p>Common computations have been moved into\n * <code>Calendar</code>. Subclasses no longer compute the week related\n * fields and the time related fields. These are commonly handled for all\n * calendars by the base class. </p>\n *\n * <p><b>Subclass computation of time <tt>=&gt;</tt> fields</b>\n *\n * <p>The {@link #ERA}, {@link #YEAR},\n * {@link #EXTENDED_YEAR}, {@link #MONTH},\n * {@link #DAY_OF_MONTH}, and {@link #DAY_OF_YEAR} fields are\n * computed by the subclass, based on the Julian day. All other fields\n * are computed by <code>Calendar</code>.\n *\n * <ul>\n *\n *   <li>Subclasses should implement {@link #handleComputeFields}\n *     to compute the {@link #ERA}, {@link #YEAR},\n *     {@link #EXTENDED_YEAR}, {@link #MONTH},\n *     {@link #DAY_OF_MONTH}, and {@link #DAY_OF_YEAR} fields,\n *     based on the value of the {@link #JULIAN_DAY} field. If there\n *     are calendar-specific fields not defined by <code>Calendar</code>,\n *     they must also be computed. These are the only fields that the\n *     subclass should compute. All other fields are computed by the base\n *     class, so time and week fields behave in a consistent way across\n *     all calendars. The default version of this method in\n *     <code>Calendar</code> implements a proleptic Gregorian\n *     calendar. Within this method, subclasses may call\n *     <code>getGregorianXxx()</code> to obtain the Gregorian calendar\n *     month, day of month, and extended year for the given date.</li>\n *\n * </ul>\n *\n * <p><b>Subclass computation of fields <tt>=&gt;</tt> time</b>\n *\n * <p>The interpretation of most field values is handled entirely by\n * <code>Calendar</code>. <code>Calendar</code> determines which fields\n * are set, which are not, which are set more recently, and so on. In\n * addition, <code>Calendar</code> handles the computation of the time\n * from the time fields and handles the week-related fields. The only\n * thing the subclass must do is determine the extended year, based on\n * the year fields, and then, given an extended year and a month, it must\n * return a Julian day number.\n *\n * <ul>\n *\n *   <li>Subclasses should implement {@link #handleGetExtendedYear}\n *     to return the extended year for this calendar system, based on the\n *     {@link #YEAR}, {@link #EXTENDED_YEAR}, and any fields that\n *     the calendar system uses that are larger than a year, such as\n *     {@link #ERA}.</li>\n *\n *   <li>Subclasses should implement {@link #handleComputeMonthStart}\n *     to return the Julian day number\n *     associated with a month and extended year. This is the Julian day\n *     number of the day before the first day of the month. The month\n *     number is zero-based. This computation should not depend on any\n *     field values.</li>\n *\n * </ul>\n *\n * <p><b>Other methods</b>\n *\n * <ul>\n *\n *   <li>Subclasses should implement {@link #handleGetMonthLength}\n *     to return the number of days in a\n *     given month of a given extended year. The month number, as always,\n *     is zero-based.</li>\n *\n *   <li>Subclasses should implement {@link #handleGetYearLength}\n *     to return the number of days in the given\n *     extended year. This method is used by\n *     <tt>computeWeekFields</tt> to compute the\n *     {@link #WEEK_OF_YEAR} and {@link #YEAR_WOY} fields.</li>\n *\n *   <li>Subclasses should implement {@link #handleGetLimit}\n *     to return the protected values of a field, depending on the value of\n *     <code>limitType</code>. This method only needs to handle the\n *     fields {@link #ERA}, {@link #YEAR}, {@link #MONTH},\n *     {@link #WEEK_OF_YEAR}, {@link #WEEK_OF_MONTH},\n *     {@link #DAY_OF_MONTH}, {@link #DAY_OF_YEAR},\n *     {@link #DAY_OF_WEEK_IN_MONTH}, {@link #YEAR_WOY}, and\n *     {@link #EXTENDED_YEAR}.  Other fields are invariant (with\n *     respect to calendar system) and are handled by the base\n *     class.</li>\n *\n *   <li>Optionally, subclasses may override {@link #validateField}\n *     to check any subclass-specific fields. If the\n *     field's value is out of range, the method should throw an\n *     <code>IllegalArgumentException</code>. The method may call\n *     <code>super.validateField(field)</code> to handle fields in a\n *     generic way, that is, to compare them to the range\n *     <code>getMinimum(field)</code>..<code>getMaximum(field)</code>.</li>\n *\n *   <li>Optionally, subclasses may override\n *     {@link #handleCreateFields} to create an <code>int[]</code>\n *     array large enough to hold the calendar's fields. This is only\n *     necessary if the calendar defines additional fields beyond those\n *     defined by <code>Calendar</code>. The length of the result must be\n *     be between the base and maximum field counts.</li>\n *\n *   <li>Optionally, subclasses may override\n *     {@link #handleGetDateFormat} to create a\n *     <code>DateFormat</code> appropriate to this calendar. This is only\n *     required if a calendar subclass redefines the use of a field (for\n *     example, changes the {@link #ERA} field from a symbolic field\n *     to a numeric one) or defines an additional field.</li>\n *\n *   <li>Optionally, subclasses may override {@link #roll roll} and\n *     {@link #add add} to handle fields that are discontinuous. For\n *     example, in the Hebrew calendar the month &quot;Adar I&quot; only\n *     occurs in leap years; in other years the calendar jumps from\n *     Shevat (month #4) to Adar (month #6). The {@link\n *     HebrewCalendar#add HebrewCalendar.add} and {@link\n *     HebrewCalendar#roll HebrewCalendar.roll} methods take this into\n *     account, so that adding 1 month to Shevat gives the proper result\n *     (Adar) in a non-leap year. The protected utility method {@link\n *     #pinField pinField} is often useful when implementing these two\n *     methods. </li>\n *\n * </ul>\n *\n * <p><big><b>Normalized behavior</b></big>\n *\n * <p>The behavior of certain fields has been made consistent across all\n * calendar systems and implemented in <code>Calendar</code>.\n *\n * <ul>\n *\n *   <li>Time is normalized. Even though some calendar systems transition\n *     between days at sunset or at other times, all ICU4J calendars\n *     transition between days at <em>local zone midnight</em>.  This\n *     allows ICU4J to centralize the time computations in\n *     <code>Calendar</code> and to maintain basic correspondences\n *     between calendar systems. Affected fields: {@link #AM_PM},\n *     {@link #HOUR}, {@link #HOUR_OF_DAY}, {@link #MINUTE},\n *     {@link #SECOND}, {@link #MILLISECOND},\n *     {@link #ZONE_OFFSET}, and {@link #DST_OFFSET}.</li>\n *\n *   <li>DST behavior is normalized. Daylight savings time behavior is\n *     computed the same for all calendar systems, and depends on the\n *     value of several <code>GregorianCalendar</code> fields: the\n *     {@link #YEAR}, {@link #MONTH}, and\n *     {@link #DAY_OF_MONTH}. As a result, <code>Calendar</code>\n *     always computes these fields, even for non-Gregorian calendar\n *     systems. These fields are available to subclasses.</li>\n *\n *   <li>Weeks are normalized. Although locales define the week\n *     differently, in terms of the day on which it starts, and the\n *     designation of week number one of a month or year, they all use a\n *     common mechanism. Furthermore, the day of the week has a simple\n *     and consistent definition throughout history. For example,\n *     although the Gregorian calendar introduced a discontinuity when\n *     first instituted, the day of week was not disrupted. For this\n *     reason, the fields {@link #DAY_OF_WEEK}, <code>WEEK_OF_YEAR,\n *     WEEK_OF_MONTH</code>, {@link #DAY_OF_WEEK_IN_MONTH},\n *     {@link #DOW_LOCAL}, {@link #YEAR_WOY} are all computed in\n *     a consistent way in the base class, based on the\n *     {@link #EXTENDED_YEAR}, {@link #DAY_OF_YEAR},\n *     {@link #MONTH}, and {@link #DAY_OF_MONTH}, which are\n *     computed by the subclass.</li>\n *\n * </ul>\n *\n * <p><big><b>Supported range</b></big>\n *\n * <p>The allowable range of <code>Calendar</code> has been\n * narrowed. <code>GregorianCalendar</code> used to attempt to support\n * the range of dates with millisecond values from\n * <code>Long.MIN_VALUE</code> to <code>Long.MAX_VALUE</code>. This\n * introduced awkward constructions (hacks) which slowed down\n * performance. It also introduced non-uniform behavior at the\n * boundaries. The new <code>Calendar</code> protocol specifies the\n * maximum range of supportable dates as those having Julian day numbers\n * of <code>-0x7F000000</code> to <code>+0x7F000000</code>. This\n * corresponds to years from ~5,800,000 BCE to ~5,800,000 CE. Programmers\n * should use the protected constants in <code>Calendar</code> to\n * specify an extremely early or extremely late date.</p>\n *\n * <p><big><b>General notes</b></big>\n *\n * <ul>\n *\n *   <li>Calendars implementations are <em>proleptic</em>. For example,\n *     even though the Gregorian calendar was not instituted until the\n *     16th century, the <code>GregorianCalendar</code> class supports\n *     dates before the historical onset of the calendar by extending the\n *     calendar system backward in time. Similarly, the\n *     <code>HebrewCalendar</code> extends backward before the start of\n *     its epoch into zero and negative years. Subclasses do not throw\n *     exceptions because a date precedes the historical start of a\n *     calendar system. Instead, they implement\n *     {@link #handleGetLimit} to return appropriate limits on\n *     {@link #YEAR}, {@link #ERA}, etc. fields. Then, if the\n *     calendar is set to not be lenient, out-of-range field values will\n *     trigger an exception.</li>\n *\n *   <li>Calendar system subclasses compute a <em>extended\n *     year</em>. This differs from the {@link #YEAR} field in that\n *     it ranges over all integer values, including zero and negative\n *     values, and it encapsulates the information of the\n *     {@link #YEAR} field and all larger fields.  Thus, for the\n *     Gregorian calendar, the {@link #EXTENDED_YEAR} is computed as\n *     <code>ERA==AD ? YEAR : 1-YEAR</code>. Another example is the Mayan\n *     long count, which has years (<code>KUN</code>) and nested cycles\n *     of years (<code>KATUN</code> and <code>BAKTUN</code>). The Mayan\n *     {@link #EXTENDED_YEAR} is computed as <code>TUN + 20 * (KATUN\n *     + 20 * BAKTUN)</code>. The <code>Calendar</code> base class uses\n *     the {@link #EXTENDED_YEAR} field to compute the week-related\n *     fields.</li>\n *\n * </ul>\n *\n * @see          Date\n * @see          GregorianCalendar\n * @see          TimeZone\n * @see          DateFormat\n * @author Mark Davis, Deborah Goldsmith, Chen-Lieh Huang, Alan Liu, Laura Werner\n ",
+  "links" : [ "#getFieldCount", "#roll", "#DST_OFFSET", "#DAY_OF_WEEK_IN_MONTH", "#WEEK_OF_YEAR", "#pinField", "java.util.Date", "#MONTH", "#HOUR", "android.icu.text.DateFormat", "#handleComputeMonthStart", "#handleComputeFields", "#add", "#JULIAN_DAY", "#internalGetTimeInMillis", "java.util.Calendar", "#internalGet", "#DOW_LOCAL", "#handleCreateFields", "#WEEK_OF_MONTH", "#add(int", "#setSkippedWallTimeOption(int)", "#ZONE_OFFSET", "android.icu.util.HebrewCalendar#roll", "#AM_PM", "#SECOND", "#internalSet", "#ERA", "#roll(int", "#validateField", "#handleGetMonthLength", "#handleGetYearLength", "#HOUR_OF_DAY", "#YEAR_WOY", "#EXTENDED_YEAR", "#handleGetLimit", "#DAY_OF_YEAR", "#handleGetExtendedYear", "#MILLISECONDS_IN_DAY", "#YEAR", "#DAY_OF_MONTH", "#handleGetDateFormat", "#MILLISECOND", "#setRepeatedWallTimeOption(int)", "android.icu.util.HebrewCalendar#add", "#DAY_OF_WEEK", "#MINUTE" ],
+  "variables" : [ {
+    "name" : "ERA",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * era, e.g., AD or BC in the Julian calendar. This is a calendar-specific\n     * value; see subclass documentation.\n     * @see GregorianCalendar#AD\n     * @see GregorianCalendar#BC\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * year. This is a calendar-specific value; see subclass documentation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONTH",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * month. This is a calendar-specific value. The first month of the year is\n     * <code>JANUARY</code>; the last depends on the number of months in a year.\n     * @see #JANUARY\n     * @see #FEBRUARY\n     * @see #MARCH\n     * @see #APRIL\n     * @see #MAY\n     * @see #JUNE\n     * @see #JULY\n     * @see #AUGUST\n     * @see #SEPTEMBER\n     * @see #OCTOBER\n     * @see #NOVEMBER\n     * @see #DECEMBER\n     * @see #UNDECIMBER\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WEEK_OF_YEAR",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * week number within the current year.  The first week of the year, as\n     * defined by {@link #getFirstDayOfWeek()} and\n     * {@link #getMinimalDaysInFirstWeek()}, has value 1.  Subclasses define\n     * the value of {@link #WEEK_OF_YEAR} for days before the first week of\n     * the year.\n     * @see #getFirstDayOfWeek\n     * @see #getMinimalDaysInFirstWeek\n     ",
+    "links" : [ "#WEEK_OF_YEAR", "#getFirstDayOfWeek()", "#getMinimalDaysInFirstWeek()" ]
+  }, {
+    "name" : "WEEK_OF_MONTH",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * week number within the current month.  The first week of the month, as\n     * defined by {@link #getFirstDayOfWeek()} and\n     * {@link #getMinimalDaysInFirstWeek()}, has value 1.  Subclasses define\n     * the value of {@link #WEEK_OF_MONTH} for days before the first week of\n     * the month.\n     * @see #getFirstDayOfWeek\n     * @see #getMinimalDaysInFirstWeek\n     ",
+    "links" : [ "#getFirstDayOfWeek()", "#WEEK_OF_MONTH", "#getMinimalDaysInFirstWeek()" ]
+  }, {
+    "name" : "DATE",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * day of the month. This is a synonym for {@link #DAY_OF_MONTH}.\n     * The first day of the month has value 1.\n     * @see #DAY_OF_MONTH\n     ",
+    "links" : [ "#DAY_OF_MONTH" ]
+  }, {
+    "name" : "DAY_OF_MONTH",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * day of the month. This is a synonym for {@link #DATE}.\n     * The first day of the month has value 1.\n     * @see #DATE\n     ",
+    "links" : [ "#DATE" ]
+  }, {
+    "name" : "DAY_OF_YEAR",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the day\n     * number within the current year.  The first day of the year has value 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DAY_OF_WEEK",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the day\n     * of the week.  This field takes values {@link #SUNDAY},\n     * {@link #MONDAY}, {@link #TUESDAY}, {@link #WEDNESDAY},\n     * {@link #THURSDAY}, {@link #FRIDAY}, and {@link #SATURDAY}.\n     * @see #SUNDAY\n     * @see #MONDAY\n     * @see #TUESDAY\n     * @see #WEDNESDAY\n     * @see #THURSDAY\n     * @see #FRIDAY\n     * @see #SATURDAY\n     ",
+    "links" : [ "#SATURDAY", "#WEDNESDAY", "#FRIDAY", "#TUESDAY", "#THURSDAY", "#SUNDAY", "#MONDAY" ]
+  }, {
+    "name" : "DAY_OF_WEEK_IN_MONTH",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * ordinal number of the day of the week within the current month. Together\n     * with the {@link #DAY_OF_WEEK} field, this uniquely specifies a day\n     * within a month.  Unlike {@link #WEEK_OF_MONTH} and\n     * {@link #WEEK_OF_YEAR}, this field's value does <em>not</em> depend on\n     * {@link #getFirstDayOfWeek()} or\n     * {@link #getMinimalDaysInFirstWeek()}.  <code>DAY_OF_MONTH 1</code>\n     * through <code>7</code> always correspond to <code>DAY_OF_WEEK_IN_MONTH\n     * 1</code>; <code>8</code> through <code>15</code> correspond to\n     * <code>DAY_OF_WEEK_IN_MONTH 2</code>, and so on.\n     * <code>DAY_OF_WEEK_IN_MONTH 0</code> indicates the week before\n     * <code>DAY_OF_WEEK_IN_MONTH 1</code>.  Negative values count back from the\n     * end of the month, so the last Sunday of a month is specified as\n     * <code>DAY_OF_WEEK = SUNDAY, DAY_OF_WEEK_IN_MONTH = -1</code>.  Because\n     * negative values count backward they will usually be aligned differently\n     * within the month than positive values.  For example, if a month has 31\n     * days, <code>DAY_OF_WEEK_IN_MONTH -1</code> will overlap\n     * <code>DAY_OF_WEEK_IN_MONTH 5</code> and the end of <code>4</code>.\n     * @see #DAY_OF_WEEK\n     * @see #WEEK_OF_MONTH\n     ",
+    "links" : [ "#WEEK_OF_YEAR", "#getFirstDayOfWeek()", "#WEEK_OF_MONTH", "#DAY_OF_WEEK", "#getMinimalDaysInFirstWeek()" ]
+  }, {
+    "name" : "AM_PM",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating\n     * whether the <code>HOUR</code> is before or after noon.\n     * E.g., at 10:04:15.250 PM the <code>AM_PM</code> is <code>PM</code>.\n     * @see #AM\n     * @see #PM\n     * @see #HOUR\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * hour of the morning or afternoon. <code>HOUR</code> is used for the 12-hour\n     * clock.\n     * E.g., at 10:04:15.250 PM the <code>HOUR</code> is 10.\n     * @see #AM_PM\n     * @see #HOUR_OF_DAY\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR_OF_DAY",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * hour of the day. <code>HOUR_OF_DAY</code> is used for the 24-hour clock.\n     * E.g., at 10:04:15.250 PM the <code>HOUR_OF_DAY</code> is 22.\n     * @see #HOUR\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MINUTE",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * minute within the hour.\n     * E.g., at 10:04:15.250 PM the <code>MINUTE</code> is 4.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECOND",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * second within the minute.\n     * E.g., at 10:04:15.250 PM the <code>SECOND</code> is 15.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MILLISECOND",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * millisecond within the second.\n     * E.g., at 10:04:15.250 PM the <code>MILLISECOND</code> is 250.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ZONE_OFFSET",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * raw offset from GMT in milliseconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DST_OFFSET",
+    "type" : "int",
+    "comment" : "\n     * Field number for <code>get</code> and <code>set</code> indicating the\n     * daylight savings offset in milliseconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_WOY",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field number for <code>get()</code> and <code>set()</code>\n     * indicating the extended year corresponding to the\n     * {@link #WEEK_OF_YEAR} field.  This may be one greater or less\n     * than the value of {@link #EXTENDED_YEAR}.\n     ",
+    "links" : [ "#WEEK_OF_YEAR", "#EXTENDED_YEAR" ]
+  }, {
+    "name" : "DOW_LOCAL",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field number for <code>get()</code> and <code>set()</code>\n     * indicating the localized day of week.  This will be a value from 1\n     * to 7 inclusive, with 1 being the localized first day of the week.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTENDED_YEAR",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field number for <code>get()</code> and <code>set()</code>\n     * indicating the extended year.  This is a single number designating\n     * the year of this calendar system, encompassing all supra-year\n     * fields.  For example, for the Julian calendar system, year numbers\n     * are positive, with an era of BCE or CE.  An extended year value for\n     * the Julian calendar system assigns positive values to CE years and\n     * negative values to BCE years, with 1 BCE being year 0.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JULIAN_DAY",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field number for <code>get()</code> and <code>set()</code>\n     * indicating the modified Julian day number.  This is different from\n     * the conventional Julian day number in two regards.  First, it\n     * demarcates days at local zone midnight, rather than noon GMT.\n     * Second, it is a local number; that is, it depends on the local time\n     * zone.  It can be thought of as a single number that encompasses all\n     * the date-related fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MILLISECONDS_IN_DAY",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field number for <code>get()</code> and <code>set()</code>\n     * indicating the milliseconds in the day.  This ranges from 0 to\n     * 23:59:59.999 (regardless of DST).  This field behaves\n     * <em>exactly</em> like a composite of all time-related fields, not\n     * including the zone fields.  As such, it also reflects\n     * discontinuities of those fields on DST transition days.  On a day of\n     * DST onset, it will jump forward.  On a day of DST cessation, it will\n     * jump backward.  This reflects the fact that is must be combined with\n     * the DST_OFFSET field to obtain a unique local time value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "IS_LEAP_MONTH",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field indicating whether or not the current month is a leap month.\n     * Should have a value of 0 for non-leap months, and 1 for leap months.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ORDINAL_MONTH",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Field indicating the month. This is a calendar-specific value.\n     * Differ from MONTH, this value is continuous and unique within a\n     * year and range from 0 to 11 or 0 to 12 depending on how many months in a\n     * year, the calendar system has leap month or not, and in leap year or not.\n     * It is the ordinal position of that month in the corresponding year of\n     * the calendar. For Chinese, Dangi, and Hebrew calendar, the range is\n     * 0 to 11 in non-leap years and 0 to 12 in leap years. For Coptic and Ethiopian\n     * calendar, the range is always 0 to 12. For other calendars supported by\n     * ICU now, the range is 0 to 11. When the number of months in a year of the\n     * identified calendar is variable, a different ORDINAL_MONTH value can\n     * be used for dates that are part of the same named month in different years.\n     * For example, in the Hebrew calendar, \"1 Nisan 5781\" is associated with\n     * ORDINAL_MONTH value 6 while \"1 Nisan 5782\" is associated with\n     * ORDINAL_MONTH value 7 because 5782 is a leap year and Nisan follows\n     * the insertion of Adar I. In Chinese calendar, \"Year 4664 Month 6 Day 2\"\n     * is associated with ORDINAL_MONTH value 5 while \"Year 4665 Month 6 Day 2\"\n     * is associated with ORDINAL_MONTH value 6 because 4665 is a leap year\n     * and there is an extra \"Leap Month 5\" which associated with ORDINAL_MONTH\n     * value 5 before \"Month 6\" of year 4664.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "BASE_FIELD_COUNT",
+    "type" : "int",
+    "comment" : "\n     * The number of fields defined by this class.  Subclasses may define\n     * addition fields starting with this number.\n     * @removed ICU 58 The numeric value may change over time, see ICU ticket #12420.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_FIELD_COUNT",
+    "type" : "int",
+    "comment" : "\n     * The maximum number of fields possible.  Subclasses must not define\n     * more total fields than this number.\n     * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SUNDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Sunday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Monday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TUESDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Tuesday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WEDNESDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Wednesday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "THURSDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Thursday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FRIDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Friday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SATURDAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>DAY_OF_WEEK</code> field indicating\n     * Saturday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JANUARY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * first month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FEBRUARY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * second month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MARCH",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * third month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "APRIL",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * fourth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * fifth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JUNE",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * sixth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JULY",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * seventh month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "AUGUST",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * eighth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SEPTEMBER",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * ninth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OCTOBER",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * tenth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NOVEMBER",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * eleventh month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DECEMBER",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * twelfth month of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNDECIMBER",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>MONTH</code> field indicating the\n     * thirteenth month of the year. Although {@link GregorianCalendar}\n     * does not use this value, lunar calendars do.\n     ",
+    "links" : [ "android.icu.util.GregorianCalendar" ]
+  }, {
+    "name" : "AM",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>AM_PM</code> field indicating the\n     * period of the day from midnight to just before noon.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PM",
+    "type" : "int",
+    "comment" : "\n     * Value of the <code>AM_PM</code> field indicating the\n     * period of the day from noon to just before midnight.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WEEKDAY",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Value returned by getDayOfWeekType(int dayOfWeek) to indicate a\n     * weekday.\n     * @see #WEEKEND\n     * @see #WEEKEND_ONSET\n     * @see #WEEKEND_CEASE\n     * @see #getDayOfWeekType\n     * @deprecated ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "WEEKEND",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Value returned by getDayOfWeekType(int dayOfWeek) to indicate a\n     * weekend day.\n     * @see #WEEKDAY\n     * @see #WEEKEND_ONSET\n     * @see #WEEKEND_CEASE\n     * @see #getDayOfWeekType\n     * @deprecated  ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "WEEKEND_ONSET",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Value returned by getDayOfWeekType(int dayOfWeek) to indicate a\n     * day that starts as a weekday and transitions to the weekend.\n     * Call getWeekendTransition() to get the point of transition.\n     * @see #WEEKDAY\n     * @see #WEEKEND\n     * @see #WEEKEND_CEASE\n     * @see #getDayOfWeekType\n     * @deprecated ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "WEEKEND_CEASE",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Value returned by getDayOfWeekType(int dayOfWeek) to indicate a\n     * day that starts as the weekend and transitions to a weekday.\n     * Call getWeekendTransition() to get the point of transition.\n     * @see #WEEKDAY\n     * @see #WEEKEND\n     * @see #WEEKEND_ONSET\n     * @see #getDayOfWeekType\n     * @deprecated ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "WALLTIME_LAST",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong>Option used by {@link #setRepeatedWallTimeOption(int)} and\n     * {@link #setSkippedWallTimeOption(int)} specifying an ambiguous wall time\n     * to be interpreted as the latest.\n     * @see #setRepeatedWallTimeOption(int)\n     * @see #getRepeatedWallTimeOption()\n     * @see #setSkippedWallTimeOption(int)\n     * @see #getSkippedWallTimeOption()\n     ",
+    "links" : [ "#setRepeatedWallTimeOption(int)", "#setSkippedWallTimeOption(int)" ]
+  }, {
+    "name" : "WALLTIME_FIRST",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong>Option used by {@link #setRepeatedWallTimeOption(int)} and\n     * {@link #setSkippedWallTimeOption(int)} specifying an ambiguous wall time\n     * to be interpreted as the earliest.\n     * @see #setRepeatedWallTimeOption(int)\n     * @see #getRepeatedWallTimeOption()\n     * @see #setSkippedWallTimeOption(int)\n     * @see #getSkippedWallTimeOption()\n     ",
+    "links" : [ "#setRepeatedWallTimeOption(int)", "#setSkippedWallTimeOption(int)" ]
+  }, {
+    "name" : "WALLTIME_NEXT_VALID",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong>Option used by {@link #setSkippedWallTimeOption(int)} specifying an\n     * ambiguous wall time to be interpreted as the next valid wall time.\n     * @see #setSkippedWallTimeOption(int)\n     * @see #getSkippedWallTimeOption()\n     ",
+    "links" : [ "#setSkippedWallTimeOption(int)" ]
+  }, {
+    "name" : "ONE_SECOND",
+    "type" : "int",
+    "comment" : "\n     * The number of milliseconds in one second.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_MINUTE",
+    "type" : "int",
+    "comment" : "\n     * The number of milliseconds in one minute.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_HOUR",
+    "type" : "int",
+    "comment" : "\n     * The number of milliseconds in one hour.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_DAY",
+    "type" : "long",
+    "comment" : "\n     * The number of milliseconds in one day.  Although ONE_DAY and\n     * ONE_WEEK can fit into ints, they must be longs in order to prevent\n     * arithmetic overflow when performing (bug 4173516).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_WEEK",
+    "type" : "long",
+    "comment" : "\n     * The number of milliseconds in one week.  Although ONE_DAY and\n     * ONE_WEEK can fit into ints, they must be longs in order to prevent\n     * arithmetic overflow when performing (bug 4173516).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JAN_1_1_JULIAN_DAY",
+    "type" : "int",
+    "comment" : "\n     * The Julian day of the Gregorian epoch, that is, January 1, 1 on the\n     * Gregorian calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EPOCH_JULIAN_DAY",
+    "type" : "int",
+    "comment" : "\n     * The Julian day of the epoch, that is, January 1, 1970 on the\n     * Gregorian calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_JULIAN",
+    "type" : "int",
+    "comment" : "\n     * The minimum supported Julian day.  This value is equivalent to\n     * {@link #MIN_MILLIS} and {@link #MIN_DATE}.\n     * @see #JULIAN_DAY\n     ",
+    "links" : [ "#MIN_MILLIS", "#MIN_DATE" ]
+  }, {
+    "name" : "MIN_MILLIS",
+    "type" : "long",
+    "comment" : "\n     * The minimum supported epoch milliseconds.  This value is equivalent\n     * to {@link #MIN_JULIAN} and {@link #MIN_DATE}.\n     ",
+    "links" : [ "#MIN_JULIAN", "#MIN_DATE" ]
+  }, {
+    "name" : "MIN_DATE",
+    "type" : "Date",
+    "comment" : "\n     * The minimum supported <code>Date</code>.  This value is equivalent\n     * to {@link #MIN_JULIAN} and {@link #MIN_MILLIS}.\n     ",
+    "links" : [ "#MIN_JULIAN", "#MIN_MILLIS" ]
+  }, {
+    "name" : "MAX_JULIAN",
+    "type" : "int",
+    "comment" : "\n     * The maximum supported Julian day.  This value is equivalent to\n     * {@link #MAX_MILLIS} and {@link #MAX_DATE}.\n     * @see #JULIAN_DAY\n     ",
+    "links" : [ "#MAX_DATE", "#MAX_MILLIS" ]
+  }, {
+    "name" : "MAX_MILLIS",
+    "type" : "long",
+    "comment" : "\n     * The maximum supported epoch milliseconds.  This value is equivalent\n     * to {@link #MAX_JULIAN} and {@link #MAX_DATE}.\n     ",
+    "links" : [ "#MAX_DATE", "#MAX_JULIAN" ]
+  }, {
+    "name" : "MAX_DATE",
+    "type" : "Date",
+    "comment" : "\n     * The maximum supported <code>Date</code>.  This value is equivalent\n     * to {@link #MAX_JULIAN} and {@link #MAX_MILLIS}.\n     ",
+    "links" : [ "#MAX_MILLIS", "#MAX_JULIAN" ]
+  }, {
+    "name" : "MAX_HOURS",
+    "type" : "int",
+    "comment" : "\n     * The maximum supported hours for millisecond calculations\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "fields",
+    "type" : "int[]",
+    "comment" : "\n     * The field values for the currently set time for this calendar.\n     * This is an array of at least {@link #BASE_FIELD_COUNT} integers.\n     * @see #handleCreateFields\n     * @serial\n     ",
+    "links" : [ "#BASE_FIELD_COUNT" ]
+  }, {
+    "name" : "stamp",
+    "type" : "int[]",
+    "comment" : "\n     * Pseudo-time-stamps which specify when each field was set. There\n     * are two special values, UNSET and INTERNALLY_SET. Values from\n     * MINIMUM_USER_SET to Integer.MAX_VALUE are legal user set values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "time",
+    "type" : "long",
+    "comment" : "\n     * The currently set time for this calendar, expressed in milliseconds after\n     * January 1, 1970, 0:00:00 GMT.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "isTimeSet",
+    "type" : "boolean",
+    "comment" : "\n     * True if then the value of <code>time</code> is valid.\n     * The time is made invalid by a change to an item of <code>field[]</code>.\n     * @see #time\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "areFieldsSet",
+    "type" : "boolean",
+    "comment" : "\n     * True if <code>fields[]</code> are in sync with the currently set time.\n     * If false, then the next attempt to get the value of a field will\n     * force a recomputation of all fields from the current value of\n     * <code>time</code>.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "areAllFieldsSet",
+    "type" : "boolean",
+    "comment" : "\n     * True if all fields have been set.  This is only false in a few\n     * situations: In a newly created, partially constructed object.  After\n     * a call to clear().  In an object just read from a stream using\n     * readObject().  Once computeFields() has been called this is set to\n     * true and stays true until one of the above situations recurs.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "areFieldsVirtuallySet",
+    "type" : "boolean",
+    "comment" : "\n     * True if all fields have been virtually set, but have not yet been\n     * computed.  This occurs only in setTimeInMillis(), or after readObject().\n     * A calendar set to this state will compute all fields from the time if it\n     * becomes necessary, but otherwise will delay such computation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "lenient",
+    "type" : "boolean",
+    "comment" : "\n     * True if this calendar allows out-of-range field values during computation\n     * of <code>time</code> from <code>fields[]</code>.\n     * @see #setLenient\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "zone",
+    "type" : "TimeZone",
+    "comment" : "\n     * The {@link TimeZone} used by this calendar. {@link Calendar}\n     * uses the time zone data to translate between local and GMT time.\n     * @serial\n     ",
+    "links" : [ "android.icu.util.TimeZone", "android.icu.util.Calendar" ]
+  }, {
+    "name" : "firstDayOfWeek",
+    "type" : "int",
+    "comment" : "\n     * The first day of the week, with possible values {@link #SUNDAY},\n     * {@link #MONDAY}, etc.  This is a locale-dependent value.\n     * @serial\n     ",
+    "links" : [ "#SUNDAY", "#MONDAY" ]
+  }, {
+    "name" : "minimalDaysInFirstWeek",
+    "type" : "int",
+    "comment" : "\n     * The number of days required for the first week in a month or year,\n     * with possible values from 1 to 7.  This is a locale-dependent value.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "weekendOnset",
+    "type" : "int",
+    "comment" : "\n     * First day of the weekend in this calendar's locale.  Must be in\n     * the range SUNDAY...SATURDAY (1..7).  The weekend starts at\n     * weekendOnsetMillis milliseconds after midnight on that day of\n     * the week.  This value is taken from locale resource data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "weekendOnsetMillis",
+    "type" : "int",
+    "comment" : "\n     * Milliseconds after midnight at which the weekend starts on the\n     * day of the week weekendOnset.  Times that are greater than or\n     * equal to weekendOnsetMillis are considered part of the weekend.\n     * Must be in the range 0..24*60*60*1000-1.  This value is taken\n     * from locale resource data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "weekendCease",
+    "type" : "int",
+    "comment" : "\n     * Day of the week when the weekend stops in this calendar's\n     * locale.  Must be in the range SUNDAY...SATURDAY (1..7).  The\n     * weekend stops at weekendCeaseMillis milliseconds after midnight\n     * on that day of the week.  This value is taken from locale\n     * resource data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "weekendCeaseMillis",
+    "type" : "int",
+    "comment" : "\n     * Milliseconds after midnight at which the weekend stops on the\n     * day of the week weekendCease.  Times that are greater than or\n     * equal to weekendCeaseMillis are considered not to be the\n     * weekend.  Must be in the range 0..24*60*60*1000-1.  This value\n     * is taken from locale resource data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "repeatedWallTime",
+    "type" : "int",
+    "comment" : "\n     * Option used when the specified wall time occurs multiple times.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "skippedWallTime",
+    "type" : "int",
+    "comment" : "\n     * Option used when the specified wall time does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNSET",
+    "type" : "int",
+    "comment" : "\n     * Value of the time stamp <code>stamp[]</code> indicating that\n     * a field has not been set since the last call to <code>clear()</code>.\n     * @see #INTERNALLY_SET\n     * @see #MINIMUM_USER_STAMP\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INTERNALLY_SET",
+    "type" : "int",
+    "comment" : "\n     * Value of the time stamp <code>stamp[]</code> indicating that a field\n     * has been set via computations from the time or from other fields.\n     * @see #UNSET\n     * @see #MINIMUM_USER_STAMP\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MINIMUM_USER_STAMP",
+    "type" : "int",
+    "comment" : "\n     * If the time stamp <code>stamp[]</code> has a value greater than or\n     * equal to <code>MINIMUM_USER_SET</code> then it has been set by the\n     * user via a call to <code>set()</code>.\n     * @see #UNSET\n     * @see #INTERNALLY_SET\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "nextStamp",
+    "type" : "int",
+    "comment" : "\n     * The next available value for <code>stamp[]</code>, an internal array.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STAMP_MAX",
+    "type" : "int",
+    "comment" : " Max value for stamp allowable before recalculation ",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " jdk1.4.2 serialver",
+    "links" : [ ]
+  }, {
+    "name" : "internalSetMask",
+    "type" : "int",
+    "comment" : "\n     * Bitmask for internalSet() defining which fields may legally be set\n     * by subclasses.  Any attempt to set a field not in this bitmask\n     * results in an exception, because such fields must be set by the base\n     * class.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gregorianYear",
+    "type" : "int",
+    "comment" : "\n     * The Gregorian year, as computed by computeGregorianFields() and\n     * returned by getGregorianYear().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gregorianMonth",
+    "type" : "int",
+    "comment" : "\n     * The Gregorian month, as computed by computeGregorianFields() and\n     * returned by getGregorianMonth().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gregorianDayOfYear",
+    "type" : "int",
+    "comment" : "\n     * The Gregorian day of the year, as computed by\n     * computeGregorianFields() and returned by getGregorianDayOfYear().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gregorianDayOfMonth",
+    "type" : "int",
+    "comment" : "\n     * The Gregorian day of the month, as computed by\n     * computeGregorianFields() and returned by getGregorianDayOfMonth().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gTemporalMonthCodes",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_CACHE",
+    "type" : "ICUCache<String, PatternData>",
+    "comment" : " date format pattern cache",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_PATTERNS",
+    "type" : "String[]",
+    "comment" : " final fallback patterns (match current root)",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_ATTIME_PATTERNS",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TIME_SKELETONS",
+    "type" : "String[]",
+    "comment" : " final fallback patterns",
+    "links" : [ ]
+  }, {
+    "name" : "QUOTE",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FIELD_DIFF_MAX_INT",
+    "type" : "int",
+    "comment" : " 2147483647",
+    "links" : [ ]
+  }, {
+    "name" : "LIMITS",
+    "type" : "int[][]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MINIMUM",
+    "type" : "int",
+    "comment" : "\n     * Limit type for <code>getLimit()</code> and <code>handleGetLimit()</code>\n     * indicating the minimum value that a field can take (least minimum).\n     * @see #getLimit\n     * @see #handleGetLimit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GREATEST_MINIMUM",
+    "type" : "int",
+    "comment" : "\n     * Limit type for <code>getLimit()</code> and <code>handleGetLimit()</code>\n     * indicating the greatest minimum value that a field can take.\n     * @see #getLimit\n     * @see #handleGetLimit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LEAST_MAXIMUM",
+    "type" : "int",
+    "comment" : "\n     * Limit type for <code>getLimit()</code> and <code>handleGetLimit()</code>\n     * indicating the least maximum value that a field can take.\n     * @see #getLimit\n     * @see #handleGetLimit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAXIMUM",
+    "type" : "int",
+    "comment" : "\n     * Limit type for <code>getLimit()</code> and <code>handleGetLimit()</code>\n     * indicating the maximum value that a field can take (greatest maximum).\n     * @see #getLimit\n     * @see #handleGetLimit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WEEK_DATA_CACHE",
+    "type" : "WeekDataCache",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "RESOLVE_REMAP",
+    "type" : "int",
+    "comment" : "\n     * Value to OR against resolve table field values for remapping.\n     * @see #resolveFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DATE_PRECEDENCE",
+    "type" : "int[][][]",
+    "comment" : " Default table for day in year",
+    "links" : [ ]
+  }, {
+    "name" : "DOW_PRECEDENCE",
+    "type" : "int[][][]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MONTH_PRECEDENCE",
+    "type" : "int[][][]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FIND_ZONE_TRANSITION_TIME_UNITS",
+    "type" : "int[]",
+    "comment" : "\n     * The time units used by {@link #findPreviousZoneTransitionTime(TimeZone, int, long, long)}\n     * for optimizing transition time binary search.\n     ",
+    "links" : [ "#findPreviousZoneTransitionTime(TimeZone" ]
+  }, {
+    "name" : "GREGORIAN_MONTH_COUNT",
+    "type" : "int[][]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FIELD_NAME",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "validLocale",
+    "type" : "ULocale",
+    "comment" : "\n     * The most specific locale containing any resource data, or null.\n     * @see android.icu.util.ULocale\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "actualLocale",
+    "type" : "ULocale",
+    "comment" : "\n     * The locale containing data used to construct this object, or\n     * null.\n     * @see android.icu.util.ULocale\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void setCalendarLocale(ULocale locale)",
+    "returnType" : "void",
+    "comment" : "\n     * Set valid/actual locale to this calendar during initialization.\n     *\n     * Valid or actual locale does not make much sense for Calendar\n     * object. An instance of Calendar is initialized by week data\n     * determine by region and calendar type (either region or keyword).\n     * Language is not really used for calendar creation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void recalculateStamp()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void initInternal()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance()",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar using the default time zone and locale.\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance(TimeZone zone)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar using the specified time zone and default locale.\n     * @param zone the time zone to use\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance(Locale aLocale)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar using the default time zone and specified locale.\n     * @param aLocale the locale for the week data\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance(ULocale locale)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar using the default time zone and specified locale.\n     * @param locale the ulocale for the week data\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance(TimeZone zone, Locale aLocale)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar with the specified time zone and locale.\n     * @param zone the time zone to use\n     * @param aLocale the locale for the week data\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Calendar getInstance(TimeZone zone, ULocale locale)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns a calendar with the specified time zone and locale.\n     * @param zone the time zone to use\n     * @param locale the ulocale for the week data\n     * @return a Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Calendar getInstanceInternal(TimeZone tz, ULocale locale)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * All getInstance implementations call this private method to create a new\n     * Calendar instance.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getRegionForCalendar(ULocale loc)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static CalType getCalendarTypeForLocale(ULocale l)",
+    "returnType" : "CalType",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static Calendar createInstance(ULocale locale)",
+    "returnType" : "Calendar",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Locale[] getAvailableLocales()",
+    "returnType" : "Locale[]",
+    "comment" : "\n     * Returns the list of locales for which Calendars are installed.\n     * @return the list of locales for which Calendars are installed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ULocale[] getAvailableULocales()",
+    "returnType" : "ULocale[]",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the list of locales for which Calendars are installed.\n     * @return the list of locales for which Calendars are installed.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final String[] getKeywordValuesForLocale(String key, ULocale locale, boolean commonlyUsed)",
+    "returnType" : "String[]",
+    "comment" : "\n     * <strong>[icu]</strong> Given a key and a locale, returns an array of string values in a preferred\n     * order that would make a difference. These are all and only those values where\n     * the open (creation) of the service with the locale formed from the input locale\n     * plus input keyword and that value has different behavior than creation with the\n     * input locale alone.\n     * @param key           one of the keys supported by this service.  For now, only\n     *                      \"calendar\" is supported.\n     * @param locale        the locale\n     * @param commonlyUsed  if set to true it will return only commonly used values\n     *                      with the given locale in preferred order.  Otherwise,\n     *                      it will return all the available values for the locale.\n     * @return an array of string values for the given key and the locale.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Date getTime()",
+    "returnType" : "Date",
+    "comment" : "\n     * Returns this Calendar's current time.\n     * @return the current time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setTime(Date date)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets this Calendar's current time with the given Date.\n     *\n     * <p>Note: Calling <code>setTime</code> with\n     * <code>Date(Long.MAX_VALUE)</code> or <code>Date(Long.MIN_VALUE)</code>\n     * may yield incorrect field values from {@link #get(int)}.\n     * @param date the given Date.\n     ",
+    "links" : [ "#get(int)" ]
+  }, {
+    "name" : "public long getTimeInMillis()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns this Calendar's current time as a long.\n     * @return the current time as UTC milliseconds from the epoch.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTimeInMillis(long millis)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets this Calendar's current time from the given long value.\n     * An IllegalIcuArgumentException is thrown when millis is outside the range permitted\n     * by a Calendar object when in strict mode.\n     * When in lenient mode the out of range values are pinned to their respective min/max.\n     * @param millis the new time in UTC milliseconds from the epoch.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean inTemporalLeapYear()",
+    "returnType" : "boolean",
+    "comment" : "\n     * <strong>[icu]</strong> Returns true if the date is in a leap year. Recalculate the current time\n     * field values if the time value has been changed by a call to * setTime().\n     * This method is semantically const, but may alter the object in memory.\n     * A \"leap year\" is a year that contains more days than other years (for\n     * solar or lunar calendars) or more months than other years (for lunisolar\n     * calendars like Hebrew or Chinese), as defined in the ECMAScript Temporal\n     * proposal.\n     * @return true if the date in the fields is in a Temporal proposal\n     *               defined leap year. False otherwise.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getTemporalMonthCode()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets The Temporal monthCode value corresponding to the month for the date.\n     * The value is a string identifier that starts with the literal grapheme\n     * \"M\" followed by two graphemes representing the zero-padded month number\n     * of the current month in a normal (non-leap) year and suffixed by an\n     * optional literal grapheme \"L\" if this is a leap month in a lunisolar\n     * calendar. The 25 possible values are \"M01\" .. \"M13\" and \"M01L\" .. \"M12L\".\n     * For the Hebrew calendar, the values are \"M01\" .. \"M12\" for non-leap year, and\n     * \"M01\" .. \"M05\", \"M05L\", \"M06\" .. \"M12\" for leap year.\n     * For the Chinese calendar, the values are \"M01\" .. \"M12\" for non-leap year and\n     * in leap year with another monthCode in \"M01L\" .. \"M12L\".\n     * For Coptic and Ethiopian calendar, the Temporal monthCode values for any\n     * years are \"M01\" to \"M13\".\n     *\n     * @return       One of 25 possible strings in {\"M01\"..\"M13\", \"M01L\"..\"M12L\"}.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTemporalMonthCode(String temporalMonth)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets The Temporal monthCode which is a string identifier that starts\n     * with the literal grapheme \"M\" followed by two graphemes representing\n     * the zero-padded month number of the current month in a normal\n     * (non-leap) year and suffixed by an optional literal grapheme \"L\" if this\n     * is a leap month in a lunisolar calendar. The 25 possible values are\n     * \"M01\" .. \"M13\" and \"M01L\" .. \"M12L\". For Hebrew calendar, the values are\n     * \"M01\" .. \"M12\" for non-leap years, and \"M01\" .. \"M05\", \"M05L\", \"M06\"\n     * .. \"M12\" for leap year.\n     * For the Chinese calendar, the values are \"M01\" .. \"M12\" for non-leap year and\n     * in leap year with another monthCode in \"M01L\" .. \"M12L\".\n     * For Coptic and Ethiopian calendar, the Temporal monthCode values for any\n     * years are \"M01\" to \"M13\".\n     * @param temporalMonth One of 25 possible strings in {\"M01\".. \"M12\", \"M13\", \"M01L\",\n     *  \"M12L\"}.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int get(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the value for a given time field.\n     * @param field the given time field.\n     * @return the value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int internalGet(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the value for a given time field.  This is an internal method\n     * for subclasses that does <em>not</em> trigger any calculations.\n     * @param field the given time field.\n     * @return the value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int internalGet(int field, int defaultValue)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the value for a given time field, or return the given default\n     * value if the field is not set.  This is an internal method for\n     * subclasses that does <em>not</em> trigger any calculations.\n     * @param field the given time field.\n     * @param defaultValue value to return if field is not set\n     * @return the value for the given time field of defaultValue if the\n     * field is unset\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int internalGetMonth()",
+    "returnType" : "int",
+    "comment" : "\n     * Use this function instead of internalGet(MONTH). The implementation\n     * check the timestamp of MONTH and ORDINAL_MONTH and use the\n     * one set later. The subclass should override it to conver the value of ORDINAL_MONTH\n     * to MONTH correctly if ORDINAL_MONTH has higher priority.\n     * @return the value for the given time field.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int internalGetMonth(int defaultValue)",
+    "returnType" : "int",
+    "comment" : "\n     * Use this function instead of internalGet(MONTH, defaultValue). The implementation\n     * check the timestamp of MONTH and ORDINAL_MONTH and use the\n     * one set later. The subclass should override it to conver the value of ORDINAL_MONTH\n     * to MONTH correctly if ORDINAL_MONTH has higher priority.\n     * @param defaultValue a default value used if the MONTH and\n     *   ORDINAL_MONTH are both unset.\n     * @return the value for the MONTH.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void set(int field, int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the time field with the given value.\n     * @param field the given time field.\n     * @param value the value to be set for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void set(int year, int month, int date)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the values for the fields year, month, and date.\n     * Previous values of other fields are retained.  If this is not desired,\n     * call {@link #clear()} first.\n     * @param year the value used to set the YEAR time field.\n     * @param month the value used to set the MONTH time field.\n     * Month value is 0-based. e.g., 0 for January.\n     * @param date the value used to set the DATE time field.\n     ",
+    "links" : [ "#clear()" ]
+  }, {
+    "name" : "public final void set(int year, int month, int date, int hour, int minute)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the values for the fields year, month, date, hour, and minute.\n     * Previous values of other fields are retained.  If this is not desired,\n     * call {@link #clear()} first.\n     * @param year the value used to set the YEAR time field.\n     * @param month the value used to set the MONTH time field.\n     * Month value is 0-based. e.g., 0 for January.\n     * @param date the value used to set the DATE time field.\n     * @param hour the value used to set the HOUR_OF_DAY time field.\n     * @param minute the value used to set the MINUTE time field.\n     ",
+    "links" : [ "#clear()" ]
+  }, {
+    "name" : "public final void set(int year, int month, int date, int hour, int minute, int second)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the values for the fields year, month, date, hour, minute, and second.\n     * Previous values of other fields are retained.  If this is not desired,\n     * call {@link #clear} first.\n     * @param year the value used to set the YEAR time field.\n     * @param month the value used to set the MONTH time field.\n     * Month value is 0-based. e.g., 0 for January.\n     * @param date the value used to set the DATE time field.\n     * @param hour the value used to set the HOUR_OF_DAY time field.\n     * @param minute the value used to set the MINUTE time field.\n     * @param second the value used to set the SECOND time field.\n     ",
+    "links" : [ "#clear" ]
+  }, {
+    "name" : "private static int gregoYearFromIslamicStart(int year)",
+    "returnType" : "int",
+    "comment" : "\n     * utility function for getRelatedYear\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getRelatedYear()",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int firstIslamicStartYearFromGrego(int year)",
+    "returnType" : "int",
+    "comment" : "\n     * utility function for setRelatedYear\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setRelatedYear(int year)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the values of all the time fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void clear(int field)",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the value in the given time field.\n     * @param field the time field to be cleared.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isSet(int field)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines if the given time field has a value set.\n     * @return true if the given time field has a value set; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void complete()",
+    "returnType" : "void",
+    "comment" : "\n     * Fills in any unset fields in the time field list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares this calendar to the specified object.\n     * The result is <code>true</code> if and only if the argument is\n     * not <code>null</code> and is a <code>Calendar</code> object that\n     * represents the same calendar as this object.\n     * @param obj the object to compare with.\n     * @return <code>true</code> if the objects are the same;\n     * <code>false</code> otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEquivalentTo(Calendar other)",
+    "returnType" : "boolean",
+    "comment" : "\n     * <strong>[icu]</strong> Returns true if the given Calendar object is equivalent to this\n     * one.  An equivalent Calendar will behave exactly as this one\n     * does, but it may be set to a different time.  By contrast, for\n     * the equals() method to return true, the other Calendar must\n     * be set to the same time.\n     *\n     * @param other the Calendar to be compared with this Calendar\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a hash code for this calendar.\n     * @return a hash code value for this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long compare(Object that)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the difference in milliseconds between the moment this\n     * calendar is set to and the moment the given calendar or Date object\n     * is set to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean before(Object when)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the time field records.\n     * Equivalent to comparing result of conversion to UTC.\n     * @param when the Calendar to be compared with this Calendar.\n     * @return true if the current time of this Calendar is before\n     * the time of Calendar when; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean after(Object when)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the time field records.\n     * Equivalent to comparing result of conversion to UTC.\n     * @param when the Calendar to be compared with this Calendar.\n     * @return true if the current time of this Calendar is after\n     * the time of Calendar when; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getActualMaximum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the maximum value that this field could have, given the\n     * current date.  For example, with the Gregorian date February 3, 1997\n     * and the {@link #DAY_OF_MONTH DAY_OF_MONTH} field, the actual maximum\n     * is 28; for February 3, 1996 it is 29.\n     *\n     * <p>The actual maximum computation ignores smaller fields and the\n     * current value of like-sized fields.  For example, the actual maximum\n     * of the DAY_OF_YEAR or MONTH depends only on the year and supra-year\n     * fields.  The actual maximum of the DAY_OF_MONTH depends, in\n     * addition, on the MONTH field and any other fields at that\n     * granularity (such as IS_LEAP_MONTH).  The\n     * DAY_OF_WEEK_IN_MONTH field does not depend on the current\n     * DAY_OF_WEEK; it returns the maximum for any day of week in the\n     * current month.  Likewise for the WEEK_OF_MONTH and WEEK_OF_YEAR\n     * fields.\n     *\n     * @param field the field whose maximum is desired\n     * @return the maximum of the given field for the current date of this calendar\n     * @see #getMaximum\n     * @see #getLeastMaximum\n     ",
+    "links" : [ "#DAY_OF_MONTH" ]
+  }, {
+    "name" : "public int getActualMinimum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the minimum value that this field could have, given the current date.\n     * For most fields, this is the same as {@link #getMinimum getMinimum}\n     * and {@link #getGreatestMinimum getGreatestMinimum}.  However, some fields,\n     * especially those related to week number, are more complicated.\n     * <p>\n     * For example, assume {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek}\n     * returns 4 and {@link #getFirstDayOfWeek getFirstDayOfWeek} returns SUNDAY.\n     * If the first day of the month is Sunday, Monday, Tuesday, or Wednesday\n     * there will be four or more days in the first week, so it will be week number 1,\n     * and <code>getActualMinimum(WEEK_OF_MONTH)</code> will return 1.  However,\n     * if the first of the month is a Thursday, Friday, or Saturday, there are\n     * <em>not</em> four days in that week, so it is week number 0, and\n     * <code>getActualMinimum(WEEK_OF_MONTH)</code> will return 0.\n     * <p>\n     * @param field the field whose actual minimum value is desired.\n     * @return the minimum of the given field for the current date of this calendar\n     *\n     * @see #getMinimum\n     * @see #getGreatestMinimum\n     ",
+    "links" : [ "#getFirstDayOfWeek", "#getGreatestMinimum", "#getMinimum", "#getMinimalDaysInFirstWeek" ]
+  }, {
+    "name" : "protected void prepareGetActual(int field, boolean isMinimum)",
+    "returnType" : "void",
+    "comment" : "\n     * Prepare this calendar for computing the actual minimum or maximum.\n     * This method modifies this calendar's fields; it is called on a\n     * temporary calendar.\n     *\n     * <p>Rationale: The semantics of getActualXxx() is to return the\n     * maximum or minimum value that the given field can take, taking into\n     * account other relevant fields.  In general these other fields are\n     * larger fields.  For example, when computing the actual maximum\n     * DAY_OF_MONTH, the current value of DAY_OF_MONTH itself is ignored,\n     * as is the value of any field smaller.\n     *\n     * <p>The time fields all have fixed minima and maxima, so we don't\n     * need to worry about them.  This also lets us set the\n     * MILLISECONDS_IN_DAY to zero to erase any effects the time fields\n     * might have when computing date fields.\n     *\n     * <p>DAY_OF_WEEK is adjusted specially for the WEEK_OF_MONTH and\n     * WEEK_OF_YEAR fields to ensure that they are computed correctly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getActualHelper(int field, int startValue, int endValue)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void roll(int field, boolean up)",
+    "returnType" : "void",
+    "comment" : "\n     * Rolls (up/down) a single unit of time on the given field.  If the\n     * field is rolled past its maximum allowable value, it will \"wrap\" back\n     * to its minimum and continue rolling. For\n     * example, to roll the current date up by one day, you can call:\n     * <p>\n     * <code>roll({@link #DATE}, true)</code>\n     * <p>\n     * When rolling on the {@link #YEAR} field, it will roll the year\n     * value in the range between 1 and the value returned by calling\n     * {@link #getMaximum getMaximum}({@link #YEAR}).\n     * <p>\n     * When rolling on certain fields, the values of other fields may conflict and\n     * need to be changed.  For example, when rolling the <code>MONTH</code> field\n     * for the Gregorian date 1/31/96 upward, the <code>DAY_OF_MONTH</code> field\n     * must be adjusted so that the result is 2/29/96 rather than the invalid\n     * 2/31/96.\n     * <p>\n     * Rolling up always means rolling forward in time (unless\n     * the limit of the field is reached, in which case it may pin or wrap), so for the\n     * Gregorian calendar, starting with 100 BC and rolling the year up results in 99 BC.\n     * When eras have a definite beginning and end (as in the Chinese calendar, or as in\n     * most eras in the Japanese calendar) then rolling the year past either limit of the\n     * era will cause the year to wrap around. When eras only have a limit at one end,\n     * then attempting to roll the year past that limit will result in pinning the year\n     * at that limit. Note that for most calendars in which era 0 years move forward in\n     * time (such as Buddhist, Hebrew, or Islamic), it is possible for add or roll to\n     * result in negative years for era 0 (that is the only way to represent years before\n     * the calendar epoch in such calendars).\n     * <p>\n     * <b>Note:</b> Calling <tt>roll(field, true)</tt> N times is <em>not</em>\n     * necessarily equivalent to calling <tt>roll(field, N)</tt>.  For example,\n     * imagine that you start with the date Gregorian date January 31, 1995.  If you call\n     * <tt>roll(Calendar.MONTH, 2)</tt>, the result will be March 31, 1995.\n     * But if you call <tt>roll(Calendar.MONTH, true)</tt>, the result will be\n     * February 28, 1995.  Calling it one more time will give March 28, 1995, which\n     * is usually not the desired result.\n     * <p>\n     * <b>Note:</b> You should always use <tt>roll</tt> and <tt>add</tt> rather\n     * than attempting to perform arithmetic operations directly on the fields\n     * of a <tt>Calendar</tt>.  It is quite possible for <tt>Calendar</tt> subclasses\n     * to have fields with non-linear behavior, for example missing months\n     * or days during non-leap years.  The subclasses' <tt>add</tt> and <tt>roll</tt>\n     * methods will take this into account, while simple arithmetic manipulations\n     * may give invalid results.\n     * <p>\n     * @param field the calendar field to roll.\n     *\n     * @param up    indicates if the value of the specified time field is to be\n     *              rolled up or rolled down. Use <code>true</code> if rolling up,\n     *              <code>false</code> otherwise.\n     *\n     * @exception   IllegalArgumentException if the field is invalid or refers\n     *              to a field that cannot be handled by this method.\n     * @see #roll(int, int)\n     * @see #add\n     ",
+    "links" : [ "#YEAR", "#getMaximum", "#DATE" ]
+  }, {
+    "name" : "public void roll(int field, int amount)",
+    "returnType" : "void",
+    "comment" : "\n     * Rolls (up/down) a specified amount time on the given field.  For\n     * example, to roll the current date up by three days, you can call\n     * <code>roll(Calendar.DATE, 3)</code>.  If the\n     * field is rolled past its maximum allowable value, it will \"wrap\" back\n     * to its minimum and continue rolling.\n     * For example, calling <code>roll(Calendar.DATE, 10)</code>\n     * on a Gregorian calendar set to 4/25/96 will result in the date 4/5/96.\n     * <p>\n     * When rolling on certain fields, the values of other fields may conflict and\n     * need to be changed.  For example, when rolling the {@link #MONTH MONTH} field\n     * for the Gregorian date 1/31/96 by +1, the {@link #DAY_OF_MONTH DAY_OF_MONTH} field\n     * must be adjusted so that the result is 2/29/96 rather than the invalid\n     * 2/31/96.\n     * <p>\n     * Rolling by a positive value always means rolling forward in time (unless\n     * the limit of the field is reached, in which case it may pin or wrap), so for the\n     * Gregorian calendar, starting with 100 BC and rolling the year by + 1 results in 99 BC.\n     * When eras have a definite beginning and end (as in the Chinese calendar, or as in\n     * most eras in the Japanese calendar) then rolling the year past either limit of the\n     * era will cause the year to wrap around. When eras only have a limit at one end,\n     * then attempting to roll the year past that limit will result in pinning the year\n     * at that limit. Note that for most calendars in which era 0 years move forward in\n     * time (such as Buddhist, Hebrew, or Islamic), it is possible for add or roll to\n     * result in negative years for era 0 (that is the only way to represent years before\n     * the calendar epoch in such calendars).\n     * <p>\n     * <strong>[icu] Note:</strong> the ICU implementation of this method is able to roll\n     * all fields except for {@link #ERA ERA}, {@link #DST_OFFSET DST_OFFSET},\n     * and {@link #ZONE_OFFSET ZONE_OFFSET}.  Subclasses may, of course, add support for\n     * additional fields in their overrides of <code>roll</code>.\n     * <p>\n     * <b>Note:</b> You should always use <tt>roll</tt> and <tt>add</tt> rather\n     * than attempting to perform arithmetic operations directly on the fields\n     * of a <tt>Calendar</tt>.  It is quite possible for <tt>Calendar</tt> subclasses\n     * to have fields with non-linear behavior, for example missing months\n     * or days during non-leap years.  The subclasses' <tt>add</tt> and <tt>roll</tt>\n     * methods will take this into account, while simple arithmetic manipulations\n     * may give invalid results.\n     * <p>\n     * <b>Subclassing:</b><br>\n     * This implementation of <code>roll</code> assumes that the behavior of the\n     * field is continuous between its minimum and maximum, which are found by\n     * calling {@link #getActualMinimum getActualMinimum} and {@link #getActualMaximum getActualMaximum}.\n     * For most such fields, simple addition, subtraction, and modulus operations\n     * are sufficient to perform the roll.  For week-related fields,\n     * the results of {@link #getFirstDayOfWeek getFirstDayOfWeek} and\n     * {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek} are also necessary.\n     * Subclasses can override these two methods if their values differ from the defaults.\n     * <p>\n     * Subclasses that have fields for which the assumption of continuity breaks\n     * down must override <code>roll</code> to handle those fields specially.\n     * For example, in the Hebrew calendar the month \"Adar I\"\n     * only occurs in leap years; in other years the calendar jumps from\n     * Shevat (month #4) to Adar (month #6).  The\n     * {@link HebrewCalendar#roll HebrewCalendar.roll} method takes this into account,\n     * so that rolling the month of Shevat by one gives the proper result (Adar) in a\n     * non-leap year.\n     * <p>\n     * @param field     the calendar field to roll.\n     * @param amount    the amount by which the field should be rolled.\n     *\n     * @exception   IllegalArgumentException if the field is invalid or refers\n     *              to a field that cannot be handled by this method.\n     * @see #roll(int, boolean)\n     * @see #add\n     ",
+    "links" : [ "#ERA", "#getActualMinimum", "#getFirstDayOfWeek", "#DST_OFFSET", "#MONTH", "#DAY_OF_MONTH", "#ZONE_OFFSET", "#getActualMaximum", "android.icu.util.HebrewCalendar#roll", "#getMinimalDaysInFirstWeek" ]
+  }, {
+    "name" : "public void add(int field, int amount)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a signed amount to a specified field, using this calendar's rules.\n     * For example, to add three days to the current date, you can call\n     * <code>add(Calendar.DATE, 3)</code>.\n     * <p>\n     * When adding to certain fields, the values of other fields may conflict and\n     * need to be changed.  For example, when adding one to the {@link #MONTH MONTH} field\n     * for the Gregorian date 1/31/96, the {@link #DAY_OF_MONTH DAY_OF_MONTH} field\n     * must be adjusted so that the result is 2/29/96 rather than the invalid\n     * 2/31/96.\n     * <p>\n     * Adding a positive value always means moving forward in time, so for the Gregorian\n     * calendar, starting with 100 BC and adding +1 to year results in 99 BC (even though\n     * this actually reduces the numeric value of the field itself).\n     * <p>\n     * <strong>[icu] Note:</strong> The ICU implementation of this method is able to add to\n     * all fields except for {@link #ERA ERA}, {@link #DST_OFFSET DST_OFFSET},\n     * and {@link #ZONE_OFFSET ZONE_OFFSET}.  Subclasses may, of course, add support for\n     * additional fields in their overrides of <code>add</code>.\n     * <p>\n     * <b>Note:</b> You should always use <tt>roll</tt> and <tt>add</tt> rather\n     * than attempting to perform arithmetic operations directly on the fields\n     * of a <tt>Calendar</tt>.  It is quite possible for <tt>Calendar</tt> subclasses\n     * to have fields with non-linear behavior, for example missing months\n     * or days during non-leap years.  The subclasses' <tt>add</tt> and <tt>roll</tt>\n     * methods will take this into account, while simple arithmetic manipulations\n     * may give invalid results.\n     * <p>\n     * <b>Subclassing:</b><br>\n     * This implementation of <code>add</code> assumes that the behavior of the\n     * field is continuous between its minimum and maximum, which are found by\n     * calling {@link #getActualMinimum getActualMinimum} and\n     * {@link #getActualMaximum getActualMaximum}.\n     * For such fields, simple arithmetic operations are sufficient to\n     * perform the add.\n     * <p>\n     * Subclasses that have fields for which this assumption of continuity breaks\n     * down must override <code>add</code> to handle those fields specially.\n     * For example, in the Hebrew calendar the month \"Adar I\"\n     * only occurs in leap years; in other years the calendar jumps from\n     * Shevat (month #4) to Adar (month #6).  The\n     * {@link HebrewCalendar#add HebrewCalendar.add} method takes this into account,\n     * so that adding one month\n     * to a date in Shevat gives the proper result (Adar) in a non-leap year.\n     * <p>\n     * @param field     the time field.\n     * @param amount    the amount to add to the field.\n     *\n     * @exception   IllegalArgumentException if the field is invalid or refers\n     *              to a field that cannot be handled by this method.\n     * @see #roll(int, int)\n     ",
+    "links" : [ "#ERA", "#getActualMinimum", "#DST_OFFSET", "#MONTH", "#DAY_OF_MONTH", "#ZONE_OFFSET", "android.icu.util.HebrewCalendar#add", "#getActualMaximum" ]
+  }, {
+    "name" : "public String getDisplayName(Locale loc)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the name of this calendar in the language of the given locale.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getDisplayName(ULocale loc)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the name of this calendar in the language of the given locale.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compareTo(Calendar that)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares the times (in millis) represented by two\n     * <code>Calendar</code> objects.\n     *\n     * @param that the <code>Calendar</code> to compare to this.\n     * @return <code>0</code> if the time represented by\n     * this <code>Calendar</code> is equal to the time represented\n     * by that <code>Calendar</code>, a value less than\n     * <code>0</code> if the time represented by this is before\n     * the time represented by that, and a value greater than\n     * <code>0</code> if the time represented by this\n     * is after the time represented by that.\n     * @throws NullPointerException if that\n     * <code>Calendar</code> is null.\n     * @throws IllegalArgumentException if the time of that\n     * <code>Calendar</code> can't be obtained because of invalid\n     * calendar values.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public DateFormat getDateTimeFormat(int dateStyle, int timeStyle, Locale loc)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a <code>DateFormat</code> appropriate to this calendar.\n     * Subclasses wishing to specialize this behavior should override\n     * {@link #handleGetDateFormat}.\n     ",
+    "links" : [ "#handleGetDateFormat" ]
+  }, {
+    "name" : "public DateFormat getDateTimeFormat(int dateStyle, int timeStyle, ULocale loc)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a <code>DateFormat</code> appropriate to this calendar.\n     * Subclasses wishing to specialize this behavior should override\n     * {@link #handleGetDateFormat}.\n     ",
+    "links" : [ "#handleGetDateFormat" ]
+  }, {
+    "name" : "protected DateFormat handleGetDateFormat(String pattern, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a <code>DateFormat</code> appropriate to this calendar.\n     * This is a framework method for subclasses to override.  This method\n     * is responsible for creating the calendar-specific DateFormat and\n     * DateFormatSymbols objects as needed.\n     * @param pattern the pattern, specific to the <code>DateFormat</code>\n     * subclass\n     * @param locale the locale for which the symbols should be drawn\n     * @return a <code>DateFormat</code> appropriate to this calendar\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormat handleGetDateFormat(String pattern, String override, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a <code>DateFormat</code> appropriate to this calendar.\n     * This is a framework method for subclasses to override.  This method\n     * is responsible for creating the calendar-specific DateFormat and\n     * DateFormatSymbols objects as needed.\n     * @param pattern the pattern, specific to the <code>DateFormat</code>\n     * subclass\n     * @param override The override string.  A numbering system override string can take one of the following forms:\n     *     1). If just a numbering system name is specified, it applies to all numeric fields in the date format pattern.\n     *     2). To specify an alternate numbering system on a field by field basis, use the field letters from the pattern\n     *         followed by an = sign, followed by the numbering system name.  For example, to specify that just the year\n     *         be formatted using Hebrew digits, use the override \"y=hebr\".  Multiple overrides can be specified in a single\n     *         string by separating them with a semi-colon. For example, the override string \"m=thai;y=deva\" would format using\n     *         Thai digits for the month and Devanagari digits for the year.\n     * @param locale the locale for which the symbols should be drawn\n     * @return a <code>DateFormat</code> appropriate to this calendar\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormat handleGetDateFormat(String pattern, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a <code>DateFormat</code> appropriate to this calendar.\n     * This is a framework method for subclasses to override.  This method\n     * is responsible for creating the calendar-specific DateFormat and\n     * DateFormatSymbols objects as needed.\n     * @param pattern the pattern, specific to the <code>DateFormat</code>\n     * subclass\n     * @param locale the locale for which the symbols should be drawn\n     * @return a <code>DateFormat</code> appropriate to this calendar\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormat handleGetDateFormat(String pattern, String override, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a <code>DateFormat</code> appropriate to this calendar.\n     * This is a framework method for subclasses to override.  This method\n     * is responsible for creating the calendar-specific DateFormat and\n     * DateFormatSymbols objects as needed.\n     * @param pattern the pattern, specific to the <code>DateFormat</code>\n     * subclass\n     * @param locale the locale for which the symbols should be drawn\n     * @return a <code>DateFormat</code> appropriate to this calendar\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static DateFormat formatHelper(Calendar cal, ULocale loc, int dateStyle, int timeStyle)",
+    "returnType" : "DateFormat",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getDateTimeFormatString(ULocale loc, String calType, int dateStyle, int timeStyle)",
+    "returnType" : "String",
+    "comment" : " TODO: Check if calType can be passed via keyword on loc parameter instead.",
+    "links" : [ ]
+  }, {
+    "name" : "private static PatternData getPatternData(ULocale locale, String calType)",
+    "returnType" : "PatternData",
+    "comment" : "\n     * Retrieves the DateTime patterns and overrides from the resource bundle and generates a\n     * new PatternData object.\n     * @param locale Locale to retrieve.\n     * @param calType Calendar type to retrieve. If not found will fallback to gregorian.\n     * @return PatternData object for this locale and calendarType.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getDateTimePattern(Calendar cal, ULocale uLocale, int dateStyle)",
+    "returnType" : "String",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getDateAtTimePattern(Calendar cal, ULocale uLocale, int dateStyle)",
+    "returnType" : "String",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String mergeOverrideStrings(String datePattern, String timePattern, String dateOverride, String timeOverride)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String expandOverride(String pattern, String override)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void pinField(int field)",
+    "returnType" : "void",
+    "comment" : "\n     * Adjust the specified field so that it is within\n     * the allowable range for the date to which this calendar is set.\n     * For example, in a Gregorian calendar pinning the {@link #DAY_OF_MONTH DAY_OF_MONTH}\n     * field for a calendar set to April 31 would cause it to be set\n     * to April 30.\n     * <p>\n     * <b>Subclassing:</b>\n     * <br>\n     * This utility method is intended for use by subclasses that need to implement\n     * their own overrides of {@link #roll roll} and {@link #add add}.\n     * <p>\n     * <b>Note:</b>\n     * <code>pinField</code> is implemented in terms of\n     * {@link #getActualMinimum getActualMinimum}\n     * and {@link #getActualMaximum getActualMaximum}.  If either of those methods uses\n     * a slow, iterative algorithm for a particular field, it would be\n     * unwise to attempt to call <code>pinField</code> for that field.  If you\n     * really do need to do so, you should override this method to do\n     * something more efficient for that field.\n     * <p>\n     * @param field The calendar field whose value should be pinned.\n     *\n     * @see #getActualMinimum\n     * @see #getActualMaximum\n     ",
+    "links" : [ "#getActualMinimum", "#roll", "#DAY_OF_MONTH", "#getActualMaximum", "#add" ]
+  }, {
+    "name" : "protected boolean isEra0CountingBackward()",
+    "returnType" : "boolean",
+    "comment" : "\n     * The year in this calendar is counting from 1 backward if the era is 0.\n     * @return The year in era 0 of this calendar is counting backward from 1.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int weekNumber(int desiredDay, int dayOfPeriod, int dayOfWeek)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the week number of a day, within a period. This may be the week number in\n     * a year or the week number in a month. Usually this will be a value &gt;= 1, but if\n     * some initial days of the period are excluded from week 1, because\n     * {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek} is &gt; 1, then\n     * the week number will be zero for those\n     * initial days. This method requires the day number and day of week for some\n     * known date in the period in order to determine the day of week\n     * on the desired day.\n     * <p>\n     * <b>Subclassing:</b>\n     * <br>\n     * This method is intended for use by subclasses in implementing their\n     * {@link #computeTime computeTime} and/or {@link #computeFields computeFields} methods.\n     * It is often useful in {@link #getActualMinimum getActualMinimum} and\n     * {@link #getActualMaximum getActualMaximum} as well.\n     * <p>\n     * This variant is handy for computing the week number of some other\n     * day of a period (often the first or last day of the period) when its day\n     * of the week is not known but the day number and day of week for some other\n     * day in the period (e.g. the current date) <em>is</em> known.\n     * <p>\n     * @param desiredDay    The {@link #DAY_OF_YEAR DAY_OF_YEAR} or\n     *              {@link #DAY_OF_MONTH DAY_OF_MONTH} whose week number is desired.\n     *              Should be 1 for the first day of the period.\n     *\n     * @param dayOfPeriod   The {@link #DAY_OF_YEAR DAY_OF_YEAR}\n     *              or {@link #DAY_OF_MONTH DAY_OF_MONTH} for a day in the period whose\n     *              {@link #DAY_OF_WEEK DAY_OF_WEEK} is specified by the\n     *              <code>dayOfWeek</code> parameter.\n     *              Should be 1 for first day of period.\n     *\n     * @param dayOfWeek  The {@link #DAY_OF_WEEK DAY_OF_WEEK} for the day\n     *              corresponding to the <code>dayOfPeriod</code> parameter.\n     *              1-based with 1=Sunday.\n     *\n     * @return      The week number (one-based), or zero if the day falls before\n     *              the first week because\n     *              {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek}\n     *              is more than one.\n     ",
+    "links" : [ "#getActualMinimum", "#DAY_OF_YEAR", "#DAY_OF_MONTH", "#computeFields", "#computeTime", "#getActualMaximum", "#DAY_OF_WEEK", "#getMinimalDaysInFirstWeek" ]
+  }, {
+    "name" : "protected final int weekNumber(int dayOfPeriod, int dayOfWeek)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the week number of a day, within a period. This may be the week number in\n     * a year, or the week number in a month. Usually this will be a value &gt;= 1, but if\n     * some initial days of the period are excluded from week 1, because\n     * {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek} is &gt; 1,\n     * then the week number will be zero for those\n     * initial days. This method requires the day of week for the given date in order to\n     * determine the result.\n     * <p>\n     * <b>Subclassing:</b>\n     * <br>\n     * This method is intended for use by subclasses in implementing their\n     * {@link #computeTime computeTime} and/or {@link #computeFields computeFields} methods.\n     * It is often useful in {@link #getActualMinimum getActualMinimum} and\n     * {@link #getActualMaximum getActualMaximum} as well.\n     * <p>\n     * @param dayOfPeriod   The {@link #DAY_OF_YEAR DAY_OF_YEAR} or\n     *                      {@link #DAY_OF_MONTH DAY_OF_MONTH} whose week number is desired.\n     *                      Should be 1 for the first day of the period.\n     *\n     * @param dayOfWeek     The {@link #DAY_OF_WEEK DAY_OF_WEEK} for the day\n     *                      corresponding to the <code>dayOfPeriod</code> parameter.\n     *                      1-based with 1=Sunday.\n     *\n     * @return      The week number (one-based), or zero if the day falls before\n     *              the first week because\n     *              {@link #getMinimalDaysInFirstWeek getMinimalDaysInFirstWeek}\n     *              is more than one.\n     ",
+    "links" : [ "#getActualMinimum", "#DAY_OF_YEAR", "#DAY_OF_MONTH", "#computeFields", "#computeTime", "#getActualMaximum", "#DAY_OF_WEEK", "#getMinimalDaysInFirstWeek" ]
+  }, {
+    "name" : "public int fieldDifference(Date when, int field)",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the difference between the given time and the time this\n     * calendar object is set to.  If this calendar is set\n     * <em>before</em> the given time, the returned value will be\n     * positive.  If this calendar is set <em>after</em> the given\n     * time, the returned value will be negative.  The\n     * <code>field</code> parameter specifies the units of the return\n     * value.  For example, if <code>fieldDifference(when,\n     * Calendar.MONTH)</code> returns 3, then this calendar is set to\n     * 3 months before <code>when</code>, and possibly some additional\n     * time less than one month.\n     *\n     * <p>As a side effect of this call, this calendar is advanced\n     * toward <code>when</code> by the given amount.  That is, calling\n     * this method has the side effect of calling <code>add(field,\n     * n)</code>, where <code>n</code> is the return value.\n     *\n     * <p>Usage: To use this method, call it first with the largest\n     * field of interest, then with progressively smaller fields.  For\n     * example:\n     *\n     * <pre>\n     * int y = cal.fieldDifference(when, Calendar.YEAR);\n     * int m = cal.fieldDifference(when, Calendar.MONTH);\n     * int d = cal.fieldDifference(when, Calendar.DATE);</pre>\n     *\n     * computes the difference between <code>cal</code> and\n     * <code>when</code> in years, months, and days.\n     *\n     * <p>Note: <code>fieldDifference()</code> is\n     * <em>asymmetrical</em>.  That is, in the following code:\n     *\n     * <pre>\n     * cal.setTime(date1);\n     * int m1 = cal.fieldDifference(date2, Calendar.MONTH);\n     * int d1 = cal.fieldDifference(date2, Calendar.DATE);\n     * cal.setTime(date2);\n     * int m2 = cal.fieldDifference(date1, Calendar.MONTH);\n     * int d2 = cal.fieldDifference(date1, Calendar.DATE);</pre>\n     *\n     * one might expect that <code>m1 == -m2 &amp;&amp; d1 == -d2</code>.\n     * However, this is not generally the case, because of\n     * irregularities in the underlying calendar system (e.g., the\n     * Gregorian calendar has a varying number of days per month).\n     *\n     * @param when the date to compare this calendar's time to\n     * @param field the field in which to compute the result\n     * @return the difference, either positive or negative, between\n     * this calendar's time and <code>when</code>, in terms of\n     * <code>field</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTimeZone(TimeZone value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the time zone with the given time zone value.\n     * @param value the given time zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public TimeZone getTimeZone()",
+    "returnType" : "TimeZone",
+    "comment" : "\n     * Returns the time zone.\n     * @return the time zone object associated with this calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLenient(boolean lenient)",
+    "returnType" : "void",
+    "comment" : "\n     * Specify whether or not date/time interpretation is to be lenient.  With\n     * lenient interpretation, a date such as \"February 942, 1996\" will be\n     * treated as being equivalent to the 941st day after February 1, 1996.\n     * With strict interpretation, such dates will cause an exception to be\n     * thrown.\n     *\n     * @see DateFormat#setLenient\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLenient()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tell whether date/time interpretation is to be lenient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRepeatedWallTimeOption(int option)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong>Sets the behavior for handling wall time repeating multiple times\n     * at negative time zone offset transitions. For example, 1:30 AM on\n     * November 6, 2011 in US Eastern time (America/New_York) occurs twice;\n     * 1:30 AM EDT, then 1:30 AM EST one hour later. When <code>WALLTIME_FIRST</code>\n     * is used, the wall time 1:30AM in this example will be interpreted as 1:30 AM EDT\n     * (first occurrence). When <code>WALLTIME_LAST</code> is used, it will be\n     * interpreted as 1:30 AM EST (last occurrence). The default value is\n     * <code>WALLTIME_LAST</code>.\n     *\n     * @param option the behavior for handling repeating wall time, either\n     * <code>WALLTIME_FIRST</code> or <code>WALLTIME_LAST</code>.\n     * @throws IllegalArgumentException when <code>option</code> is neither\n     * <code>WALLTIME_FIRST</code> nor <code>WALLTIME_LAST</code>.\n     *\n     * @see #getRepeatedWallTimeOption()\n     * @see #WALLTIME_FIRST\n     * @see #WALLTIME_LAST\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRepeatedWallTimeOption()",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong>Gets the behavior for handling wall time repeating multiple times\n     * at negative time zone offset transitions.\n     *\n     * @return the behavior for handling repeating wall time, either\n     * <code>WALLTIME_FIRST</code> or <code>WALLTIME_LAST</code>.\n     *\n     * @see #setRepeatedWallTimeOption(int)\n     * @see #WALLTIME_FIRST\n     * @see #WALLTIME_LAST\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSkippedWallTimeOption(int option)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong>Sets the behavior for handling skipped wall time at positive time zone offset\n     * transitions. For example, 2:30 AM on March 13, 2011 in US Eastern time (America/New_York)\n     * does not exist because the wall time jump from 1:59 AM EST to 3:00 AM EDT. When\n     * <code>WALLTIME_FIRST</code> is used, 2:30 AM is interpreted as 30 minutes before 3:00 AM\n     * EDT, therefore, it will be resolved as 1:30 AM EST. When <code>WALLTIME_LAST</code>\n     * is used, 2:30 AM is interpreted as 31 minutes after 1:59 AM EST, therefore, it will be\n     * resolved as 3:30 AM EDT. When <code>WALLTIME_NEXT_VALID</code> is used, 2:30 AM will\n     * be resolved as next valid wall time, that is 3:00 AM EDT. The default value is\n     * <code>WALLTIME_LAST</code>.\n     * <p>\n     * <b>Note:</b>This option is effective only when this calendar is {@link #isLenient() lenient}.\n     * When the calendar is strict, such non-existing wall time will cause an exception.\n     *\n     * @param option the behavior for handling skipped wall time at positive time zone\n     * offset transitions, one of <code>WALLTIME_FIRST</code>, <code>WALLTIME_LAST</code> and\n     * <code>WALLTIME_NEXT_VALID</code>.\n     * @throws IllegalArgumentException when <code>option</code> is not any of\n     * <code>WALLTIME_FIRST</code>, <code>WALLTIME_LAST</code> and <code>WALLTIME_NEXT_VALID</code>.\n     *\n     * @see #getSkippedWallTimeOption()\n     * @see #WALLTIME_FIRST\n     * @see #WALLTIME_LAST\n     * @see #WALLTIME_NEXT_VALID\n     ",
+    "links" : [ "#isLenient()" ]
+  }, {
+    "name" : "public int getSkippedWallTimeOption()",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong>Gets the behavior for handling skipped wall time at positive time zone offset\n     * transitions.\n     *\n     * @return the behavior for handling skipped wall time, one of\n     * <code>WALLTIME_FIRST</code>, <code>WALLTIME_LAST</code> and <code>WALLTIME_NEXT_VALID</code>.\n     *\n     * @see #setSkippedWallTimeOption(int)\n     * @see #WALLTIME_FIRST\n     * @see #WALLTIME_LAST\n     * @see #WALLTIME_NEXT_VALID\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFirstDayOfWeek(int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets what the first day of the week is,\n     * where 1 = {@link #SUNDAY} and 7 = {@link #SATURDAY}.\n     * @param value the given first day of the week, where 1 = {@link #SUNDAY} and 7 = {@link #SATURDAY}.\n     ",
+    "links" : [ "#SATURDAY", "#SUNDAY" ]
+  }, {
+    "name" : "public int getFirstDayOfWeek()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns what the first day of the week is,\n     * where 1 = {@link #SUNDAY} and 7 = {@link #SATURDAY}.\n     * e.g., Sunday in US, Monday in France\n     * @return the first day of the week, where 1 = {@link #SUNDAY} and 7 = {@link #SATURDAY}.\n     ",
+    "links" : [ "#SATURDAY", "#SUNDAY" ]
+  }, {
+    "name" : "public void setMinimalDaysInFirstWeek(int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets what the minimal days required in the first week of the year are.\n     * For example, if the first week is defined as one that contains the first\n     * day of the first month of a year, call the method with value 1. If it\n     * must be a full week, use value 7.\n     * @param value the given minimal days required in the first week\n     * of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMinimalDaysInFirstWeek()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns what the minimal days required in the first week of the year are.\n     * That is, if the first week is defined as one that contains the first day\n     * of the first month of a year, getMinimalDaysInFirstWeek returns 1. If\n     * the minimal days required must be a full week, getMinimalDaysInFirstWeek\n     * returns 7.\n     * @return the minimal days required in the first week of the year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int handleGetLimit(int field, int limitType)",
+    "returnType" : "int",
+    "comment" : "\n     * Subclass API for defining limits of different types.\n     * Subclasses must implement this method to return limits for the\n     * following fields:\n     *\n     * <pre>ERA\n     * YEAR\n     * MONTH\n     * WEEK_OF_YEAR\n     * WEEK_OF_MONTH\n     * DAY_OF_MONTH\n     * DAY_OF_YEAR\n     * DAY_OF_WEEK_IN_MONTH\n     * YEAR_WOY\n     * EXTENDED_YEAR</pre>\n     *\n     * @param field one of the above field numbers\n     * @param limitType one of <code>MINIMUM</code>, <code>GREATEST_MINIMUM</code>,\n     * <code>LEAST_MAXIMUM</code>, or <code>MAXIMUM</code>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int getLimit(int field, int limitType)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a limit for a field.\n     * @param field the field, from 0..<code>getFieldCount()-1</code>\n     * @param limitType the type specifier for the limit\n     * @see #MINIMUM\n     * @see #GREATEST_MINIMUM\n     * @see #LEAST_MAXIMUM\n     * @see #MAXIMUM\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getMinimum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the minimum value for the given time field.\n     * e.g., for Gregorian DAY_OF_MONTH, 1.\n     * @param field the given time field.\n     * @return the minimum value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getMaximum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the maximum value for the given time field.\n     * e.g. for Gregorian DAY_OF_MONTH, 31.\n     * @param field the given time field.\n     * @return the maximum value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getGreatestMinimum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the highest minimum value for the given field if varies.\n     * Otherwise same as getMinimum(). For Gregorian, no difference.\n     * @param field the given time field.\n     * @return the highest minimum value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getLeastMaximum(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the lowest maximum value for the given field if varies.\n     * Otherwise same as getMaximum(). e.g., for Gregorian DAY_OF_MONTH, 28.\n     * @param field the given time field.\n     * @return the lowest maximum value for the given time field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getDayOfWeekType(int dayOfWeek)",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Returns whether the given day of the week is a weekday, a\n     * weekend day, or a day that transitions from one to the other, for the\n     * locale and calendar system associated with this Calendar (the locale's\n     * region is often the most determinant factor). If a transition occurs at\n     * midnight, then the days before and after the transition will have the\n     * type WEEKDAY or WEEKEND.  If a transition occurs at a time\n     * other than midnight, then the day of the transition will have\n     * the type WEEKEND_ONSET or WEEKEND_CEASE.  In this case, the\n     * method getWeekendTransition() will return the point of\n     * transition.\n     * @param dayOfWeek either SUNDAY, MONDAY, TUESDAY, WEDNESDAY,\n     * THURSDAY, FRIDAY, or SATURDAY\n     * @return either WEEKDAY, WEEKEND, WEEKEND_ONSET, or\n     * WEEKEND_CEASE\n     * @exception IllegalArgumentException if dayOfWeek is not\n     * between SUNDAY and SATURDAY, inclusive\n     * @see #WEEKDAY\n     * @see #WEEKEND\n     * @see #WEEKEND_ONSET\n     * @see #WEEKEND_CEASE\n     * @see #getWeekendTransition\n     * @see #isWeekend(Date)\n     * @see #isWeekend()\n     * @deprecated ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "public int getWeekendTransition(int dayOfWeek)",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the time during the day at which the weekend begins or end in this\n     * calendar system.  If getDayOfWeekType(dayOfWeek) == WEEKEND_ONSET return the time\n     * at which the weekend begins.  If getDayOfWeekType(dayOfWeek) == WEEKEND_CEASE\n     * return the time at which the weekend ends.  If getDayOfWeekType(dayOfWeek) has some\n     * other value, then throw an exception.\n     * @param dayOfWeek either SUNDAY, MONDAY, TUESDAY, WEDNESDAY,\n     * THURSDAY, FRIDAY, or SATURDAY\n     * @return the milliseconds after midnight at which the\n     * weekend begins or ends\n     * @exception IllegalArgumentException if dayOfWeek is not\n     * WEEKEND_ONSET or WEEKEND_CEASE\n     * @see #getDayOfWeekType\n     * @see #isWeekend(Date)\n     * @see #isWeekend()\n     * @deprecated ICU 54 use {@link #getWeekDataForRegion(String)}, {@link #getWeekData()}, {@link #setWeekData(WeekData)}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setWeekData(WeekData)", "#getWeekDataForRegion(String)", "#getWeekData()" ]
+  }, {
+    "name" : "public boolean isWeekend(Date date)",
+    "returnType" : "boolean",
+    "comment" : "\n     * <strong>[icu]</strong> Returns true if the given date and time is in the weekend in this calendar\n     * system.  Equivalent to calling setTime() followed by isWeekend().  Note: This\n     * method changes the time this calendar is set to.\n     * @param date the date and time\n     * @return true if the given date and time is part of the\n     * weekend\n     * @see #isWeekend()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWeekend()",
+    "returnType" : "boolean",
+    "comment" : "\n     * <strong>[icu]</strong> Returns true if this Calendar's current date and time is in the weekend in\n     * this calendar system.\n     * @return true if the given date and time is part of the\n     * weekend\n     * @see #isWeekend(Date)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Overrides Cloneable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string representation of this calendar. This method\n     * is intended to be used only for debugging purposes, and the\n     * format of the returned string may vary between implementations.\n     * The returned string may be empty but may not be <code>null</code>.\n     *\n     * @return  a string representation of this calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static WeekData getWeekDataForRegion(String region)",
+    "returnType" : "WeekData",
+    "comment" : "\n     * <strong>[icu]</strong> Return simple, immutable struct-like class for access to the CLDR week data.\n     * @param region The input region. The results are undefined if the region code is not valid.\n     * @return the WeekData for the input region. It is never null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WeekData getWeekData()",
+    "returnType" : "WeekData",
+    "comment" : "\n     * <strong>[icu]</strong> Return simple, immutable struct-like class for access to the week data in this calendar.\n     * @return the WeekData for this calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Calendar setWeekData(WeekData wdata)",
+    "returnType" : "Calendar",
+    "comment" : "\n     * <strong>[icu]</strong> Set data in this calendar based on the WeekData input.\n     * @param wdata The week data to use\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static WeekData getWeekDataForRegionInternal(String region)",
+    "returnType" : "WeekData",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setWeekData(String region)",
+    "returnType" : "void",
+    "comment" : "\n     * Set this calendar to contain week and week data for the given region.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateTime()",
+    "returnType" : "void",
+    "comment" : "\n     * Recompute the time and update the status fields isTimeSet\n     * and areFieldsSet.  Callers should check isTimeSet and only\n     * call this method if isTimeSet is false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(ObjectOutputStream stream) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Save the state of this object to a stream (i.e., serialize it).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reconstitute this object from a stream (i.e., deserialize it).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void computeFields()",
+    "returnType" : "void",
+    "comment" : "\n     * Converts the current millisecond time value <code>time</code> to\n     * field values in <code>fields[]</code>.  This synchronizes the time\n     * field values with a new time that is set for the calendar.  The time\n     * is <em>not</em> recomputed first; to recompute the time, then the\n     * fields, call the <code>complete</code> method.\n     * @see #complete\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void computeGregorianAndDOWFields(int julianDay)",
+    "returnType" : "void",
+    "comment" : "\n     * Compute the Gregorian calendar year, month, and day of month from\n     * the given Julian day.  These values are not stored in fields, but in\n     * member variables gregorianXxx.  Also compute the DAY_OF_WEEK and\n     * DOW_LOCAL fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void computeGregorianFields(int julianDay)",
+    "returnType" : "void",
+    "comment" : "\n     * Compute the Gregorian calendar year, month, and day of month from the\n     * Julian day.  These values are not stored in fields, but in member\n     * variables gregorianXxx.  They are used for time zone computations and by\n     * subclasses that are Gregorian derivatives.  Subclasses may call this\n     * method to perform a Gregorian calendar millis-&gt;fields computation.\n     * To perform a Gregorian calendar fields-&gt;millis computation, call\n     * computeGregorianMonthStart().\n     * @see #computeGregorianMonthStart\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void computeWeekFields()",
+    "returnType" : "void",
+    "comment" : "\n     * Compute the fields WEEK_OF_YEAR, YEAR_WOY, WEEK_OF_MONTH,\n     * DAY_OF_WEEK_IN_MONTH, and DOW_LOCAL from EXTENDED_YEAR, YEAR,\n     * DAY_OF_WEEK, and DAY_OF_YEAR.  The latter fields are computed by the\n     * subclass based on the calendar system.\n     *\n     * <p>The YEAR_WOY field is computed simplistically.  It is equal to YEAR\n     * most of the time, but at the year boundary it may be adjusted to YEAR-1\n     * or YEAR+1 to reflect the overlap of a week into an adjacent year.  In\n     * this case, a simple increment or decrement is performed on YEAR, even\n     * though this may yield an invalid YEAR value.  For instance, if the YEAR\n     * is part of a calendar system with an N-year cycle field CYCLE, then\n     * incrementing the YEAR may involve incrementing CYCLE and setting YEAR\n     * back to 0 or 1.  This is not handled by this code, and in fact cannot be\n     * simply handled without having subclasses define an entire parallel set of\n     * fields for fields larger than or equal to a year.  This additional\n     * complexity is not warranted, since the intention of the YEAR_WOY field is\n     * to support ISO 8601 notation, so it will typically be used with a\n     * proleptic Gregorian calendar, which has no field larger than a year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int resolveFields(int[][][] precedenceTable)",
+    "returnType" : "int",
+    "comment" : "\n     * Given a precedence table, return the newest field combination in\n     * the table, or -1 if none is found.\n     *\n     * <p>The precedence table is a 3-dimensional array of integers.  It\n     * may be thought of as an array of groups.  Each group is an array of\n     * lines.  Each line is an array of field numbers.  Within a line, if\n     * all fields are set, then the time stamp of the line is taken to be\n     * the stamp of the most recently set field.  If any field of a line is\n     * unset, then the line fails to match.  Within a group, the line with\n     * the newest time stamp is selected.  The first field of the line is\n     * returned to indicate which line matched.\n     *\n     * <p>In some cases, it may be desirable to map a line to field that\n     * whose stamp is NOT examined.  For example, if the best field is\n     * DAY_OF_WEEK then the DAY_OF_WEEK_IN_MONTH algorithm may be used.  In\n     * order to do this, insert the value <code>REMAP_RESOLVE | F</code> at\n     * the start of the line, where <code>F</code> is the desired return\n     * field value.  This field will NOT be examined; it only determines\n     * the return value if the other fields in the line are the newest.\n     *\n     * <p>If all lines of a group contain at least one unset field, then no\n     * line will match, and the group as a whole will fail to match.  In\n     * that case, the next group will be processed.  If all groups fail to\n     * match, then -1 is returned.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int newestStamp(int first, int last, int bestStampSoFar)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the newest stamp of a given range of fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int getStamp(int field)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the timestamp of a field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int newerField(int defaultField, int alternateField)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the field that is newer, either defaultField, or\n     * alternateField.  If neither is newer or neither is set, return defaultField.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void validateFields()",
+    "returnType" : "void",
+    "comment" : "\n     * Ensure that each field is within its valid range by calling {@link\n     * #validateField(int)} on each field that has been set.  This method\n     * should only be called if this calendar is not lenient.\n     * @see #isLenient\n     * @see #validateField(int)\n     ",
+    "links" : [ "#validateField(int)" ]
+  }, {
+    "name" : "protected void validateField(int field)",
+    "returnType" : "void",
+    "comment" : "\n     * Validate a single field of this calendar.  Subclasses should\n     * override this method to validate any calendar-specific fields.\n     * Generic fields can be handled by\n     * <code>Calendar.validateField()</code>.\n     * @see #validateField(int, int, int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void validateField(int field, int min, int max)",
+    "returnType" : "void",
+    "comment" : "\n     * Validate a single field of this calendar given its minimum and\n     * maximum allowed value.  If the field is out of range, throw a\n     * descriptive <code>IllegalArgumentException</code>.  Subclasses may\n     * use this method in their implementation of {@link\n     * #validateField(int)}.\n     ",
+    "links" : [ "#validateField(int)" ]
+  }, {
+    "name" : "protected void computeTime()",
+    "returnType" : "void",
+    "comment" : "\n     * Converts the current field values in <code>fields[]</code> to the\n     * millisecond time value <code>time</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Long getImmediatePreviousZoneTransition(long base)",
+    "returnType" : "Long",
+    "comment" : "\n     * Find the previous zone transition near the given time.\n     *\n     * @param base The base time, inclusive.\n     * @return The time of the previous transition, or null if not found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Long getPreviousZoneTransitionTime(TimeZone tz, long base, long duration)",
+    "returnType" : "Long",
+    "comment" : "\n     * Find the previous zone transition within the specified duration.\n     * Note: This method is only used when TimeZone is NOT a BasicTimeZone.\n     * @param tz The time zone.\n     * @param base The base time, inclusive.\n     * @param duration The range of time evaluated.\n     * @return The time of the previous zone transition, or null if not available.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Long findPreviousZoneTransitionTime(TimeZone tz, int upperOffset, long upper, long lower)",
+    "returnType" : "Long",
+    "comment" : "\n     * Implementing binary search for zone transition detection, used by {@link #getPreviousZoneTransitionTime(TimeZone, long, long)}\n     * @param tz The time zone.\n     * @param upperOffset The zone offset at <code>upper</code>\n     * @param upper The upper bound, inclusive.\n     * @param lower The lower bound, exclusive.\n     * @return The time of the previous zone transition, or null if not available.\n     ",
+    "links" : [ "#getPreviousZoneTransitionTime(TimeZone" ]
+  }, {
+    "name" : "protected int computeMillisInDay()",
+    "returnType" : "int",
+    "comment" : "\n     * Compute the milliseconds in the day from the fields.  This is a\n     * value from 0 to 23:59:59.999 inclusive, unless fields are out of\n     * range, in which case it can be an arbitrary value.  This value\n     * reflects local zone wall time.\n     * @deprecated ICU 60\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected long computeMillisInDayLong()",
+    "returnType" : "long",
+    "comment" : "\n     * Compute the milliseconds in the day from the fields.  The standard\n     * value range is from 0 to 23:59:59.999 inclusive. This value\n     * reflects local zone wall time.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int computeZoneOffset(long millis, int millisInDay)",
+    "returnType" : "int",
+    "comment" : "\n     * This method can assume EXTENDED_YEAR has been set.\n     * @param millis milliseconds of the date fields (local midnight millis)\n     * @param millisInDay milliseconds of the time fields; may be out\n     * or range.\n     * @return total zone offset (raw + DST) for the given moment\n     * @deprecated ICU 60\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int computeZoneOffset(long millis, long millisInDay)",
+    "returnType" : "int",
+    "comment" : "\n     * This method can assume EXTENDED_YEAR has been set.\n     * @param millis milliseconds of the date fields (local midnight millis)\n     * @param millisInDay milliseconds of the time fields\n     * @return total zone offset (raw + DST) for the given moment\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int computeJulianDay()",
+    "returnType" : "int",
+    "comment" : "\n     * Compute the Julian day number as specified by this calendar's fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int[][][] getFieldResolutionTable()",
+    "returnType" : "int[][][]",
+    "comment" : "\n     * Returns the field resolution array for this calendar.  Calendars that\n     * define additional fields or change the semantics of existing fields\n     * should override this method to adjust the field resolution semantics\n     * accordingly.  Other subclasses should not override this method.\n     * @see #resolveFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int handleComputeMonthStart(int eyear, int month, boolean useMonth)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the Julian day number of day before the first day of the\n     * given month in the given extended year.  Subclasses should override\n     * this method to implement their calendar system.\n     * @param eyear the extended year\n     * @param month the zero-based month, or 0 if useMonth is false\n     * @param useMonth if false, compute the day before the first day of\n     * the given year, otherwise, compute the day before the first day of\n     * the given month\n     * @return the Julian day number of the day before the first\n     * day of the given month and year\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int handleGetExtendedYear()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the extended year defined by the current fields.  This will\n     * use the EXTENDED_YEAR field or the YEAR and supra-year fields (such\n     * as ERA) specific to the calendar system, depending on which set of\n     * fields is newer.\n     * @return the extended year\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleGetMonthLength(int extendedYear, int month)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of days in the given month of the given extended\n     * year of this calendar system.  Subclasses should override this\n     * method if they can provide a more correct or more efficient\n     * implementation than the default implementation in Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleGetYearLength(int eyear)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of days in the given extended year of this\n     * calendar system.  Subclasses should override this method if they can\n     * provide a more correct or more efficient implementation than the\n     * default implementation in Calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int[] handleCreateFields()",
+    "returnType" : "int[]",
+    "comment" : "\n     * Subclasses that use additional fields beyond those defined in\n     * <code>Calendar</code> should override this method to return an\n     * <code>int[]</code> array of the appropriate length.  The length\n     * must be at least <code>BASE_FIELD_COUNT</code> and no more than\n     * <code>MAX_FIELD_COUNT</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int getDefaultMonthInYear(int extendedYear)",
+    "returnType" : "int",
+    "comment" : "\n     * Subclasses may override this.\n     * Called by handleComputeJulianDay.  Returns the default month (0-based) for the year,\n     * taking year and era into account.  Defaults to 0 (JANUARY) for Gregorian.\n     * @param extendedYear the extendedYear, as returned by handleGetExtendedYear\n     * @return the default month\n     * @see #MONTH\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int getDefaultDayInMonth(int extendedYear, int month)",
+    "returnType" : "int",
+    "comment" : "\n     * Subclasses may override this.\n     * Called by handleComputeJulianDay.  Returns the default day (1-based) for the month,\n     * taking currently-set year and era into account.  Defaults to 1 for Gregorian.\n     * @param extendedYear the extendedYear, as returned by handleGetExtendedYear\n     * @param month the month, as returned by getDefaultMonthInYear\n     * @return the default day of the month\n     * @see #DAY_OF_MONTH\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleComputeJulianDay(int bestField)",
+    "returnType" : "int",
+    "comment" : "\n     * Subclasses may override this.  This method calls\n     * handleGetMonthLength() to obtain the calendar-specific month\n     * length.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int computeGregorianMonthStart(int year, int month)",
+    "returnType" : "int",
+    "comment" : "\n     * Compute the Julian day of a month of the Gregorian calendar.\n     * Subclasses may call this method to perform a Gregorian calendar\n     * fields-&gt;millis computation.  To perform a Gregorian calendar\n     * millis-&gt;fields computation, call computeGregorianFields().\n     * @param year extended Gregorian year\n     * @param month zero-based Gregorian month\n     * @return the Julian day number of the day before the first\n     * day of the given month in the given extended year\n     * @see #computeGregorianFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void handleComputeFields(int julianDay)",
+    "returnType" : "void",
+    "comment" : "\n     * Subclasses may override this method to compute several fields\n     * specific to each calendar system.  These are:\n     *\n     * <ul><li>ERA\n     * <li>YEAR\n     * <li>MONTH\n     * <li>DAY_OF_MONTH\n     * <li>DAY_OF_YEAR\n     * <li>EXTENDED_YEAR</ul>\n     *\n     * Subclasses can refer to the DAY_OF_WEEK and DOW_LOCAL fields, which\n     * will be set when this method is called.  Subclasses can also call\n     * the getGregorianXxx() methods to obtain Gregorian calendar\n     * equivalents for the given Julian day.\n     *\n     * <p>In addition, subclasses should compute any subclass-specific\n     * fields, that is, fields from BASE_FIELD_COUNT to\n     * getFieldCount() - 1.\n     *\n     * <p>The default implementation in <code>Calendar</code> implements\n     * a pure proleptic Gregorian calendar.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int getGregorianYear()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the extended year on the Gregorian calendar as computed by\n     * <code>computeGregorianFields()</code>.\n     * @see #computeGregorianFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int getGregorianMonth()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the month (0-based) on the Gregorian calendar as computed by\n     * <code>computeGregorianFields()</code>.\n     * @see #computeGregorianFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int getGregorianDayOfYear()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the day of year (1-based) on the Gregorian calendar as\n     * computed by <code>computeGregorianFields()</code>.\n     * @see #computeGregorianFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final int getGregorianDayOfMonth()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the day of month (1-based) on the Gregorian calendar as\n     * computed by <code>computeGregorianFields()</code>.\n     * @see #computeGregorianFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getFieldCount()",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the number of fields defined by this calendar.  Valid field\n     * arguments to <code>set()</code> and <code>get()</code> are\n     * <code>0..getFieldCount()-1</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void internalSet(int field, int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a field to a value.  Subclasses should use this method when\n     * computing fields.  It sets the time stamp in the\n     * <code>stamp[]</code> array to <code>INTERNALLY_SET</code>.  If a\n     * field that may not be set by subclasses is passed in, an\n     * <code>IllegalArgumentException</code> is thrown.  This prevents\n     * subclasses from modifying fields that are intended to be\n     * calendar-system invariant.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final boolean isGregorianLeapYear(int year)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines if the given year is a leap year. Returns true if the\n     * given year is a leap year.\n     * @param year the given year.\n     * @return true if the given year is a leap year; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int gregorianMonthLength(int y, int m)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the length of a month of the Gregorian calendar.\n     * @param y the extended year\n     * @param m the 0-based month number\n     * @return the number of days in the given month\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int gregorianPreviousMonthLength(int y, int m)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the length of a previous month of the Gregorian calendar.\n     * @param y the extended year\n     * @param m the 0-based month number\n     * @return the number of days in the month previous to the given month\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final long floorDivide(long numerator, long denominator)",
+    "returnType" : "long",
+    "comment" : "\n     * Divide two long integers, returning the floor of the quotient.\n     * <p>\n     * Unlike the built-in division, this is mathematically well-behaved.\n     * E.g., <code>-1/4</code> =&gt; 0\n     * but <code>floorDivide(-1,4)</code> =&gt; -1.\n     * @param numerator the numerator\n     * @param denominator a divisor which must be &gt; 0\n     * @return the floor of the quotient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int floorDivide(int numerator, int denominator)",
+    "returnType" : "int",
+    "comment" : "\n     * Divide two integers, returning the floor of the quotient.\n     * <p>\n     * Unlike the built-in division, this is mathematically well-behaved.\n     * E.g., <code>-1/4</code> =&gt; 0\n     * but <code>floorDivide(-1,4)</code> =&gt; -1.\n     * @param numerator the numerator\n     * @param denominator a divisor which must be &gt; 0\n     * @return the floor of the quotient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int floorDivide(int numerator, int denominator, int[] remainder)",
+    "returnType" : "int",
+    "comment" : "\n     * Divide two integers, returning the floor of the quotient, and\n     * the modulus remainder.\n     * <p>\n     * Unlike the built-in division, this is mathematically well-behaved.\n     * E.g., <code>-1/4</code> =&gt; 0 and <code>-1%4</code> =&gt; -1,\n     * but <code>floorDivide(-1,4)</code> =&gt; -1 with <code>remainder[0]</code> =&gt; 3.\n     * @param numerator the numerator\n     * @param denominator a divisor which must be &gt; 0\n     * @param remainder an array of at least one element in which the value\n     * <code>numerator mod denominator</code> is returned. Unlike <code>numerator\n     * % denominator</code>, this will always be non-negative.\n     * @return the floor of the quotient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int floorDivide(long numerator, int denominator, int[] remainder)",
+    "returnType" : "int",
+    "comment" : "\n     * Divide two integers, returning the floor of the quotient, and\n     * the modulus remainder.\n     * <p>\n     * Unlike the built-in division, this is mathematically well-behaved.\n     * E.g., <code>-1/4</code> =&gt; 0 and <code>-1%4</code> =&gt; -1,\n     * but <code>floorDivide(-1,4)</code> =&gt; -1 with <code>remainder[0]</code> =&gt; 3.\n     * @param numerator the numerator\n     * @param denominator a divisor which must be &gt; 0\n     * @param remainder an array of at least one element in which the value\n     * <code>numerator mod denominator</code> is returned. Unlike <code>numerator\n     * % denominator</code>, this will always be non-negative.\n     * @return the floor of the quotient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String fieldName(int field)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string name for a field, for debugging and exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int millisToJulianDay(long millis)",
+    "returnType" : "int",
+    "comment" : "\n     * Converts time as milliseconds to Julian day.\n     * @param millis the given milliseconds.\n     * @return the Julian day number.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final long julianDayToMillis(int julian)",
+    "returnType" : "long",
+    "comment" : "\n     * Converts Julian day to time as milliseconds.\n     * @param julian the given Julian day number.\n     * @return time as milliseconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static final int julianDayToDayOfWeek(int julian)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the day of week, from SUNDAY to SATURDAY, given a Julian day.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final long internalGetTimeInMillis()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the current milliseconds without recomputing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getType()",
+    "returnType" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the calendar type name string for this Calendar object.\n     * The returned string is the legacy ICU calendar attribute value,\n     * for example, \"gregorian\" or \"japanese\".\n     *\n     * <p>See type=\"old type name\" for the calendar attribute of locale IDs\n     * at http://www.unicode.org/reports/tr35/#Key_Type_Definitions\n     *\n     * @return legacy calendar type name string\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean haveDefaultCentury()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns if two digit representation of year in this calendar type\n     * customarily implies a default century (i.e. 03 -&gt; 2003).\n     * The default implementation returns <code>true</code>. A subclass may\n     * return <code>false</code> if such practice is not applicable (for example,\n     * Chinese calendar and Japanese calendar).\n     *\n     * @return <code>true</code> if this calendar has a default century.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ULocale getLocale(ULocale.Type type)",
+    "returnType" : "ULocale",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the locale that was used to create this object, or null.\n     * This may may differ from the locale requested at the time of\n     * this object's creation.  For example, if an object is created\n     * for locale <tt>en_US_CALIFORNIA</tt>, the actual data may be\n     * drawn from <tt>en</tt> (the <i>actual</i> locale), and\n     * <tt>en_US</tt> may be the most specific locale that exists (the\n     * <i>valid</i> locale).\n     *\n     * <p>Note: This method will be implemented in ICU 3.0; ICU 2.8\n     * contains a partial preview implementation.  The <i>actual</i>\n     * locale is returned correctly, but the <i>valid</i> locale is\n     * not, in most cases.\n     * @param type type of information requested, either {@link\n     * android.icu.util.ULocale#VALID_LOCALE} or {@link\n     * android.icu.util.ULocale#ACTUAL_LOCALE}.\n     * @return the information specified by <i>type</i>, or null if\n     * this object was not constructed from locale data.\n     * @see android.icu.util.ULocale\n     * @see android.icu.util.ULocale#VALID_LOCALE\n     * @see android.icu.util.ULocale#ACTUAL_LOCALE\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "android.icu.util.ULocale#ACTUAL_LOCALE", "android.icu.util.ULocale#VALID_LOCALE" ]
+  }, {
+    "name" : " final void setLocale(ULocale valid, ULocale actual)",
+    "returnType" : "void",
+    "comment" : "\n     * Set information about the locales that were used to create this\n     * object.  If the object was not constructed from locale data,\n     * both arguments should be set to null.  Otherwise, neither\n     * should be null.  The actual locale must be at the same level or\n     * less specific than the valid locale.  This method is intended\n     * for use by factories or other entities that create objects of\n     * this class.\n     * @param valid the most specific locale containing any resource\n     * data, or null\n     * @param actual the locale containing data used to construct this\n     * object, or null\n     * @see android.icu.util.ULocale\n     * @see android.icu.util.ULocale#VALID_LOCALE\n     * @see android.icu.util.ULocale#ACTUAL_LOCALE\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void setCalendarLocale(ULocale locale)", "private void recalculateStamp()", "private void initInternal()", "public static Calendar getInstance()", "public static Calendar getInstance(TimeZone zone)", "public static Calendar getInstance(Locale aLocale)", "public static Calendar getInstance(ULocale locale)", "public static Calendar getInstance(TimeZone zone, Locale aLocale)", "public static Calendar getInstance(TimeZone zone, ULocale locale)", "private static Calendar getInstanceInternal(TimeZone tz, ULocale locale)", "private static String getRegionForCalendar(ULocale loc)", "private static CalType getCalendarTypeForLocale(ULocale l)", "private static Calendar createInstance(ULocale locale)", "public static Locale[] getAvailableLocales()", "public static ULocale[] getAvailableULocales()", "public static final String[] getKeywordValuesForLocale(String key, ULocale locale, boolean commonlyUsed)", "public final Date getTime()", "public final void setTime(Date date)", "public long getTimeInMillis()", "public void setTimeInMillis(long millis)", "public boolean inTemporalLeapYear()", "public String getTemporalMonthCode()", "public void setTemporalMonthCode(String temporalMonth)", "public final int get(int field)", "protected final int internalGet(int field)", "protected final int internalGet(int field, int defaultValue)", "protected int internalGetMonth()", "protected int internalGetMonth(int defaultValue)", "public final void set(int field, int value)", "public final void set(int year, int month, int date)", "public final void set(int year, int month, int date, int hour, int minute)", "public final void set(int year, int month, int date, int hour, int minute, int second)", "private static int gregoYearFromIslamicStart(int year)", "public final int getRelatedYear()", "private static int firstIslamicStartYearFromGrego(int year)", "public final void setRelatedYear(int year)", "public final void clear()", "public final void clear(int field)", "public final boolean isSet(int field)", "protected void complete()", "public boolean equals(Object obj)", "public boolean isEquivalentTo(Calendar other)", "public int hashCode()", "private long compare(Object that)", "public boolean before(Object when)", "public boolean after(Object when)", "public int getActualMaximum(int field)", "public int getActualMinimum(int field)", "protected void prepareGetActual(int field, boolean isMinimum)", "private int getActualHelper(int field, int startValue, int endValue)", "public final void roll(int field, boolean up)", "public void roll(int field, int amount)", "public void add(int field, int amount)", "public String getDisplayName(Locale loc)", "public String getDisplayName(ULocale loc)", "public int compareTo(Calendar that)", "public DateFormat getDateTimeFormat(int dateStyle, int timeStyle, Locale loc)", "public DateFormat getDateTimeFormat(int dateStyle, int timeStyle, ULocale loc)", "protected DateFormat handleGetDateFormat(String pattern, Locale locale)", "protected DateFormat handleGetDateFormat(String pattern, String override, Locale locale)", "protected DateFormat handleGetDateFormat(String pattern, ULocale locale)", "protected DateFormat handleGetDateFormat(String pattern, String override, ULocale locale)", "private static DateFormat formatHelper(Calendar cal, ULocale loc, int dateStyle, int timeStyle)", "public static String getDateTimeFormatString(ULocale loc, String calType, int dateStyle, int timeStyle)", "private static PatternData getPatternData(ULocale locale, String calType)", "public static String getDateTimePattern(Calendar cal, ULocale uLocale, int dateStyle)", "public static String getDateAtTimePattern(Calendar cal, ULocale uLocale, int dateStyle)", "private static String mergeOverrideStrings(String datePattern, String timePattern, String dateOverride, String timeOverride)", "private static String expandOverride(String pattern, String override)", "protected void pinField(int field)", "protected boolean isEra0CountingBackward()", "protected int weekNumber(int desiredDay, int dayOfPeriod, int dayOfWeek)", "protected final int weekNumber(int dayOfPeriod, int dayOfWeek)", "public int fieldDifference(Date when, int field)", "public void setTimeZone(TimeZone value)", "public TimeZone getTimeZone()", "public void setLenient(boolean lenient)", "public boolean isLenient()", "public void setRepeatedWallTimeOption(int option)", "public int getRepeatedWallTimeOption()", "public void setSkippedWallTimeOption(int option)", "public int getSkippedWallTimeOption()", "public void setFirstDayOfWeek(int value)", "public int getFirstDayOfWeek()", "public void setMinimalDaysInFirstWeek(int value)", "public int getMinimalDaysInFirstWeek()", "protected abstract int handleGetLimit(int field, int limitType)", "protected int getLimit(int field, int limitType)", "public final int getMinimum(int field)", "public final int getMaximum(int field)", "public final int getGreatestMinimum(int field)", "public final int getLeastMaximum(int field)", "public int getDayOfWeekType(int dayOfWeek)", "public int getWeekendTransition(int dayOfWeek)", "public boolean isWeekend(Date date)", "public boolean isWeekend()", "public Object clone()", "public String toString()", "public static WeekData getWeekDataForRegion(String region)", "public WeekData getWeekData()", "public Calendar setWeekData(WeekData wdata)", "private static WeekData getWeekDataForRegionInternal(String region)", "private void setWeekData(String region)", "private void updateTime()", "private void writeObject(ObjectOutputStream stream) throws IOException", "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException", "protected void computeFields()", "private final void computeGregorianAndDOWFields(int julianDay)", "protected final void computeGregorianFields(int julianDay)", "private final void computeWeekFields()", "protected int resolveFields(int[][][] precedenceTable)", "protected int newestStamp(int first, int last, int bestStampSoFar)", "protected final int getStamp(int field)", "protected int newerField(int defaultField, int alternateField)", "protected void validateFields()", "protected void validateField(int field)", "protected final void validateField(int field, int min, int max)", "protected void computeTime()", "private Long getImmediatePreviousZoneTransition(long base)", "private static Long getPreviousZoneTransitionTime(TimeZone tz, long base, long duration)", "private static Long findPreviousZoneTransitionTime(TimeZone tz, int upperOffset, long upper, long lower)", "protected int computeMillisInDay()", "protected long computeMillisInDayLong()", "protected int computeZoneOffset(long millis, int millisInDay)", "protected int computeZoneOffset(long millis, long millisInDay)", "protected int computeJulianDay()", "protected int[][][] getFieldResolutionTable()", "protected abstract int handleComputeMonthStart(int eyear, int month, boolean useMonth)", "protected abstract int handleGetExtendedYear()", "protected int handleGetMonthLength(int extendedYear, int month)", "protected int handleGetYearLength(int eyear)", "protected int[] handleCreateFields()", "protected int getDefaultMonthInYear(int extendedYear)", "protected int getDefaultDayInMonth(int extendedYear, int month)", "protected int handleComputeJulianDay(int bestField)", "protected int computeGregorianMonthStart(int year, int month)", "protected void handleComputeFields(int julianDay)", "protected final int getGregorianYear()", "protected final int getGregorianMonth()", "protected final int getGregorianDayOfYear()", "protected final int getGregorianDayOfMonth()", "public final int getFieldCount()", "protected final void internalSet(int field, int value)", "protected static final boolean isGregorianLeapYear(int year)", "protected static final int gregorianMonthLength(int y, int m)", "protected static final int gregorianPreviousMonthLength(int y, int m)", "protected static final long floorDivide(long numerator, long denominator)", "protected static final int floorDivide(int numerator, int denominator)", "protected static final int floorDivide(int numerator, int denominator, int[] remainder)", "protected static final int floorDivide(long numerator, int denominator, int[] remainder)", "protected String fieldName(int field)", "protected static final int millisToJulianDay(long millis)", "protected static final long julianDayToMillis(int julian)", "protected static final int julianDayToDayOfWeek(int julian)", "protected final long internalGetTimeInMillis()", "public String getType()", "public boolean haveDefaultCentury()", "public final ULocale getLocale(ULocale.Type type)", " final void setLocale(ULocale valid, ULocale actual)" ],
+  "variableNames" : [ "ERA", "YEAR", "MONTH", "WEEK_OF_YEAR", "WEEK_OF_MONTH", "DATE", "DAY_OF_MONTH", "DAY_OF_YEAR", "DAY_OF_WEEK", "DAY_OF_WEEK_IN_MONTH", "AM_PM", "HOUR", "HOUR_OF_DAY", "MINUTE", "SECOND", "MILLISECOND", "ZONE_OFFSET", "DST_OFFSET", "YEAR_WOY", "DOW_LOCAL", "EXTENDED_YEAR", "JULIAN_DAY", "MILLISECONDS_IN_DAY", "IS_LEAP_MONTH", "ORDINAL_MONTH", "BASE_FIELD_COUNT", "MAX_FIELD_COUNT", "SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER", "UNDECIMBER", "AM", "PM", "WEEKDAY", "WEEKEND", "WEEKEND_ONSET", "WEEKEND_CEASE", "WALLTIME_LAST", "WALLTIME_FIRST", "WALLTIME_NEXT_VALID", "ONE_SECOND", "ONE_MINUTE", "ONE_HOUR", "ONE_DAY", "ONE_WEEK", "JAN_1_1_JULIAN_DAY", "EPOCH_JULIAN_DAY", "MIN_JULIAN", "MIN_MILLIS", "MIN_DATE", "MAX_JULIAN", "MAX_MILLIS", "MAX_DATE", "MAX_HOURS", "fields", "stamp", "time", "isTimeSet", "areFieldsSet", "areAllFieldsSet", "areFieldsVirtuallySet", "lenient", "zone", "firstDayOfWeek", "minimalDaysInFirstWeek", "weekendOnset", "weekendOnsetMillis", "weekendCease", "weekendCeaseMillis", "repeatedWallTime", "skippedWallTime", "UNSET", "INTERNALLY_SET", "MINIMUM_USER_STAMP", "nextStamp", "STAMP_MAX", "serialVersionUID", "internalSetMask", "gregorianYear", "gregorianMonth", "gregorianDayOfYear", "gregorianDayOfMonth", "gTemporalMonthCodes", "PATTERN_CACHE", "DEFAULT_PATTERNS", "DEFAULT_ATTIME_PATTERNS", "TIME_SKELETONS", "QUOTE", "FIELD_DIFF_MAX_INT", "LIMITS", "MINIMUM", "GREATEST_MINIMUM", "LEAST_MAXIMUM", "MAXIMUM", "WEEK_DATA_CACHE", "RESOLVE_REMAP", "DATE_PRECEDENCE", "DOW_PRECEDENCE", "MONTH_PRECEDENCE", "FIND_ZONE_TRANSITION_TIME_UNITS", "GREGORIAN_MONTH_COUNT", "FIELD_NAME", "validLocale", "actualLocale" ]
+}

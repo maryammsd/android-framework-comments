@@ -1,0 +1,266 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/Phaser.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "Phaser",
+  "comment" : "\n * A reusable synchronization barrier, similar in functionality to\n * {@link CyclicBarrier} and {@link CountDownLatch} but supporting\n * more flexible usage.\n *\n * <p><b>Registration.</b> Unlike the case for other barriers, the\n * number of parties <em>registered</em> to synchronize on a phaser\n * may vary over time.  Tasks may be registered at any time (using\n * methods {@link #register}, {@link #bulkRegister}, or forms of\n * constructors establishing initial numbers of parties), and\n * optionally deregistered upon any arrival (using {@link\n * #arriveAndDeregister}).  As is the case with most basic\n * synchronization constructs, registration and deregistration affect\n * only internal counts; they do not establish any further internal\n * bookkeeping, so tasks cannot query whether they are registered.\n * (However, you can introduce such bookkeeping by subclassing this\n * class.)\n *\n * <p><b>Synchronization.</b> Like a {@code CyclicBarrier}, a {@code\n * Phaser} may be repeatedly awaited.  Method {@link\n * #arriveAndAwaitAdvance} has effect analogous to {@link\n * java.util.concurrent.CyclicBarrier#await CyclicBarrier.await}. Each\n * generation of a phaser has an associated phase number. The phase\n * number starts at zero, and advances when all parties arrive at the\n * phaser, wrapping around to zero after reaching {@code\n * Integer.MAX_VALUE}. The use of phase numbers enables independent\n * control of actions upon arrival at a phaser and upon awaiting\n * others, via two kinds of methods that may be invoked by any\n * registered party:\n *\n * <ul>\n *\n *   <li><b>Arrival.</b> Methods {@link #arrive} and\n *       {@link #arriveAndDeregister} record arrival.  These methods\n *       do not block, but return an associated <em>arrival phase\n *       number</em>; that is, the phase number of the phaser to which\n *       the arrival applied. When the final party for a given phase\n *       arrives, an optional action is performed and the phase\n *       advances.  These actions are performed by the party\n *       triggering a phase advance, and are arranged by overriding\n *       method {@link #onAdvance(int, int)}, which also controls\n *       termination. Overriding this method is similar to, but more\n *       flexible than, providing a barrier action to a {@code\n *       CyclicBarrier}.\n *\n *   <li><b>Waiting.</b> Method {@link #awaitAdvance} requires an\n *       argument indicating an arrival phase number, and returns when\n *       the phaser advances to (or is already at) a different phase.\n *       Unlike similar constructions using {@code CyclicBarrier},\n *       method {@code awaitAdvance} continues to wait even if the\n *       waiting thread is interrupted. Interruptible and timeout\n *       versions are also available, but exceptions encountered while\n *       tasks wait interruptibly or with timeout do not change the\n *       state of the phaser. If necessary, you can perform any\n *       associated recovery within handlers of those exceptions,\n *       often after invoking {@code forceTermination}.  Phasers may\n *       also be used by tasks executing in a {@link ForkJoinPool}.\n *       Progress is ensured if the pool's parallelism level can\n *       accommodate the maximum number of simultaneously blocked\n *       parties.\n *\n * </ul>\n *\n * <p><b>Termination.</b> A phaser may enter a <em>termination</em>\n * state, that may be checked using method {@link #isTerminated}. Upon\n * termination, all synchronization methods immediately return without\n * waiting for advance, as indicated by a negative return value.\n * Similarly, attempts to register upon termination have no effect.\n * Termination is triggered when an invocation of {@code onAdvance}\n * returns {@code true}. The default implementation returns {@code\n * true} if a deregistration has caused the number of registered\n * parties to become zero.  As illustrated below, when phasers control\n * actions with a fixed number of iterations, it is often convenient\n * to override this method to cause termination when the current phase\n * number reaches a threshold. Method {@link #forceTermination} is\n * also available to abruptly release waiting threads and allow them\n * to terminate.\n *\n * <p><b>Tiering.</b> Phasers may be <em>tiered</em> (i.e.,\n * constructed in tree structures) to reduce contention. Phasers with\n * large numbers of parties that would otherwise experience heavy\n * synchronization contention costs may instead be set up so that\n * groups of sub-phasers share a common parent.  This may greatly\n * increase throughput even though it incurs greater per-operation\n * overhead.\n *\n * <p>In a tree of tiered phasers, registration and deregistration of\n * child phasers with their parent are managed automatically.\n * Whenever the number of registered parties of a child phaser becomes\n * non-zero (as established in the {@link #Phaser(Phaser,int)}\n * constructor, {@link #register}, or {@link #bulkRegister}), the\n * child phaser is registered with its parent.  Whenever the number of\n * registered parties becomes zero as the result of an invocation of\n * {@link #arriveAndDeregister}, the child phaser is deregistered\n * from its parent.\n *\n * <p><b>Monitoring.</b> While synchronization methods may be invoked\n * only by registered parties, the current state of a phaser may be\n * monitored by any caller.  At any given moment there are {@link\n * #getRegisteredParties} parties in total, of which {@link\n * #getArrivedParties} have arrived at the current phase ({@link\n * #getPhase}).  When the remaining ({@link #getUnarrivedParties})\n * parties arrive, the phase advances.  The values returned by these\n * methods may reflect transient states and so are not in general\n * useful for synchronization control.  Method {@link #toString}\n * returns snapshots of these state queries in a form convenient for\n * informal monitoring.\n *\n * <p>Memory consistency effects: Actions prior to any form of arrive\n * method <a href=\"package-summary.html#MemoryVisibility\">\n * <i>happen-before</i></a> a corresponding phase advance and\n * onAdvance actions (if present), which in turn <i>happen-before</i>\n * actions following the phase advance.\n *\n * <p><b>Sample usages:</b>\n *\n * <p>A {@code Phaser} may be used instead of a {@code CountDownLatch}\n * to control a one-shot action serving a variable number of parties.\n * The typical idiom is for the method setting this up to first\n * register, then start all the actions, then deregister, as in:\n *\n * <pre> {@code\n * void runTasks(List<Runnable> tasks) {\n *   Phaser startingGate = new Phaser(1); // \"1\" to register self\n *   // create and start threads\n *   for (Runnable task : tasks) {\n *     startingGate.register();\n *     new Thread(() -> {\n *       startingGate.arriveAndAwaitAdvance();\n *       task.run();\n *     }).start();\n *   }\n *\n *   // deregister self to allow threads to proceed\n *   startingGate.arriveAndDeregister();\n * }}</pre>\n *\n * <p>One way to cause a set of threads to repeatedly perform actions\n * for a given number of iterations is to override {@code onAdvance}:\n *\n * <pre> {@code\n * void startTasks(List<Runnable> tasks, int iterations) {\n *   Phaser phaser = new Phaser() {\n *     protected boolean onAdvance(int phase, int registeredParties) {\n *       return phase >= iterations - 1 || registeredParties == 0;\n *     }\n *   };\n *   phaser.register();\n *   for (Runnable task : tasks) {\n *     phaser.register();\n *     new Thread(() -> {\n *       do {\n *         task.run();\n *         phaser.arriveAndAwaitAdvance();\n *       } while (!phaser.isTerminated());\n *     }).start();\n *   }\n *   // allow threads to proceed; don't wait for them\n *   phaser.arriveAndDeregister();\n * }}</pre>\n *\n * If the main task must later await termination, it\n * may re-register and then execute a similar loop:\n * <pre> {@code\n *   // ...\n *   phaser.register();\n *   while (!phaser.isTerminated())\n *     phaser.arriveAndAwaitAdvance();}</pre>\n *\n * <p>Related constructions may be used to await particular phase numbers\n * in contexts where you are sure that the phase will never wrap around\n * {@code Integer.MAX_VALUE}. For example:\n *\n * <pre> {@code\n * void awaitPhase(Phaser phaser, int phase) {\n *   int p = phaser.register(); // assumes caller not already registered\n *   while (p < phase) {\n *     if (phaser.isTerminated())\n *       // ... deal with unexpected termination\n *     else\n *       p = phaser.arriveAndAwaitAdvance();\n *   }\n *   phaser.arriveAndDeregister();\n * }}</pre>\n *\n * <p>To create a set of {@code n} tasks using a tree of phasers, you\n * could use code of the following form, assuming a Task class with a\n * constructor accepting a {@code Phaser} that it registers with upon\n * construction. After invocation of {@code build(new Task[n], 0, n,\n * new Phaser())}, these tasks could then be started, for example by\n * submitting to a pool:\n *\n * <pre> {@code\n * void build(Task[] tasks, int lo, int hi, Phaser ph) {\n *   if (hi - lo > TASKS_PER_PHASER) {\n *     for (int i = lo; i < hi; i += TASKS_PER_PHASER) {\n *       int j = Math.min(i + TASKS_PER_PHASER, hi);\n *       build(tasks, i, j, new Phaser(ph));\n *     }\n *   } else {\n *     for (int i = lo; i < hi; ++i)\n *       tasks[i] = new Task(ph);\n *       // assumes new Task(ph) performs ph.register()\n *   }\n * }}</pre>\n *\n * The best value of {@code TASKS_PER_PHASER} depends mainly on\n * expected synchronization rates. A value as low as four may\n * be appropriate for extremely small per-phase task bodies (thus\n * high rates), or up to hundreds for extremely large ones.\n *\n * <p><b>Implementation notes:</b> This implementation restricts the\n * maximum number of parties to 65535. Attempts to register additional\n * parties result in {@code IllegalStateException}. However, you can and\n * should create tiered phasers to accommodate arbitrarily large sets\n * of participants.\n *\n * @since 1.7\n * @author Doug Lea\n ",
+  "links" : [ "#isTerminated", "java.util.concurrent.CyclicBarrier", "#bulkRegister", "#arriveAndAwaitAdvance", "#arrive", "#getRegisteredParties", "#arriveAndDeregister", "java.util.concurrent.CyclicBarrier#await", "java.util.concurrent.CountDownLatch", "#register", "#onAdvance(int", "#forceTermination", "#awaitAdvance", "#getArrivedParties", "java.util.concurrent.ForkJoinPool", "#getUnarrivedParties", "#Phaser(Phaser", "#getPhase", "#toString" ],
+  "variables" : [ {
+    "name" : "state",
+    "type" : "long",
+    "comment" : "\n     * Primary state representation, holding four bit-fields:\n     *\n     * unarrived  -- the number of parties yet to hit barrier (bits  0-15)\n     * parties    -- the number of parties to wait            (bits 16-31)\n     * phase      -- the generation of the barrier            (bits 32-62)\n     * terminated -- set if barrier is terminated             (bit  63 / sign)\n     *\n     * Except that a phaser with no registered parties is\n     * distinguished by the otherwise illegal state of having zero\n     * parties and one unarrived parties (encoded as EMPTY below).\n     *\n     * To efficiently maintain atomicity, these values are packed into\n     * a single (atomic) long. Good performance relies on keeping\n     * state decoding and encoding simple, and keeping race windows\n     * short.\n     *\n     * All state updates are performed via CAS except initial\n     * registration of a sub-phaser (i.e., one with a non-null\n     * parent).  In this (relatively rare) case, we use built-in\n     * synchronization to lock while first registering with its\n     * parent.\n     *\n     * The phase of a subphaser is allowed to lag that of its\n     * ancestors until it is actually accessed -- see method\n     * reconcileState.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_PARTIES",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_PHASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PARTIES_SHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PHASE_SHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "UNARRIVED_MASK",
+    "type" : "int",
+    "comment" : " to mask ints",
+    "links" : [ ]
+  }, {
+    "name" : "PARTIES_MASK",
+    "type" : "long",
+    "comment" : " to mask longs",
+    "links" : [ ]
+  }, {
+    "name" : "COUNTS_MASK",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TERMINATION_BIT",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_ARRIVAL",
+    "type" : "int",
+    "comment" : " some special values",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_PARTY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ONE_DEREGISTER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "parent",
+    "type" : "Phaser",
+    "comment" : "\n     * The parent of this phaser, or null if none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "root",
+    "type" : "Phaser",
+    "comment" : "\n     * The root of phaser tree. Equals this if not in a tree.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "evenQ",
+    "type" : "AtomicReference<QNode>",
+    "comment" : "\n     * Heads of Treiber stacks for waiting threads. To eliminate\n     * contention when releasing some threads while adding others, we\n     * use two of them, alternating across even and odd phases.\n     * Subphasers share queues with root to speed up releases.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "oddQ",
+    "type" : "AtomicReference<QNode>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NCPU",
+    "type" : "int",
+    "comment" : " The number of CPUs, for spin control ",
+    "links" : [ ]
+  }, {
+    "name" : "SPINS_PER_ARRIVAL",
+    "type" : "int",
+    "comment" : "\n     * The number of times to spin before blocking while waiting for\n     * advance, per arrival while waiting. On multiprocessors, fully\n     * blocking and waking up a large number of threads all at once is\n     * usually a very slow process, so we use rechargeable spins to\n     * avoid it when threads regularly arrive: When a thread in\n     * internalAwaitAdvance notices another arrival before blocking,\n     * and there appear to be enough CPUs available, it spins\n     * SPINS_PER_ARRIVAL more times before blocking. The value trades\n     * off good-citizenship vs big unnecessary slowdowns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE",
+    "type" : "VarHandle",
+    "comment" : " VarHandle mechanics",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static int unarrivedOf(long s)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int partiesOf(long s)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int phaseOf(long s)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int arrivedOf(long s)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String badArrive(long s)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns message string for bounds exceptions on arrival.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String badRegister(long s)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns message string for bounds exceptions on registration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int doArrive(int adjust)",
+    "returnType" : "int",
+    "comment" : "\n     * Main implementation for methods arrive and arriveAndDeregister.\n     * Manually tuned to speed up and minimize race windows for the\n     * common case of just decrementing unarrived field.\n     *\n     * @param adjust value to subtract from state;\n     *               ONE_ARRIVAL for arrive,\n     *               ONE_DEREGISTER for arriveAndDeregister\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int doRegister(int registrations)",
+    "returnType" : "int",
+    "comment" : "\n     * Implementation of register, bulkRegister.\n     *\n     * @param registrations number to add to both parties and\n     * unarrived fields. Must be greater than zero.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long reconcileState()",
+    "returnType" : "long",
+    "comment" : "\n     * Resolves lagged phase propagation from root if necessary.\n     * Reconciliation normally occurs when root has advanced but\n     * subphasers have not yet done so, in which case they must finish\n     * their own advance by setting unarrived to parties (or if\n     * parties is zero, resetting to unregistered EMPTY state).\n     *\n     * @return reconciled state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int register()",
+    "returnType" : "int",
+    "comment" : "\n     * Adds a new unarrived party to this phaser.  If an ongoing\n     * invocation of {@link #onAdvance} is in progress, this method\n     * may await its completion before returning.  If this phaser has\n     * a parent, and this phaser previously had no registered parties,\n     * this child phaser is also registered with its parent. If\n     * this phaser is terminated, the attempt to register has\n     * no effect, and a negative value is returned.\n     *\n     * @return the arrival phase number to which this registration\n     * applied.  If this value is negative, then this phaser has\n     * terminated, in which case registration has no effect.\n     * @throws IllegalStateException if attempting to register more\n     * than the maximum supported number of parties\n     ",
+    "links" : [ "#onAdvance" ]
+  }, {
+    "name" : "public int bulkRegister(int parties)",
+    "returnType" : "int",
+    "comment" : "\n     * Adds the given number of new unarrived parties to this phaser.\n     * If an ongoing invocation of {@link #onAdvance} is in progress,\n     * this method may await its completion before returning.  If this\n     * phaser has a parent, and the given number of parties is greater\n     * than zero, and this phaser previously had no registered\n     * parties, this child phaser is also registered with its parent.\n     * If this phaser is terminated, the attempt to register has no\n     * effect, and a negative value is returned.\n     *\n     * @param parties the number of additional parties required to\n     * advance to the next phase\n     * @return the arrival phase number to which this registration\n     * applied.  If this value is negative, then this phaser has\n     * terminated, in which case registration has no effect.\n     * @throws IllegalStateException if attempting to register more\n     * than the maximum supported number of parties\n     * @throws IllegalArgumentException if {@code parties < 0}\n     ",
+    "links" : [ "#onAdvance" ]
+  }, {
+    "name" : "public int arrive()",
+    "returnType" : "int",
+    "comment" : "\n     * Arrives at this phaser, without waiting for others to arrive.\n     *\n     * <p>It is a usage error for an unregistered party to invoke this\n     * method.  However, this error may result in an {@code\n     * IllegalStateException} only upon some subsequent operation on\n     * this phaser, if ever.\n     *\n     * @return the arrival phase number, or a negative value if terminated\n     * @throws IllegalStateException if not terminated and the number\n     * of unarrived parties would become negative\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int arriveAndDeregister()",
+    "returnType" : "int",
+    "comment" : "\n     * Arrives at this phaser and deregisters from it without waiting\n     * for others to arrive. Deregistration reduces the number of\n     * parties required to advance in future phases.  If this phaser\n     * has a parent, and deregistration causes this phaser to have\n     * zero parties, this phaser is also deregistered from its parent.\n     *\n     * <p>It is a usage error for an unregistered party to invoke this\n     * method.  However, this error may result in an {@code\n     * IllegalStateException} only upon some subsequent operation on\n     * this phaser, if ever.\n     *\n     * @return the arrival phase number, or a negative value if terminated\n     * @throws IllegalStateException if not terminated and the number\n     * of registered or unarrived parties would become negative\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int arriveAndAwaitAdvance()",
+    "returnType" : "int",
+    "comment" : "\n     * Arrives at this phaser and awaits others. Equivalent in effect\n     * to {@code awaitAdvance(arrive())}.  If you need to await with\n     * interruption or timeout, you can arrange this with an analogous\n     * construction using one of the other forms of the {@code\n     * awaitAdvance} method.  If instead you need to deregister upon\n     * arrival, use {@code awaitAdvance(arriveAndDeregister())}.\n     *\n     * <p>It is a usage error for an unregistered party to invoke this\n     * method.  However, this error may result in an {@code\n     * IllegalStateException} only upon some subsequent operation on\n     * this phaser, if ever.\n     *\n     * @return the arrival phase number, or the (negative)\n     * {@linkplain #getPhase() current phase} if terminated\n     * @throws IllegalStateException if not terminated and the number\n     * of unarrived parties would become negative\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int awaitAdvance(int phase)",
+    "returnType" : "int",
+    "comment" : "\n     * Awaits the phase of this phaser to advance from the given phase\n     * value, returning immediately if the current phase is not equal\n     * to the given phase value or this phaser is terminated.\n     *\n     * @param phase an arrival phase number, or negative value if\n     * terminated; this argument is normally the value returned by a\n     * previous call to {@code arrive} or {@code arriveAndDeregister}.\n     * @return the next arrival phase number, or the argument if it is\n     * negative, or the (negative) {@linkplain #getPhase() current phase}\n     * if terminated\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int awaitAdvanceInterruptibly(int phase) throws InterruptedException",
+    "returnType" : "int",
+    "comment" : "\n     * Awaits the phase of this phaser to advance from the given phase\n     * value, throwing {@code InterruptedException} if interrupted\n     * while waiting, or returning immediately if the current phase is\n     * not equal to the given phase value or this phaser is\n     * terminated.\n     *\n     * @param phase an arrival phase number, or negative value if\n     * terminated; this argument is normally the value returned by a\n     * previous call to {@code arrive} or {@code arriveAndDeregister}.\n     * @return the next arrival phase number, or the argument if it is\n     * negative, or the (negative) {@linkplain #getPhase() current phase}\n     * if terminated\n     * @throws InterruptedException if thread interrupted while waiting\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int awaitAdvanceInterruptibly(int phase, long timeout, TimeUnit unit) throws InterruptedException, TimeoutException",
+    "returnType" : "int",
+    "comment" : "\n     * Awaits the phase of this phaser to advance from the given phase\n     * value or the given timeout to elapse, throwing {@code\n     * InterruptedException} if interrupted while waiting, or\n     * returning immediately if the current phase is not equal to the\n     * given phase value or this phaser is terminated.\n     *\n     * @param phase an arrival phase number, or negative value if\n     * terminated; this argument is normally the value returned by a\n     * previous call to {@code arrive} or {@code arriveAndDeregister}.\n     * @param timeout how long to wait before giving up, in units of\n     *        {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     *        {@code timeout} parameter\n     * @return the next arrival phase number, or the argument if it is\n     * negative, or the (negative) {@linkplain #getPhase() current phase}\n     * if terminated\n     * @throws InterruptedException if thread interrupted while waiting\n     * @throws TimeoutException if timed out while waiting\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forceTermination()",
+    "returnType" : "void",
+    "comment" : "\n     * Forces this phaser to enter termination state.  Counts of\n     * registered parties are unaffected.  If this phaser is a member\n     * of a tiered set of phasers, then all of the phasers in the set\n     * are terminated.  If this phaser is already terminated, this\n     * method has no effect.  This method may be useful for\n     * coordinating recovery after one or more tasks encounter\n     * unexpected exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getPhase()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the current phase number. The maximum phase number is\n     * {@code Integer.MAX_VALUE}, after which it restarts at\n     * zero. Upon termination, the phase number is negative,\n     * in which case the prevailing phase prior to termination\n     * may be obtained via {@code getPhase() + Integer.MIN_VALUE}.\n     *\n     * @return the phase number, or a negative value if terminated\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRegisteredParties()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of parties registered at this phaser.\n     *\n     * @return the number of parties\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getArrivedParties()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of registered parties that have arrived at\n     * the current phase of this phaser. If this phaser has terminated,\n     * the returned value is meaningless and arbitrary.\n     *\n     * @return the number of arrived parties\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getUnarrivedParties()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of registered parties that have not yet\n     * arrived at the current phase of this phaser. If this phaser has\n     * terminated, the returned value is meaningless and arbitrary.\n     *\n     * @return the number of unarrived parties\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Phaser getParent()",
+    "returnType" : "Phaser",
+    "comment" : "\n     * Returns the parent of this phaser, or {@code null} if none.\n     *\n     * @return the parent of this phaser, or {@code null} if none\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Phaser getRoot()",
+    "returnType" : "Phaser",
+    "comment" : "\n     * Returns the root ancestor of this phaser, which is the same as\n     * this phaser if it has no parent.\n     *\n     * @return the root ancestor of this phaser\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isTerminated()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this phaser has been terminated.\n     *\n     * @return {@code true} if this phaser has been terminated\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean onAdvance(int phase, int registeredParties)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Overridable method to perform an action upon impending phase\n     * advance, and to control termination. This method is invoked\n     * upon arrival of the party advancing this phaser (when all other\n     * waiting parties are dormant).  If this method returns {@code\n     * true}, this phaser will be set to a final termination state\n     * upon advance, and subsequent calls to {@link #isTerminated}\n     * will return true. Any (unchecked) Exception or Error thrown by\n     * an invocation of this method is propagated to the party\n     * attempting to advance this phaser, in which case no advance\n     * occurs.\n     *\n     * <p>The arguments to this method provide the state of the phaser\n     * prevailing for the current transition.  The effects of invoking\n     * arrival, registration, and waiting methods on this phaser from\n     * within {@code onAdvance} are unspecified and should not be\n     * relied on.\n     *\n     * <p>If this phaser is a member of a tiered set of phasers, then\n     * {@code onAdvance} is invoked only for its root phaser on each\n     * advance.\n     *\n     * <p>To support the most common use cases, the default\n     * implementation of this method returns {@code true} when the\n     * number of registered parties has become zero as the result of a\n     * party invoking {@code arriveAndDeregister}.  You can disable\n     * this behavior, thus enabling continuation upon future\n     * registrations, by overriding this method to always return\n     * {@code false}:\n     *\n     * <pre> {@code\n     * Phaser phaser = new Phaser() {\n     *   protected boolean onAdvance(int phase, int parties) { return false; }\n     * };}</pre>\n     *\n     * @param phase the current phase number on entry to this method,\n     * before this phaser is advanced\n     * @param registeredParties the current number of registered parties\n     * @return {@code true} if this phaser should terminate\n     ",
+    "links" : [ "#isTerminated" ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string identifying this phaser, as well as its\n     * state.  The state, in brackets, includes the String {@code\n     * \"phase = \"} followed by the phase number, {@code \"parties = \"}\n     * followed by the number of registered parties, and {@code\n     * \"arrived = \"} followed by the number of arrived parties.\n     *\n     * @return a string identifying this phaser, as well as its state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String stateToString(long s)",
+    "returnType" : "String",
+    "comment" : "\n     * Implementation of toString and string-based error messages.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void releaseWaiters(int phase)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes and signals threads from queue for phase.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int abortWait(int phase)",
+    "returnType" : "int",
+    "comment" : "\n     * Variant of releaseWaiters that additionally tries to remove any\n     * nodes no longer waiting for advance due to timeout or\n     * interrupt. Currently, nodes are removed only if they are at\n     * head of queue, which suffices to reduce memory footprint in\n     * most usages.\n     *\n     * @return current phase on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int internalAwaitAdvance(int phase, QNode node)",
+    "returnType" : "int",
+    "comment" : "\n     * Possibly blocks and waits for phase to advance unless aborted.\n     * Call only on root phaser.\n     *\n     * @param phase current phase\n     * @param node if non-null, the wait node to track interrupt and timeout;\n     * if null, denotes noninterruptible wait\n     * @return current phase\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static int unarrivedOf(long s)", "private static int partiesOf(long s)", "private static int phaseOf(long s)", "private static int arrivedOf(long s)", "private String badArrive(long s)", "private String badRegister(long s)", "private int doArrive(int adjust)", "private int doRegister(int registrations)", "private long reconcileState()", "public int register()", "public int bulkRegister(int parties)", "public int arrive()", "public int arriveAndDeregister()", "public int arriveAndAwaitAdvance()", "public int awaitAdvance(int phase)", "public int awaitAdvanceInterruptibly(int phase) throws InterruptedException", "public int awaitAdvanceInterruptibly(int phase, long timeout, TimeUnit unit) throws InterruptedException, TimeoutException", "public void forceTermination()", "public final int getPhase()", "public int getRegisteredParties()", "public int getArrivedParties()", "public int getUnarrivedParties()", "public Phaser getParent()", "public Phaser getRoot()", "public boolean isTerminated()", "protected boolean onAdvance(int phase, int registeredParties)", "public String toString()", "private String stateToString(long s)", "private void releaseWaiters(int phase)", "private int abortWait(int phase)", "private int internalAwaitAdvance(int phase, QNode node)" ],
+  "variableNames" : [ "state", "MAX_PARTIES", "MAX_PHASE", "PARTIES_SHIFT", "PHASE_SHIFT", "UNARRIVED_MASK", "PARTIES_MASK", "COUNTS_MASK", "TERMINATION_BIT", "ONE_ARRIVAL", "ONE_PARTY", "ONE_DEREGISTER", "EMPTY", "parent", "root", "evenQ", "oddQ", "NCPU", "SPINS_PER_ARRIVAL", "STATE" ]
+}

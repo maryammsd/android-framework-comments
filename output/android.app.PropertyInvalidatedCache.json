@@ -1,0 +1,466 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/PropertyInvalidatedCache.java",
+  "packageName" : "android.app",
+  "className" : "PropertyInvalidatedCache",
+  "comment" : "\n * LRU cache that's invalidated when an opaque value in a property changes. Self-synchronizing,\n * but doesn't hold a lock across data fetches on query misses.\n *\n * The intended use case is caching frequently-read, seldom-changed information normally\n * retrieved across interprocess communication. Imagine that you've written a user birthday\n * information daemon called \"birthdayd\" that exposes an {@code IUserBirthdayService} interface\n * over binder. That binder interface looks something like this:\n *\n * <pre>\n * parcelable Birthday {\n *   int month;\n *   int day;\n * }\n * interface IUserBirthdayService {\n *   Birthday getUserBirthday(int userId);\n * }\n * </pre>\n *\n * Suppose the service implementation itself looks like this...\n *\n * <pre>\n * public class UserBirthdayServiceImpl implements IUserBirthdayService {\n *   private final HashMap&lt;Integer, Birthday%&gt; mUidToBirthday;\n *   {@literal @}Override\n *   public synchronized Birthday getUserBirthday(int userId) {\n *     return mUidToBirthday.get(userId);\n *   }\n *   private synchronized void updateBirthdays(Map&lt;Integer, Birthday%&gt; uidToBirthday) {\n *     mUidToBirthday.clear();\n *     mUidToBirthday.putAll(uidToBirthday);\n *   }\n * }\n * </pre>\n *\n * ... and we have a client in frameworks (loaded into every app process) that looks\n * like this:\n *\n * <pre>\n * public class ActivityThread {\n *   ...\n *   public Birthday getUserBirthday(int userId) {\n *     return GetService(\"birthdayd\").getUserBirthday(userId);\n *   }\n *   ...\n * }\n * </pre>\n *\n * With this code, every time an app calls {@code getUserBirthday(uid)}, we make a binder call\n * to the birthdayd process and consult its database of birthdays. If we query user birthdays\n * frequently, we do a lot of work that we don't have to do, since user birthdays\n * change infrequently.\n *\n * PropertyInvalidatedCache is part of a pattern for optimizing this kind of\n * information-querying code. Using {@code PropertyInvalidatedCache}, you'd write the client\n * this way:\n *\n * <pre>\n * public class ActivityThread {\n *   ...\n *   private final PropertyInvalidatedCache.QueryHandler&lt;Integer, Birthday&gt; mBirthdayQuery =\n *       new PropertyInvalidatedCache.QueryHandler&lt;Integer, Birthday&gt;() {\n *           {@literal @}Override\n *           public Birthday apply(Integer) {\n *              return GetService(\"birthdayd\").getUserBirthday(userId);\n *           }\n *       };\n *   private static final int BDAY_CACHE_MAX = 8;  // Maximum birthdays to cache\n *   private static final String BDAY_CACHE_KEY = \"cache_key.birthdayd\";\n *   private final PropertyInvalidatedCache&lt;Integer, Birthday%&gt; mBirthdayCache = new\n *     PropertyInvalidatedCache&lt;Integer, Birthday%&gt;(\n *             BDAY_CACHE_MAX, MODULE_SYSTEM, \"getUserBirthday\", mBirthdayQuery);\n *\n *   public void disableUserBirthdayCache() {\n *     mBirthdayCache.disableForCurrentProcess();\n *   }\n *   public void invalidateUserBirthdayCache() {\n *     mBirthdayCache.invalidateCache();\n *   }\n *   public Birthday getUserBirthday(int userId) {\n *     return mBirthdayCache.query(userId);\n *   }\n *   ...\n * }\n * </pre>\n *\n * With this cache, clients perform a binder call to birthdayd if asking for a user's birthday\n * for the first time; on subsequent queries, we return the already-known Birthday object.\n *\n * The second parameter to the IpcDataCache constructor is a string that identifies the \"module\"\n * that owns the cache. There are some well-known modules (such as {@code MODULE_SYSTEM} but any\n * string is permitted.  The third parameters is the name of the API being cached; this, too, can\n * any value.  The fourth is the name of the cache.  The cache is usually named after th API.\n * Some things you must know about the three strings:\n * <list>\n * <ul> The system property that controls the cache is named {@code cache_key.<module>.<api>}.\n * Usually, the SELinux rules permit a process to write a system property (and therefore\n * invalidate a cache) based on the wildcard {@code cache_key.<module>.*}.  This means that\n * although the cache can be constructed with any module string, whatever string is chosen must be\n * consistent with the SELinux configuration.\n * <ul> The API name can be any string of alphanumeric characters.  All caches with the same API\n * are invalidated at the same time.  If a server supports several caches and all are invalidated\n * in common, then it is most efficient to assign the same API string to every cache.\n * <ul> The cache name can be any string.  In debug output, the name is used to distiguish between\n * caches with the same API name.  The cache name is also used when disabling caches in the\n * current process.  So, invalidation is based on the module+api but disabling (which is generally\n * a once-per-process operation) is based on the cache name.\n * </list>\n *\n * User birthdays do occasionally change, so we have to modify the server to invalidate this\n * cache when necessary. That invalidation code looks like this:\n *\n * <pre>\n * public class UserBirthdayServiceImpl {\n *   ...\n *   public UserBirthdayServiceImpl() {\n *     ...\n *     ActivityThread.currentActivityThread().disableUserBirthdayCache();\n *     ActivityThread.currentActivityThread().invalidateUserBirthdayCache();\n *   }\n *\n *   private synchronized void updateBirthdays(Map&lt;Integer, Birthday%&gt; uidToBirthday) {\n *     mUidToBirthday.clear();\n *     mUidToBirthday.putAll(uidToBirthday);\n *     ActivityThread.currentActivityThread().invalidateUserBirthdayCache();\n *   }\n *   ...\n * }\n * </pre>\n *\n * The call to {@code PropertyInvalidatedCache.invalidateCache()} guarantees that all clients\n * will re-fetch birthdays from binder during consequent calls to\n * {@code ActivityThread.getUserBirthday()}. Because the invalidate call happens with the lock\n * held, we maintain consistency between different client views of the birthday state. The use\n * of PropertyInvalidatedCache in this idiomatic way introduces no new race conditions.\n *\n * PropertyInvalidatedCache has a few other features for doing things like incremental\n * enhancement of cached values and invalidation of multiple caches (that all share the same\n * property key) at once.\n *\n * {@code BDAY_CACHE_KEY} is the name of a property that we set to an opaque unique value each\n * time we update the cache. SELinux configuration must allow everyone to read this property\n * and it must allow any process that needs to invalidate the cache (here, birthdayd) to write\n * the property. (These properties conventionally begin with the \"cache_key.\" prefix.)\n *\n * The {@code UserBirthdayServiceImpl} constructor calls {@code disableUserBirthdayCache()} so\n * that calls to {@code getUserBirthday} from inside birthdayd don't go through the cache. In\n * this local case, there's no IPC, so use of the cache is (depending on exact\n * circumstance) unnecessary.\n *\n * There may be queries for which it is more efficient to bypass the cache than to cache\n * the result.  This would be true, for example, if some queries would require frequent\n * cache invalidation while other queries require infrequent invalidation.  To expand on\n * the birthday example, suppose that there is a userId that signifies \"the next\n * birthday\".  When passed this userId, the server returns the next birthday among all\n * users - this value changes as time advances.  The userId value can be cached, but the\n * cache must be invalidated whenever a birthday occurs, and this invalidates all\n * birthdays.  If there is a large number of users, invalidation will happen so often that\n * the cache provides no value.\n *\n * The class provides a bypass mechanism to handle this situation.\n * <pre>\n * public class ActivityThread {\n *   ...\n *   private final IpcDataCache.QueryHandler&lt;Integer, Birthday&gt; mBirthdayQuery =\n *       new IpcDataCache.QueryHandler&lt;Integer, Birthday&gt;() {\n *           {@literal @}Override\n *           public Birthday apply(Integer) {\n *              return GetService(\"birthdayd\").getUserBirthday(userId);\n *           }\n *           {@literal @}Override\n *           public boolean shouldBypassQuery(Integer userId) {\n *               return userId == NEXT_BIRTHDAY;\n *           }\n *       };\n *   ...\n * }\n * </pre>\n *\n * If the {@code shouldBypassQuery()} method returns true then the cache is not used for that\n * particular query.  The {@code shouldBypassQuery()} method is not abstract and the default\n * implementation returns false.\n *\n * For security, there is a allowlist of processes that are allowed to invalidate a cache.\n * The allowlist includes normal runtime processes but does not include test processes.\n * Test processes must call {@code PropertyInvalidatedCache.disableForTestMode()} to disable\n * all cache activity in that process.\n *\n * Caching can be disabled completely by initializing {@code sEnabled} to false and rebuilding.\n *\n * To test a binder cache, create one or more tests that exercise the binder method.  This\n * should be done twice: once with production code and once with a special image that sets\n * {@code DEBUG} and {@code VERIFY} true.  In the latter case, verify that no cache\n * inconsistencies are reported.  If a cache inconsistency is reported, however, it might be a\n * false positive.  This happens if the server side data can be read and written non-atomically\n * with respect to cache invalidation.\n *\n * @param <Query> The class used to index cache entries: must be hashable and comparable\n * @param <Result> The class holding cache entries; use a boxed primitive if possible\n * @hide\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "MODULE_TEST",
+    "type" : "String",
+    "comment" : "\n     * The module used for unit tests and cts tests.  It is expected that no process in\n     * the system has permissions to write properties with this module.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MODULE_SYSTEM",
+    "type" : "String",
+    "comment" : "\n     * The module used for system server/framework caches.  This is not visible outside\n     * the system processes.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MODULE_BLUETOOTH",
+    "type" : "String",
+    "comment" : "\n     * The module used for bluetooth caches.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MODULE_TELEPHONY",
+    "type" : "String",
+    "comment" : "\n     * The module used for telephony caches.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_FAILURE_RETRY_DELAY_MILLIS",
+    "type" : "int",
+    "comment" : "\n     * Wait 200ms between retry attempts and the retry limit is 5.  That gives a total possible\n     * delay of 1s, which should be less than ANR timeouts.  The goal is to have the system crash\n     * because the property could not be set (which is a condition that is easily recognized) and\n     * not crash because of an ANR (which can be confusing to debug).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_FAILURE_RETRY_LIMIT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NONCE_UNSET",
+    "type" : "int",
+    "comment" : "\n     * Reserved nonce values.  Use isReservedNonce() to test for a reserved value.  Note\n     * that all values cause the cache to be skipped.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NONCE_DISABLED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NONCE_CORKED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NONCE_BYPASS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNonceName",
+    "type" : "String[]",
+    "comment" : "\n     * The names of the nonces\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VERIFY",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "\n     * The object-private lock.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHits",
+    "type" : "long",
+    "comment" : " Per-Cache performance counters.",
+    "links" : [ ]
+  }, {
+    "name" : "mMisses",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSkips",
+    "type" : "long[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMissOverflow",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHighWaterMark",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClears",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sCorkLock",
+    "type" : "Object",
+    "comment" : "\n     * Protect objects that support corking.  mLock and sGlobalLock must never be taken while this\n     * is held.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sCorkedInvalidates",
+    "type" : "HashMap<String, Long>",
+    "comment" : "\n     * Record the number of invalidate or cork calls that were nops because the cache was already\n     * corked.  This is static because invalidation is done in a static context.  Entries are\n     * indexed by the cache property.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sCorks",
+    "type" : "HashMap<String, Integer>",
+    "comment" : "\n     * A map of cache keys that we've \"corked\". (The values are counts.)  When a cache key is\n     * corked, we skip the cache invalidate when the cache key is in the unset state --- that\n     * is, when a cache key is corked, an invalidation does not enable the cache if somebody\n     * else hasn't disabled it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sGlobalLock",
+    "type" : "Object",
+    "comment" : "\n     * A lock for the global list of caches and cache keys.  This must never be taken inside mLock\n     * or sCorkLock.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sDisabledKeys",
+    "type" : "HashSet<String>",
+    "comment" : "\n     * A map of cache keys that have been disabled in the local process.  When a key is\n     * disabled locally, existing caches are disabled and the key is saved in this map.\n     * Future cache instances that use the same key will be disabled in their constructor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sCaches",
+    "type" : "WeakHashMap<PropertyInvalidatedCache, Void>",
+    "comment" : "\n     * Weakly references all cache objects in the current process, allowing us to iterate over\n     * them all for purposes like issuing debug dumps and reacting to memory pressure.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sInvalidates",
+    "type" : "HashMap<String, Long>",
+    "comment" : "\n     * Counts of the number of times a cache key was invalidated.  Invalidation occurs in a static\n     * context with no cache object available, so this is a static map.  Entries are indexed by\n     * the cache property.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sEnabled",
+    "type" : "boolean",
+    "comment" : "\n     * If sEnabled is false then all cache operations are stubbed out.  Set\n     * it to false inside test processes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPropertyName",
+    "type" : "String",
+    "comment" : "\n     * Name of the property that holds the unique value that we use to invalidate the cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPropertyHandle",
+    "type" : "SystemProperties.Handle",
+    "comment" : "\n     * Handle to the {@code mPropertyName} property, transitioning to non-{@code null} once the\n     * property exists on the system.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCacheName",
+    "type" : "String",
+    "comment" : "\n     * The name by which this cache is known.  This should normally be the\n     * binder call that is being cached, but the constructors default it to\n     * the property name.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mComputer",
+    "type" : "QueryHandler<Query, Result>",
+    "comment" : "\n     * The function that computes a Result, given a Query.  This function is called on a\n     * cache miss.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCache",
+    "type" : "LinkedHashMap<Query, Result>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastSeenNonce",
+    "type" : "long",
+    "comment" : "\n     * The last value of the {@code mPropertyHandle} that we observed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mDisabled",
+    "type" : "boolean",
+    "comment" : "\n     * Whether we've disabled the cache in this process.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mMaxEntries",
+    "type" : "int",
+    "comment" : "\n     * Maximum number of entries the cache will maintain.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sTesting",
+    "type" : "boolean",
+    "comment" : " If true, the cache might be under test.  If false, there is no testing in progress.",
+    "links" : [ ]
+  }, {
+    "name" : "sTestingPropertyMap",
+    "type" : "HashMap<String, Long>",
+    "comment" : " If sTesting is true then keys that are under test are in this map.",
+    "links" : [ ]
+  }, {
+    "name" : "NAME_CONTAINS",
+    "type" : "String",
+    "comment" : "\n     * Switches that can be used to control the detail emitted by a cache dump.  The\n     * \"CONTAINS\" switches match if the cache (property) name contains the switch\n     * argument.  The \"LIKE\" switches match if the cache (property) name matches the\n     * switch argument as a regex.  The regular expression must match the entire name,\n     * which generally means it may need leading/trailing \".\" expressions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NAME_LIKE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_CONTAINS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_LIKE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static String createPropertyName(@NonNull String module, @NonNull String apiName)",
+    "returnType" : "String",
+    "comment" : "\n     * Construct a system property that matches the rules described above.  The module is\n     * one of the permitted values above.  The API is a string that is a legal Java simple\n     * identifier.  The api is modified to conform to the system property style guide by\n     * replacing every upper case letter with an underscore and the lower case equivalent.\n     * (An initial upper case letter is not prefixed with an underscore).\n     * There is no requirement that the apiName be the name of an actual API.\n     *\n     * Be aware that SystemProperties has a maximum length which is private to the\n     * implementation.  The current maximum is 92 characters. If this method creates a\n     * property name that is too long, SystemProperties.set() will fail without a good\n     * error message.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isReservedNonce(long n)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private LinkedHashMap<Query, Result> createMap()",
+    "returnType" : "LinkedHashMap<Query, Result>",
+    "comment" : " Create a map.  This should be called only from the constructor.",
+    "links" : [ ]
+  }, {
+    "name" : "private void registerCache()",
+    "returnType" : "void",
+    "comment" : "\n     * Register the map in the global list.  If the cache is disabled globally, disable it\n     * now.  This method is only ever called from the constructor, which means no other thread has\n     * access to the object yet.  It can safely be modified outside any lock.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setTestMode(boolean mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable or disable testing.  The testing property map is cleared every time this\n     * method is called.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void testPropertyName(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable testing the specific cache key.  Only keys in the map are subject to testing.\n     * There is no method to stop testing a property name.  Just disable the test mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void testPropertyName()",
+    "returnType" : "void",
+    "comment" : "\n     * Enable testing the specific cache key.  Only keys in the map are subject to testing.\n     * There is no method to stop testing a property name.  Just disable the test mode.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long getCurrentNonce()",
+    "returnType" : "long",
+    "comment" : " handle for faster reading.",
+    "links" : [ ]
+  }, {
+    "name" : "private static void setNonce(String name, long val)",
+    "returnType" : "void",
+    "comment" : " Write the nonce in a static context.  No handle is available.",
+    "links" : [ ]
+  }, {
+    "name" : "private static long getNonce(String name)",
+    "returnType" : "long",
+    "comment" : " Set the nonce in a static context.  No handle is available.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Forget all cached values.\n     * TODO(216112648) remove this as a public API.  Clients should invalidate caches, not clear\n     * them.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Result recompute(@NonNull Query query)",
+    "returnType" : "Result",
+    "comment" : "\n     * Fetch a result from scratch in case it's not in the cache at all.  Called unlocked: may\n     * block. If this function returns null, the result of the cache query is null. There is no\n     * \"negative cache\" in the query: we don't cache null results at all.\n     * TODO(216112648): deprecate this as a public interface, in favor of an instance of\n     * QueryHandler.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean bypass(@NonNull Query query)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the query should bypass the cache.  The default behavior is to\n     * always use the cache but the method can be overridden for a specific class.\n     * TODO(216112648): deprecate this as a public interface, in favor of an instance of\n     * QueryHandler.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean resultEquals(Result cachedResult, Result fetchedResult)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines if a pair of responses are considered equal. Used to determine whether\n     * a cache is inadvertently returning stale results when VERIFY is set to true.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Result refresh(Result oldResult, Query query)",
+    "returnType" : "Result",
+    "comment" : "\n     * Make result up-to-date on a cache hit.  Called unlocked;\n     * may block.\n     *\n     * Return either 1) oldResult itself (the same object, by reference equality), in which\n     * case we just return oldResult as the result of the cache query, 2) a new object, which\n     * replaces oldResult in the cache and which we return as the result of the cache query\n     * after performing another property read to make sure that the result hasn't changed in\n     * the meantime (if the nonce has changed in the meantime, we drop the cache and try the\n     * whole query again), or 3) null, which causes the old value to be removed from the cache\n     * and null to be returned as the result of the cache query.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void disableInstance()",
+    "returnType" : "void",
+    "comment" : "\n     * Disable the use of this cache in this process.  This method is using internally and during\n     * testing.  To disable a cache in normal code, use disableLocal().  A disabled cache cannot\n     * be re-enabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final void disableLocal(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable the local use of all caches with the same name.  All currently registered caches\n     * with the name will be disabled now, and all future cache instances that use the name will\n     * be disabled in their constructor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void forgetDisableLocal()",
+    "returnType" : "void",
+    "comment" : "\n     * Stop disabling local caches with a particular name.  Any caches that are currently\n     * disabled remain disabled (the \"disabled\" setting is sticky).  However, new caches\n     * with this name will not be disabled.  It is not an error if the cache name is not\n     * found in the list of disabled caches.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disableLocal()",
+    "returnType" : "void",
+    "comment" : "\n     * Disable this cache in the current process, and all other caches that use the same\n     * name.  This does not affect caches that have a different name but use the same\n     * property.\n     * TODO(216112648) Remove this in favor of disableForCurrentProcess().\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disableForCurrentProcess()",
+    "returnType" : "void",
+    "comment" : "\n     * Disable this cache in the current process, and all other present and future caches that use\n     * the same name.  This does not affect caches that have a different name but use the same\n     * property.  Once disabled, a cache cannot be reenabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void disableForCurrentProcess(@NonNull String cacheName)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isDisabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return whether a cache instance is disabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Result query(@NonNull Query query)",
+    "returnType" : "Result",
+    "comment" : "\n     * Get a value from the cache or recompute it.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void disableSystemWide()",
+    "returnType" : "void",
+    "comment" : "\n     * Non-static convenience version of disableSystemWide() for situations in which only a\n     * single PropertyInvalidatedCache is keyed on a particular property value.\n     *\n     * When multiple caches share a single property value, using an instance method on one of\n     * the cache objects to invalidate all of the cache objects becomes confusing and you should\n     * just use the static version of this function.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void disableSystemWide(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable all caches system-wide that are keyed on {@var name}. This\n     * function is synchronous: caches are invalidated and disabled upon return.\n     *\n     * @param name Name of the cache-key property to invalidate\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void invalidateCache()",
+    "returnType" : "void",
+    "comment" : "\n     * Non-static convenience version of invalidateCache() for situations in which only a single\n     * PropertyInvalidatedCache is keyed on a particular property value.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void invalidateCache(@NonNull String module, @NonNull String api)",
+    "returnType" : "void",
+    "comment" : "\n     * Invalidate caches in all processes that are keyed for the module and api.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void invalidateCache(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Invalidate PropertyInvalidatedCache caches in all processes that are keyed on\n     * {@var name}. This function is synchronous: caches are invalidated upon return.\n     *\n     * TODO(216112648) make this method private in favor of the two-argument (module, api)\n     * override.\n     *\n     * @param name Name of the cache-key property to invalidate\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void invalidateCacheLocked(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void corkInvalidations(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Temporarily put the cache in the uninitialized state and prevent invalidations from\n     * moving it out of that state: useful in cases where we want to avoid the overhead of a\n     * large number of cache invalidations in a short time.  While the cache is corked, clients\n     * bypass the cache and talk to backing services directly.  This property makes corking\n     * correctness-preserving even if corked outside the lock that controls access to the\n     * cache's backing service.\n     *\n     * corkInvalidations() and uncorkInvalidations() must be called in pairs.\n     *\n     * @param name Name of the cache-key property to cork\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void uncorkInvalidations(@NonNull String name)",
+    "returnType" : "void",
+    "comment" : "\n     * Undo the effect of a cork, allowing cache invalidations to proceed normally.\n     * Removing the last cork on a cache name invalidates the cache by side effect,\n     * transitioning it to normal operation (unless explicitly disabled system-wide).\n     *\n     * @param name Name of the cache-key property to uncork\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Result maybeCheckConsistency(Query query, Result proposedResult)",
+    "returnType" : "Result",
+    "comment" : "\n     * Return the result generated by a given query to the cache, performing debugging checks when\n     * enabled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String cacheName()",
+    "returnType" : "String",
+    "comment" : "\n     * Return the name of the cache, to be used in debug messages.  This is exposed\n     * primarily for testing.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String propertyName()",
+    "returnType" : "String",
+    "comment" : "\n     * Return the property used by the cache.  This is primarily for test purposes.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String queryToString(@NonNull Query query)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the query as a string, to be used in debug messages.  New clients should not\n     * override this, but should instead add the necessary toString() method to the Query\n     * class.\n     * TODO(216112648) add a method in the QueryHandler and deprecate this API.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void disableForTestMode()",
+    "returnType" : "void",
+    "comment" : "\n     * Disable all caches in the local process.  This is primarily useful for testing when\n     * the test needs to bypass the cache or when the test is for a server, and the test\n     * process does not have privileges to write SystemProperties. Once disabled it is not\n     * possible to re-enable caching in the current process.  If a client wants to\n     * temporarily disable caching, use the corking mechanism.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getDisabledState()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Report the disabled status of this cache instance.  The return value does not\n     * reflect status of the property key.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of entries in the cache.  This is used for testing and has package-only\n     * visibility.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ArrayList<PropertyInvalidatedCache> getActiveCaches()",
+    "returnType" : "ArrayList<PropertyInvalidatedCache>",
+    "comment" : "\n     * Returns a list of caches alive at the current time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ArrayList<Map.Entry<String, Integer>> getActiveCorks()",
+    "returnType" : "ArrayList<Map.Entry<String, Integer>>",
+    "comment" : "\n     * Returns a list of the active corks in a process.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean anyDetailed(String[] args)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if any argument is a detailed specification switch.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean chooses(String arg, String key, String reference, boolean contains)",
+    "returnType" : "boolean",
+    "comment" : "\n     * A helper method to determine if a string matches a switch.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean showDetailed(String[] args)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if this cache should be dumped in detail.  This method is not called\n     * unless it has already been determined that there is at least one match requested.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dumpContents(PrintWriter pw, boolean detailed, String[] args)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void dumpCorkInfo(PrintWriter pw)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump the corking status.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void dumpCacheInfo(@NonNull PrintWriter pw, @NonNull String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Without arguments, this dumps statistics from every cache in the process to the\n     * provided ParcelFileDescriptor.  Optional switches allow the caller to choose\n     * specific caches (selection is by cache name or property name); if these switches\n     * are used then the output includes both cache statistics and cache entries.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void dumpCacheInfo(@NonNull ParcelFileDescriptor pfd, @NonNull String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Without arguments, this dumps statistics from every cache in the process to the\n     * provided ParcelFileDescriptor.  Optional switches allow the caller to choose\n     * specific caches (selection is by cache name or property name); if these switches\n     * are used then the output includes both cache statistics and cache entries.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void onTrimMemory()",
+    "returnType" : "void",
+    "comment" : "\n     * Trim memory by clearing all the caches.\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static String createPropertyName(@NonNull String module, @NonNull String apiName)", "private static boolean isReservedNonce(long n)", "private LinkedHashMap<Query, Result> createMap()", "private void registerCache()", "public static void setTestMode(boolean mode)", "private static void testPropertyName(@NonNull String name)", "public void testPropertyName()", "private long getCurrentNonce()", "private static void setNonce(String name, long val)", "private static long getNonce(String name)", "public final void clear()", "public Result recompute(@NonNull Query query)", "public boolean bypass(@NonNull Query query)", "public boolean resultEquals(Result cachedResult, Result fetchedResult)", "protected Result refresh(Result oldResult, Query query)", "public final void disableInstance()", "private static final void disableLocal(@NonNull String name)", "public final void forgetDisableLocal()", "public void disableLocal()", "public void disableForCurrentProcess()", "public static void disableForCurrentProcess(@NonNull String cacheName)", "public final boolean isDisabled()", "public Result query(@NonNull Query query)", "public final void disableSystemWide()", "private static void disableSystemWide(@NonNull String name)", "public void invalidateCache()", "public static void invalidateCache(@NonNull String module, @NonNull String api)", "public static void invalidateCache(@NonNull String name)", "private static void invalidateCacheLocked(@NonNull String name)", "public static void corkInvalidations(@NonNull String name)", "public static void uncorkInvalidations(@NonNull String name)", "private Result maybeCheckConsistency(Query query, Result proposedResult)", "public final String cacheName()", "public final String propertyName()", "protected String queryToString(@NonNull Query query)", "public static void disableForTestMode()", "public boolean getDisabledState()", "public int size()", "private static ArrayList<PropertyInvalidatedCache> getActiveCaches()", "private static ArrayList<Map.Entry<String, Integer>> getActiveCorks()", "private static boolean anyDetailed(String[] args)", "private static boolean chooses(String arg, String key, String reference, boolean contains)", "private boolean showDetailed(String[] args)", "private void dumpContents(PrintWriter pw, boolean detailed, String[] args)", "private static void dumpCorkInfo(PrintWriter pw)", "private static void dumpCacheInfo(@NonNull PrintWriter pw, @NonNull String[] args)", "public static void dumpCacheInfo(@NonNull ParcelFileDescriptor pfd, @NonNull String[] args)", "public static void onTrimMemory()" ],
+  "variableNames" : [ "MODULE_TEST", "MODULE_SYSTEM", "MODULE_BLUETOOTH", "MODULE_TELEPHONY", "PROPERTY_FAILURE_RETRY_DELAY_MILLIS", "PROPERTY_FAILURE_RETRY_LIMIT", "NONCE_UNSET", "NONCE_DISABLED", "NONCE_CORKED", "NONCE_BYPASS", "sNonceName", "TAG", "DEBUG", "VERIFY", "mLock", "mHits", "mMisses", "mSkips", "mMissOverflow", "mHighWaterMark", "mClears", "sCorkLock", "sCorkedInvalidates", "sCorks", "sGlobalLock", "sDisabledKeys", "sCaches", "sInvalidates", "sEnabled", "mPropertyName", "mPropertyHandle", "mCacheName", "mComputer", "mCache", "mLastSeenNonce", "mDisabled", "mMaxEntries", "sTesting", "sTestingPropertyMap", "NAME_CONTAINS", "NAME_LIKE", "PROPERTY_CONTAINS", "PROPERTY_LIKE" ]
+}

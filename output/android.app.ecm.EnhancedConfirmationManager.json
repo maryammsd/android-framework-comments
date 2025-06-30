@@ -1,0 +1,71 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/ecm/EnhancedConfirmationManager.java",
+  "packageName" : "android.app.ecm",
+  "className" : "EnhancedConfirmationManager",
+  "comment" : "\n * This class provides the core API for ECM (Enhanced Confirmation Mode). ECM is a feature that\n * restricts access to protected **settings** (i.e., sensitive resources) by restricted **apps**\n * (apps from from dangerous sources, such as sideloaded packages or packages downloaded from a web\n * browser).\n *\n * <p>Specifically, this class provides the ability to:\n *\n * <ol>\n *   <li>Check whether a setting is restricted from an app ({@link #isRestricted})\n *   <li>Get an intent that will open the \"Restricted setting\" dialog ({@link\n *       #createRestrictedSettingDialogIntent}) (a dialog that informs the user that the operation\n *       they've attempted to perform is restricted)\n *   <li>Check whether an app is eligible to have its restriction status cleared ({@link\n *       #isClearRestrictionAllowed})\n *   <li>Clear an app's restriction status (i.e., un-restrict it). ({@link #clearRestriction})\n * </ol>\n *\n * <p>Methods of this class will generally accept an app (identified by a packageName and a user)\n * and a \"setting\" (a string representing the \"sensitive resource\") as arguments. ECM's exact\n * behavior will generally depend on what restriction state ECM considers each setting and app. For\n * example:\n *\n * <ol>\n *   <li>A setting may be considered by ECM to be either **protected** or **not protected**. In\n *       general, this should be considered hardcoded into ECM's implementation: nothing can\n *       \"protect\" or \"unprotect\" a setting.\n *   <li>An app may be considered as being **not restricted** or **restricted**. A restricted app\n *       will be restricted from accessing all protected settings. Whether ECM considers any\n *       particular app restricted is an implementation detail of ECM. However, the user is able to\n *       clear any restricted app's restriction status (i.e, un-restrict it), after which ECM will\n *       consider the app **not restricted**.\n * </ol>\n *\n * Why is ECM needed? Consider the following (pre-ECM) scenario:\n *\n * <ol>\n *   <li>The user downloads and installs an apk file from a browser.\n *   <li>The user opens Settings -> Accessibility\n *   <li>The user tries to register the app as an accessibility service.\n *   <li>The user is shown a permission prompt \"Allow _ to have full control of your device?\"\n *   <li>The user clicks \"Allow\"\n *   <li>The downloaded app now has full control of the device.\n * </ol>\n *\n * The purpose of ECM is to add more friction to this scenario.\n *\n * <p>With ECM, this scenario becomes:\n *\n * <ol>\n *   <li>The user downloads and installs an apk file from a browser.\n *   <li>The user goes into Settings -> Accessibility.\n *   <li>The user tries to register the app as an accessibility service.\n *   <li>The user is presented with a \"Restricted setting\" dialog explaining that the attempted\n *       action has been restricted. (No \"allow\" button is shown, but a link is given to a screen\n *       with intentionally-obscure instructions on how to proceed.)\n *   <li>The user must now navigate to Settings -> Apps -> [app]\n *   <li>The user then must click on \"...\" (top-right corner hamburger menu), then click \"Allow\n *       restricted settings\"\n *   <li>The user goes (again) into Settings -> Accessibility and (again) tries to register the app\n *       as an accessibility service.\n *   <li>The user is shown a permission prompt \"Allow _ to have full control of your device?\"\n *   <li>The user clicks \"Allow\"\n *   <li>The downloaded app now has full control of the device.\n * </ol>\n *\n * And, expanding on the above scenario, the role that this class plays is as follows:\n *\n * <ol>\n *   <li>The user downloads and installs an apk file from a browser.\n *   <li>The user goes into Settings -> Accessibility.\n *       <p>**This screen then calls {@link #isRestricted}, which checks whether each app listed\n *       on-screen is restricted from the accessibility service setting. It uses this to visually\n *       \"gray out\" restricted apps.**\n *   <li>The user tries to register the app as an accessibility service.\n *       <p>**This screen then calls {@link #createRestrictedSettingDialogIntent} and starts the\n *       intent. This opens the \"Restricted setting\" dialog.**\n *   <li>The user is presented with a \"Restricted setting\" dialog explaining that the attempted\n *       action is restricted. (No \"allow\" button is shown, but a link is given to a screen with\n *       intentionally-obscure instructions on how to proceed.)\n *       <p>**Upon opening, this dialog marks the app as eligible to have its restriction status\n *       cleared.**\n *   <li>The user must now navigate to Settings -> Apps -> [app].\n *       <p>**This screen calls {@link #isClearRestrictionAllowed} to check whether the app is\n *       eligible to have its restriction status cleared. If this returns {@code true}, this screen\n *       should then show a \"Allow restricted setting\" button inside the top-right hamburger menu.**\n *   <li>The user then must click on \"...\" (top-right corner hamburger menu), then click \"Allow\n *       restricted settings\".\n *       <p>**In response, this screen should now call {@link #clearRestriction}.**\n *   <li>The user goes (again) into Settings -> Accessibility and (again) tries to register the app\n *       as an accessibility service.\n *   <li>The user is shown a permission prompt \"Allow _ to have full control of your device?\"\n *   <li>The user clicks \"Allow\"\n *   <li>The downloaded app now has full control of the device.\n * </ol>\n *\n * @hide\n ",
+  "links" : [ "#clearRestriction", "#isClearRestrictionAllowed", "#isRestricted", "#createRestrictedSettingDialogIntent" ],
+  "variables" : [ {
+    "name" : "ACTION_SHOW_ECM_RESTRICTED_SETTING_DIALOG",
+    "type" : "String",
+    "comment" : "\n     * Shows the \"Restricted setting\" dialog. Opened when a setting is blocked.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROTECTED_SETTINGS",
+    "type" : "ArraySet<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPackageManager",
+    "type" : "PackageManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IEnhancedConfirmationManager",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean isRestricted(@NonNull String packageName, @NonNull String settingIdentifier) throws NameNotFoundException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check whether a setting is restricted from an app.\n     *\n     * <p>This is {@code true} when the setting is a protected setting (i.e., a sensitive resource),\n     * and the app is restricted (i.e., considered dangerous), and the user has not yet cleared the\n     * app's restriction status (i.e., by clicking \"Allow restricted settings\" for this app).\n     *\n     * @param packageName package name of the application to check for\n     * @param settingIdentifier identifier of the resource to check to check for\n     * @return {@code true} if the setting is restricted from the app\n     * @throws NameNotFoundException if the provided package was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearRestriction(@NonNull String packageName) throws NameNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Clear an app's restriction status (i.e., un-restrict it).\n     *\n     * <p>After this is called, the app will no longer be restricted from accessing any protected\n     * setting by ECM. This method should be called when the user clicks \"Allow restricted settings\"\n     * for the app.\n     *\n     * @param packageName package name of the application to remove protection from\n     * @throws NameNotFoundException if the provided package was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isClearRestrictionAllowed(@NonNull String packageName) throws NameNotFoundException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check whether the provided app is eligible to have its restriction status cleared (i.e., the\n     * app is restricted, and the \"Restricted setting\" dialog has been presented to the user).\n     *\n     * <p>The Settings UI should use method this to check whether to present the user with the\n     * \"Allow restricted settings\" button.\n     *\n     * @param packageName package name of the application to check for\n     * @return {@code true} if the settings UI should present the user with the ability to clear\n     * restrictions from the provided app\n     * @throws NameNotFoundException if the provided package was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setClearRestrictionAllowed(@NonNull String packageName) throws NameNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Mark the app as eligible to have its restriction status cleared.\n     *\n     * <p>This should be called from the \"Restricted setting\" dialog (which {@link\n     * #createRestrictedSettingDialogIntent} directs to) upon being presented to the user.\n     *\n     * @param packageName package name of the application which should be considered acknowledged\n     * @throws NameNotFoundException if the provided package was not found\n     ",
+    "links" : [ "#createRestrictedSettingDialogIntent" ]
+  }, {
+    "name" : "public Intent createRestrictedSettingDialogIntent(@NonNull String packageName, @NonNull String settingIdentifier) throws NameNotFoundException",
+    "returnType" : "Intent",
+    "comment" : "\n     * Gets an intent that will open the \"Restricted setting\" dialog for the specified package\n     * and setting.\n     *\n     * <p>The \"Restricted setting\" dialog is a dialog that informs the user that the operation\n     * they've attempted to perform is restricted, and provides them with a link explaining how to\n     * proceed.\n     *\n     * @param packageName package name of the restricted application\n     * @param settingIdentifier identifier of the restricted setting\n     * @throws NameNotFoundException if the provided package was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getPackageUid(String packageName) throws NameNotFoundException",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public boolean isRestricted(@NonNull String packageName, @NonNull String settingIdentifier) throws NameNotFoundException", "public void clearRestriction(@NonNull String packageName) throws NameNotFoundException", "public boolean isClearRestrictionAllowed(@NonNull String packageName) throws NameNotFoundException", "public void setClearRestrictionAllowed(@NonNull String packageName) throws NameNotFoundException", "public Intent createRestrictedSettingDialogIntent(@NonNull String packageName, @NonNull String settingIdentifier) throws NameNotFoundException", "private int getPackageUid(String packageName) throws NameNotFoundException" ],
+  "variableNames" : [ "ACTION_SHOW_ECM_RESTRICTED_SETTING_DIALOG", "LOG_TAG", "PROTECTED_SETTINGS", "mContext", "mPackageManager", "mService" ]
+}

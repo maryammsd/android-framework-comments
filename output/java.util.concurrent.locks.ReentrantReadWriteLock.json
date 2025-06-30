@@ -1,0 +1,126 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/locks/ReentrantReadWriteLock.java",
+  "packageName" : "java.util.concurrent.locks",
+  "className" : "ReentrantReadWriteLock",
+  "comment" : "\n * An implementation of {@link ReadWriteLock} supporting similar\n * semantics to {@link ReentrantLock}.\n * <p>This class has the following properties:\n *\n * <ul>\n * <li><b>Acquisition order</b>\n *\n * <p>This class does not impose a reader or writer preference\n * ordering for lock access.  However, it does support an optional\n * <em>fairness</em> policy.\n *\n * <dl>\n * <dt><b><i>Non-fair mode (default)</i></b>\n * <dd>When constructed as non-fair (the default), the order of entry\n * to the read and write lock is unspecified, subject to reentrancy\n * constraints.  A nonfair lock that is continuously contended may\n * indefinitely postpone one or more reader or writer threads, but\n * will normally have higher throughput than a fair lock.\n *\n * <dt><b><i>Fair mode</i></b>\n * <dd>When constructed as fair, threads contend for entry using an\n * approximately arrival-order policy. When the currently held lock\n * is released, either the longest-waiting single writer thread will\n * be assigned the write lock, or if there is a group of reader threads\n * waiting longer than all waiting writer threads, that group will be\n * assigned the read lock.\n *\n * <p>A thread that tries to acquire a fair read lock (non-reentrantly)\n * will block if either the write lock is held, or there is a waiting\n * writer thread. The thread will not acquire the read lock until\n * after the oldest currently waiting writer thread has acquired and\n * released the write lock. Of course, if a waiting writer abandons\n * its wait, leaving one or more reader threads as the longest waiters\n * in the queue with the write lock free, then those readers will be\n * assigned the read lock.\n *\n * <p>A thread that tries to acquire a fair write lock (non-reentrantly)\n * will block unless both the read lock and write lock are free (which\n * implies there are no waiting threads).  (Note that the non-blocking\n * {@link ReadLock#tryLock()} and {@link WriteLock#tryLock()} methods\n * do not honor this fair setting and will immediately acquire the lock\n * if it is possible, regardless of waiting threads.)\n * </dl>\n *\n * <li><b>Reentrancy</b>\n *\n * <p>This lock allows both readers and writers to reacquire read or\n * write locks in the style of a {@link ReentrantLock}. Non-reentrant\n * readers are not allowed until all write locks held by the writing\n * thread have been released.\n *\n * <p>Additionally, a writer can acquire the read lock, but not\n * vice-versa.  Among other applications, reentrancy can be useful\n * when write locks are held during calls or callbacks to methods that\n * perform reads under read locks.  If a reader tries to acquire the\n * write lock it will never succeed.\n *\n * <li><b>Lock downgrading</b>\n * <p>Reentrancy also allows downgrading from the write lock to a read lock,\n * by acquiring the write lock, then the read lock and then releasing the\n * write lock. However, upgrading from a read lock to the write lock is\n * <b>not</b> possible.\n *\n * <li><b>Interruption of lock acquisition</b>\n * <p>The read lock and write lock both support interruption during lock\n * acquisition.\n *\n * <li><b>{@link Condition} support</b>\n * <p>The write lock provides a {@link Condition} implementation that\n * behaves in the same way, with respect to the write lock, as the\n * {@link Condition} implementation provided by\n * {@link ReentrantLock#newCondition} does for {@link ReentrantLock}.\n * This {@link Condition} can, of course, only be used with the write lock.\n *\n * <p>The read lock does not support a {@link Condition} and\n * {@code readLock().newCondition()} throws\n * {@code UnsupportedOperationException}.\n *\n * <li><b>Instrumentation</b>\n * <p>This class supports methods to determine whether locks\n * are held or contended. These methods are designed for monitoring\n * system state, not for synchronization control.\n * </ul>\n *\n * <p>Serialization of this class behaves in the same way as built-in\n * locks: a deserialized lock is in the unlocked state, regardless of\n * its state when serialized.\n *\n * <p><b>Sample usages.</b> Here is a code sketch showing how to perform\n * lock downgrading after updating a cache (exception handling is\n * particularly tricky when handling multiple locks in a non-nested\n * fashion):\n *\n * <pre> {@code\n * class CachedData {\n *   Object data;\n *   boolean cacheValid;\n *   final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();\n *\n *   void processCachedData() {\n *     rwl.readLock().lock();\n *     if (!cacheValid) {\n *       // Must release read lock before acquiring write lock\n *       rwl.readLock().unlock();\n *       rwl.writeLock().lock();\n *       try {\n *         // Recheck state because another thread might have\n *         // acquired write lock and changed state before we did.\n *         if (!cacheValid) {\n *           data = ...;\n *           cacheValid = true;\n *         }\n *         // Downgrade by acquiring read lock before releasing write lock\n *         rwl.readLock().lock();\n *       } finally {\n *         rwl.writeLock().unlock(); // Unlock write, still hold read\n *       }\n *     }\n *\n *     try {\n *       use(data);\n *     } finally {\n *       rwl.readLock().unlock();\n *     }\n *   }\n * }}</pre>\n *\n * ReentrantReadWriteLocks can be used to improve concurrency in some\n * uses of some kinds of Collections. This is typically worthwhile\n * only when the collections are expected to be large, accessed by\n * more reader threads than writer threads, and entail operations with\n * overhead that outweighs synchronization overhead. For example, here\n * is a class using a TreeMap that is expected to be large and\n * concurrently accessed.\n *\n * <pre> {@code\n * class RWDictionary {\n *   private final Map<String, Data> m = new TreeMap<>();\n *   private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();\n *   private final Lock r = rwl.readLock();\n *   private final Lock w = rwl.writeLock();\n *\n *   public Data get(String key) {\n *     r.lock();\n *     try { return m.get(key); }\n *     finally { r.unlock(); }\n *   }\n *   public List<String> allKeys() {\n *     r.lock();\n *     try { return new ArrayList<>(m.keySet()); }\n *     finally { r.unlock(); }\n *   }\n *   public Data put(String key, Data value) {\n *     w.lock();\n *     try { return m.put(key, value); }\n *     finally { w.unlock(); }\n *   }\n *   public void clear() {\n *     w.lock();\n *     try { m.clear(); }\n *     finally { w.unlock(); }\n *   }\n * }}</pre>\n *\n * <h2>Implementation Notes</h2>\n *\n * <p>This lock supports a maximum of 65535 recursive write locks\n * and 65535 read locks. Attempts to exceed these limits result in\n * {@link Error} throws from locking methods.\n *\n * @since 1.5\n * @author Doug Lea\n ",
+  "links" : [ "java.util.concurrent.locks.Condition", "java.util.concurrent.locks.ReentrantLock", "java.util.concurrent.locks.ReentrantLock#newCondition", "Error", "#tryLock()", "java.util.concurrent.locks.ReadWriteLock" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "readerLock",
+    "type" : "ReentrantReadWriteLock.ReadLock",
+    "comment" : " Inner class providing readlock ",
+    "links" : [ ]
+  }, {
+    "name" : "writerLock",
+    "type" : "ReentrantReadWriteLock.WriteLock",
+    "comment" : " Inner class providing writelock ",
+    "links" : [ ]
+  }, {
+    "name" : "sync",
+    "type" : "Sync",
+    "comment" : " Performs all synchronization mechanics ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public ReentrantReadWriteLock.WriteLock writeLock()",
+    "returnType" : "ReentrantReadWriteLock.WriteLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ReentrantReadWriteLock.ReadLock readLock()",
+    "returnType" : "ReentrantReadWriteLock.ReadLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isFair()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this lock has fairness set true.\n     *\n     * @return {@code true} if this lock has fairness set true\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Thread getOwner()",
+    "returnType" : "Thread",
+    "comment" : "\n     * Returns the thread that currently owns the write lock, or\n     * {@code null} if not owned. When this method is called by a\n     * thread that is not the owner, the return value reflects a\n     * best-effort approximation of current lock status. For example,\n     * the owner may be momentarily {@code null} even if there are\n     * threads trying to acquire the lock but have not yet done so.\n     * This method is designed to facilitate construction of\n     * subclasses that provide more extensive lock monitoring\n     * facilities.\n     *\n     * @return the owner, or {@code null} if not owned\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getReadLockCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Queries the number of read locks held for this lock. This\n     * method is designed for use in monitoring system state, not for\n     * synchronization control.\n     * @return the number of read locks held\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWriteLocked()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queries if the write lock is held by any thread. This method is\n     * designed for use in monitoring system state, not for\n     * synchronization control.\n     *\n     * @return {@code true} if any thread holds the write lock and\n     *         {@code false} otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWriteLockedByCurrentThread()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queries if the write lock is held by the current thread.\n     *\n     * @return {@code true} if the current thread holds the write lock and\n     *         {@code false} otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWriteHoldCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Queries the number of reentrant write holds on this lock by the\n     * current thread.  A writer thread has a hold on a lock for\n     * each lock action that is not matched by an unlock action.\n     *\n     * @return the number of holds on the write lock by the current thread,\n     *         or zero if the write lock is not held by the current thread\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getReadHoldCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Queries the number of reentrant read holds on this lock by the\n     * current thread.  A reader thread has a hold on a lock for\n     * each lock action that is not matched by an unlock action.\n     *\n     * @return the number of holds on the read lock by the current thread,\n     *         or zero if the read lock is not held by the current thread\n     * @since 1.6\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Collection<Thread> getQueuedWriterThreads()",
+    "returnType" : "Collection<Thread>",
+    "comment" : "\n     * Returns a collection containing threads that may be waiting to\n     * acquire the write lock.  Because the actual set of threads may\n     * change dynamically while constructing this result, the returned\n     * collection is only a best-effort estimate.  The elements of the\n     * returned collection are in no particular order.  This method is\n     * designed to facilitate construction of subclasses that provide\n     * more extensive lock monitoring facilities.\n     *\n     * @return the collection of threads\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Collection<Thread> getQueuedReaderThreads()",
+    "returnType" : "Collection<Thread>",
+    "comment" : "\n     * Returns a collection containing threads that may be waiting to\n     * acquire the read lock.  Because the actual set of threads may\n     * change dynamically while constructing this result, the returned\n     * collection is only a best-effort estimate.  The elements of the\n     * returned collection are in no particular order.  This method is\n     * designed to facilitate construction of subclasses that provide\n     * more extensive lock monitoring facilities.\n     *\n     * @return the collection of threads\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean hasQueuedThreads()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queries whether any threads are waiting to acquire the read or\n     * write lock. Note that because cancellations may occur at any\n     * time, a {@code true} return does not guarantee that any other\n     * thread will ever acquire a lock.  This method is designed\n     * primarily for use in monitoring of the system state.\n     *\n     * @return {@code true} if there may be other threads waiting to\n     *         acquire the lock\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean hasQueuedThread(Thread thread)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queries whether the given thread is waiting to acquire either\n     * the read or write lock. Note that because cancellations may\n     * occur at any time, a {@code true} return does not guarantee\n     * that this thread will ever acquire a lock.  This method is\n     * designed primarily for use in monitoring of the system state.\n     *\n     * @param thread the thread\n     * @return {@code true} if the given thread is queued waiting for this lock\n     * @throws NullPointerException if the thread is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getQueueLength()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns an estimate of the number of threads waiting to acquire\n     * either the read or write lock.  The value is only an estimate\n     * because the number of threads may change dynamically while this\n     * method traverses internal data structures.  This method is\n     * designed for use in monitoring system state, not for\n     * synchronization control.\n     *\n     * @return the estimated number of threads waiting for this lock\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Collection<Thread> getQueuedThreads()",
+    "returnType" : "Collection<Thread>",
+    "comment" : "\n     * Returns a collection containing threads that may be waiting to\n     * acquire either the read or write lock.  Because the actual set\n     * of threads may change dynamically while constructing this\n     * result, the returned collection is only a best-effort estimate.\n     * The elements of the returned collection are in no particular\n     * order.  This method is designed to facilitate construction of\n     * subclasses that provide more extensive monitoring facilities.\n     *\n     * @return the collection of threads\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasWaiters(Condition condition)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Queries whether any threads are waiting on the given condition\n     * associated with the write lock. Note that because timeouts and\n     * interrupts may occur at any time, a {@code true} return does\n     * not guarantee that a future {@code signal} will awaken any\n     * threads.  This method is designed primarily for use in\n     * monitoring of the system state.\n     *\n     * @param condition the condition\n     * @return {@code true} if there are any waiting threads\n     * @throws IllegalMonitorStateException if this lock is not held\n     * @throws IllegalArgumentException if the given condition is\n     *         not associated with this lock\n     * @throws NullPointerException if the condition is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWaitQueueLength(Condition condition)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns an estimate of the number of threads waiting on the\n     * given condition associated with the write lock. Note that because\n     * timeouts and interrupts may occur at any time, the estimate\n     * serves only as an upper bound on the actual number of waiters.\n     * This method is designed for use in monitoring of the system\n     * state, not for synchronization control.\n     *\n     * @param condition the condition\n     * @return the estimated number of waiting threads\n     * @throws IllegalMonitorStateException if this lock is not held\n     * @throws IllegalArgumentException if the given condition is\n     *         not associated with this lock\n     * @throws NullPointerException if the condition is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Collection<Thread> getWaitingThreads(Condition condition)",
+    "returnType" : "Collection<Thread>",
+    "comment" : "\n     * Returns a collection containing those threads that may be\n     * waiting on the given condition associated with the write lock.\n     * Because the actual set of threads may change dynamically while\n     * constructing this result, the returned collection is only a\n     * best-effort estimate. The elements of the returned collection\n     * are in no particular order.  This method is designed to\n     * facilitate construction of subclasses that provide more\n     * extensive condition monitoring facilities.\n     *\n     * @param condition the condition\n     * @return the collection of threads\n     * @throws IllegalMonitorStateException if this lock is not held\n     * @throws IllegalArgumentException if the given condition is\n     *         not associated with this lock\n     * @throws NullPointerException if the condition is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string identifying this lock, as well as its lock state.\n     * The state, in brackets, includes the String {@code \"Write locks =\"}\n     * followed by the number of reentrantly held write locks, and the\n     * String {@code \"Read locks =\"} followed by the number of held\n     * read locks.\n     *\n     * @return a string identifying this lock, as well as its lock state\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public ReentrantReadWriteLock.WriteLock writeLock()", "public ReentrantReadWriteLock.ReadLock readLock()", "public final boolean isFair()", "protected Thread getOwner()", "public int getReadLockCount()", "public boolean isWriteLocked()", "public boolean isWriteLockedByCurrentThread()", "public int getWriteHoldCount()", "public int getReadHoldCount()", "protected Collection<Thread> getQueuedWriterThreads()", "protected Collection<Thread> getQueuedReaderThreads()", "public final boolean hasQueuedThreads()", "public final boolean hasQueuedThread(Thread thread)", "public final int getQueueLength()", "protected Collection<Thread> getQueuedThreads()", "public boolean hasWaiters(Condition condition)", "public int getWaitQueueLength(Condition condition)", "protected Collection<Thread> getWaitingThreads(Condition condition)", "public String toString()" ],
+  "variableNames" : [ "serialVersionUID", "readerLock", "writerLock", "sync" ]
+}

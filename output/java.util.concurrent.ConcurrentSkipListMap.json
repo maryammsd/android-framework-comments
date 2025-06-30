@@ -1,0 +1,486 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ConcurrentSkipListMap.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "ConcurrentSkipListMap",
+  "comment" : "\n * A scalable concurrent {@link ConcurrentNavigableMap} implementation.\n * The map is sorted according to the {@linkplain Comparable natural\n * ordering} of its keys, or by a {@link Comparator} provided at map\n * creation time, depending on which constructor is used.\n *\n * <p>This class implements a concurrent variant of <a\n * href=\"http://en.wikipedia.org/wiki/Skip_list\" target=\"_top\">SkipLists</a>\n * providing expected average <i>log(n)</i> time cost for the\n * {@code containsKey}, {@code get}, {@code put} and\n * {@code remove} operations and their variants.  Insertion, removal,\n * update, and access operations safely execute concurrently by\n * multiple threads.\n *\n * <p>Iterators and spliterators are\n * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n *\n * <p>Ascending key ordered views and their iterators are faster than\n * descending ones.\n *\n * <p>All {@code Map.Entry} pairs returned by methods in this class\n * and its views represent snapshots of mappings at the time they were\n * produced. They do <em>not</em> support the {@code Entry.setValue}\n * method. (Note however that it is possible to change mappings in the\n * associated map using {@code put}, {@code putIfAbsent}, or\n * {@code replace}, depending on exactly which effect you need.)\n *\n * <p>Beware that bulk operations {@code putAll}, {@code equals},\n * {@code toArray}, {@code containsValue}, and {@code clear} are\n * <em>not</em> guaranteed to be performed atomically. For example, an\n * iterator operating concurrently with a {@code putAll} operation\n * might view only some of the added elements.\n *\n * <p>This class and its views and iterators implement all of the\n * <em>optional</em> methods of the {@link Map} and {@link Iterator}\n * interfaces. Like most other concurrent collections, this class does\n * <em>not</em> permit the use of {@code null} keys or values because some\n * null return values cannot be reliably distinguished from the absence of\n * elements.\n *\n * <p>This class is a member of the\n * <a href=\"{@docRoot}/java.base/java/util/package-summary.html#CollectionsFramework\">\n * Java Collections Framework</a>.\n *\n * @author Doug Lea\n * @param <K> the type of keys maintained by this map\n * @param <V> the type of mapped values\n * @since 1.6\n ",
+  "links" : [ "java.util.AbstractMap", "java.util.Iterator", "java.util.concurrent.ConcurrentNavigableMap", "java.util.Comparator" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "comparator",
+    "type" : "Comparator<? super K>",
+    "comment" : "\n     * The comparator used to maintain order in this map, or null if\n     * using natural ordering.  (Non-private to simplify access in\n     * nested classes.)\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "head",
+    "type" : "Index<K, V>",
+    "comment" : " Lazily initialized topmost index of the skiplist. ",
+    "links" : [ ]
+  }, {
+    "name" : "adder",
+    "type" : "LongAdder",
+    "comment" : " Lazily initialized element count ",
+    "links" : [ ]
+  }, {
+    "name" : "keySet",
+    "type" : "KeySet<K, V>",
+    "comment" : " Lazily initialized key set ",
+    "links" : [ ]
+  }, {
+    "name" : "values",
+    "type" : "Values<K, V>",
+    "comment" : " Lazily initialized values collection ",
+    "links" : [ ]
+  }, {
+    "name" : "entrySet",
+    "type" : "EntrySet<K, V>",
+    "comment" : " Lazily initialized entry set ",
+    "links" : [ ]
+  }, {
+    "name" : "descendingMap",
+    "type" : "SubMap<K, V>",
+    "comment" : " Lazily initialized descending map ",
+    "links" : [ ]
+  }, {
+    "name" : "EQ",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GT",
+    "type" : "int",
+    "comment" : " Actually checked as !LT",
+    "links" : [ ]
+  }, {
+    "name" : "HEAD",
+    "type" : "VarHandle",
+    "comment" : " VarHandle mechanics",
+    "links" : [ ]
+  }, {
+    "name" : "ADDER",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NEXT",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VAL",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "RIGHT",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static int cpr(Comparator c, Object x, Object y)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares using comparator or natural ordering if null.\n     * Called only by methods that have performed required type checks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<K, V> baseHead()",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Returns the header for base node list, or null if uninitialized\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void unlinkNode(Node<K, V> b, Node<K, V> n)",
+    "returnType" : "void",
+    "comment" : "\n     * Tries to unlink deleted node n from predecessor b (if both\n     * exist), by first splicing in a marker if not already present.\n     * Upon return, node n is sure to be unlinked from b, possibly\n     * via the actions of some other thread.\n     *\n     * @param b if nonnull, predecessor\n     * @param n if nonnull, node known to be deleted\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addCount(long c)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds to element count, initializing adder if necessary\n     *\n     * @param c count to add\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final long getAdderCount()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns element count, initializing adder if necessary.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Node<K, V> findPredecessor(Object key, Comparator<? super K> cmp)",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Returns an index node with key strictly less than given key.\n     * Also unlinks indexes to deleted nodes found along the way.\n     * Callers rely on this side-effect of clearing indices to deleted\n     * nodes.\n     *\n     * @param key if nonnull the key\n     * @return a predecessor node of key, or null if uninitialized or null key\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Node<K, V> findNode(Object key)",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Returns node holding key or null if no such, clearing out any\n     * deleted nodes seen along the way.  Repeatedly traverses at\n     * base-level looking for key starting at predecessor returned\n     * from findPredecessor, processing base-level deletions as\n     * encountered. Restarts occur, at traversal step encountering\n     * node n, if n's key field is null, indicating it is a marker, so\n     * its predecessor is deleted before continuing, which we help do\n     * by re-finding a valid predecessor.  The traversal loops in\n     * doPut, doRemove, and findNear all include the same checks.\n     *\n     * @param key the key\n     * @return node holding key, or null if no such\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private V doGet(Object key)",
+    "returnType" : "V",
+    "comment" : "\n     * Gets value for key. Same idea as findNode, except skips over\n     * deletions and markers, and returns first encountered value to\n     * avoid possibly inconsistent rereads.\n     *\n     * @param key the key\n     * @return the value, or null if absent\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private V doPut(K key, V value, boolean onlyIfAbsent)",
+    "returnType" : "V",
+    "comment" : "\n     * Main insertion method.  Adds element if not present, or\n     * replaces value if present and onlyIfAbsent is false.\n     *\n     * @param key the key\n     * @param value the value that must be associated with key\n     * @param onlyIfAbsent if should not insert if already present\n     * @return the old value, or null if newly inserted\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean addIndices(Index<K, V> q, int skips, Index<K, V> x, Comparator<? super K> cmp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Add indices after an insertion. Descends iteratively to the\n     * highest level of insertion, then recursively, to chain index\n     * nodes to lower ones. Returns null on (staleness) failure,\n     * disabling higher-level insertions. Recursion depths are\n     * exponentially less probable.\n     *\n     * @param q starting index for current level\n     * @param skips levels to skip before inserting\n     * @param x index for this insertion\n     * @param cmp comparator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final V doRemove(Object key, Object value)",
+    "returnType" : "V",
+    "comment" : "\n     * Main deletion method. Locates node, nulls value, appends a\n     * deletion marker, unlinks predecessor, removes associated index\n     * nodes, and possibly reduces head index level.\n     *\n     * @param key the key\n     * @param value if non-null, the value that must be\n     * associated with key\n     * @return the node, or null if not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void tryReduceLevel()",
+    "returnType" : "void",
+    "comment" : "\n     * Possibly reduce head level if it has no nodes.  This method can\n     * (rarely) make mistakes, in which case levels can disappear even\n     * though they are about to contain index nodes. This impacts\n     * performance, not correctness.  To minimize mistakes as well as\n     * to reduce hysteresis, the level is reduced by one only if the\n     * topmost three levels look empty. Also, if the removed level\n     * looks non-empty after CAS, we try to change it back quick\n     * before anyone notices our mistake! (This trick works pretty\n     * well because this method will practically never make mistakes\n     * unless current thread stalls immediately before first CAS, in\n     * which case it is very unlikely to stall again immediately\n     * afterwards, so will recover.)\n     *\n     * We put up with all this rather than just let levels grow\n     * because otherwise, even a small map that has undergone a large\n     * number of insertions and removals will have a lot of levels,\n     * slowing down access more than would an occasional unwanted\n     * reduction.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<K, V> findFirst()",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Gets first valid node, unlinking deleted nodes if encountered.\n     * @return first node or null if empty\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final AbstractMap.SimpleImmutableEntry<K, V> findFirstEntry()",
+    "returnType" : "AbstractMap.SimpleImmutableEntry<K, V>",
+    "comment" : "\n     * Entry snapshot version of findFirst\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private AbstractMap.SimpleImmutableEntry<K, V> doRemoveFirstEntry()",
+    "returnType" : "AbstractMap.SimpleImmutableEntry<K, V>",
+    "comment" : "\n     * Removes first entry; returns its snapshot.\n     * @return null if empty, else snapshot of first entry\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<K, V> findLast()",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Specialized version of find to get last valid node.\n     * @return last node or null if empty\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final AbstractMap.SimpleImmutableEntry<K, V> findLastEntry()",
+    "returnType" : "AbstractMap.SimpleImmutableEntry<K, V>",
+    "comment" : "\n     * Entry version of findLast\n     * @return Entry for last node or null if empty\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Map.Entry<K, V> doRemoveLastEntry()",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Removes last entry; returns its snapshot.\n     * Specialized variant of doRemove.\n     * @return null if empty, else snapshot of last entry\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<K, V> findNear(K key, int rel, Comparator<? super K> cmp)",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Utility for ceiling, floor, lower, higher methods.\n     * @param key the key\n     * @param rel the relation -- OR'ed combination of EQ, LT, GT\n     * @return nearest node fitting relation, or null if no such\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final AbstractMap.SimpleImmutableEntry<K, V> findNearEntry(K key, int rel, Comparator<? super K> cmp)",
+    "returnType" : "AbstractMap.SimpleImmutableEntry<K, V>",
+    "comment" : "\n     * Variant of findNear returning SimpleImmutableEntry\n     * @param key the key\n     * @param rel the relation -- OR'ed combination of EQ, LT, GT\n     * @return Entry fitting relation, or null if no such\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentSkipListMap<K, V> clone()",
+    "returnType" : "ConcurrentSkipListMap<K, V>",
+    "comment" : "\n     * Returns a shallow copy of this {@code ConcurrentSkipListMap}\n     * instance. (The keys and values themselves are not cloned.)\n     *\n     * @return a shallow copy of this map\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void buildFromSorted(SortedMap<K, ? extends V> map)",
+    "returnType" : "void",
+    "comment" : "\n     * Streamlined bulk insertion to initialize from elements of\n     * given sorted map.  Call only from constructor or clone\n     * method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Saves this map to a stream (that is, serializes it).\n     *\n     * @param s the stream\n     * @throws java.io.IOException if an I/O error occurs\n     * @serialData The key (Object) and value (Object) for each\n     * key-value mapping represented by the map, followed by\n     * {@code null}. The key-value mappings are emitted in key-order\n     * (as determined by the Comparator, or by the keys' natural\n     * ordering if no Comparator).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(final java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reconstitutes this map from a stream (that is, deserializes it).\n     * @param s the stream\n     * @throws ClassNotFoundException if the class of a serialized object\n     *         could not be found\n     * @throws java.io.IOException if an I/O error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsKey(Object key)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this map contains a mapping for the specified\n     * key.\n     *\n     * @param key key whose presence in this map is to be tested\n     * @return {@code true} if this map contains a mapping for the specified key\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V get(Object key)",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the value to which the specified key is mapped,\n     * or {@code null} if this map contains no mapping for the key.\n     *\n     * <p>More formally, if this map contains a mapping from a key\n     * {@code k} to a value {@code v} such that {@code key} compares\n     * equal to {@code k} according to the map's ordering, then this\n     * method returns {@code v}; otherwise it returns {@code null}.\n     * (There can be at most one such mapping.)\n     *\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V getOrDefault(Object key, V defaultValue)",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the value to which the specified key is mapped,\n     * or the given defaultValue if this map contains no mapping for the key.\n     *\n     * @param key the key\n     * @param defaultValue the value to return if this map contains\n     * no mapping for the given key\n     * @return the mapping for the key, if present; else the defaultValue\n     * @throws NullPointerException if the specified key is null\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V put(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * Associates the specified value with the specified key in this map.\n     * If the map previously contained a mapping for the key, the old\n     * value is replaced.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param value value to be associated with the specified key\n     * @return the previous value associated with the specified key, or\n     *         {@code null} if there was no mapping for the key\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V remove(Object key)",
+    "returnType" : "V",
+    "comment" : "\n     * Removes the mapping for the specified key from this map if present.\n     *\n     * @param  key key for which mapping should be removed\n     * @return the previous value associated with the specified key, or\n     *         {@code null} if there was no mapping for the key\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsValue(Object value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this map maps one or more keys to the\n     * specified value.  This operation requires time linear in the\n     * map size. Additionally, it is possible for the map to change\n     * during execution of this method, in which case the returned\n     * result may be inaccurate.\n     *\n     * @param value value whose presence in this map is to be tested\n     * @return {@code true} if a mapping to {@code value} exists;\n     *         {@code false} otherwise\n     * @throws NullPointerException if the specified value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes all of the mappings from this map.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the specified key is not already associated with a value,\n     * attempts to compute its value using the given mapping function\n     * and enters it into this map unless {@code null}.  The function\n     * is <em>NOT</em> guaranteed to be applied once atomically only\n     * if the value is not present.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param mappingFunction the function to compute a value\n     * @return the current (existing or computed) value associated with\n     *         the specified key, or null if the computed value is null\n     * @throws NullPointerException if the specified key is null\n     *         or the mappingFunction is null\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the value for the specified key is present, attempts to\n     * compute a new mapping given the key and its current mapped\n     * value. The function is <em>NOT</em> guaranteed to be applied\n     * once atomically.\n     *\n     * @param key key with which a value may be associated\n     * @param remappingFunction the function to compute a value\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key is null\n     *         or the remappingFunction is null\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * Attempts to compute a mapping for the specified key and its\n     * current mapped value (or {@code null} if there is no current\n     * mapping). The function is <em>NOT</em> guaranteed to be applied\n     * once atomically.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param remappingFunction the function to compute a value\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key is null\n     *         or the remappingFunction is null\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the specified key is not already associated with a value,\n     * associates it with the given value.  Otherwise, replaces the\n     * value with the results of the given remapping function, or\n     * removes if {@code null}. The function is <em>NOT</em>\n     * guaranteed to be applied once atomically.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param value the value to use if absent\n     * @param remappingFunction the function to recompute a value if present\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key or value is null\n     *         or the remappingFunction is null\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public NavigableSet<K> keySet()",
+    "returnType" : "NavigableSet<K>",
+    "comment" : "\n     * Returns a {@link NavigableSet} view of the keys contained in this map.\n     *\n     * <p>The set's iterator returns the keys in ascending order.\n     * The set's spliterator additionally reports {@link Spliterator#CONCURRENT},\n     * {@link Spliterator#NONNULL}, {@link Spliterator#SORTED} and\n     * {@link Spliterator#ORDERED}, with an encounter order that is ascending\n     * key order.\n     *\n     * <p>The {@linkplain Spliterator#getComparator() spliterator's comparator}\n     * is {@code null} if the {@linkplain #comparator() map's comparator}\n     * is {@code null}.\n     * Otherwise, the spliterator's comparator is the same as or imposes the\n     * same total ordering as the map's comparator.\n     *\n     * <p>The set is backed by the map, so changes to the map are\n     * reflected in the set, and vice-versa.  The set supports element\n     * removal, which removes the corresponding mapping from the map,\n     * via the {@code Iterator.remove}, {@code Set.remove},\n     * {@code removeAll}, {@code retainAll}, and {@code clear}\n     * operations.  It does not support the {@code add} or {@code addAll}\n     * operations.\n     *\n     * <p>The view's iterators and spliterators are\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * <p>This method is equivalent to method {@code navigableKeySet}.\n     *\n     * @return a navigable set view of the keys in this map\n     ",
+    "links" : [ "java.util.NavigableSet", "java.util.Spliterator#SORTED", "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT", "java.util.Spliterator#ORDERED" ]
+  }, {
+    "name" : "public NavigableSet<K> navigableKeySet()",
+    "returnType" : "NavigableSet<K>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<V> values()",
+    "returnType" : "Collection<V>",
+    "comment" : "\n     * Returns a {@link Collection} view of the values contained in this map.\n     * <p>The collection's iterator returns the values in ascending order\n     * of the corresponding keys. The collections's spliterator additionally\n     * reports {@link Spliterator#CONCURRENT}, {@link Spliterator#NONNULL} and\n     * {@link Spliterator#ORDERED}, with an encounter order that is ascending\n     * order of the corresponding keys.\n     *\n     * <p>The collection is backed by the map, so changes to the map are\n     * reflected in the collection, and vice-versa.  The collection\n     * supports element removal, which removes the corresponding\n     * mapping from the map, via the {@code Iterator.remove},\n     * {@code Collection.remove}, {@code removeAll},\n     * {@code retainAll} and {@code clear} operations.  It does not\n     * support the {@code add} or {@code addAll} operations.\n     *\n     * <p>The view's iterators and spliterators are\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     ",
+    "links" : [ "java.util.AbstractCollection", "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT", "java.util.Spliterator#ORDERED" ]
+  }, {
+    "name" : "public Set<Map.Entry<K, V>> entrySet()",
+    "returnType" : "Set<Map.Entry<K, V>>",
+    "comment" : "\n     * Returns a {@link Set} view of the mappings contained in this map.\n     *\n     * <p>The set's iterator returns the entries in ascending key order.  The\n     * set's spliterator additionally reports {@link Spliterator#CONCURRENT},\n     * {@link Spliterator#NONNULL}, {@link Spliterator#SORTED} and\n     * {@link Spliterator#ORDERED}, with an encounter order that is ascending\n     * key order.\n     *\n     * <p>The set is backed by the map, so changes to the map are\n     * reflected in the set, and vice-versa.  The set supports element\n     * removal, which removes the corresponding mapping from the map,\n     * via the {@code Iterator.remove}, {@code Set.remove},\n     * {@code removeAll}, {@code retainAll} and {@code clear}\n     * operations.  It does not support the {@code add} or\n     * {@code addAll} operations.\n     *\n     * <p>The view's iterators and spliterators are\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * <p>The {@code Map.Entry} elements traversed by the {@code iterator}\n     * or {@code spliterator} do <em>not</em> support the {@code setValue}\n     * operation.\n     *\n     * @return a set view of the mappings contained in this map,\n     *         sorted in ascending key order\n     ",
+    "links" : [ "java.util.AbstractSet", "java.util.Spliterator#SORTED", "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT", "java.util.Spliterator#ORDERED" ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> descendingMap()",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public NavigableSet<K> descendingKeySet()",
+    "returnType" : "NavigableSet<K>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object o)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the specified object with this map for equality.\n     * Returns {@code true} if the given object is also a map and the\n     * two maps represent the same mappings.  More formally, two maps\n     * {@code m1} and {@code m2} represent the same mappings if\n     * {@code m1.entrySet().equals(m2.entrySet())}.  This\n     * operation may return misleading results if either map is\n     * concurrently modified during execution of this method.\n     *\n     * @param o object to be compared for equality with this map\n     * @return {@code true} if the specified object is equal to this map\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V putIfAbsent(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @return the previous value associated with the specified key,\n     *         or {@code null} if there was no mapping for the key\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean remove(Object key, Object value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean replace(K key, V oldValue, V newValue)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if any of the arguments are null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V replace(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @return the previous value associated with the specified key,\n     *         or {@code null} if there was no mapping for the key\n     * @throws ClassCastException if the specified key cannot be compared\n     *         with the keys currently in the map\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Comparator<? super K> comparator()",
+    "returnType" : "Comparator<? super K>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public K firstKey()",
+    "returnType" : "K",
+    "comment" : "\n     * @throws NoSuchElementException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K lastKey()",
+    "returnType" : "K",
+    "comment" : "\n     * @throws NoSuchElementException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V putFirst(K k, V v)",
+    "returnType" : "V",
+    "comment" : "\n     * Throws {@code UnsupportedOperationException}. The encounter order induced by this\n     * map's comparison method determines the position of mappings, so explicit positioning\n     * is not supported.\n     *\n     * @throws UnsupportedOperationException always\n     * @since 21\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V putLast(K k, V v)",
+    "returnType" : "V",
+    "comment" : "\n     * Throws {@code UnsupportedOperationException}. The encounter order induced by this\n     * map's comparison method determines the position of mappings, so explicit positioning\n     * is not supported.\n     *\n     * @throws UnsupportedOperationException always\n     * @since 21\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code fromKey} or {@code toKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> headMap(K toKey, boolean inclusive)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code toKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> tailMap(K fromKey, boolean inclusive)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code fromKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> subMap(K fromKey, K toKey)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code fromKey} or {@code toKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> headMap(K toKey)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code toKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ConcurrentNavigableMap<K, V> tailMap(K fromKey)",
+    "returnType" : "ConcurrentNavigableMap<K, V>",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if {@code fromKey} is null\n     * @throws IllegalArgumentException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> lowerEntry(K key)",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the greatest key\n     * strictly less than the given key, or {@code null} if there is\n     * no such key. The returned entry does <em>not</em> support the\n     * {@code Entry.setValue} method.\n     *\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K lowerKey(K key)",
+    "returnType" : "K",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> floorEntry(K key)",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the greatest key\n     * less than or equal to the given key, or {@code null} if there\n     * is no such key. The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     *\n     * @param key the key\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K floorKey(K key)",
+    "returnType" : "K",
+    "comment" : "\n     * @param key the key\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> ceilingEntry(K key)",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the least key\n     * greater than or equal to the given key, or {@code null} if\n     * there is no such entry. The returned entry does <em>not</em>\n     * support the {@code Entry.setValue} method.\n     *\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K ceilingKey(K key)",
+    "returnType" : "K",
+    "comment" : "\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> higherEntry(K key)",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the least key\n     * strictly greater than the given key, or {@code null} if there\n     * is no such key. The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     *\n     * @param key the key\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K higherKey(K key)",
+    "returnType" : "K",
+    "comment" : "\n     * @param key the key\n     * @throws ClassCastException {@inheritDoc}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> firstEntry()",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the least\n     * key in this map, or {@code null} if the map is empty.\n     * The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> lastEntry()",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns a key-value mapping associated with the greatest\n     * key in this map, or {@code null} if the map is empty.\n     * The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> pollFirstEntry()",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Removes and returns a key-value mapping associated with\n     * the least key in this map, or {@code null} if the map is empty.\n     * The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> pollLastEntry()",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Removes and returns a key-value mapping associated with\n     * the greatest key in this map, or {@code null} if the map is empty.\n     * The returned entry does <em>not</em> support\n     * the {@code Entry.setValue} method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static final List<E> toList(Collection<E> c)",
+    "returnType" : "List<E>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEach(BiConsumer<? super K, ? super V> action)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean removeEntryIf(Predicate<? super Entry<K, V>> function)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper method for EntrySet.removeIf.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean removeValueIf(Predicate<? super V> function)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper method for Values.removeIf.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final KeySpliterator<K, V> keySpliterator()",
+    "returnType" : "KeySpliterator<K, V>",
+    "comment" : " factory method for KeySpliterator",
+    "links" : [ ]
+  }, {
+    "name" : " final ValueSpliterator<K, V> valueSpliterator()",
+    "returnType" : "ValueSpliterator<K, V>",
+    "comment" : " Almost the same as keySpliterator()",
+    "links" : [ ]
+  }, {
+    "name" : " final EntrySpliterator<K, V> entrySpliterator()",
+    "returnType" : "EntrySpliterator<K, V>",
+    "comment" : " Almost the same as keySpliterator()",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " static int cpr(Comparator c, Object x, Object y)", " final Node<K, V> baseHead()", " static void unlinkNode(Node<K, V> b, Node<K, V> n)", "private void addCount(long c)", " final long getAdderCount()", "private Node<K, V> findPredecessor(Object key, Comparator<? super K> cmp)", "private Node<K, V> findNode(Object key)", "private V doGet(Object key)", "private V doPut(K key, V value, boolean onlyIfAbsent)", " static boolean addIndices(Index<K, V> q, int skips, Index<K, V> x, Comparator<? super K> cmp)", " final V doRemove(Object key, Object value)", "private void tryReduceLevel()", " final Node<K, V> findFirst()", " final AbstractMap.SimpleImmutableEntry<K, V> findFirstEntry()", "private AbstractMap.SimpleImmutableEntry<K, V> doRemoveFirstEntry()", " final Node<K, V> findLast()", " final AbstractMap.SimpleImmutableEntry<K, V> findLastEntry()", "private Map.Entry<K, V> doRemoveLastEntry()", " final Node<K, V> findNear(K key, int rel, Comparator<? super K> cmp)", " final AbstractMap.SimpleImmutableEntry<K, V> findNearEntry(K key, int rel, Comparator<? super K> cmp)", "public ConcurrentSkipListMap<K, V> clone()", "private void buildFromSorted(SortedMap<K, ? extends V> map)", "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException", "private void readObject(final java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException", "public boolean containsKey(Object key)", "public V get(Object key)", "public V getOrDefault(Object key, V defaultValue)", "public V put(K key, V value)", "public V remove(Object key)", "public boolean containsValue(Object value)", "public int size()", "public boolean isEmpty()", "public void clear()", "public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction)", "public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)", "public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)", "public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction)", "public NavigableSet<K> keySet()", "public NavigableSet<K> navigableKeySet()", "public Collection<V> values()", "public Set<Map.Entry<K, V>> entrySet()", "public ConcurrentNavigableMap<K, V> descendingMap()", "public NavigableSet<K> descendingKeySet()", "public boolean equals(Object o)", "public V putIfAbsent(K key, V value)", "public boolean remove(Object key, Object value)", "public boolean replace(K key, V oldValue, V newValue)", "public V replace(K key, V value)", "public Comparator<? super K> comparator()", "public K firstKey()", "public K lastKey()", "public V putFirst(K k, V v)", "public V putLast(K k, V v)", "public ConcurrentNavigableMap<K, V> subMap(K fromKey, boolean fromInclusive, K toKey, boolean toInclusive)", "public ConcurrentNavigableMap<K, V> headMap(K toKey, boolean inclusive)", "public ConcurrentNavigableMap<K, V> tailMap(K fromKey, boolean inclusive)", "public ConcurrentNavigableMap<K, V> subMap(K fromKey, K toKey)", "public ConcurrentNavigableMap<K, V> headMap(K toKey)", "public ConcurrentNavigableMap<K, V> tailMap(K fromKey)", "public Map.Entry<K, V> lowerEntry(K key)", "public K lowerKey(K key)", "public Map.Entry<K, V> floorEntry(K key)", "public K floorKey(K key)", "public Map.Entry<K, V> ceilingEntry(K key)", "public K ceilingKey(K key)", "public Map.Entry<K, V> higherEntry(K key)", "public K higherKey(K key)", "public Map.Entry<K, V> firstEntry()", "public Map.Entry<K, V> lastEntry()", "public Map.Entry<K, V> pollFirstEntry()", "public Map.Entry<K, V> pollLastEntry()", " static final List<E> toList(Collection<E> c)", "public void forEach(BiConsumer<? super K, ? super V> action)", "public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function)", " boolean removeEntryIf(Predicate<? super Entry<K, V>> function)", " boolean removeValueIf(Predicate<? super V> function)", " final KeySpliterator<K, V> keySpliterator()", " final ValueSpliterator<K, V> valueSpliterator()", " final EntrySpliterator<K, V> entrySpliterator()" ],
+  "variableNames" : [ "serialVersionUID", "comparator", "head", "adder", "keySet", "values", "entrySet", "descendingMap", "EQ", "LT", "GT", "HEAD", "ADDER", "NEXT", "VAL", "RIGHT" ]
+}

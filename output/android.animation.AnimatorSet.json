@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/animation/AnimatorSet.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/animation/AnimatorSet.java",
   "packageName" : "android.animation",
   "className" : "AnimatorSet",
   "comment" : "\n * This class plays a set of {@link Animator} objects in the specified order. Animations\n * can be set up to play together, in sequence, or after a specified delay.\n *\n * <p>There are two different approaches to adding animations to a <code>AnimatorSet</code>:\n * either the {@link AnimatorSet#playTogether(Animator[]) playTogether()} or\n * {@link AnimatorSet#playSequentially(Animator[]) playSequentially()} methods can be called to add\n * a set of animations all at once, or the {@link AnimatorSet#play(Animator)} can be\n * used in conjunction with methods in the {@link AnimatorSet.Builder Builder}\n * class to add animations\n * one by one.</p>\n *\n * <p>It is possible to set up a <code>AnimatorSet</code> with circular dependencies between\n * its animations. For example, an animation a1 could be set up to start before animation a2, a2\n * before a3, and a3 before a1. The results of this configuration are undefined, but will typically\n * result in none of the affected animations being played. Because of this (and because\n * circular dependencies do not make logical sense anyway), circular dependencies\n * should be avoided, and the dependency flow of animations should only be in one direction.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about animating with {@code AnimatorSet}, read the\n * <a href=\"{@docRoot}guide/topics/graphics/prop-animation.html#choreography\">Property\n * Animation</a> developer guide.</p>\n * </div>\n ",
+  "links" : [ "android.animation.AnimatorSet#play(Animator)", "AnimatorSet.Builder", "android.animation.AnimatorSet#playTogether(Animator", "android.animation.Animator", "android.animation.AnimatorSet#playSequentially(Animator" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -124,7 +125,12 @@
     "comment" : "\n     * Set on the next frame after pause() is called, used to calculate a new startTime\n     * or delayStartTime which allows the animator set to continue from the point at which\n     * it was paused. If negative, has not yet been set.\n     ",
     "links" : [ ]
   }, {
-    "name" : "mDummyListener",
+    "name" : "mChildStartAndStopTimes",
+    "type" : "long[]",
+    "comment" : "\n     * The start and stop times of all descendant animators.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mAnimationEndListener",
     "type" : "AnimatorListenerAdapter",
     "comment" : " fixes their side.",
     "links" : [ ]
@@ -183,6 +189,11 @@
     "name" : "public void cancel()",
     "returnType" : "void",
     "comment" : "\n     * {@inheritDoc}\n     *\n     * <p>Note that canceling a <code>AnimatorSet</code> also cancels all of the animations that it\n     * is responsible for.</p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void callOnPlayingSet(Consumer<Animator> consumer)",
+    "returnType" : "void",
+    "comment" : "\n     * Calls consumer on every Animator of mPlayingSet.\n     *\n     * @param consumer The method to call on every Animator of mPlayingSet.\n     ",
     "links" : [ ]
   }, {
     "name" : "private void forceToEnd()",
@@ -280,25 +291,45 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : " void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)",
+    "name" : "private void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)",
     "returnType" : "void",
     "comment" : "\n     * Internal only.\n     *\n     * This method sets the animation values based on the play time. It also fast forward or\n     * backward all the child animations progress accordingly.\n     *\n     * This method is also responsible for calling\n     * {@link android.view.animation.Animation.AnimationListener#onAnimationRepeat(Animation)},\n     * as needed, based on the last play time and current play time.\n     ",
     "links" : [ "android.view.animation.Animation.AnimationListener#onAnimationRepeat(Animation)" ]
+  }, {
+    "name" : "private int findNextIndex(long playTime, long[] startEndTimes)",
+    "returnType" : "int",
+    "comment" : "\n     * Looks through startEndTimes for playTime. If it is in startEndTimes, the index after\n     * is returned. Otherwise, it returns the index at which it would be placed if it were\n     * to be inserted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void animateSkipToEnds(long currentPlayTime, long lastPlayTime)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void animateValuesInRange(long currentPlayTime, long lastPlayTime)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private long[] ensureChildStartAndEndTimes()",
+    "returnType" : "long[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void getStartAndEndTimes(LongArray times, long offset)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
   }, {
     "name" : " boolean isInitialized()",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private void skipToStartValue(boolean inReverse)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
     "name" : "public void setCurrentPlayTime(long playTime)",
     "returnType" : "void",
-    "comment" : "\n     * Sets the position of the animation to the specified point in time. This time should\n     * be between 0 and the total duration of the animation, including any repetition. If\n     * the animation has not yet been started, then it will not advance forward after it is\n     * set to this time; it will simply set the time to this value and perform any appropriate\n     * actions based on that time. If the animation is already running, then setCurrentPlayTime()\n     * will set the current playing time to this value and continue playing from that point.\n     *\n     * @param playTime The time, in milliseconds, to which the animation is advanced or rewound.\n     *                 Unless the animation is reversing, the playtime is considered the time since\n     *                 the end of the start delay of the AnimatorSet in a forward playing direction.\n     *\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Sets the position of the animation to the specified point in time. This time should\n     * be between 0 and the total duration of the animation, including any repetition. If\n     * the animation has not yet been started, then it will not advance forward after it is\n     * set to this time; it will simply set the time to this value and perform any appropriate\n     * actions based on that time. If the animation is already running, then setCurrentPlayTime()\n     * will set the current playing time to this value and continue playing from that point.\n     * On {@link Build.VERSION_CODES#UPSIDE_DOWN_CAKE} and above, an AnimatorSet\n     * that hasn't been {@link #start()}ed, will issue\n     * {@link android.animation.Animator.AnimatorListener#onAnimationStart(Animator, boolean)}\n     * and {@link android.animation.Animator.AnimatorListener#onAnimationEnd(Animator, boolean)}\n     * events.\n     *\n     * @param playTime The time, in milliseconds, to which the animation is advanced or rewound.\n     *                 Unless the animation is reversing, the playtime is considered the time since\n     *                 the end of the start delay of the AnimatorSet in a forward playing direction.\n     *\n     ",
+    "links" : [ "android.animation.Animator.AnimatorListener#onAnimationEnd(Animator", "#start()", "Build.VERSION_CODES#UPSIDE_DOWN_CAKE", "android.animation.Animator.AnimatorListener#onAnimationStart(Animator" ]
   }, {
     "name" : "public long getCurrentPlayTime()",
     "returnType" : "long",
@@ -335,12 +366,12 @@
     "comment" : "\n     * This method pulses frames into child animations. It scales the input animation play time\n     * with the duration scale and pass that to the child animation via pulseAnimationFrame(long).\n     *\n     * @param node child animator node\n     * @param animPlayTime unscaled play time (including start delay) for the child animator\n     ",
     "links" : [ ]
   }, {
-    "name" : "private long getPlayTimeForNode(long overallPlayTime, Node node)",
+    "name" : "private long getPlayTimeForNodeIncludingDelay(long overallPlayTime, Node node)",
     "returnType" : "long",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private long getPlayTimeForNode(long overallPlayTime, Node node, boolean inReverse)",
+    "name" : "private long getPlayTimeForNodeIncludingDelay(long overallPlayTime, Node node, boolean inReverse)",
     "returnType" : "long",
     "comment" : "",
     "links" : [ ]
@@ -350,12 +381,12 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private void addDummyListener()",
+    "name" : "private void addAnimationEndListener()",
     "returnType" : "void",
     "comment" : " masked a real bug in play movies. TODO: remove this and below once the root cause is fixed.",
     "links" : [ ]
   }, {
-    "name" : "private void removeDummyListener()",
+    "name" : "private void removeAnimationEndListener()",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -440,6 +471,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "mPlayingSet", "mNodeMap", "mEvents", "mNodes", "mDependencyDirty", "mStarted", "mStartDelay", "mDelayAnim", "mRootNode", "mDuration", "mInterpolator", "mTotalDuration", "mShouldIgnoreEndWithoutStart", "mShouldResetValuesAtStart", "mEndCanBeCalled", "mLastFrameTime", "mFirstFrame", "mLastEventId", "mReversing", "mSelfPulse", "mSeekState", "mChildrenInitialized", "mPauseTime", "mDummyListener" ],
-  "methodNames" : [ "public void playTogether(Animator... items)", "public void playTogether(Collection<Animator> items)", "public void playSequentially(Animator... items)", "public void playSequentially(List<Animator> items)", "public ArrayList<Animator> getChildAnimations()", "public void setTarget(Object target)", "public int getChangingConfigurations()", "public void setInterpolator(TimeInterpolator interpolator)", "public TimeInterpolator getInterpolator()", "public Builder play(Animator anim)", "public void cancel()", "private void forceToEnd()", "public void end()", "public boolean isRunning()", "public boolean isStarted()", "public long getStartDelay()", "public void setStartDelay(long startDelay)", "public long getDuration()", "public AnimatorSet setDuration(long duration)", "public void setupStartValues()", "public void setupEndValues()", "public void pause()", "public void resume()", "public void start()", " void startWithoutPulsing(boolean inReverse)", "private void initAnimation()", "private void start(boolean inReverse, boolean selfPulse)", "private static boolean isEmptySet(AnimatorSet set)", "private void updateAnimatorsDuration()", " void skipToEndValue(boolean inReverse)", " void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)", " boolean isInitialized()", "private void skipToStartValue(boolean inReverse)", "public void setCurrentPlayTime(long playTime)", "public long getCurrentPlayTime()", "private void initChildren()", "public boolean doAnimationFrame(long frameTime)", "public void commitAnimationFrame(long frameTime)", " boolean pulseAnimationFrame(long frameTime)", "private void handleAnimationEvents(int startId, int latestId, long playTime)", "private void pulseFrame(Node node, long animPlayTime)", "private long getPlayTimeForNode(long overallPlayTime, Node node)", "private long getPlayTimeForNode(long overallPlayTime, Node node, boolean inReverse)", "private void startAnimation()", "private void addDummyListener()", "private void removeDummyListener()", "private int findLatestEventIdForTime(long currentPlayTime)", "private void endAnimation()", "private void removeAnimationCallback()", "private void addAnimationCallback(long delay)", "public AnimatorSet clone()", "public boolean canReverse()", "public void reverse()", "public String toString()", "private void printChildCount()", "private void createDependencyGraph()", "private void sortAnimationEvents()", "private void updatePlayTime(Node parent, ArrayList<Node> visited)", "private void findSiblings(Node node, ArrayList<Node> siblings)", "public boolean shouldPlayTogether()", "public long getTotalDuration()", "private Node getNodeForAnimation(Animator anim)" ]
+  "methodNames" : [ "public void playTogether(Animator... items)", "public void playTogether(Collection<Animator> items)", "public void playSequentially(Animator... items)", "public void playSequentially(List<Animator> items)", "public ArrayList<Animator> getChildAnimations()", "public void setTarget(Object target)", "public int getChangingConfigurations()", "public void setInterpolator(TimeInterpolator interpolator)", "public TimeInterpolator getInterpolator()", "public Builder play(Animator anim)", "public void cancel()", "private void callOnPlayingSet(Consumer<Animator> consumer)", "private void forceToEnd()", "public void end()", "public boolean isRunning()", "public boolean isStarted()", "public long getStartDelay()", "public void setStartDelay(long startDelay)", "public long getDuration()", "public AnimatorSet setDuration(long duration)", "public void setupStartValues()", "public void setupEndValues()", "public void pause()", "public void resume()", "public void start()", " void startWithoutPulsing(boolean inReverse)", "private void initAnimation()", "private void start(boolean inReverse, boolean selfPulse)", "private static boolean isEmptySet(AnimatorSet set)", "private void updateAnimatorsDuration()", " void skipToEndValue(boolean inReverse)", "private void animateBasedOnPlayTime(long currentPlayTime, long lastPlayTime, boolean inReverse)", "private int findNextIndex(long playTime, long[] startEndTimes)", " void animateSkipToEnds(long currentPlayTime, long lastPlayTime)", " void animateValuesInRange(long currentPlayTime, long lastPlayTime)", "private long[] ensureChildStartAndEndTimes()", " void getStartAndEndTimes(LongArray times, long offset)", " boolean isInitialized()", "public void setCurrentPlayTime(long playTime)", "public long getCurrentPlayTime()", "private void initChildren()", "public boolean doAnimationFrame(long frameTime)", "public void commitAnimationFrame(long frameTime)", " boolean pulseAnimationFrame(long frameTime)", "private void handleAnimationEvents(int startId, int latestId, long playTime)", "private void pulseFrame(Node node, long animPlayTime)", "private long getPlayTimeForNodeIncludingDelay(long overallPlayTime, Node node)", "private long getPlayTimeForNodeIncludingDelay(long overallPlayTime, Node node, boolean inReverse)", "private void startAnimation()", "private void addAnimationEndListener()", "private void removeAnimationEndListener()", "private int findLatestEventIdForTime(long currentPlayTime)", "private void endAnimation()", "private void removeAnimationCallback()", "private void addAnimationCallback(long delay)", "public AnimatorSet clone()", "public boolean canReverse()", "public void reverse()", "public String toString()", "private void printChildCount()", "private void createDependencyGraph()", "private void sortAnimationEvents()", "private void updatePlayTime(Node parent, ArrayList<Node> visited)", "private void findSiblings(Node node, ArrayList<Node> siblings)", "public boolean shouldPlayTogether()", "public long getTotalDuration()", "private Node getNodeForAnimation(Animator anim)" ],
+  "variableNames" : [ "TAG", "mPlayingSet", "mNodeMap", "mEvents", "mNodes", "mDependencyDirty", "mStarted", "mStartDelay", "mDelayAnim", "mRootNode", "mDuration", "mInterpolator", "mTotalDuration", "mShouldIgnoreEndWithoutStart", "mShouldResetValuesAtStart", "mEndCanBeCalled", "mLastFrameTime", "mFirstFrame", "mLastEventId", "mReversing", "mSelfPulse", "mSeekState", "mChildrenInitialized", "mPauseTime", "mChildStartAndStopTimes", "mAnimationEndListener" ]
 }

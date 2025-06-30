@@ -1,13 +1,14 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/content/pm/UserInfo.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/content/pm/UserInfo.java",
   "packageName" : "android.content.pm",
   "className" : "UserInfo",
   "comment" : "\n * Per-user information.\n *\n * <p>There are 3 base properties of users: {@link #FLAG_SYSTEM}, {@link #FLAG_FULL}, and\n * {@link #FLAG_PROFILE}. Every user must have one of the following combination of these\n * flags:\n * <ul>\n *    <li>FLAG_SYSTEM (user {@link UserHandle#USER_SYSTEM} on a headless-user-0 device)</li>\n *    <li>FLAG_SYSTEM and FLAG_FULL (user {@link UserHandle#USER_SYSTEM} on a regular device)</li>\n *    <li>FLAG_FULL (non-profile secondary user)</li>\n *    <li>FLAG_PROFILE (profile users)</li>\n * </ul>\n * Users can have also have additional flags (such as FLAG_GUEST) as appropriate.\n *\n * @hide\n ",
+  "links" : [ "android.os.UserHandle#USER_SYSTEM", "#FLAG_PROFILE", "#FLAG_SYSTEM", "#FLAG_FULL" ],
   "variables" : [ {
     "name" : "FLAG_PRIMARY",
     "type" : "int",
-    "comment" : "\n     * Primary user. Only one user can have this flag set. It identifies the first human user\n     * on a device. This flag is not supported in headless system user mode.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Primary user. In practice, this is just synonymous with {@link #FLAG_SYSTEM}.\n     *\n     * <p>On many devices, this will also be the first human user.\n     * However, in {@link UserManager#isHeadlessSystemUserMode() headless system user mode}, this\n     * should be regarded as unsupported since the system user may not be a human.\n     *\n     * @deprecated For checking for user 0, use {@link #FLAG_SYSTEM}.\n     *             For checking for the designated \"main human user\", use {@link #FLAG_MAIN}.\n     ",
+    "links" : [ "#FLAG_SYSTEM", "#FLAG_MAIN", "android.os.UserManager#isHeadlessSystemUserMode()" ]
   }, {
     "name" : "FLAG_ADMIN",
     "type" : "int",
@@ -36,7 +37,7 @@
   }, {
     "name" : "FLAG_DISABLED",
     "type" : "int",
-    "comment" : "\n     * Indicates that this user is disabled.\n     *\n     * <p>Note: If an ephemeral user is disabled, it shouldn't be later re-enabled. Ephemeral users\n     * are disabled as their removal is in progress to indicate that they shouldn't be re-entered.\n     ",
+    "comment" : "\n     * Indicates that this user is disabled.\n     *\n     * <p> This is currently used to indicate that a Managed Profile, when created via\n     * DevicePolicyManager, has not yet been provisioned; once the DPC provisions it, a DPM call\n     * will manually set it to enabled.\n     *\n     * <p>Users that are slated for deletion are also generally set to disabled.\n     *\n     * <p>Note: If an ephemeral user is disabled, it shouldn't be later re-enabled. Ephemeral users\n     * are disabled as their removal is in progress to indicate that they shouldn't be re-entered.\n     ",
     "links" : [ ]
   }, {
     "name" : "FLAG_QUIET_MODE",
@@ -68,6 +69,21 @@
     "type" : "int",
     "comment" : "\n     * Indicates that this user is a profile human user, such as a managed profile.\n     * Mutually exclusive with {@link #FLAG_FULL}.\n     ",
     "links" : [ "#FLAG_FULL" ]
+  }, {
+    "name" : "FLAG_EPHEMERAL_ON_CREATE",
+    "type" : "int",
+    "comment" : "\n     * Indicates that this user is created in ephemeral mode via\n     * {@link IUserManager} create user.\n     *\n     * When a user is created with {@link #FLAG_EPHEMERAL}, {@link #FLAG_EPHEMERAL_ON_CREATE}\n     * is set internally within the user manager.\n     *\n     * When {@link #FLAG_EPHEMERAL_ON_CREATE} is set {@link IUserManager.setUserEphemeral}\n     * has no effect because a user that was created ephemeral can never be made non-ephemeral.\n     *\n     * {@link #FLAG_EPHEMERAL_ON_CREATE} should NOT be set by client's of user manager\n     *\n     * @hide\n     ",
+    "links" : [ "IUserManager.setUserEphemeral", "IUserManager", "#FLAG_EPHEMERAL_ON_CREATE", "#FLAG_EPHEMERAL" ]
+  }, {
+    "name" : "FLAG_MAIN",
+    "type" : "int",
+    "comment" : "\n     * Indicates that this user is the designated main user on the device. This user may have access\n     * to certain features which are limited to at most one user.\n     *\n     * <p>Currently, this will be the first user to go through setup on the device, but in future\n     * releases this status may be transferable or may even not be given to any users.\n     *\n     * <p>This is not necessarily the system user. For example, it will not be the system user on\n     * devices for which {@link UserManager#isHeadlessSystemUserMode()} returns true.\n     ",
+    "links" : [ "android.os.UserManager#isHeadlessSystemUserMode()" ]
+  }, {
+    "name" : "FLAG_FOR_TESTING",
+    "type" : "int",
+    "comment" : "\n     * Indicates that this user was created for the purposes of testing.\n     *\n     * <p>These users are subject to removal during tests and should not be used on actual devices\n     * used by humans.\n     *\n     * @hide\n     ",
+    "links" : [ ]
   }, {
     "name" : "NO_PROFILE_GROUP_ID",
     "type" : "int",
@@ -146,8 +162,13 @@
   }, {
     "name" : "preCreated",
     "type" : "boolean",
-    "comment" : "\n     * This is used to optimize the creation of an user, i.e. OEMs might choose to pre-create a\n     * number of users at the first boot, so the actual creation later is faster.\n     *\n     * <p>A {@code preCreated} user is not a real user yet, so it should not show up on regular\n     * user operations (other than user creation per se).\n     *\n     * <p>Once the pre-created is used to create a \"real\" user later on, {@code preCreate} is set to\n     * {@code false}.\n     ",
+    "comment" : "\n     * This is used to optimize the creation of a user, i.e. OEMs might choose to pre-create a\n     * number of users at the first boot, so the actual creation later is faster.\n     *\n     * <p>A {@code preCreated} user is not a real user yet, so it should not show up on regular\n     * user operations (other than user creation per se).\n     *\n     * <p>Once the pre-created is used to create a \"real\" user later on, {@code preCreated} is set\n     * to {@code false}.\n     *\n     * <p><b>NOTE: Pre-created users are deprecated. This field remains to be able to recognize\n     * pre-created users in older versions, but will eventually be removed.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "convertedFromPreCreated",
+    "type" : "boolean",
+    "comment" : "\n     * When {@code true}, it indicates this user was created by converting a {@link #preCreated}\n     * user.\n     *\n     * <p><b>NOTE: </b>only used for debugging purposes, it's not set when marshalled to a parcel.\n     *\n     * <p><b>NOTE: Pre-created users are deprecated. This field remains to be able to recognize\n     * pre-created users in older versions, but will eventually ve removed.\n     ",
+    "links" : [ "#preCreated" ]
   }, {
     "name" : "CREATOR",
     "type" : "Parcelable.Creator<UserInfo>",
@@ -162,8 +183,8 @@
   }, {
     "name" : "public boolean isPrimary()",
     "returnType" : "boolean",
-    "comment" : "",
-    "links" : [ ]
+    "comment" : "\n     * @deprecated For checking for user 0, compare {@link #id} to {@link UserHandle#USER_SYSTEM}.\n     *             For checking for the designated \"main human user\", use {@link #isMain()}.\n     ",
+    "links" : [ "android.os.UserHandle#USER_SYSTEM", "#isMain()", "#id" ]
   }, {
     "name" : "public boolean isAdmin()",
     "returnType" : "boolean",
@@ -190,10 +211,25 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean isEnabled()",
+    "name" : "public boolean isCloneProfile()",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "public boolean isCommunalProfile()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isPrivateProfile()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEnabled()",
+    "returnType" : "boolean",
+    "comment" : " See {@link #FLAG_DISABLED}",
+    "links" : [ "#FLAG_DISABLED" ]
   }, {
     "name" : "public boolean isQuietModeEnabled()",
     "returnType" : "boolean",
@@ -203,6 +239,11 @@
     "name" : "public boolean isEphemeral()",
     "returnType" : "boolean",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isForTesting()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
     "links" : [ ]
   }, {
     "name" : "public boolean isInitialized()",
@@ -220,25 +261,25 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean isSystemOnly()",
+    "name" : "public boolean isMain()",
     "returnType" : "boolean",
-    "comment" : "\n     * Returns true if the user is a split system user.\n     * <p>If {@link UserManager#isSplitSystemUser split system user mode} is not enabled,\n     * the method always returns false.\n     ",
-    "links" : [ "android.os.UserManager#isSplitSystemUser" ]
-  }, {
-    "name" : "public static boolean isSystemOnly(int userId)",
-    "returnType" : "boolean",
-    "comment" : "\n     * Returns true if the given user is a split system user.\n     * <p>If {@link UserManager#isSplitSystemUser split system user mode} is not enabled,\n     * the method always returns false.\n     ",
-    "links" : [ "android.os.UserManager#isSplitSystemUser" ]
+    "comment" : "\n     * @see #FLAG_MAIN\n     ",
+    "links" : [ ]
   }, {
     "name" : "public boolean supportsSwitchTo()",
     "returnType" : "boolean",
     "comment" : "\n     * @return true if this user can be switched to.\n     *",
     "links" : [ ]
   }, {
+    "name" : "private boolean canSwitchToHeadlessSystemUser()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if user is of type {@link UserManager#USER_TYPE_SYSTEM_HEADLESS} and\n     * {@link com.android.internal.R.bool.config_canSwitchToHeadlessSystemUser} is true.\n     ",
+    "links" : [ "android.os.UserManager#USER_TYPE_SYSTEM_HEADLESS", "com.android.internal.R.bool.config_canSwitchToHeadlessSystemUser" ]
+  }, {
     "name" : "public boolean supportsSwitchToByUser()",
     "returnType" : "boolean",
-    "comment" : "\n     * @return true if this user can be switched to by end user through UI.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * @return true if this user can be switched to by end user through UI.\n     * @deprecated Use {@link UserInfo#supportsSwitchTo} instead.\n     ",
+    "links" : [ "android.content.pm.UserInfo#supportsSwitchTo" ]
   }, {
     "name" : "public boolean canHaveProfile()",
     "returnType" : "boolean",
@@ -275,6 +316,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "FLAG_PRIMARY", "FLAG_ADMIN", "FLAG_GUEST", "FLAG_RESTRICTED", "FLAG_INITIALIZED", "FLAG_MANAGED_PROFILE", "FLAG_DISABLED", "FLAG_QUIET_MODE", "FLAG_EPHEMERAL", "FLAG_DEMO", "FLAG_FULL", "FLAG_SYSTEM", "FLAG_PROFILE", "NO_PROFILE_GROUP_ID", "id", "serialNumber", "name", "iconPath", "flags", "creationTime", "lastLoggedInTime", "lastLoggedInFingerprint", "userType", "profileGroupId", "restrictedProfileParentId", "profileBadge", "partial", "guestToRemove", "preCreated", "CREATOR" ],
-  "methodNames" : [ "public static String getDefaultUserType(@UserInfoFlag int userInfoFlag)", "public boolean isPrimary()", "public boolean isAdmin()", "public boolean isGuest()", "public boolean isRestricted()", "public boolean isProfile()", "public boolean isManagedProfile()", "public boolean isEnabled()", "public boolean isQuietModeEnabled()", "public boolean isEphemeral()", "public boolean isInitialized()", "public boolean isDemo()", "public boolean isFull()", "public boolean isSystemOnly()", "public static boolean isSystemOnly(int userId)", "public boolean supportsSwitchTo()", "public boolean supportsSwitchToByUser()", "public boolean canHaveProfile()", "public UserHandle getUserHandle()", "public String toString()", "public String toFullString()", "public static String flagsToString(int flags)", "public int describeContents()", "public void writeToParcel(Parcel dest, int parcelableFlags)" ]
+  "methodNames" : [ "public static String getDefaultUserType(@UserInfoFlag int userInfoFlag)", "public boolean isPrimary()", "public boolean isAdmin()", "public boolean isGuest()", "public boolean isRestricted()", "public boolean isProfile()", "public boolean isManagedProfile()", "public boolean isCloneProfile()", "public boolean isCommunalProfile()", "public boolean isPrivateProfile()", "public boolean isEnabled()", "public boolean isQuietModeEnabled()", "public boolean isEphemeral()", "public boolean isForTesting()", "public boolean isInitialized()", "public boolean isDemo()", "public boolean isFull()", "public boolean isMain()", "public boolean supportsSwitchTo()", "private boolean canSwitchToHeadlessSystemUser()", "public boolean supportsSwitchToByUser()", "public boolean canHaveProfile()", "public UserHandle getUserHandle()", "public String toString()", "public String toFullString()", "public static String flagsToString(int flags)", "public int describeContents()", "public void writeToParcel(Parcel dest, int parcelableFlags)" ],
+  "variableNames" : [ "FLAG_PRIMARY", "FLAG_ADMIN", "FLAG_GUEST", "FLAG_RESTRICTED", "FLAG_INITIALIZED", "FLAG_MANAGED_PROFILE", "FLAG_DISABLED", "FLAG_QUIET_MODE", "FLAG_EPHEMERAL", "FLAG_DEMO", "FLAG_FULL", "FLAG_SYSTEM", "FLAG_PROFILE", "FLAG_EPHEMERAL_ON_CREATE", "FLAG_MAIN", "FLAG_FOR_TESTING", "NO_PROFILE_GROUP_ID", "id", "serialNumber", "name", "iconPath", "flags", "creationTime", "lastLoggedInTime", "lastLoggedInFingerprint", "userType", "profileGroupId", "restrictedProfileParentId", "profileBadge", "partial", "guestToRemove", "preCreated", "convertedFromPreCreated", "CREATOR" ]
 }

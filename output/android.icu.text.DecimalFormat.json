@@ -1,0 +1,636 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/DecimalFormat.java",
+  "packageName" : "android.icu.text",
+  "className" : "DecimalFormat",
+  "comment" : "\n * <strong>[icu enhancement]</strong> ICU's replacement for {@link java.text.DecimalFormat}.&nbsp;Methods, fields, and other functionality specific to ICU are labeled '<strong>[icu]</strong>'.\n *\n * <p>\n * <strong>IMPORTANT:</strong> New users are strongly encouraged to see if\n * {@link NumberFormatter} fits their use case.  Although not deprecated, this\n * class, DecimalFormat, is only provided for java.text.DecimalFormat compatibility.\n * <hr>\n *\n * <code>DecimalFormat</code> is the primary\n * concrete subclass of {@link NumberFormat}. It has a variety of features designed to make it\n * possible to parse and format numbers in any locale, including support for Western, Arabic, or\n * Indic digits. It supports different flavors of numbers, including integers (\"123\"), fixed-point\n * numbers (\"123.4\"), scientific notation (\"1.23E4\"), percentages (\"12%\"), and currency amounts\n * (\"$123.00\", \"USD123.00\", \"123.00 US dollars\"). All of these flavors can be easily localized.\n *\n * <p>To obtain a number formatter for a specific locale (including the default locale), call one of\n * NumberFormat's factory methods such as {@link NumberFormat#getInstance}. Do not call\n * DecimalFormat constructors directly unless you know what you are doing.\n *\n * <p>DecimalFormat aims to comply with the specification <a\n * href=\"http://unicode.org/reports/tr35/tr35-numbers.html#Number_Format_Patterns\">UTS #35</a>. Read\n * the specification for more information on how all the properties in DecimalFormat fit together.\n *\n * <p><strong>NOTE:</strong> Starting in ICU 60, there is a new set of APIs for localized number\n * formatting that are designed to be an improvement over DecimalFormat.  New users are discouraged\n * from using DecimalFormat.  For more information, see the package android.icu.number.\n *\n * <h3>Example Usage</h3>\n *\n * <p>Customize settings on a DecimalFormat instance from the NumberFormat factory:\n *\n * <blockquote>\n *\n * <pre>\n * NumberFormat f = NumberFormat.getInstance(loc);\n * if (f instanceof DecimalFormat) {\n *     ((DecimalFormat) f).setDecimalSeparatorAlwaysShown(true);\n *     ((DecimalFormat) f).setMinimumGroupingDigits(2);\n * }\n * </pre>\n *\n * </blockquote>\n *\n * <p>Quick and dirty print out a number using the localized number, currency, and percent format\n * for each locale:\n *\n * <blockquote>\n *\n * <pre>\n * for (ULocale uloc : ULocale.getAvailableLocales()) {\n *     System.out.print(uloc + \":\\t\");\n *     System.out.print(NumberFormat.getInstance(uloc).format(1.23));\n *     System.out.print(\"\\t\");\n *     System.out.print(NumberFormat.getCurrencyInstance(uloc).format(1.23));\n *     System.out.print(\"\\t\");\n *     System.out.print(NumberFormat.getPercentInstance(uloc).format(1.23));\n *     System.out.println();\n * }\n * </pre>\n *\n * </blockquote>\n *\n * <h3>Properties and Symbols</h3>\n *\n * <p>A DecimalFormat object encapsulates a set of <em>properties</em> and a set of\n * <em>symbols</em>. Grouping size, rounding mode, and affixes are examples of properties. Locale\n * digits and the characters used for grouping and decimal separators are examples of symbols.\n *\n * <p>To set a custom set of symbols, use {@link #setDecimalFormatSymbols}. Use the various other\n * setters in this class to set custom values for the properties.\n *\n * <h3>Rounding</h3>\n *\n * <p>DecimalFormat provides three main strategies to specify the position at which numbers should\n * be rounded:\n *\n * <ol>\n *   <li><strong>Magnitude:</strong> Display a fixed number of fraction digits; this is the most\n *       common form.\n *   <li><strong>Increment:</strong> Round numbers to the closest multiple of a certain increment,\n *       such as 0.05. This is common in currencies.\n *   <li><strong>Significant Digits:</strong> Round numbers such that a fixed number of nonzero\n *       digits are shown. This is most common in scientific notation.\n * </ol>\n *\n * <p>It is not possible to specify more than one rounding strategy. For example, setting a rounding\n * increment in conjunction with significant digits results in undefined behavior.\n *\n * <p>It is also possible to specify the <em>rounding mode</em> to use. The default rounding mode is\n * \"half even\", which rounds numbers to their closest increment, with ties broken in favor of\n * trailing numbers being even. For more information, see {@link #setRoundingMode} and <a\n * href=\"https://unicode-org.github.io/icu/userguide/format_parse/numbers/rounding-modes\">the ICU\n * User Guide</a>.\n *\n * <h3>Pattern Strings</h3>\n *\n * <p>A <em>pattern string</em> is a way to serialize some of the available properties for decimal\n * formatting. However, not all properties are capable of being serialized into a pattern string;\n * see {@link #applyPattern} for more information.\n *\n * <p>Most users should not need to interface with pattern strings directly.\n *\n * <p>ICU DecimalFormat aims to follow the specification for pattern strings in <a\n * href=\"http://unicode.org/reports/tr35/tr35-numbers.html#Number_Format_Patterns\">UTS #35</a>.\n * Refer to that specification for more information on pattern string syntax.\n *\n * <h4>Pattern String BNF</h4>\n *\n * The following BNF is used when parsing the pattern string into property values:\n *\n * <pre>\n * pattern    := subpattern (';' subpattern)?\n * subpattern := prefix? number exponent? suffix?\n * number     := (integer ('.' fraction)?) | sigDigits\n * prefix     := '&#92;u0000'..'&#92;uFFFD' - specialCharacters\n * suffix     := '&#92;u0000'..'&#92;uFFFD' - specialCharacters\n * integer    := '#'* '0'* '0'\n * fraction   := '0'* '#'*\n * sigDigits  := '#'* '@' '@'* '#'*\n * exponent   := 'E' '+'? '0'* '0'\n * padSpec    := '*' padChar\n * padChar    := '&#92;u0000'..'&#92;uFFFD' - quote\n * &#32;\n * Notation:\n *   X*       0 or more instances of X\n *   X?       0 or 1 instances of X\n *   X|Y      either X or Y\n *   C..D     any character from C up to D, inclusive\n *   S-T      characters in S, except those in T\n * </pre>\n *\n * <p>The first subpattern is for positive numbers. The second (optional) subpattern is for negative\n * numbers.\n *\n * <p>Not indicated in the BNF syntax above:\n *\n * <ul>\n *   <li>The grouping separator ',' can occur inside the integer and sigDigits elements, between any\n *       two pattern characters of that element, as long as the integer or sigDigits element is not\n *       followed by the exponent element.\n *   <li>Two grouping intervals are recognized: That between the decimal point and the first\n *       grouping symbol, and that between the first and second grouping symbols. These intervals\n *       are identical in most locales, but in some locales they differ. For example, the pattern\n *       &quot;#,##,###&quot; formats the number 123456789 as &quot;12,34,56,789&quot;.\n *   <li>The pad specifier <code>padSpec</code> may appear before the prefix, after the prefix,\n *       before the suffix, after the suffix, or not at all.\n *   <li>In place of '0', the digits '1' through '9' may be used to indicate a rounding increment.\n * </ul>\n *\n * <h3>Parsing</h3>\n *\n * <p>DecimalFormat aims to be able to parse anything that it can output as a formatted string.\n *\n * <p>There are two primary parse modes: <em>lenient</em> and <em>strict</em>. Lenient mode should\n * be used if the goal is to parse user input to a number; strict mode should be used if the goal is\n * validation. The default is lenient mode. For more information, see {@link #setParseStrict}.\n *\n * <p><code>DecimalFormat</code> parses all Unicode characters that represent decimal digits, as\n * defined by {@link UCharacter#digit}. In addition, <code>DecimalFormat</code> also recognizes as\n * digits the ten consecutive characters starting with the localized zero digit defined in the\n * {@link DecimalFormatSymbols} object. During formatting, the {@link DecimalFormatSymbols}-based\n * digits are output.\n *\n * <p>Grouping separators are ignored in lenient mode (default). In strict mode, grouping separators\n * must match the locale-specified grouping sizes.\n *\n * <p>When using {@link #parseCurrency}, all currencies are accepted, not just the currency\n * currently set in the formatter. In addition, the formatter is able to parse every currency style\n * format for a particular locale no matter which style the formatter is constructed with. For\n * example, a formatter instance gotten from NumberFormat.getInstance(ULocale,\n * NumberFormat.CURRENCYSTYLE) can parse both \"USD1.00\" and \"3.00 US dollars\".\n *\n * <p>Whitespace characters (lenient mode) and control characters (lenient and strict mode),\n * collectively called \"ignorables\", do not need to match in identity or quantity between the\n * pattern string and the input string. For example, the pattern \"# %\" matches \"35 %\" (with a single\n * space), \"35%\" (with no space), \"35&nbsp;%\" (with a non-breaking space), and \"35&nbsp; %\" (with\n * multiple spaces). Arbitrary ignorables are also allowed at boundaries between the parts of the\n * number: prefix, number, exponent separator, and suffix. Ignorable whitespace characters are those\n * having the Unicode \"blank\" property for regular expressions, defined in UTS #18 Annex C, which is\n * \"horizontal\" whitespace, like spaces and tabs, but not \"vertical\" whitespace, like line breaks.\n * Ignorable control characters are those in the Unicode set [:Default_Ignorable_Code_Point:].\n *\n * <p>If {@link #parse(String, ParsePosition)} fails to parse a string, it returns <code>null</code>\n * and leaves the parse position unchanged. The convenience method {@link #parse(String)} indicates\n * parse failure by throwing a {@link java.text.ParseException}.\n *\n * <p>Under the hood, a state table parsing engine is used. To debug a parsing failure during\n * development, use the following pattern to print details about the state table transitions:\n *\n * <pre>\n * android.icu.impl.number.Parse.DEBUGGING = true;\n * df.parse(\"123.45\", ppos);\n * android.icu.impl.number.Parse.DEBUGGING = false;\n * </pre>\n *\n * <h3>Thread Safety and Best Practices</h3>\n *\n * <p>Starting with ICU 59, instances of DecimalFormat are thread-safe.\n *\n * <p>Under the hood, DecimalFormat maintains an immutable formatter object that is rebuilt whenever\n * any of the property setters are called. It is therefore best practice to call property setters\n * only during construction and not when formatting numbers online.\n *\n * @see java.text.Format\n * @see NumberFormat\n ",
+  "links" : [ "#applyPattern", "#setRoundingMode", "java.text.DecimalFormat", "#parse(String)", "android.icu.number.LocalizedNumberFormatter", "android.icu.text.NumberFormat#getInstance", "#parse(String", "#setParseStrict", "#parseCurrency", "android.icu.lang.UCharacter#digit", "#setDecimalFormatSymbols", "android.icu.text.DecimalFormatSymbols", "android.icu.text.NumberFormat", "java.text.ParseException" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " New serialization in ICU 59: declare different version from ICU 58. ",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionOnStream",
+    "type" : "int",
+    "comment" : "\n   * One non-transient field such that deserialization can determine the version of the class. This\n   * field has existed since the very earliest versions of DecimalFormat.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "properties",
+    "type" : "DecimalFormatProperties",
+    "comment" : " final ",
+    "links" : [ ]
+  }, {
+    "name" : "symbols",
+    "type" : "DecimalFormatSymbols",
+    "comment" : "\n   * The symbols for the current locale. Volatile because threads may read and write at the same\n   * time.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "formatter",
+    "type" : "LocalizedNumberFormatter",
+    "comment" : "\n   * The pre-computed formatter object. Setters cause this to be re-computed atomically. The {@link\n   * #format} method uses the formatter directly without needing to synchronize. Volatile because\n   * threads may read and write at the same time.\n   ",
+    "links" : [ "#format" ]
+  }, {
+    "name" : "exportedProperties",
+    "type" : "DecimalFormatProperties",
+    "comment" : "\n   * The effective properties as exported from the formatter object. Volatile because threads may\n   * read and write at the same time.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "parser",
+    "type" : "NumberParserImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "currencyParser",
+    "type" : "NumberParserImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "icuMathContextForm",
+    "type" : "int",
+    "comment" : " NOTE: This value is not serialized. (should it be?)",
+    "links" : [ ]
+  }, {
+    "name" : "MINIMUM_GROUPING_DIGITS_AUTO",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #setMinimumGroupingDigits(int)} to specify display\n   * grouping using the default strategy for all locales.\n   *\n   * @see #setMinimumGroupingDigits(int)\n   * @see #MINIMUM_GROUPING_DIGITS_MIN2\n   ",
+    "links" : [ "#setMinimumGroupingDigits(int)" ]
+  }, {
+    "name" : "MINIMUM_GROUPING_DIGITS_MIN2",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #setMinimumGroupingDigits(int)} to specify display\n   * grouping using locale defaults, except do not show grouping on values smaller than\n   * 10000 (such that there is a minimum of two digits before the first separator).\n   *\n   * @see #setMinimumGroupingDigits(int)\n   * @see #MINIMUM_GROUPING_DIGITS_AUTO\n   ",
+    "links" : [ "#setMinimumGroupingDigits(int)" ]
+  }, {
+    "name" : "PAD_BEFORE_PREFIX",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #getPadPosition()} and {@link #setPadPosition(int)} to specify pad\n   * characters inserted before the prefix.\n   *\n   * @see #setPadPosition\n   * @see #getPadPosition\n   * @see #PAD_AFTER_PREFIX\n   * @see #PAD_BEFORE_SUFFIX\n   * @see #PAD_AFTER_SUFFIX\n   ",
+    "links" : [ "#setPadPosition(int)", "#getPadPosition()" ]
+  }, {
+    "name" : "PAD_AFTER_PREFIX",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #getPadPosition()} and {@link #setPadPosition(int)} to specify pad\n   * characters inserted after the prefix.\n   *\n   * @see #setPadPosition\n   * @see #getPadPosition\n   * @see #PAD_BEFORE_PREFIX\n   * @see #PAD_BEFORE_SUFFIX\n   * @see #PAD_AFTER_SUFFIX\n   ",
+    "links" : [ "#setPadPosition(int)", "#getPadPosition()" ]
+  }, {
+    "name" : "PAD_BEFORE_SUFFIX",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #getPadPosition()} and {@link #setPadPosition(int)} to specify pad\n   * characters inserted before the suffix.\n   *\n   * @see #setPadPosition\n   * @see #getPadPosition\n   * @see #PAD_BEFORE_PREFIX\n   * @see #PAD_AFTER_PREFIX\n   * @see #PAD_AFTER_SUFFIX\n   ",
+    "links" : [ "#setPadPosition(int)", "#getPadPosition()" ]
+  }, {
+    "name" : "PAD_AFTER_SUFFIX",
+    "type" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Constant for {@link #getPadPosition()} and {@link #setPadPosition(int)} to specify pad\n   * characters inserted after the suffix.\n   *\n   * @see #setPadPosition\n   * @see #getPadPosition\n   * @see #PAD_BEFORE_PREFIX\n   * @see #PAD_AFTER_PREFIX\n   * @see #PAD_BEFORE_SUFFIX\n   ",
+    "links" : [ "#setPadPosition(int)", "#getPadPosition()" ]
+  } ],
+  "methods" : [ {
+    "name" : "private static DecimalFormatSymbols getDefaultSymbols()",
+    "returnType" : "DecimalFormatSymbols",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void applyPattern(String pattern)",
+    "returnType" : "void",
+    "comment" : "\n   * Parses the given pattern string and overwrites the settings specified in the pattern string.\n   * The properties corresponding to the following setters are overwritten, either with their\n   * default values or with the value specified in the pattern string:\n   *\n   * <ol>\n   *   <li>{@link #setDecimalSeparatorAlwaysShown}\n   *   <li>{@link #setExponentSignAlwaysShown}\n   *   <li>{@link #setFormatWidth}\n   *   <li>{@link #setGroupingSize}\n   *   <li>{@link #setMultiplier} (percent/permille)\n   *   <li>{@link #setMaximumFractionDigits}\n   *   <li>{@link #setMaximumIntegerDigits}\n   *   <li>{@link #setMaximumSignificantDigits}\n   *   <li>{@link #setMinimumExponentDigits}\n   *   <li>{@link #setMinimumFractionDigits}\n   *   <li>{@link #setMinimumIntegerDigits}\n   *   <li>{@link #setMinimumSignificantDigits}\n   *   <li>{@link #setPadPosition}\n   *   <li>{@link #setPadCharacter}\n   *   <li>{@link #setRoundingIncrement}\n   *   <li>{@link #setSecondaryGroupingSize}\n   * </ol>\n   *\n   * All other settings remain untouched.\n   *\n   * <p>For more information on pattern strings, see <a\n   * href=\"http://unicode.org/reports/tr35/tr35-numbers.html#Number_Format_Patterns\">UTS #35</a>.\n   ",
+    "links" : [ "#setDecimalSeparatorAlwaysShown", "#setMaximumIntegerDigits", "#setFormatWidth", "#setMinimumExponentDigits", "#setMinimumFractionDigits", "#setMaximumSignificantDigits", "#setMinimumSignificantDigits", "#setGroupingSize", "#setMinimumIntegerDigits", "#setSecondaryGroupingSize", "#setExponentSignAlwaysShown", "#setPadPosition", "#setMaximumFractionDigits", "#setRoundingIncrement", "#setPadCharacter", "#setMultiplier" ]
+  }, {
+    "name" : "public synchronized void applyLocalizedPattern(String localizedPattern)",
+    "returnType" : "void",
+    "comment" : "\n   * Converts the given string to standard notation and then parses it using {@link #applyPattern}.\n   * This method is provided for backwards compatibility and should not be used in new projects.\n   *\n   * <p>Localized notation means that instead of using generic placeholders in the pattern, you use\n   * the corresponding locale-specific characters instead. For example, in locale <em>fr-FR</em>,\n   * the period in the pattern \"0.000\" means \"decimal\" in standard notation (as it does in every\n   * other locale), but it means \"grouping\" in localized notation.\n   *\n   * @param localizedPattern The pattern string in localized notation.\n   ",
+    "links" : [ "#applyPattern" ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized void writeObject(ObjectOutputStream oos) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Custom serialization: save property bag and symbols; the formatter object can be re-created\n   * from just that amount of information.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n   * Custom serialization: re-create object from serialized property bag and symbols. Also supports\n   * reading from the legacy (pre-ICU4J 59) format and converting it to the new form.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(double number, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(long number, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(BigInteger number, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(java.math.BigDecimal number, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(BigDecimal number, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public AttributedCharacterIterator formatToCharacterIterator(Object obj)",
+    "returnType" : "AttributedCharacterIterator",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(CurrencyAmount currAmt, StringBuffer result, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Number parse(String text, ParsePosition parsePosition)",
+    "returnType" : "Number",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public CurrencyAmount parseCurrency(CharSequence text, ParsePosition parsePosition)",
+    "returnType" : "CurrencyAmount",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized DecimalFormatSymbols getDecimalFormatSymbols()",
+    "returnType" : "DecimalFormatSymbols",
+    "comment" : "\n   * Returns a copy of the decimal format symbols used by this formatter.\n   *\n   * @return desired DecimalFormatSymbols\n   * @see DecimalFormatSymbols\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setDecimalFormatSymbols(DecimalFormatSymbols newSymbols)",
+    "returnType" : "void",
+    "comment" : "\n   * Sets the decimal format symbols used by this formatter. The formatter uses a copy of the\n   * provided symbols.\n   *\n   * @param newSymbols desired DecimalFormatSymbols\n   * @see DecimalFormatSymbols\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized String getPositivePrefix()",
+    "returnType" : "String",
+    "comment" : "\n   * <strong>Affixes:</strong> Gets the positive prefix string currently being used to format\n   * numbers.\n   *\n   * <p>If the affix was specified via the pattern, the string returned by this method will have\n   * locale symbols substituted in place of special characters according to the LDML specification.\n   * If the affix was specified via {@link #setPositivePrefix}, the string will be returned\n   * literally.\n   *\n   * @return The string being prepended to positive numbers.\n   ",
+    "links" : [ "#setPositivePrefix" ]
+  }, {
+    "name" : "public synchronized void setPositivePrefix(String prefix)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Affixes:</strong> Sets the string to prepend to positive numbers. For example, if you\n   * set the value \"#\", then the number 123 will be formatted as \"#123\" in the locale\n   * <em>en-US</em>.\n   *\n   * <p>Using this method overrides the affix specified via the pattern, and unlike the pattern, the\n   * string given to this method will be interpreted literally WITHOUT locale symbol substitutions.\n   *\n   * @param prefix The literal string to prepend to positive numbers.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized String getNegativePrefix()",
+    "returnType" : "String",
+    "comment" : "\n   * <strong>Affixes:</strong> Gets the negative prefix string currently being used to format\n   * numbers.\n   *\n   * <p>If the affix was specified via the pattern, the string returned by this method will have\n   * locale symbols substituted in place of special characters according to the LDML specification.\n   * If the affix was specified via {@link #setNegativePrefix}, the string will be returned\n   * literally.\n   *\n   * @return The string being prepended to negative numbers.\n   ",
+    "links" : [ "#setNegativePrefix" ]
+  }, {
+    "name" : "public synchronized void setNegativePrefix(String prefix)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Affixes:</strong> Sets the string to prepend to negative numbers. For example, if you\n   * set the value \"#\", then the number -123 will be formatted as \"#123\" in the locale\n   * <em>en-US</em> (overriding the implicit default '-' in the pattern).\n   *\n   * <p>Using this method overrides the affix specified via the pattern, and unlike the pattern, the\n   * string given to this method will be interpreted literally WITHOUT locale symbol substitutions.\n   *\n   * @param prefix The literal string to prepend to negative numbers.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized String getPositiveSuffix()",
+    "returnType" : "String",
+    "comment" : "\n   * <strong>Affixes:</strong> Gets the positive suffix string currently being used to format\n   * numbers.\n   *\n   * <p>If the affix was specified via the pattern, the string returned by this method will have\n   * locale symbols substituted in place of special characters according to the LDML specification.\n   * If the affix was specified via {@link #setPositiveSuffix}, the string will be returned\n   * literally.\n   *\n   * @return The string being appended to positive numbers.\n   ",
+    "links" : [ "#setPositiveSuffix" ]
+  }, {
+    "name" : "public synchronized void setPositiveSuffix(String suffix)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Affixes:</strong> Sets the string to append to positive numbers. For example, if you\n   * set the value \"#\", then the number 123 will be formatted as \"123#\" in the locale\n   * <em>en-US</em>.\n   *\n   * <p>Using this method overrides the affix specified via the pattern, and unlike the pattern, the\n   * string given to this method will be interpreted literally WITHOUT locale symbol substitutions.\n   *\n   * @param suffix The literal string to append to positive numbers.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized String getNegativeSuffix()",
+    "returnType" : "String",
+    "comment" : "\n   * <strong>Affixes:</strong> Gets the negative suffix string currently being used to format\n   * numbers.\n   *\n   * <p>If the affix was specified via the pattern, the string returned by this method will have\n   * locale symbols substituted in place of special characters according to the LDML specification.\n   * If the affix was specified via {@link #setNegativeSuffix}, the string will be returned\n   * literally.\n   *\n   * @return The string being appended to negative numbers.\n   ",
+    "links" : [ "#setNegativeSuffix" ]
+  }, {
+    "name" : "public synchronized void setNegativeSuffix(String suffix)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Affixes:</strong> Sets the string to append to negative numbers. For example, if you\n   * set the value \"#\", then the number 123 will be formatted as \"123#\" in the locale\n   * <em>en-US</em>.\n   *\n   * <p>Using this method overrides the affix specified via the pattern, and unlike the pattern, the\n   * string given to this method will be interpreted literally WITHOUT locale symbol substitutions.\n   *\n   * @param suffix The literal string to append to negative numbers.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isSignAlwaysShown()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether the sign is being shown on positive numbers.\n   *\n   * @return Whether the sign is shown on positive numbers and zero.\n   * @see #setSignAlwaysShown\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setSignAlwaysShown(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * Sets whether to always shown the plus sign ('+' in <em>en</em>) on positive numbers. The rules\n   * in UTS #35 section 3.2.1 will be followed to ensure a locale-aware placement of the sign.\n   *\n   * <p>More specifically, the following strategy will be used to place the plus sign:\n   *\n   * <ol>\n   *   <li><em>Patterns without a negative subpattern:</em> The locale's plus sign will be prepended\n   *       to the positive prefix.\n   *   <li><em>Patterns with a negative subpattern without a '-' sign (e.g., accounting):</em> The\n   *       locale's plus sign will be prepended to the positive prefix, as in case 1.\n   *   <li><em>Patterns with a negative subpattern that has a '-' sign:</em> The locale's plus sign\n   *       will substitute the '-' in the negative subpattern. The positive subpattern will be\n   *       unused.\n   * </ol>\n   *\n   * This method is designed to be used <em>instead of</em> applying a pattern containing an\n   * explicit plus sign, such as \"+0;-0\". The behavior when combining this method with explicit plus\n   * signs in the pattern is undefined.\n   *\n   * @param value true to always show a sign; false to hide the sign on positive numbers and zero.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMultiplier()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the multiplier being applied to numbers before they are formatted.\n   *\n   * @see #setMultiplier\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMultiplier(int multiplier)",
+    "returnType" : "void",
+    "comment" : "\n   * Sets a number that will be used to multiply all numbers prior to formatting. For example, when\n   * formatting percents, a multiplier of 100 can be used.\n   *\n   * <p>If a percent or permille sign is specified in the pattern, the multiplier is automatically\n   * set to 100 or 1000, respectively.\n   *\n   * <p>If the number specified here is a power of 10, a more efficient code path will be used.\n   *\n   * @param multiplier The number by which all numbers passed to {@link #format} will be multiplied.\n   * @throws IllegalArgumentException If the given multiplier is zero.\n   * @throws ArithmeticException when inverting multiplier produces a non-terminating decimal result\n   *         in conjunction with MathContext of unlimited precision.\n   ",
+    "links" : [ "#format" ]
+  }, {
+    "name" : "public synchronized java.math.BigDecimal getRoundingIncrement()",
+    "returnType" : "java.math.BigDecimal",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the increment to which numbers are being rounded.\n   *\n   * @see #setRoundingIncrement\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setRoundingIncrement(java.math.BigDecimal increment)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Sets an increment, or interval, to which\n   * numbers are rounded. For example, a rounding increment of 0.05 will cause the number 1.23 to be\n   * rounded to 1.25 in the default rounding mode.\n   *\n   * <p>The rounding increment can be specified via the pattern string: for example, the pattern\n   * \"#,##0.05\" encodes a rounding increment of 0.05.\n   *\n   * <p>The rounding increment is applied <em>after</em> any multipliers might take effect; for\n   * example, in scientific notation or when {@link #setMultiplier} is used.\n   *\n   * <p>See {@link #setMaximumFractionDigits} and {@link #setMaximumSignificantDigits} for two other\n   * ways of specifying rounding strategies.\n   *\n   * @param increment The increment to which numbers are to be rounded.\n   * @see #setRoundingMode\n   * @see #setMaximumFractionDigits\n   * @see #setMaximumSignificantDigits\n   ",
+    "links" : [ "#setMaximumSignificantDigits", "#setMaximumFractionDigits", "#setMultiplier" ]
+  }, {
+    "name" : "public synchronized void setRoundingIncrement(BigDecimal increment)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Overload of {@link\n   * #setRoundingIncrement(java.math.BigDecimal)}.\n   *\n   * @param increment The increment to which numbers are to be rounded.\n   * @see #setRoundingIncrement\n   ",
+    "links" : [ "#setRoundingIncrement(java.math.BigDecimal)" ]
+  }, {
+    "name" : "public synchronized void setRoundingIncrement(double increment)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Overload of {@link\n   * #setRoundingIncrement(java.math.BigDecimal)}.\n   *\n   * @param increment The increment to which numbers are to be rounded.\n   * @see #setRoundingIncrement\n   ",
+    "links" : [ "#setRoundingIncrement(java.math.BigDecimal)" ]
+  }, {
+    "name" : "public synchronized int getRoundingMode()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the rounding mode being used to round numbers.\n   *\n   * @see #setRoundingMode\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setRoundingMode(int roundingMode)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Rounding and Digit Limits:</strong> Sets the {@link RoundingMode} used to round\n   * numbers. The default rounding mode is HALF_EVEN, which rounds decimals to their closest whole\n   * number, and rounds to the closest even number if at the midpoint.\n   *\n   * <p>For more detail on rounding modes, see <a\n   * href=\"https://unicode-org.github.io/icu/userguide/format_parse/numbers/rounding-modes\">the ICU\n   * User Guide</a>.\n   *\n   * <p>For backwards compatibility, the rounding mode is specified as an int argument, which can be\n   * from either the constants in {@link BigDecimal} or the ordinal value of {@link RoundingMode}.\n   * The following two calls are functionally equivalent.\n   *\n   * <pre>\n   * df.setRoundingMode(BigDecimal.ROUND_CEILING);\n   * df.setRoundingMode(RoundingMode.CEILING.ordinal());\n   * </pre>\n   *\n   * @param roundingMode The integer constant rounding mode to use when formatting numbers.\n   ",
+    "links" : [ "android.icu.math.BigDecimal", "java.math.RoundingMode" ]
+  }, {
+    "name" : "public synchronized java.math.MathContext getMathContext()",
+    "returnType" : "java.math.MathContext",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the {@link java.math.MathContext} being used to round numbers.\n   *\n   * @see #setMathContext\n   ",
+    "links" : [ "java.math.MathContext" ]
+  }, {
+    "name" : "public synchronized void setMathContext(java.math.MathContext mathContext)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Sets the {@link java.math.MathContext} used\n   * to round numbers. A \"math context\" encodes both a rounding mode and a number of significant\n   * digits. Most users should call {@link #setRoundingMode} and/or {@link\n   * #setMaximumSignificantDigits} instead of this method.\n   *\n   * <p>When formatting, since no division is ever performed, the default MathContext is unlimited\n   * significant digits. However, when division occurs during parsing to correct for percentages and\n   * multipliers, a MathContext of 34 digits, the IEEE 754R Decimal128 standard, is used by default.\n   * If you require more than 34 digits when parsing, you can set a custom MathContext using this\n   * method.\n   *\n   * @param mathContext The MathContext to use when rounding numbers.\n   * @throws ArithmeticException when inverting multiplier produces a non-terminating decimal result\n   *         in conjunction with MathContext of unlimited precision.\n   * @see java.math.MathContext\n   ",
+    "links" : [ "#setMaximumSignificantDigits", "#setRoundingMode", "java.math.MathContext" ]
+  }, {
+    "name" : "public synchronized MathContext getMathContextICU()",
+    "returnType" : "MathContext",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the {@link android.icu.math.MathContext} being used to round numbers.\n   *\n   * @see #setMathContext\n   ",
+    "links" : [ "android.icu.math.MathContext" ]
+  }, {
+    "name" : "public synchronized void setMathContextICU(MathContext mathContextICU)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Overload of {@link #setMathContext} for\n   * {@link android.icu.math.MathContext}.\n   *\n   * @param mathContextICU The MathContext to use when rounding numbers.\n   * @throws ArithmeticException when inverting multiplier produces a non-terminating decimal result\n   *         in conjunction with MathContext of unlimited precision.\n   * @see #setMathContext(java.math.MathContext)\n   ",
+    "links" : [ "android.icu.math.MathContext", "#setMathContext" ]
+  }, {
+    "name" : "public synchronized int getMinimumIntegerDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the effective minimum number of digits before the decimal separator.\n   *\n   * @see #setMinimumIntegerDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMinimumIntegerDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Rounding and Digit Limits:</strong> Sets the minimum number of digits to display before\n   * the decimal separator. If the number has fewer than this many digits, the number is padded with\n   * zeros.\n   *\n   * <p>For example, if minimum integer digits is 3, the number 12.3 will be printed as \"001.23\".\n   *\n   * <p>Minimum integer and minimum and maximum fraction digits can be specified via the pattern\n   * string. For example, \"#,#00.00#\" has 2 minimum integer digits, 2 minimum fraction digits, and 3\n   * maximum fraction digits. Note that it is not possible to specify maximum integer digits in the\n   * pattern except in scientific notation.\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * @param value The minimum number of digits before the decimal separator.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMaximumIntegerDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the effective maximum number of digits before the decimal separator.\n   *\n   * @see #setMaximumIntegerDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMaximumIntegerDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Rounding and Digit Limits:</strong> Sets the maximum number of digits to display before\n   * the decimal separator. If the number has more than this many digits, the number is truncated.\n   *\n   * <p>For example, if maximum integer digits is 3, the number 12345 will be printed as \"345\".\n   *\n   * <p>Minimum integer and minimum and maximum fraction digits can be specified via the pattern\n   * string. For example, \"#,#00.00#\" has 2 minimum integer digits, 2 minimum fraction digits, and 3\n   * maximum fraction digits. Note that it is not possible to specify maximum integer digits in the\n   * pattern except in scientific notation.\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * @param value The maximum number of digits before the decimal separator.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMinimumFractionDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the effective minimum number of integer digits after the decimal separator.\n   *\n   * @see #setMaximumIntegerDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMinimumFractionDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Rounding and Digit Limits:</strong> Sets the minimum number of digits to display after\n   * the decimal separator. If the number has fewer than this many digits, the number is padded with\n   * zeros.\n   *\n   * <p>For example, if minimum fraction digits is 2, the number 123.4 will be printed as \"123.40\".\n   *\n   * <p>Minimum integer and minimum and maximum fraction digits can be specified via the pattern\n   * string. For example, \"#,#00.00#\" has 2 minimum integer digits, 2 minimum fraction digits, and 3\n   * maximum fraction digits. Note that it is not possible to specify maximum integer digits in the\n   * pattern except in scientific notation.\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * <p>See {@link #setRoundingIncrement} and {@link #setMaximumSignificantDigits} for two other\n   * ways of specifying rounding strategies.\n   *\n   * @param value The minimum number of integer digits after the decimal separator.\n   * @see #setRoundingMode\n   * @see #setRoundingIncrement\n   * @see #setMaximumSignificantDigits\n   ",
+    "links" : [ "#setMaximumSignificantDigits", "#setRoundingIncrement" ]
+  }, {
+    "name" : "public synchronized int getMaximumFractionDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the effective maximum number of integer digits after the decimal separator.\n   *\n   * @see #setMaximumIntegerDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMaximumFractionDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Rounding and Digit Limits:</strong> Sets the maximum number of digits to display after\n   * the decimal separator. If the number has more than this many digits, the number is rounded\n   * according to the rounding mode.\n   *\n   * <p>For example, if maximum fraction digits is 2, the number 123.456 will be printed as\n   * \"123.46\".\n   *\n   * <p>Minimum integer and minimum and maximum fraction digits can be specified via the pattern\n   * string. For example, \"#,#00.00#\" has 2 minimum integer digits, 2 minimum fraction digits, and 3\n   * maximum fraction digits. Note that it is not possible to specify maximum integer digits in the\n   * pattern except in scientific notation.\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * @param value The maximum number of integer digits after the decimal separator.\n   * @see #setRoundingMode\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean areSignificantDigitsUsed()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether significant digits are being used in rounding.\n   *\n   * @see #setSignificantDigitsUsed\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setSignificantDigitsUsed(boolean useSignificantDigits)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Sets whether significant digits are to be\n   * used in rounding.\n   *\n   * <p>Calling <code>df.setSignificantDigitsUsed(true)</code> is functionally equivalent to:\n   *\n   * <pre>\n   * df.setMinimumSignificantDigits(1);\n   * df.setMaximumSignificantDigits(6);\n   * </pre>\n   *\n   * @param useSignificantDigits true to enable significant digit rounding; false to disable it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMinimumSignificantDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the effective minimum number of significant digits displayed.\n   *\n   * @see #setMinimumSignificantDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMinimumSignificantDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Sets the minimum number of significant\n   * digits to be displayed. If the number of significant digits is less than this value, the number\n   * will be padded with zeros as necessary.\n   *\n   * <p>For example, if minimum significant digits is 3 and the number is 1.2, the number will be\n   * printed as \"1.20\".\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * @param value The minimum number of significant digits to display.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMaximumSignificantDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the effective maximum number of significant digits displayed.\n   *\n   * @see #setMaximumSignificantDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMaximumSignificantDigits(int value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Rounding and Digit Limits:</strong> Sets the maximum number of significant\n   * digits to be displayed. If the number of significant digits in the number exceeds this value,\n   * the number will be rounded according to the current rounding mode.\n   *\n   * <p>For example, if maximum significant digits is 3 and the number is 12345, the number will be\n   * printed as \"12300\".\n   *\n   * <p>If minimum and maximum integer, fraction, or significant digits conflict with each other,\n   * the most recently specified value is used. For example, if there is a formatter with minInt=5,\n   * and then you set maxInt=3, then minInt will be changed to 3.\n   *\n   * <p>See {@link #setRoundingIncrement} and {@link #setMaximumFractionDigits} for two other ways\n   * of specifying rounding strategies.\n   *\n   * @param value The maximum number of significant digits to display.\n   * @see #setRoundingMode\n   * @see #setRoundingIncrement\n   * @see #setMaximumFractionDigits\n   ",
+    "links" : [ "#setMaximumFractionDigits", "#setRoundingIncrement" ]
+  }, {
+    "name" : "public synchronized int getFormatWidth()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the minimum number of characters in formatted output.\n   *\n   * @see #setFormatWidth\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setFormatWidth(int width)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Padding:</strong> Sets the minimum width of the string output by the formatting\n   * pipeline. For example, if padding is enabled and paddingWidth is set to 6, formatting the\n   * number \"3.14159\" with the pattern \"0.00\" will result in \"··3.14\" if '·' is your padding string.\n   *\n   * <p>If the number is longer than your padding width, the number will display as if no padding\n   * width had been specified, which may result in strings longer than the padding width.\n   *\n   * <p>Padding can be specified in the pattern string using the '*' symbol. For example, the format\n   * \"*x######0\" has a format width of 7 and a pad character of 'x'.\n   *\n   * <p>Padding is currently counted in UTF-16 code units; see <a\n   * href=\"https://unicode-org.atlassian.net/browse/ICU-13034\">ticket #13034</a> for more information.\n   *\n   * @param width The minimum number of characters in the output.\n   * @see #setPadCharacter\n   * @see #setPadPosition\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized char getPadCharacter()",
+    "returnType" : "char",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the character used for padding.\n   *\n   * @see #setPadCharacter\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setPadCharacter(char padChar)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Padding:</strong> Sets the character used to pad numbers that are narrower than\n   * the width specified in {@link #setFormatWidth}.\n   *\n   * <p>In the pattern string, the padding character is the token that follows '*' before or after\n   * the prefix or suffix.\n   *\n   * @param padChar The character used for padding.\n   * @see #setFormatWidth\n   ",
+    "links" : [ "#setFormatWidth" ]
+  }, {
+    "name" : "public synchronized int getPadPosition()",
+    "returnType" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the position used for padding.\n   *\n   * @see #setPadPosition\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setPadPosition(int padPos)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Padding:</strong> Sets the position where to insert the pad character when\n   * narrower than the width specified in {@link #setFormatWidth}. For example, consider the pattern\n   * \"P123S\" with padding width 8 and padding char \"*\". The four positions are:\n   *\n   * <ul>\n   *   <li>{@link DecimalFormat#PAD_BEFORE_PREFIX} ⇒ \"***P123S\"\n   *   <li>{@link DecimalFormat#PAD_AFTER_PREFIX} ⇒ \"P***123S\"\n   *   <li>{@link DecimalFormat#PAD_BEFORE_SUFFIX} ⇒ \"P123***S\"\n   *   <li>{@link DecimalFormat#PAD_AFTER_SUFFIX} ⇒ \"P123S***\"\n   * </ul>\n   *\n   * @param padPos The position used for padding.\n   * @see #setFormatWidth\n   ",
+    "links" : [ "android.icu.text.DecimalFormat#PAD_BEFORE_PREFIX", "#setFormatWidth", "android.icu.text.DecimalFormat#PAD_AFTER_PREFIX", "android.icu.text.DecimalFormat#PAD_BEFORE_SUFFIX", "android.icu.text.DecimalFormat#PAD_AFTER_SUFFIX" ]
+  }, {
+    "name" : "public synchronized boolean isScientificNotation()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether scientific (exponential) notation is enabled on this formatter.\n   *\n   * @see #setScientificNotation\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setScientificNotation(boolean useScientific)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Scientific Notation:</strong> Sets whether this formatter should print in\n   * scientific (exponential) notation. For example, if scientific notation is enabled, the number\n   * 123000 will be printed as \"1.23E5\" in locale <em>en-US</em>. A locale-specific symbol is used\n   * as the exponent separator.\n   *\n   * <p>Calling <code>df.setScientificNotation(true)</code> is functionally equivalent to calling\n   * <code>df.setMinimumExponentDigits(1)</code>.\n   *\n   * @param useScientific true to enable scientific notation; false to disable it.\n   * @see #setMinimumExponentDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized byte getMinimumExponentDigits()",
+    "returnType" : "byte",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the minimum number of digits printed in the exponent in scientific notation.\n   *\n   * @see #setMinimumExponentDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMinimumExponentDigits(byte minExpDig)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Scientific Notation:</strong> Sets the minimum number of digits to be printed in\n   * the exponent. For example, if minimum exponent digits is 3, the number 123000 will be printed\n   * as \"1.23E005\".\n   *\n   * <p>This setting corresponds to the number of zeros after the 'E' in a pattern string such as\n   * \"0.00E000\".\n   *\n   * @param minExpDig The minimum number of digits in the exponent.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isExponentSignAlwaysShown()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether the sign (plus or minus) is always printed in scientific notation.\n   *\n   * @see #setExponentSignAlwaysShown\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setExponentSignAlwaysShown(boolean expSignAlways)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Scientific Notation:</strong> Sets whether the sign (plus or minus) is always to\n   * be shown in the exponent in scientific notation. For example, if this setting is enabled, the\n   * number 123000 will be printed as \"1.23E+5\" in locale <em>en-US</em>. The number 0.0000123 will\n   * always be printed as \"1.23E-5\" in locale <em>en-US</em> whether or not this setting is enabled.\n   *\n   * <p>This setting corresponds to the '+' in a pattern such as \"0.00E+0\".\n   *\n   * @param expSignAlways true to always shown the sign in the exponent; false to show it for\n   *     negatives but not positives.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isGroupingUsed()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Returns whether or not grouping separators are being printed in the output.\n   *\n   * @see #setGroupingUsed\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setGroupingUsed(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Grouping:</strong> Sets whether grouping is to be used when formatting numbers.\n   * Grouping means whether the thousands, millions, billions, and larger powers of ten should be\n   * separated by a grouping separator (a comma in <em>en-US</em>).\n   *\n   * <p>For example, if grouping is enabled, 12345 will be printed as \"12,345\" in <em>en-US</em>. If\n   * grouping were disabled, it would instead be printed as simply \"12345\".\n   *\n   * @param enabled true to enable grouping separators; false to disable them.\n   * @see #setGroupingSize\n   * @see #setSecondaryGroupingSize\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getGroupingSize()",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the primary grouping size in use.\n   *\n   * @see #setGroupingSize\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setGroupingSize(int width)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Grouping:</strong> Sets the primary grouping size (distance between grouping\n   * separators) used when formatting large numbers. For most locales, this defaults to 3: the\n   * number of digits between the ones and thousands place, between thousands and millions, and so\n   * forth.\n   *\n   * <p>For example, with a grouping size of 3, the number 1234567 will be formatted as \"1,234,567\".\n   *\n   * <p>Grouping size can also be specified in the pattern: for example, \"#,##0\" corresponds to a\n   * grouping size of 3.\n   *\n   * @param width The grouping size to use.\n   * @see #setSecondaryGroupingSize\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getSecondaryGroupingSize()",
+    "returnType" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the secondary grouping size in use.\n   *\n   * @see #setSecondaryGroupingSize\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setSecondaryGroupingSize(int width)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Grouping:</strong> Sets the secondary grouping size (distance between grouping\n   * separators after the first separator) used when formatting large numbers. In many south Asian\n   * locales, this is set to 2.\n   *\n   * <p>For example, with primary grouping size 3 and secondary grouping size 2, the number 1234567\n   * will be formatted as \"12,34,567\".\n   *\n   * <p>Grouping size can also be specified in the pattern: for example, \"#,##,##0\" corresponds to a\n   * primary grouping size of 3 and a secondary grouping size of 2.\n   *\n   * @param width The secondary grouping size to use.\n   * @see #setGroupingSize\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int getMinimumGroupingDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the minimum number of digits before grouping is triggered.\n   *\n   * @see #setMinimumGroupingDigits\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMinimumGroupingDigits(int number)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> Sets the minimum number of digits that must be before the first grouping separator in\n   * order for the grouping separator to be printed. For example, if minimum grouping digits is set\n   * to 2, in <em>en-US</em>, 1234 will be printed as \"1234\" and 12345 will be printed as \"12,345\".\n   *\n    * Set the value to:\n   * <ul>\n   * <li>1 to turn off minimum grouping digits.</li>\n   * <li>MINIMUM_GROUPING_DIGITS_AUTO to display grouping using the default\n   * strategy for all locales.</li>\n   * <li>MINIMUM_GROUPING_DIGITS_MIN2 to display grouping using locale defaults,\n   * except do not show grouping on values smaller than 10000 (such that there is a minimum of\n   * two digits before the first separator).</li>\n   * </ul>\n   *\n   * @param number The minimum number of digits before grouping is triggered.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isDecimalSeparatorAlwaysShown()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Returns whether the decimal separator is shown on integers.\n   *\n   * @see #setDecimalSeparatorAlwaysShown\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setDecimalSeparatorAlwaysShown(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Separators:</strong> Sets whether the decimal separator (a period in <em>en-US</em>) is\n   * shown on integers. For example, if this setting is turned on, formatting 123 will result in\n   * \"123.\" with the decimal separator.\n   *\n   * <p>This setting can be specified in the pattern for integer formats: \"#,##0.\" is an example.\n   *\n   * @param value true to always show the decimal separator; false to show it only when there is a\n   *     fraction part of the number.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized Currency getCurrency()",
+    "returnType" : "Currency",
+    "comment" : "\n   * Returns the currency used to display currency amounts. May be null.\n   *\n   * @see #setCurrency\n   * @see DecimalFormatSymbols#getCurrency\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setCurrency(Currency currency)",
+    "returnType" : "void",
+    "comment" : "\n   * Sets the currency to be used when formatting numbers. The effect is twofold:\n   *\n   * <ol>\n   *   <li>Substitutions for currency symbols in the pattern string will use this currency\n   *   <li>The rounding mode will obey the rules for this currency (see {@link #setCurrencyUsage})\n   * </ol>\n   *\n   * <strong>Important:</strong> Displaying the currency in the output requires that the patter\n   * associated with this formatter contains a currency symbol '¤'. This will be the case if the\n   * instance was created via {@link #getCurrencyInstance} or one of its friends.\n   *\n   * @param currency The currency to use.\n   ",
+    "links" : [ "#getCurrencyInstance", "#setCurrencyUsage" ]
+  }, {
+    "name" : "public synchronized CurrencyUsage getCurrencyUsage()",
+    "returnType" : "CurrencyUsage",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the strategy for rounding currency amounts.\n   *\n   * @see #setCurrencyUsage\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setCurrencyUsage(CurrencyUsage usage)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> Sets the currency-dependent strategy to use when rounding numbers. There are two\n   * strategies:\n   *\n   * <ul>\n   *   <li>STANDARD: When the amount displayed is intended for banking statements or electronic\n   *       transfer.\n   *   <li>CASH: When the amount displayed is intended to be representable in physical currency,\n   *       like at a cash register.\n   * </ul>\n   *\n   * CASH mode is relevant in currencies that do not have tender down to the penny. For more\n   * information on the two rounding strategies, see <a\n   * href=\"http://unicode.org/reports/tr35/tr35-numbers.html#Supplemental_Currency_Data\">UTS\n   * #35</a>. If omitted, the strategy defaults to STANDARD. To override currency rounding\n   * altogether, use {@link #setMinimumFractionDigits} and {@link #setMaximumFractionDigits} or\n   * {@link #setRoundingIncrement}.\n   *\n   * @param usage The strategy to use when rounding in the current currency.\n   ",
+    "links" : [ "#setMaximumFractionDigits", "#setRoundingIncrement", "#setMinimumFractionDigits" ]
+  }, {
+    "name" : "public synchronized CurrencyPluralInfo getCurrencyPluralInfo()",
+    "returnType" : "CurrencyPluralInfo",
+    "comment" : "\n   * <strong>[icu]</strong> Returns the current instance of CurrencyPluralInfo.\n   *\n   * @see #setCurrencyPluralInfo\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setCurrencyPluralInfo(CurrencyPluralInfo newInfo)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> Sets a custom instance of CurrencyPluralInfo. CurrencyPluralInfo generates pattern\n   * strings for printing currency long names.\n   *\n   * <p><strong>Most users should not call this method directly.</strong> You should instead create\n   * your formatter via <code>NumberFormat.getInstance(NumberFormat.PLURALCURRENCYSTYLE)</code>.\n   *\n   * @param newInfo The CurrencyPluralInfo to use when printing currency long names.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isParseBigDecimal()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Returns whether {@link #parse} will always return a BigDecimal.\n   *\n   * @see #setParseBigDecimal\n   ",
+    "links" : [ "#parse" ]
+  }, {
+    "name" : "public synchronized void setParseBigDecimal(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * Whether to make {@link #parse} prefer returning a {@link android.icu.math.BigDecimal} when\n   * possible. For strings corresponding to return values of Infinity, -Infinity, NaN, and -0.0, a\n   * Double will be returned even if ParseBigDecimal is enabled.\n   *\n   * @param value true to cause {@link #parse} to prefer BigDecimal; false to let {@link #parse}\n   *     return additional data types like Long or BigInteger.\n   ",
+    "links" : [ "#parse", "android.icu.math.BigDecimal" ]
+  }, {
+    "name" : "public int getParseMaxDigits()",
+    "returnType" : "int",
+    "comment" : "\n   * Always returns 1000, the default prior to ICU 59.\n   *\n   * @deprecated Setting max parse digits has no effect since ICU4J 59.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setParseMaxDigits(int maxDigits)",
+    "returnType" : "void",
+    "comment" : "\n   * @param maxDigits Prior to ICU 59, the maximum number of digits in the output number after\n   *     exponential notation is applied.\n   * @deprecated Setting max parse digits has no effect since ICU4J 59.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isParseStrict()",
+    "returnType" : "boolean",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setParseStrict(boolean parseStrict)",
+    "returnType" : "void",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setParseStrictMode(ParseMode parseMode)",
+    "returnType" : "void",
+    "comment" : "\n   * Android libcore uses this internal method to set {@link ParseMode#JAVA_COMPATIBILITY}.\n   * @deprecated This API is ICU internal only.\n * @hide draft / provisional / internal are hidden on Android\n   ",
+    "links" : [ "android.icu.impl.number.DecimalFormatProperties.ParseMode#JAVA_COMPATIBILITY" ]
+  }, {
+    "name" : "public synchronized boolean isParseIntegerOnly()",
+    "returnType" : "boolean",
+    "comment" : "\n   * {@inheritDoc}\n   *\n   * @see #setParseIntegerOnly\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setParseIntegerOnly(boolean parseIntegerOnly)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>Parsing:</strong> {@inheritDoc}\n   *\n   * <p>This is functionally equivalent to calling {@link #setDecimalPatternMatchRequired} and a\n   * pattern without a decimal point.\n   *\n   * @param parseIntegerOnly true to ignore fractional parts of numbers when parsing; false to\n   *     consume fractional parts.\n   ",
+    "links" : [ "#setDecimalPatternMatchRequired" ]
+  }, {
+    "name" : "public synchronized boolean isDecimalPatternMatchRequired()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether the presence of a decimal point must match the pattern.\n   *\n   * @see #setDecimalPatternMatchRequired\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setDecimalPatternMatchRequired(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> <strong>Parsing:</strong> This method is used to either <em>require</em> or\n   * <em>forbid</em> the presence of a decimal point in the string being parsed (disabled by\n   * default). This feature was designed to be an extra layer of strictness on top of strict\n   * parsing, although it can be used in either lenient mode or strict mode.\n   *\n   * <p>To <em>require</em> a decimal point, call this method in combination with either a pattern\n   * containing a decimal point or with {@link #setDecimalSeparatorAlwaysShown}.\n   *\n   * <pre>\n   * // Require a decimal point in the string being parsed:\n   * df.applyPattern(\"#.\");\n   * df.setDecimalPatternMatchRequired(true);\n   *\n   * // Alternatively:\n   * df.setDecimalSeparatorAlwaysShown(true);\n   * df.setDecimalPatternMatchRequired(true);\n   * </pre>\n   *\n   * To <em>forbid</em> a decimal point, call this method in combination with a pattern containing\n   * no decimal point. Alternatively, use {@link #setParseIntegerOnly} for the same behavior without\n   * depending on the contents of the pattern string.\n   *\n   * <pre>\n   * // Forbid a decimal point in the string being parsed:\n   * df.applyPattern(\"#\");\n   * df.setDecimalPatternMatchRequired(true);\n   * </pre>\n   *\n   * @param value true to either require or forbid the decimal point according to the pattern; false\n   *     to disable this feature.\n   * @see #setParseIntegerOnly\n   ",
+    "links" : [ "#setDecimalSeparatorAlwaysShown", "#setParseIntegerOnly" ]
+  }, {
+    "name" : "public synchronized boolean isParseNoExponent()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether to ignore exponents when parsing.\n   *\n   * @see #setParseNoExponent\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setParseNoExponent(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> Specifies whether to stop parsing when an exponent separator is encountered. For\n   * example, parses \"123E4\" to 123 (with parse position 3) instead of 1230000 (with parse position\n   * 5).\n   *\n   * @param value true to prevent exponents from being parsed; false to allow them to be parsed.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isParseCaseSensitive()",
+    "returnType" : "boolean",
+    "comment" : "\n   * <strong>[icu]</strong> Returns whether to force case (uppercase/lowercase) to match when parsing.\n   *\n   * @see #setParseNoExponent\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setParseCaseSensitive(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n   * <strong>[icu]</strong> Specifies whether parsing should require cases to match in affixes, exponent separators,\n   * and currency codes. Case mapping is performed for each code point using {@link\n   * UCharacter#foldCase}.\n   *\n   * @param value true to force case (uppercase/lowercase) to match when parsing; false to ignore\n   *     case and perform case folding.\n   ",
+    "links" : [ "android.icu.lang.UCharacter#foldCase" ]
+  }, {
+    "name" : "public synchronized boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tests for equality between this formatter and another formatter.\n   *\n   * <p>If two DecimalFormat instances are equal, then they will always produce the same output.\n   * However, the reverse is not necessarily true: if two DecimalFormat instances always produce the\n   * same output, they are not necessarily equal.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n   * {@inheritDoc}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n   * Returns the default value of toString() with extra DecimalFormat-specific information appended\n   * to the end of the string. This extra information is intended for debugging purposes, and the\n   * format is not guaranteed to be stable.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized String toPattern()",
+    "returnType" : "String",
+    "comment" : "\n   * Serializes this formatter object to a decimal format pattern string. The result of this method\n   * is guaranteed to be <em>functionally</em> equivalent to the pattern string used to create this\n   * instance after incorporating values from the setter methods.\n   *\n   * <p>For more information on decimal format pattern strings, see <a\n   * href=\"http://unicode.org/reports/tr35/tr35-numbers.html#Number_Format_Patterns\">UTS #35</a>.\n   *\n   * <p><strong>Important:</strong> Not all properties are capable of being encoded in a pattern\n   * string. See a list of properties in {@link #applyPattern}.\n   *\n   * @return A decimal format pattern string.\n   ",
+    "links" : [ "#applyPattern" ]
+  }, {
+    "name" : "public synchronized String toLocalizedPattern()",
+    "returnType" : "String",
+    "comment" : "\n   * Calls {@link #toPattern} and converts the string to localized notation. For more information on\n   * localized notation, see {@link #applyLocalizedPattern}. This method is provided for backwards\n   * compatibility and should not be used in new projects.\n   *\n   * @return A decimal format pattern string in localized notation.\n   ",
+    "links" : [ "#toPattern", "#applyLocalizedPattern" ]
+  }, {
+    "name" : "public LocalizedNumberFormatter toNumberFormatter()",
+    "returnType" : "LocalizedNumberFormatter",
+    "comment" : "\n   * Converts this DecimalFormat to a NumberFormatter.  Starting in ICU 60,\n   * NumberFormatter is the recommended way to format numbers.\n   *\n   * @return An instance of {@link LocalizedNumberFormatter} with the same behavior as this instance of\n   * DecimalFormat.\n   * @see NumberFormatter\n   * @hide unsupported on Android\n   ",
+    "links" : [ "android.icu.number.LocalizedNumberFormatter" ]
+  }, {
+    "name" : "public IFixedDecimal getFixedDecimal(double number)",
+    "returnType" : "IFixedDecimal",
+    "comment" : "\n   * @deprecated This API is ICU internal only.\n * @hide draft / provisional / internal are hidden on Android\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " void refreshFormatter()",
+    "returnType" : "void",
+    "comment" : " Rebuilds the formatter object from the property bag. ",
+    "links" : [ ]
+  }, {
+    "name" : " NumberParserImpl getParser()",
+    "returnType" : "NumberParserImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " NumberParserImpl getCurrencyParser()",
+    "returnType" : "NumberParserImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Number safeConvertBigDecimal(java.math.BigDecimal number)",
+    "returnType" : "Number",
+    "comment" : "\n   * Converts a java.math.BigDecimal to a android.icu.math.BigDecimal with fallback for numbers\n   * outside of the range supported by android.icu.math.BigDecimal.\n   *\n   * @param number\n   * @return\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " void setPropertiesFromPattern(String pattern, int ignoreRounding)",
+    "returnType" : "void",
+    "comment" : "\n   * Updates the property bag with settings from the given pattern.\n   *\n   * @param pattern The pattern string to parse.\n   * @param ignoreRounding Whether to leave out rounding information (minFrac, maxFrac, and rounding\n   *     increment) when parsing the pattern. This may be desirable if a custom rounding mode, such\n   *     as CurrencyUsage, is to be used instead. One of {@link\n   *     PatternStringParser#IGNORE_ROUNDING_ALWAYS}, {@link PatternStringParser#IGNORE_ROUNDING_IF_CURRENCY},\n   *     or {@link PatternStringParser#IGNORE_ROUNDING_NEVER}.\n   * @see PatternAndPropertyUtils#parseToExistingProperties\n   ",
+    "links" : [ "android.icu.impl.number.PatternStringParser#IGNORE_ROUNDING_ALWAYS", "android.icu.impl.number.PatternStringParser#IGNORE_ROUNDING_IF_CURRENCY", "android.icu.impl.number.PatternStringParser#IGNORE_ROUNDING_NEVER" ]
+  }, {
+    "name" : " static void fieldPositionHelper(DecimalQuantity dq, FormattedStringBuilder string, FieldPosition fieldPosition, int offset)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setProperties(PropertySetter func)",
+    "returnType" : "void",
+    "comment" : "\n   * @deprecated This API is ICU internal only.\n * @hide draft / provisional / internal are hidden on Android\n   ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static DecimalFormatSymbols getDefaultSymbols()", "public synchronized void applyPattern(String pattern)", "public synchronized void applyLocalizedPattern(String localizedPattern)", "public Object clone()", "private synchronized void writeObject(ObjectOutputStream oos) throws IOException", "private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException", "public StringBuffer format(double number, StringBuffer result, FieldPosition fieldPosition)", "public StringBuffer format(long number, StringBuffer result, FieldPosition fieldPosition)", "public StringBuffer format(BigInteger number, StringBuffer result, FieldPosition fieldPosition)", "public StringBuffer format(java.math.BigDecimal number, StringBuffer result, FieldPosition fieldPosition)", "public StringBuffer format(BigDecimal number, StringBuffer result, FieldPosition fieldPosition)", "public AttributedCharacterIterator formatToCharacterIterator(Object obj)", "public StringBuffer format(CurrencyAmount currAmt, StringBuffer result, FieldPosition fieldPosition)", "public Number parse(String text, ParsePosition parsePosition)", "public CurrencyAmount parseCurrency(CharSequence text, ParsePosition parsePosition)", "public synchronized DecimalFormatSymbols getDecimalFormatSymbols()", "public synchronized void setDecimalFormatSymbols(DecimalFormatSymbols newSymbols)", "public synchronized String getPositivePrefix()", "public synchronized void setPositivePrefix(String prefix)", "public synchronized String getNegativePrefix()", "public synchronized void setNegativePrefix(String prefix)", "public synchronized String getPositiveSuffix()", "public synchronized void setPositiveSuffix(String suffix)", "public synchronized String getNegativeSuffix()", "public synchronized void setNegativeSuffix(String suffix)", "public synchronized boolean isSignAlwaysShown()", "public synchronized void setSignAlwaysShown(boolean value)", "public synchronized int getMultiplier()", "public synchronized void setMultiplier(int multiplier)", "public synchronized java.math.BigDecimal getRoundingIncrement()", "public synchronized void setRoundingIncrement(java.math.BigDecimal increment)", "public synchronized void setRoundingIncrement(BigDecimal increment)", "public synchronized void setRoundingIncrement(double increment)", "public synchronized int getRoundingMode()", "public synchronized void setRoundingMode(int roundingMode)", "public synchronized java.math.MathContext getMathContext()", "public synchronized void setMathContext(java.math.MathContext mathContext)", "public synchronized MathContext getMathContextICU()", "public synchronized void setMathContextICU(MathContext mathContextICU)", "public synchronized int getMinimumIntegerDigits()", "public synchronized void setMinimumIntegerDigits(int value)", "public synchronized int getMaximumIntegerDigits()", "public synchronized void setMaximumIntegerDigits(int value)", "public synchronized int getMinimumFractionDigits()", "public synchronized void setMinimumFractionDigits(int value)", "public synchronized int getMaximumFractionDigits()", "public synchronized void setMaximumFractionDigits(int value)", "public synchronized boolean areSignificantDigitsUsed()", "public synchronized void setSignificantDigitsUsed(boolean useSignificantDigits)", "public synchronized int getMinimumSignificantDigits()", "public synchronized void setMinimumSignificantDigits(int value)", "public synchronized int getMaximumSignificantDigits()", "public synchronized void setMaximumSignificantDigits(int value)", "public synchronized int getFormatWidth()", "public synchronized void setFormatWidth(int width)", "public synchronized char getPadCharacter()", "public synchronized void setPadCharacter(char padChar)", "public synchronized int getPadPosition()", "public synchronized void setPadPosition(int padPos)", "public synchronized boolean isScientificNotation()", "public synchronized void setScientificNotation(boolean useScientific)", "public synchronized byte getMinimumExponentDigits()", "public synchronized void setMinimumExponentDigits(byte minExpDig)", "public synchronized boolean isExponentSignAlwaysShown()", "public synchronized void setExponentSignAlwaysShown(boolean expSignAlways)", "public synchronized boolean isGroupingUsed()", "public synchronized void setGroupingUsed(boolean enabled)", "public synchronized int getGroupingSize()", "public synchronized void setGroupingSize(int width)", "public synchronized int getSecondaryGroupingSize()", "public synchronized void setSecondaryGroupingSize(int width)", "public synchronized int getMinimumGroupingDigits()", "public synchronized void setMinimumGroupingDigits(int number)", "public synchronized boolean isDecimalSeparatorAlwaysShown()", "public synchronized void setDecimalSeparatorAlwaysShown(boolean value)", "public synchronized Currency getCurrency()", "public synchronized void setCurrency(Currency currency)", "public synchronized CurrencyUsage getCurrencyUsage()", "public synchronized void setCurrencyUsage(CurrencyUsage usage)", "public synchronized CurrencyPluralInfo getCurrencyPluralInfo()", "public synchronized void setCurrencyPluralInfo(CurrencyPluralInfo newInfo)", "public synchronized boolean isParseBigDecimal()", "public synchronized void setParseBigDecimal(boolean value)", "public int getParseMaxDigits()", "public void setParseMaxDigits(int maxDigits)", "public synchronized boolean isParseStrict()", "public synchronized void setParseStrict(boolean parseStrict)", "public synchronized void setParseStrictMode(ParseMode parseMode)", "public synchronized boolean isParseIntegerOnly()", "public synchronized void setParseIntegerOnly(boolean parseIntegerOnly)", "public synchronized boolean isDecimalPatternMatchRequired()", "public synchronized void setDecimalPatternMatchRequired(boolean value)", "public synchronized boolean isParseNoExponent()", "public synchronized void setParseNoExponent(boolean value)", "public synchronized boolean isParseCaseSensitive()", "public synchronized void setParseCaseSensitive(boolean value)", "public synchronized boolean equals(Object obj)", "public synchronized int hashCode()", "public String toString()", "public synchronized String toPattern()", "public synchronized String toLocalizedPattern()", "public LocalizedNumberFormatter toNumberFormatter()", "public IFixedDecimal getFixedDecimal(double number)", " void refreshFormatter()", " NumberParserImpl getParser()", " NumberParserImpl getCurrencyParser()", "private Number safeConvertBigDecimal(java.math.BigDecimal number)", " void setPropertiesFromPattern(String pattern, int ignoreRounding)", " static void fieldPositionHelper(DecimalQuantity dq, FormattedStringBuilder string, FieldPosition fieldPosition, int offset)", "public synchronized void setProperties(PropertySetter func)" ],
+  "variableNames" : [ "serialVersionUID", "serialVersionOnStream", "properties", "symbols", "formatter", "exportedProperties", "parser", "currencyParser", "icuMathContextForm", "MINIMUM_GROUPING_DIGITS_AUTO", "MINIMUM_GROUPING_DIGITS_MIN2", "PAD_BEFORE_PREFIX", "PAD_AFTER_PREFIX", "PAD_BEFORE_SUFFIX", "PAD_AFTER_SUFFIX" ]
+}

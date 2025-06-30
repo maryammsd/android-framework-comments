@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/hardware/camera2/impl/CameraDeviceImpl.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/hardware/camera2/impl/CameraDeviceImpl.java",
   "packageName" : "android.hardware.camera2.impl",
   "className" : "CameraDeviceImpl",
   "comment" : "\n * HAL2.1+ implementation of CameraDevice. Use CameraManager#open to instantiate\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -19,9 +20,24 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "CHECK_PARAMS_IN_IS_SESSION_CONFIGURATION_SUPPORTED",
+    "type" : "long",
+    "comment" : "\n     * Starting {@link Build.VERSION_CODES#VANILLA_ICE_CREAM},\n     * {@link #isSessionConfigurationSupported} also checks for compatibility of session parameters\n     * when supported by the HAL. This ChangeId guards enabling that functionality for apps\n     * that target {@link Build.VERSION_CODES#VANILLA_ICE_CREAM} and above.\n     ",
+    "links" : [ "Build.VERSION_CODES#VANILLA_ICE_CREAM", "#isSessionConfigurationSupported" ]
+  }, {
     "name" : "mRemoteDevice",
     "type" : "ICameraDeviceUserWrapper",
     "comment" : " TODO: guard every function with if (!mRemoteDevice) check (if it was closed)",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteDeviceInit",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCameraDeviceSetup",
+    "type" : "CameraDeviceSetup",
+    "comment" : " CameraDeviceSetup object to delegate some of the newer calls to.",
     "links" : [ ]
   }, {
     "name" : "mInterfaceLock",
@@ -69,6 +85,11 @@
     "comment" : " map request IDs to callback/request data ",
     "links" : [ ]
   }, {
+    "name" : "mBatchOutputMap",
+    "type" : "HashMap<Integer, Integer>",
+    "comment" : " map request IDs which have batchedOutputs to requestCount",
+    "links" : [ ]
+  }, {
     "name" : "mRepeatingRequestId",
     "type" : "int",
     "comment" : "",
@@ -77,6 +98,16 @@
     "name" : "mRepeatingRequestTypes",
     "type" : "int[]",
     "comment" : " Latest repeating request list's types",
+    "links" : [ ]
+  }, {
+    "name" : "mFailedRepeatingRequestId",
+    "type" : "int",
+    "comment" : " Cache failed requests to process later in case of a repeating error callback",
+    "links" : [ ]
+  }, {
+    "name" : "mFailedRepeatingRequestTypes",
+    "type" : "int[]",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "mConfiguredInput",
@@ -104,8 +135,23 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mPhysicalIdsToChars",
+    "type" : "Map<String, CameraCharacteristics>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCameraManager",
+    "type" : "CameraManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mTotalPartialCount",
     "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -126,6 +172,16 @@
   }, {
     "name" : "mCurrentSession",
     "type" : "CameraCaptureSessionCore",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentExtensionSession",
+    "type" : "CameraExtensionSessionImpl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentAdvancedExtensionSession",
+    "type" : "CameraAdvancedExtensionSessionImpl",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -185,6 +241,11 @@
     "links" : [ ]
   } ],
   "methods" : [ {
+    "name" : "private Map<String, CameraCharacteristics> getPhysicalIdToChars()",
+    "returnType" : "Map<String, CameraCharacteristics>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "public CameraDeviceCallbacks getCallbacks()",
     "returnType" : "CameraDeviceCallbacks",
     "comment" : "",
@@ -210,9 +271,9 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean configureStreamsChecked(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, CaptureRequest sessionParams) throws CameraAccessException",
+    "name" : "public boolean configureStreamsChecked(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, CaptureRequest sessionParams, long createSessionStartTime) throws CameraAccessException",
     "returnType" : "boolean",
-    "comment" : "\n     * Attempt to configure the input and outputs; the device goes to idle and then configures the\n     * new input and outputs if possible.\n     *\n     * <p>The configuration may gracefully fail, if input configuration is not supported,\n     * if there are too many outputs, if the formats are not supported, or if the sizes for that\n     * format is not supported. In this case this function will return {@code false} and the\n     * unconfigured callback will be fired.</p>\n     *\n     * <p>If the configuration succeeds (with 1 or more outputs with or without an input),\n     * then the idle callback is fired. Unconfiguring the device always fires the idle callback.</p>\n     *\n     * @param inputConfig input configuration or {@code null} for no input\n     * @param outputs a list of one or more surfaces, or {@code null} to unconfigure\n     * @param operatingMode If the stream configuration is for a normal session,\n     *     a constrained high speed session, or something else.\n     * @param sessionParams Session parameters.\n     * @return whether or not the configuration was successful\n     *\n     * @throws CameraAccessException if there were any unexpected problems during configuration\n     ",
+    "comment" : "\n     * Attempt to configure the input and outputs; the device goes to idle and then configures the\n     * new input and outputs if possible.\n     *\n     * <p>The configuration may gracefully fail, if input configuration is not supported,\n     * if there are too many outputs, if the formats are not supported, or if the sizes for that\n     * format is not supported. In this case this function will return {@code false} and the\n     * unconfigured callback will be fired.</p>\n     *\n     * <p>If the configuration succeeds (with 1 or more outputs with or without an input),\n     * then the idle callback is fired. Unconfiguring the device always fires the idle callback.</p>\n     *\n     * @param inputConfig input configuration or {@code null} for no input\n     * @param outputs a list of one or more surfaces, or {@code null} to unconfigure\n     * @param operatingMode If the stream configuration is for a normal session,\n     *     a constrained high speed session, or something else.\n     * @param sessionParams Session parameters.\n     * @param createSessionStartTimeMs The timestamp when session creation starts, measured by\n     *     uptimeMillis().\n     * @return whether or not the configuration was successful\n     *\n     * @throws CameraAccessException if there were any unexpected problems during configuration\n     ",
     "links" : [ ]
   }, {
     "name" : "public void createCaptureSession(List<Surface> outputs, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException",
@@ -265,9 +326,9 @@
     "comment" : "\n     * For use by backwards-compatibility code only.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private void overrideEnableZsl(CameraMetadataNative request, boolean newValue)",
+    "name" : "public static void disableZslIfNeeded(CameraMetadataNative request, int targetSdkVersion, int templateType)",
     "returnType" : "void",
-    "comment" : "",
+    "comment" : "\n     * Disable CONTROL_ENABLE_ZSL based on targetSdkVersion and capture template.\n     ",
     "links" : [ ]
   }, {
     "name" : "public CaptureRequest.Builder createCaptureRequest(int templateType, Set<String> physicalCameraIdSet) throws CameraAccessException",
@@ -340,6 +401,16 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "private boolean hasBatchedOutputs(List<CaptureRequest> requestList)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateTracker(int requestId, long frameNumber, int requestType, CaptureResult result, boolean isPartialResult)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private int submitCaptureRequest(List<CaptureRequest> requestList, CaptureCallback callback, Executor executor, boolean repeating) throws CameraAccessException",
     "returnType" : "int",
     "comment" : "",
@@ -377,6 +448,16 @@
   }, {
     "name" : "protected void finalize() throws Throwable",
     "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean checkInputConfigurationWithStreamConfigurationsAs(InputConfiguration inputConfig, StreamConfigurationMap configMap)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean checkInputConfigurationWithStreamConfigurations(InputConfiguration inputConfig, boolean maxResolution)",
+    "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -474,7 +555,12 @@
     "returnType" : "int",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "public void createExtensionSession(ExtensionSessionConfiguration extensionConfiguration) throws CameraAccessException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "REQUEST_ID_NONE", "mRemoteDevice", "mInterfaceLock", "mCallbacks", "mDeviceCallback", "mSessionStateCallback", "mDeviceExecutor", "mClosing", "mInError", "mIdle", "mCaptureCallbackMap", "mRepeatingRequestId", "mRepeatingRequestTypes", "mConfiguredInput", "mConfiguredOutputs", "mOfflineSupport", "mCameraId", "mCharacteristics", "mTotalPartialCount", "NANO_PER_SECOND", "mRequestLastFrameNumbersList", "mFrameNumberTracker", "mCurrentSession", "mNextSessionId", "mAppTargetSdkVersion", "mOfflineSwitchService", "mOfflineSessionImpl", "mCallOnOpened", "mCallOnUnconfigured", "mCallOnActive", "mCallOnBusy", "mCallOnClosed", "mCallOnIdle", "mCallOnDisconnected" ],
-  "methodNames" : [ "public CameraDeviceCallbacks getCallbacks()", "public void setRemoteDevice(ICameraDeviceUser remoteDevice) throws CameraAccessException", "public void setRemoteFailure(final ServiceSpecificException failure)", "public String getId()", "public void configureOutputs(List<Surface> outputs) throws CameraAccessException", "public boolean configureStreamsChecked(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, CaptureRequest sessionParams) throws CameraAccessException", "public void createCaptureSession(List<Surface> outputs, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCaptureSessionByOutputConfigurations(List<OutputConfiguration> outputConfigurations, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createReprocessableCaptureSession(InputConfiguration inputConfig, List<Surface> outputs, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createReprocessableCaptureSessionByConfigurations(InputConfiguration inputConfig, List<OutputConfiguration> outputs, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createConstrainedHighSpeedCaptureSession(List<Surface> outputs, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCustomCaptureSession(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCaptureSession(SessionConfiguration config) throws CameraAccessException", "private void createCaptureSessionInternal(InputConfiguration inputConfig, List<OutputConfiguration> outputConfigurations, CameraCaptureSession.StateCallback callback, Executor executor, int operatingMode, CaptureRequest sessionParams) throws CameraAccessException", "public boolean isSessionConfigurationSupported(@NonNull SessionConfiguration sessionConfig) throws CameraAccessException, UnsupportedOperationException, IllegalArgumentException", "public void setSessionListener(StateCallbackKK sessionCallback)", "private void overrideEnableZsl(CameraMetadataNative request, boolean newValue)", "public CaptureRequest.Builder createCaptureRequest(int templateType, Set<String> physicalCameraIdSet) throws CameraAccessException", "public CaptureRequest.Builder createCaptureRequest(int templateType) throws CameraAccessException", "public CaptureRequest.Builder createReprocessCaptureRequest(TotalCaptureResult inputResult) throws CameraAccessException", "public void prepare(Surface surface) throws CameraAccessException", "public void prepare(int maxCount, Surface surface) throws CameraAccessException", "public void updateOutputConfiguration(OutputConfiguration config) throws CameraAccessException", "public CameraOfflineSession switchToOffline(@NonNull Collection<Surface> offlineOutputs, @NonNull Executor executor, @NonNull CameraOfflineSession.CameraOfflineSessionCallback listener) throws CameraAccessException", "public boolean supportsOfflineProcessing(Surface surface)", "public void tearDown(Surface surface) throws CameraAccessException", "public void finalizeOutputConfigs(List<OutputConfiguration> outputConfigs) throws CameraAccessException", "public int capture(CaptureRequest request, CaptureCallback callback, Executor executor) throws CameraAccessException", "public int captureBurst(List<CaptureRequest> requests, CaptureCallback callback, Executor executor) throws CameraAccessException", "private void checkEarlyTriggerSequenceCompleteLocked(final int requestId, final long lastFrameNumber, final int[] repeatingRequestTypes)", "private int[] getRequestTypes(final CaptureRequest[] requestArray)", "private int submitCaptureRequest(List<CaptureRequest> requestList, CaptureCallback callback, Executor executor, boolean repeating) throws CameraAccessException", "public int setRepeatingRequest(CaptureRequest request, CaptureCallback callback, Executor executor) throws CameraAccessException", "public int setRepeatingBurst(List<CaptureRequest> requests, CaptureCallback callback, Executor executor) throws CameraAccessException", "public void stopRepeating() throws CameraAccessException", "private void waitUntilIdle() throws CameraAccessException", "public void flush() throws CameraAccessException", "public void close()", "protected void finalize() throws Throwable", "private void checkInputConfiguration(InputConfiguration inputConfig)", "private void checkAndFireSequenceComplete()", "private void removeCompletedCallbackHolderLocked(long lastCompletedRegularFrameNumber, long lastCompletedReprocessFrameNumber, long lastCompletedZslStillFrameNumber)", "public void onDeviceError(final int errorCode, CaptureResultExtras resultExtras)", "private void scheduleNotifyError(int code)", "private void notifyError(int code)", "private void onCaptureErrorLocked(int errorCode, CaptureResultExtras resultExtras)", "public void onDeviceIdle()", " static Executor checkExecutor(Executor executor)", "public static Executor checkExecutor(Executor executor, T callback)", "public static Executor checkAndWrapHandler(Handler handler)", " static Handler checkHandler(Handler handler)", " static Handler checkHandler(Handler handler, T callback)", "private void checkIfCameraClosedOrInError() throws CameraAccessException", "private boolean isClosed()", "private CameraCharacteristics getCharacteristics()", "public void binderDied()", "public void setCameraAudioRestriction(@CAMERA_AUDIO_RESTRICTION int mode) throws CameraAccessException", "public int getCameraAudioRestriction() throws CameraAccessException" ]
+  "methodNames" : [ "private Map<String, CameraCharacteristics> getPhysicalIdToChars()", "public CameraDeviceCallbacks getCallbacks()", "public void setRemoteDevice(ICameraDeviceUser remoteDevice) throws CameraAccessException", "public void setRemoteFailure(final ServiceSpecificException failure)", "public String getId()", "public void configureOutputs(List<Surface> outputs) throws CameraAccessException", "public boolean configureStreamsChecked(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, CaptureRequest sessionParams, long createSessionStartTime) throws CameraAccessException", "public void createCaptureSession(List<Surface> outputs, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCaptureSessionByOutputConfigurations(List<OutputConfiguration> outputConfigurations, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createReprocessableCaptureSession(InputConfiguration inputConfig, List<Surface> outputs, CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createReprocessableCaptureSessionByConfigurations(InputConfiguration inputConfig, List<OutputConfiguration> outputs, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createConstrainedHighSpeedCaptureSession(List<Surface> outputs, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCustomCaptureSession(InputConfiguration inputConfig, List<OutputConfiguration> outputs, int operatingMode, android.hardware.camera2.CameraCaptureSession.StateCallback callback, Handler handler) throws CameraAccessException", "public void createCaptureSession(SessionConfiguration config) throws CameraAccessException", "private void createCaptureSessionInternal(InputConfiguration inputConfig, List<OutputConfiguration> outputConfigurations, CameraCaptureSession.StateCallback callback, Executor executor, int operatingMode, CaptureRequest sessionParams) throws CameraAccessException", "public boolean isSessionConfigurationSupported(@NonNull SessionConfiguration sessionConfig) throws CameraAccessException, UnsupportedOperationException, IllegalArgumentException", "public void setSessionListener(StateCallbackKK sessionCallback)", "public static void disableZslIfNeeded(CameraMetadataNative request, int targetSdkVersion, int templateType)", "public CaptureRequest.Builder createCaptureRequest(int templateType, Set<String> physicalCameraIdSet) throws CameraAccessException", "public CaptureRequest.Builder createCaptureRequest(int templateType) throws CameraAccessException", "public CaptureRequest.Builder createReprocessCaptureRequest(TotalCaptureResult inputResult) throws CameraAccessException", "public void prepare(Surface surface) throws CameraAccessException", "public void prepare(int maxCount, Surface surface) throws CameraAccessException", "public void updateOutputConfiguration(OutputConfiguration config) throws CameraAccessException", "public CameraOfflineSession switchToOffline(@NonNull Collection<Surface> offlineOutputs, @NonNull Executor executor, @NonNull CameraOfflineSession.CameraOfflineSessionCallback listener) throws CameraAccessException", "public boolean supportsOfflineProcessing(Surface surface)", "public void tearDown(Surface surface) throws CameraAccessException", "public void finalizeOutputConfigs(List<OutputConfiguration> outputConfigs) throws CameraAccessException", "public int capture(CaptureRequest request, CaptureCallback callback, Executor executor) throws CameraAccessException", "public int captureBurst(List<CaptureRequest> requests, CaptureCallback callback, Executor executor) throws CameraAccessException", "private void checkEarlyTriggerSequenceCompleteLocked(final int requestId, final long lastFrameNumber, final int[] repeatingRequestTypes)", "private int[] getRequestTypes(final CaptureRequest[] requestArray)", "private boolean hasBatchedOutputs(List<CaptureRequest> requestList)", "private void updateTracker(int requestId, long frameNumber, int requestType, CaptureResult result, boolean isPartialResult)", "private int submitCaptureRequest(List<CaptureRequest> requestList, CaptureCallback callback, Executor executor, boolean repeating) throws CameraAccessException", "public int setRepeatingRequest(CaptureRequest request, CaptureCallback callback, Executor executor) throws CameraAccessException", "public int setRepeatingBurst(List<CaptureRequest> requests, CaptureCallback callback, Executor executor) throws CameraAccessException", "public void stopRepeating() throws CameraAccessException", "private void waitUntilIdle() throws CameraAccessException", "public void flush() throws CameraAccessException", "public void close()", "protected void finalize() throws Throwable", "private boolean checkInputConfigurationWithStreamConfigurationsAs(InputConfiguration inputConfig, StreamConfigurationMap configMap)", "private boolean checkInputConfigurationWithStreamConfigurations(InputConfiguration inputConfig, boolean maxResolution)", "private void checkInputConfiguration(InputConfiguration inputConfig)", "private void checkAndFireSequenceComplete()", "private void removeCompletedCallbackHolderLocked(long lastCompletedRegularFrameNumber, long lastCompletedReprocessFrameNumber, long lastCompletedZslStillFrameNumber)", "public void onDeviceError(final int errorCode, CaptureResultExtras resultExtras)", "private void scheduleNotifyError(int code)", "private void notifyError(int code)", "private void onCaptureErrorLocked(int errorCode, CaptureResultExtras resultExtras)", "public void onDeviceIdle()", " static Executor checkExecutor(Executor executor)", "public static Executor checkExecutor(Executor executor, T callback)", "public static Executor checkAndWrapHandler(Handler handler)", " static Handler checkHandler(Handler handler)", " static Handler checkHandler(Handler handler, T callback)", "private void checkIfCameraClosedOrInError() throws CameraAccessException", "private boolean isClosed()", "private CameraCharacteristics getCharacteristics()", "public void binderDied()", "public void setCameraAudioRestriction(@CAMERA_AUDIO_RESTRICTION int mode) throws CameraAccessException", "public int getCameraAudioRestriction() throws CameraAccessException", "public void createExtensionSession(ExtensionSessionConfiguration extensionConfiguration) throws CameraAccessException" ],
+  "variableNames" : [ "TAG", "DEBUG", "REQUEST_ID_NONE", "CHECK_PARAMS_IN_IS_SESSION_CONFIGURATION_SUPPORTED", "mRemoteDevice", "mRemoteDeviceInit", "mCameraDeviceSetup", "mInterfaceLock", "mCallbacks", "mDeviceCallback", "mSessionStateCallback", "mDeviceExecutor", "mClosing", "mInError", "mIdle", "mCaptureCallbackMap", "mBatchOutputMap", "mRepeatingRequestId", "mRepeatingRequestTypes", "mFailedRepeatingRequestId", "mFailedRepeatingRequestTypes", "mConfiguredInput", "mConfiguredOutputs", "mOfflineSupport", "mCameraId", "mCharacteristics", "mPhysicalIdsToChars", "mCameraManager", "mTotalPartialCount", "mContext", "NANO_PER_SECOND", "mRequestLastFrameNumbersList", "mFrameNumberTracker", "mCurrentSession", "mCurrentExtensionSession", "mCurrentAdvancedExtensionSession", "mNextSessionId", "mAppTargetSdkVersion", "mOfflineSwitchService", "mOfflineSessionImpl", "mCallOnOpened", "mCallOnUnconfigured", "mCallOnActive", "mCallOnBusy", "mCallOnClosed", "mCallOnIdle", "mCallOnDisconnected" ]
 }

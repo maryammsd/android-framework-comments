@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/UpdateEngine.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/UpdateEngine.java",
   "packageName" : "android.os",
   "className" : "UpdateEngine",
   "comment" : "\n * UpdateEngine handles calls to the update engine which takes care of A/B OTA\n * updates. It wraps up the update engine Binder APIs and exposes them as\n * SystemApis, which will be called by the system app responsible for OTAs.\n * On a Google device, this will be GmsCore.\n *\n * The minimal flow is:\n * <ol>\n * <li>Create a new UpdateEngine instance.\n * <li>Call {@link #bind}, optionally providing callbacks.\n * <li>Call {@link #applyPayload}.\n * </ol>\n *\n * In addition, methods are provided to {@link #cancel} or\n * {@link #suspend}/{@link #resume} application of an update.\n *\n * The APIs defined in this class and UpdateEngineCallback class must be in\n * sync with the ones in\n * {@code system/update_engine/binder_bindings/android/os/IUpdateEngine.aidl}\n * and\n * {@code system/update_engine/binder_bindings/android/os/IUpdateEngineCallback.aidl}.\n *\n * {@hide}\n ",
+  "links" : [ "#resume", "#applyPayload", "#cancel", "#bind", "#suspend" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -67,7 +68,17 @@
   }, {
     "name" : "public void resetStatus()",
     "returnType" : "void",
-    "comment" : "\n     * Resets the bootable flag on the non-current partition and all internal\n     * update_engine state. This can be used after an unwanted payload has been\n     * successfully applied and the device has not yet been rebooted to signal\n     * that we no longer want to boot into that updated system. After this call\n     * completes, update_engine will no longer report\n     * {@code UPDATED_NEED_REBOOT}, so your callback can remove any outstanding\n     * notification that rebooting into the new system is possible.\n     ",
+    "comment" : "\n     * Resets the bootable flag on the non-current partition and all internal\n     * update_engine state. Note this call will clear the entire update\n     * progress. So a subsequent {@link #applyPayload} will apply the update\n     * from scratch.\n     *\n     * <p>After this call completes, update_engine will no longer report\n     * {@code UPDATED_NEED_REBOOT}, so your callback can remove any outstanding\n     * notification that rebooting into the new system is possible.\n     ",
+    "links" : [ "#applyPayload" ]
+  }, {
+    "name" : "public void setShouldSwitchSlotOnReboot(@NonNull String payloadMetadataFilename)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the A/B slot switch for the next boot after applying an ota update. If\n     * {@link #applyPayload} hasn't switched the slot, the updater APP can call\n     * this API to switch the slot and apply the update on next boot.\n     *\n     * @param payloadMetadataFilename the location of the metadata without the\n     * {@code file://} prefix.\n     ",
+    "links" : [ "#applyPayload" ]
+  }, {
+    "name" : "public void resetShouldSwitchSlotOnReboot()",
+    "returnType" : "void",
+    "comment" : "\n    * Resets the boot slot to the source/current slot, without cancelling the\n    * update progress. This can be called after the update is installed, and to\n    * prevent the device from accidentally taking the update when it reboots.\n    *\n    * This is useful when users don't want to take the update immediately; or\n    * the updater determines some condition hasn't met, e.g. insufficient space\n    * for boot.\n    ",
     "links" : [ ]
   }, {
     "name" : "public boolean unbind()",
@@ -90,6 +101,6 @@
     "comment" : "\n     * Cleanup files used by the previous update and free up space after the\n     * device has been booted successfully into the new build.\n     *\n     * <p>In particular, this function waits until delta files for snapshots for\n     * Virtual A/B update are merged to OS partitions, then delete these delta\n     * files.\n     *\n     * <p>This function is synchronous and may take a non-trivial amount of\n     * time. Callers should call this function in a background thread.\n     *\n     * <p>This function does not delete payload binaries downloaded for a\n     * non-streaming OTA update.\n     *\n     * @return One of the following:\n     * <ul>\n     * <li>{@link ErrorCodeConstants#SUCCESS} if execution is successful.</li>\n     * <li>{@link ErrorCodeConstants#ERROR} if a transient error has occurred.\n     * The device should be able to recover after a reboot. The function should\n     * be retried after the reboot.</li>\n     * <li>{@link ErrorCodeConstants#DEVICE_CORRUPTED} if a permanent error is\n     * encountered. Device is corrupted, and future updates must not be applied.\n     * The device cannot recover without flashing and factory resets.\n     * </ul>\n     ",
     "links" : [ "#DEVICE_CORRUPTED", "#SUCCESS", "#ERROR" ]
   } ],
-  "variableNames" : [ "TAG", "UPDATE_ENGINE_SERVICE", "mUpdateEngine", "mUpdateEngineCallback", "mUpdateEngineCallbackLock" ],
-  "methodNames" : [ "public boolean bind(final UpdateEngineCallback callback, final Handler handler)", "public boolean bind(final UpdateEngineCallback callback)", "public void applyPayload(String url, long offset, long size, String[] headerKeyValuePairs)", "public void applyPayload(@NonNull AssetFileDescriptor assetFd, @NonNull String[] headerKeyValuePairs)", "public void cancel()", "public void suspend()", "public void resume()", "public void resetStatus()", "public boolean unbind()", "public boolean verifyPayloadMetadata(String payloadMetadataFilename)", "public AllocateSpaceResult allocateSpace(@NonNull String payloadMetadataFilename, @NonNull String[] headerKeyValuePairs)", "public int cleanupAppliedPayload()" ]
+  "methodNames" : [ "public boolean bind(final UpdateEngineCallback callback, final Handler handler)", "public boolean bind(final UpdateEngineCallback callback)", "public void applyPayload(String url, long offset, long size, String[] headerKeyValuePairs)", "public void applyPayload(@NonNull AssetFileDescriptor assetFd, @NonNull String[] headerKeyValuePairs)", "public void cancel()", "public void suspend()", "public void resume()", "public void resetStatus()", "public void setShouldSwitchSlotOnReboot(@NonNull String payloadMetadataFilename)", "public void resetShouldSwitchSlotOnReboot()", "public boolean unbind()", "public boolean verifyPayloadMetadata(String payloadMetadataFilename)", "public AllocateSpaceResult allocateSpace(@NonNull String payloadMetadataFilename, @NonNull String[] headerKeyValuePairs)", "public int cleanupAppliedPayload()" ],
+  "variableNames" : [ "TAG", "UPDATE_ENGINE_SERVICE", "mUpdateEngine", "mUpdateEngineCallback", "mUpdateEngineCallbackLock" ]
 }

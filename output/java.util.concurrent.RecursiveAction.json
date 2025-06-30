@@ -1,0 +1,36 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/RecursiveAction.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "RecursiveAction",
+  "comment" : "\n * A recursive resultless {@link ForkJoinTask}.  This class\n * establishes conventions to parameterize resultless actions as\n * {@code Void} {@code ForkJoinTask}s. Because {@code null} is the\n * only valid value of type {@code Void}, methods such as {@code join}\n * always return {@code null} upon completion.\n *\n * <p><b>Sample Usages.</b> Here is a simple but complete ForkJoin\n * sort that sorts a given {@code long[]} array:\n *\n * <pre> {@code\n * static class SortTask extends RecursiveAction {\n *   final long[] array; final int lo, hi;\n *   SortTask(long[] array, int lo, int hi) {\n *     this.array = array; this.lo = lo; this.hi = hi;\n *   }\n *   SortTask(long[] array) { this(array, 0, array.length); }\n *   protected void compute() {\n *     if (hi - lo < THRESHOLD)\n *       sortSequentially(lo, hi);\n *     else {\n *       int mid = (lo + hi) >>> 1;\n *       invokeAll(new SortTask(array, lo, mid),\n *                 new SortTask(array, mid, hi));\n *       merge(lo, mid, hi);\n *     }\n *   }\n *   // implementation details follow:\n *   static final int THRESHOLD = 1000;\n *   void sortSequentially(int lo, int hi) {\n *     Arrays.sort(array, lo, hi);\n *   }\n *   void merge(int lo, int mid, int hi) {\n *     long[] buf = Arrays.copyOfRange(array, lo, mid);\n *     for (int i = 0, j = lo, k = mid; i < buf.length; j++)\n *       array[j] = (k == hi || buf[i] < array[k]) ?\n *         buf[i++] : array[k++];\n *   }\n * }}</pre>\n *\n * You could then sort {@code anArray} by creating {@code new\n * SortTask(anArray)} and invoking it in a ForkJoinPool.  As a more\n * concrete simple example, the following task increments each element\n * of an array:\n * <pre> {@code\n * class IncrementTask extends RecursiveAction {\n *   final long[] array; final int lo, hi;\n *   IncrementTask(long[] array, int lo, int hi) {\n *     this.array = array; this.lo = lo; this.hi = hi;\n *   }\n *   protected void compute() {\n *     if (hi - lo < THRESHOLD) {\n *       for (int i = lo; i < hi; ++i)\n *         array[i]++;\n *     }\n *     else {\n *       int mid = (lo + hi) >>> 1;\n *       invokeAll(new IncrementTask(array, lo, mid),\n *                 new IncrementTask(array, mid, hi));\n *     }\n *   }\n * }}</pre>\n *\n * <p>The following example illustrates some refinements and idioms\n * that may lead to better performance: RecursiveActions need not be\n * fully recursive, so long as they maintain the basic\n * divide-and-conquer approach. Here is a class that sums the squares\n * of each element of a double array, by subdividing out only the\n * right-hand-sides of repeated divisions by two, and keeping track of\n * them with a chain of {@code next} references. It uses a dynamic\n * threshold based on method {@code getSurplusQueuedTaskCount}, but\n * counterbalances potential excess partitioning by directly\n * performing leaf actions on unstolen tasks rather than further\n * subdividing.\n *\n * <pre> {@code\n * double sumOfSquares(ForkJoinPool pool, double[] array) {\n *   int n = array.length;\n *   Applyer a = new Applyer(array, 0, n, null);\n *   pool.invoke(a);\n *   return a.result;\n * }\n *\n * class Applyer extends RecursiveAction {\n *   final double[] array;\n *   final int lo, hi;\n *   double result;\n *   Applyer next; // keeps track of right-hand-side tasks\n *   Applyer(double[] array, int lo, int hi, Applyer next) {\n *     this.array = array; this.lo = lo; this.hi = hi;\n *     this.next = next;\n *   }\n *\n *   double atLeaf(int l, int h) {\n *     double sum = 0;\n *     for (int i = l; i < h; ++i) // perform leftmost base step\n *       sum += array[i] * array[i];\n *     return sum;\n *   }\n *\n *   protected void compute() {\n *     int l = lo;\n *     int h = hi;\n *     Applyer right = null;\n *     while (h - l > 1 && getSurplusQueuedTaskCount() <= 3) {\n *       int mid = (l + h) >>> 1;\n *       right = new Applyer(array, mid, h, right);\n *       right.fork();\n *       h = mid;\n *     }\n *     double sum = atLeaf(l, h);\n *     while (right != null) {\n *       if (right.tryUnfork()) // directly calculate if not stolen\n *         sum += right.atLeaf(right.lo, right.hi);\n *       else {\n *         right.join();\n *         sum += right.result;\n *       }\n *       right = right.next;\n *     }\n *     result = sum;\n *   }\n * }}</pre>\n *\n * @since 1.7\n * @author Doug Lea\n ",
+  "links" : [ "java.util.concurrent.ForkJoinTask" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected abstract void compute()",
+    "returnType" : "void",
+    "comment" : "\n     * The main computation performed by this task.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Void getRawResult()",
+    "returnType" : "Void",
+    "comment" : "\n     * Always returns {@code null}.\n     *\n     * @return {@code null} always\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void setRawResult(Void mustBeNull)",
+    "returnType" : "void",
+    "comment" : "\n     * Requires null completion value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final boolean exec()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Implements execution conventions for RecursiveActions.\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected abstract void compute()", "public final Void getRawResult()", "protected final void setRawResult(Void mustBeNull)", "protected final boolean exec()" ],
+  "variableNames" : [ "serialVersionUID" ]
+}

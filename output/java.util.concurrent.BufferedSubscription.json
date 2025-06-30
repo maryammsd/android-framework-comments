@@ -1,0 +1,296 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/SubmissionPublisher.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "BufferedSubscription",
+  "comment" : "\n     * A resizable array-based ring buffer with integrated control to\n     * start a consumer task whenever items are available.  The buffer\n     * algorithm is specialized for the case of at most one concurrent\n     * producer and consumer, and power of two buffer sizes. It relies\n     * primarily on atomic operations (CAS or getAndSet) at the next\n     * array slot to put or take an element, at the \"tail\" and \"head\"\n     * indices written only by the producer and consumer respectively.\n     *\n     * We ensure internally that there is at most one active consumer\n     * task at any given time. The publisher guarantees a single\n     * producer via its lock. Sync among producers and consumers\n     * relies on volatile fields \"ctl\", \"demand\", and \"waiting\" (along\n     * with element access). Other variables are accessed in plain\n     * mode, relying on outer ordering and exclusion, and/or enclosing\n     * them within other volatile accesses. Some atomic operations are\n     * avoided by tracking single threaded ownership by producers (in\n     * the style of biased locking).\n     *\n     * Execution control and protocol state are managed using field\n     * \"ctl\".  Methods to subscribe, close, request, and cancel set\n     * ctl bits (mostly using atomic boolean method getAndBitwiseOr),\n     * and ensure that a task is running. (The corresponding consumer\n     * side actions are in method consume.)  To avoid starting a new\n     * task on each action, ctl also includes a keep-alive bit\n     * (ACTIVE) that is refreshed if needed on producer actions.\n     * (Maintaining agreement about keep-alives requires most atomic\n     * updates to be full SC/Volatile strength, which is still much\n     * cheaper than using one task per item.)  Error signals\n     * additionally null out items and/or fields to reduce termination\n     * latency.  The cancel() method is supported by treating as ERROR\n     * but suppressing onError signal.\n     *\n     * Support for blocking also exploits the fact that there is only\n     * one possible waiter. ManagedBlocker-compatible control fields\n     * are placed in this class itself rather than in wait-nodes.\n     * Blocking control relies on the \"waiting\" and \"waiter\"\n     * fields. Producers set them before trying to block. Signalling\n     * unparks and clears fields. If the producer and/or consumer are\n     * using a ForkJoinPool, the producer attempts to help run\n     * consumer tasks via ForkJoinPool.helpAsyncBlocker before\n     * blocking.\n     *\n     * Usages of this class may encounter any of several forms of\n     * memory contention. We try to ameliorate across them without\n     * unduly impacting footprints in low-contention usages where it\n     * isn't needed. Buffer arrays start out small and grow only as\n     * needed.  The class uses @Contended and heuristic field\n     * declaration ordering to reduce false-sharing memory contention\n     * across instances of BufferedSubscription (as in, multiple\n     * subscribers per publisher).  We additionally segregate some\n     * fields that would otherwise nearly always encounter cache line\n     * contention among producers and consumers. To reduce contention\n     * across time (vs space), consumers only periodically update\n     * other fields (see method takeItems), at the expense of possibly\n     * staler reporting of lags and demand (bounded at 12.5% == 1/8\n     * capacity) and possibly more atomic operations.\n     *\n     * Other forms of imbalance and slowdowns can occur during startup\n     * when producer and consumer methods are compiled and/or memory\n     * is allocated at different rates.  This is ameliorated by\n     * artificially subdividing some consumer methods, including\n     * isolation of all subscriber callbacks.  This code also includes\n     * typical power-of-two array screening idioms to avoid compilers\n     * generating traps, along with the usual SSA-based inline\n     * assignment coding style. Also, all methods and fields have\n     * default visibility to simplify usage by callers.\n     ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "timeout",
+    "type" : "long",
+    "comment" : " Long.MAX_VALUE if untimed wait",
+    "links" : [ ]
+  }, {
+    "name" : "head",
+    "type" : "int",
+    "comment" : " next position to take",
+    "links" : [ ]
+  }, {
+    "name" : "tail",
+    "type" : "int",
+    "comment" : " next position to put",
+    "links" : [ ]
+  }, {
+    "name" : "maxCapacity",
+    "type" : "int",
+    "comment" : " max buffer size",
+    "links" : [ ]
+  }, {
+    "name" : "ctl",
+    "type" : "int",
+    "comment" : " atomic run state flags",
+    "links" : [ ]
+  }, {
+    "name" : "array",
+    "type" : "Object[]",
+    "comment" : " buffer",
+    "links" : [ ]
+  }, {
+    "name" : "subscriber",
+    "type" : "Subscriber<? super T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "onNextHandler",
+    "type" : "BiConsumer<? super Subscriber<? super T>, ? super Throwable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "executor",
+    "type" : "Executor",
+    "comment" : " null on error",
+    "links" : [ ]
+  }, {
+    "name" : "waiter",
+    "type" : "Thread",
+    "comment" : " blocked producer thread",
+    "links" : [ ]
+  }, {
+    "name" : "pendingError",
+    "type" : "Throwable",
+    "comment" : " holds until onError issued",
+    "links" : [ ]
+  }, {
+    "name" : "next",
+    "type" : "BufferedSubscription<T>",
+    "comment" : " used only by publisher",
+    "links" : [ ]
+  }, {
+    "name" : "nextRetry",
+    "type" : "BufferedSubscription<T>",
+    "comment" : " used only by publisher",
+    "links" : [ ]
+  }, {
+    "name" : "demand",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "waiting",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CLOSED",
+    "type" : "int",
+    "comment" : " if set, other bits ignored",
+    "links" : [ ]
+  }, {
+    "name" : "ACTIVE",
+    "type" : "int",
+    "comment" : " keep-alive for consumer task",
+    "links" : [ ]
+  }, {
+    "name" : "REQS",
+    "type" : "int",
+    "comment" : " (possibly) nonzero demand",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR",
+    "type" : "int",
+    "comment" : " issues onError when noticed",
+    "links" : [ ]
+  }, {
+    "name" : "COMPLETE",
+    "type" : "int",
+    "comment" : " issues onComplete when done",
+    "links" : [ ]
+  }, {
+    "name" : "RUN",
+    "type" : "int",
+    "comment" : " task is or will be running",
+    "links" : [ ]
+  }, {
+    "name" : "OPEN",
+    "type" : "int",
+    "comment" : " true after subscribe",
+    "links" : [ ]
+  }, {
+    "name" : "INTERRUPTED",
+    "type" : "long",
+    "comment" : " timeout vs interrupt sentinel",
+    "links" : [ ]
+  }, {
+    "name" : "CTL",
+    "type" : "VarHandle",
+    "comment" : " VarHandle mechanics",
+    "links" : [ ]
+  }, {
+    "name" : "DEMAND",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "QA",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " final boolean weakCasCtl(int cmp, int val)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final int getAndBitwiseOrCtl(int bits)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final long subtractDemand(int k)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean casDemand(long cmp, long val)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean isClosed()",
+    "returnType" : "boolean",
+    "comment" : "\n         * Returns true if closed (consumer task may still be running).\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final int estimateLag()",
+    "returnType" : "int",
+    "comment" : "\n         * Returns estimated number of buffered items, or negative if\n         * closed.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final int offer(T item, boolean unowned)",
+    "returnType" : "int",
+    "comment" : "\n         * Tries to add item and start consumer task if necessary.\n         * @return negative if closed, 0 if saturated, else estimated lag\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean growAndOffer(T item, Object[] a, int t)",
+    "returnType" : "boolean",
+    "comment" : "\n         * Tries to expand buffer and add item, returning true on\n         * success. Currently fails only if out of memory.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final int retryOffer(T item)",
+    "returnType" : "int",
+    "comment" : "\n         * Version of offer for retries (no resize or bias)\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final int startOnOffer(int stat)",
+    "returnType" : "int",
+    "comment" : "\n         * Tries to start consumer task after offer.\n         * @return negative if now closed, else argument\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void tryStart()",
+    "returnType" : "void",
+    "comment" : "\n         * Tries to start consumer task. Sets error state on failure.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void startOnSignal(int bits)",
+    "returnType" : "void",
+    "comment" : "\n         * Sets the given control bits, starting task if not running or closed.\n         * @param bits state bits, assumed to include RUN but not CLOSED\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void onSubscribe()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void onComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void onError(Throwable ex)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void cancel()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void request(long n)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void consume()",
+    "returnType" : "void",
+    "comment" : "\n         * Consumer loop, called from ConsumerTask, or indirectly when\n         * helping during submit.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final int takeItems(Subscriber<? super T> s, long d, int h)",
+    "returnType" : "int",
+    "comment" : "\n         * Consumes some items until unavailable or bound or error.\n         *\n         * @param s subscriber\n         * @param d current demand\n         * @param h current head\n         * @return number taken\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean consumeNext(Subscriber<? super T> s, Object x)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void handleOnNext(Subscriber<? super T> s, Throwable ex)",
+    "returnType" : "void",
+    "comment" : "\n         * Processes exception in Subscriber.onNext.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void subscribeOnOpen(Subscriber<? super T> s)",
+    "returnType" : "void",
+    "comment" : "\n         * Issues subscriber.onSubscribe if this is first signal.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void consumeSubscribe(Subscriber<? super T> s)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void closeOnComplete(Subscriber<? super T> s)",
+    "returnType" : "void",
+    "comment" : "\n         * Issues subscriber.onComplete unless already closed.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void consumeComplete(Subscriber<? super T> s)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void closeOnError(Subscriber<? super T> s, Throwable ex)",
+    "returnType" : "void",
+    "comment" : "\n         * Issues subscriber.onError, and unblocks producer if needed.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void consumeError(Subscriber<? super T> s, Throwable ex)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void signalWaiter()",
+    "returnType" : "void",
+    "comment" : "\n         * Unblocks waiting producer.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isReleasable()",
+    "returnType" : "boolean",
+    "comment" : "\n         * Returns true if closed or space available.\n         * For ManagedBlocker.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " final void awaitSpace(long nanos)",
+    "returnType" : "void",
+    "comment" : "\n         * Helps or blocks until timeout, closed, or space available.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean block()",
+    "returnType" : "boolean",
+    "comment" : "\n         * Blocks until closed, space available or timeout.\n         * For ManagedBlocker.\n         ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " final boolean weakCasCtl(int cmp, int val)", " final int getAndBitwiseOrCtl(int bits)", " final long subtractDemand(int k)", " final boolean casDemand(long cmp, long val)", " final boolean isClosed()", " final int estimateLag()", " final int offer(T item, boolean unowned)", " final boolean growAndOffer(T item, Object[] a, int t)", " final int retryOffer(T item)", " final int startOnOffer(int stat)", " final void tryStart()", " final void startOnSignal(int bits)", " final void onSubscribe()", " final void onComplete()", " final void onError(Throwable ex)", "public final void cancel()", "public final void request(long n)", " final void consume()", " final int takeItems(Subscriber<? super T> s, long d, int h)", " final boolean consumeNext(Subscriber<? super T> s, Object x)", " final void handleOnNext(Subscriber<? super T> s, Throwable ex)", " final void subscribeOnOpen(Subscriber<? super T> s)", " final void consumeSubscribe(Subscriber<? super T> s)", " final void closeOnComplete(Subscriber<? super T> s)", " final void consumeComplete(Subscriber<? super T> s)", " final void closeOnError(Subscriber<? super T> s, Throwable ex)", " final void consumeError(Subscriber<? super T> s, Throwable ex)", " final void signalWaiter()", "public final boolean isReleasable()", " final void awaitSpace(long nanos)", "public final boolean block()" ],
+  "variableNames" : [ "timeout", "head", "tail", "maxCapacity", "ctl", "array", "subscriber", "onNextHandler", "executor", "waiter", "pendingError", "next", "nextRetry", "demand", "waiting", "CLOSED", "ACTIVE", "REQS", "ERROR", "COMPLETE", "RUN", "OPEN", "INTERRUPTED", "CTL", "DEMAND", "QA" ]
+}

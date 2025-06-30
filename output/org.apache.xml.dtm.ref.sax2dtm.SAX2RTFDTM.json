@@ -1,0 +1,121 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/apache/xml/dtm/ref/sax2dtm/SAX2RTFDTM.java",
+  "packageName" : "org.apache.xml.dtm.ref.sax2dtm",
+  "className" : "SAX2RTFDTM",
+  "comment" : "\n * This is a subclass of SAX2DTM which has been modified to meet the needs of\n * Result Tree Frameworks (RTFs). The differences are:\n *\n * 1) Multiple XML trees may be appended to the single DTM. This means\n * that the root node of each document is _not_ node 0. Some code has\n * had to be deoptimized to support this mode of operation, and an\n * explicit mechanism for obtaining the Node Handle of the root node\n * has been provided.\n *\n * 2) A stack of these documents is maintained, allowing us to \"tail-prune\" the\n * most recently added trees off the end of the DTM as stylesheet elements \n * (and thus variable contexts) are exited.\n *\n * PLEASE NOTE that this class may be _heavily_ dependent upon the\n * internals of the SAX2DTM superclass, and must be maintained in\n * parallel with that code.  Arguably, they should be conditionals\n * within a single class... but they have deen separated for\n * performance reasons. (In fact, one could even argue about which is\n * the superclass and which is the subclass; the current arrangement\n * is as much about preserving stability of existing code during\n * development as anything else.)\n * \n * %REVIEW% In fact, since the differences are so minor, I think it\n * may be possible/practical to fold them back into the base\n * SAX2DTM. Consider that as a future code-size optimization.\n * ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : " Set true to monitor SAX events and similar diagnostic info. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentDocumentNode",
+    "type" : "int",
+    "comment" : " Most recently started Document, or null if the DTM is empty.  ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of nodes in use ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_data_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of data items in use ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_char_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of size-of-data fields in use ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_doq_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of dataOrQName slots in use ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_nsdeclset_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of namespace declaration sets in use\n   * %REVIEW% I don't think number of NS sets is ever different from number\n   * of NS elements. We can probabably reduce these to a single stack and save\n   * some storage.\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "mark_nsdeclelem_size",
+    "type" : "IntStack",
+    "comment" : " Tail-pruning mark: Number of naespace declaration elements in use\n   * %REVIEW% I don't think number of NS sets is ever different from number\n   * of NS elements. We can probabably reduce these to a single stack and save\n   * some storage.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyNodeCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  initial number of nodes in use\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyNSDeclSetCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  initial number of namespace declaration sets\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyNSDeclSetElemsCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  initial number of namespace declaration elements\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyDataCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  initial number of data items in use\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyCharsCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  initial number of characters in use\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_emptyDataQNCount",
+    "type" : "int",
+    "comment" : "\n   * Tail-pruning mark:  default initial number of dataOrQName slots in use\n   ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public int getDocument()",
+    "returnType" : "int",
+    "comment" : "\n   * Given a DTM, find the owning document node. In the case of\n   * SAX2RTFDTM, which may contain multiple documents, this returns\n   * the <b>most recently started</b> document, or null if the DTM is\n   * empty or no document is currently under construction.\n   *\n   * %REVIEW% Should we continue to report the most recent after\n   * construction has ended? I think not, given that it may have been\n   * tail-pruned.\n   *\n   *  @return int Node handle of Document node, or null if this DTM does not\n   *  contain an \"active\" document.\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getDocumentRoot(int nodeHandle)",
+    "returnType" : "int",
+    "comment" : "\n   * Given a node handle, find the owning document node, using DTM semantics\n   * (Document owns itself) rather than DOM semantics (Document has no owner).\n   *\n   * (I'm counting on the fact that getOwnerDocument() is implemented on top\n   * of this call, in the superclass, to avoid having to rewrite that one.\n   * Be careful if that code changes!)\n   *\n   * @param nodeHandle the id of the node.\n   * @return int Node handle of owning document\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int _documentRoot(int nodeIdentifier)",
+    "returnType" : "int",
+    "comment" : "\n   * Given a node identifier, find the owning document node.  Unlike the DOM,\n   * this considers the owningDocument of a Document to be itself. Note that\n   * in shared DTMs this may not be zero.\n   *\n   * @param nodeIdentifier the id of the starting node.\n   * @return int Node identifier of the root of this DTM tree\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the beginning of a new RTF document.\n   *\n   * %REVIEW% Y'know, this isn't all that much of a deoptimization. We\n   * might want to consider folding the start/endDocument changes back\n   * into the main SAX2DTM so we don't have to expose so many fields\n   * (even as Protected) and carry the additional code.\n   *\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#startDocument\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the end of the document.\n   *\n   * %REVIEW% Y'know, this isn't all that much of a deoptimization. We\n   * might want to consider folding the start/endDocument changes back\n   * into the main SAX2DTM so we don't have to expose so many fields\n   * (even as Protected).\n   *\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#endDocument\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushRewindMark()",
+    "returnType" : "void",
+    "comment" : " \"Tail-pruning\" support for RTFs.\n   *\n   * This function pushes information about the current size of the\n   * DTM's data structures onto a stack, for use by popRewindMark()\n   * (which see).\n   *\n   * %REVIEW% I have no idea how to rewind m_elemIndexes. However,\n   * RTFs will not be indexed, so I can simply panic if that case\n   * arises. Hey, it works...\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean popRewindMark()",
+    "returnType" : "boolean",
+    "comment" : " \"Tail-pruning\" support for RTFs.\n   *\n   * This function pops the information previously saved by\n   * pushRewindMark (which see) and uses it to discard all nodes added\n   * to the DTM after that time. We expect that this will allow us to\n   * reuse storage more effectively.\n   *\n   * This is _not_ intended to be called while a document is still being\n   * constructed -- only between endDocument and the next startDocument\n   *\n   * %REVIEW% WARNING: This is the first use of some of the truncation\n   * methods.  If Xalan blows up after this is called, that's a likely\n   * place to check.\n   *\n   * %REVIEW% Our original design for DTMs permitted them to share\n   * string pools.  If there any risk that this might be happening, we\n   * can _not_ rewind and recover the string storage. One solution\n   * might to assert that DTMs used for RTFs Must Not take advantage\n   * of that feature, but this seems excessively fragile. Another, much\n   * less attractive, would be to just let them leak... Nah.\n   *\n   * @return true if and only if the pop completely emptied the\n   * RTF. That response is used when determining how to unspool\n   * RTF-started-while-RTF-open situations.\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isTreeIncomplete()",
+    "returnType" : "boolean",
+    "comment" : " @return true if a DTM tree is currently under construction.\n   * ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public int getDocument()", "public int getDocumentRoot(int nodeHandle)", "protected int _documentRoot(int nodeIdentifier)", "public void startDocument() throws SAXException", "public void endDocument() throws SAXException", "public void pushRewindMark()", "public boolean popRewindMark()", "public boolean isTreeIncomplete()" ],
+  "variableNames" : [ "DEBUG", "m_currentDocumentNode", "mark_size", "mark_data_size", "mark_char_size", "mark_doq_size", "mark_nsdeclset_size", "mark_nsdeclelem_size", "m_emptyNodeCount", "m_emptyNSDeclSetCount", "m_emptyNSDeclSetElemsCount", "m_emptyDataCount", "m_emptyCharsCount", "m_emptyDataQNCount" ]
+}

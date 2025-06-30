@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/telecom/Call.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/telecom/Call.java",
   "packageName" : "android.telecom",
   "className" : "Call",
   "comment" : "\n * Represents an ongoing phone call that the in-call app should present to the user.\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "STATE_NEW",
     "type" : "int",
@@ -74,6 +75,11 @@
     "comment" : "\n     * The key to retrieve the optional {@code PhoneAccount}s Telecom can bundle with its Call\n     * extras. Used to pass the phone accounts to display on the front end to the user in order to\n     * select phone accounts to (for example) place a call.\n     * @deprecated Use the list from {@link #EXTRA_SUGGESTED_PHONE_ACCOUNTS} instead.\n     ",
     "links" : [ "#EXTRA_SUGGESTED_PHONE_ACCOUNTS" ]
   }, {
+    "name" : "EXTRA_IS_SUPPRESSED_BY_DO_NOT_DISTURB",
+    "type" : "String",
+    "comment" : "\n     * Extra key intended for {@link InCallService}s that notify the user of an incoming call. When\n     * EXTRA_IS_SUPPRESSED_BY_DO_NOT_DISTURB returns true, the {@link InCallService} should not\n     * interrupt the user of the incoming call because the call is being suppressed by Do Not\n     * Disturb settings.\n     *\n     * This extra will be removed from the {@link Call} object for {@link InCallService}s that do\n     * not hold the {@link android.Manifest.permission#READ_CONTACTS} permission.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.Manifest.permission#READ_CONTACTS", "android.telecom.Call" ]
+  }, {
     "name" : "EXTRA_SUGGESTED_PHONE_ACCOUNTS",
     "type" : "String",
     "comment" : "\n     * Key for extra used to pass along a list of {@link PhoneAccountSuggestion}s to the in-call\n     * UI when a call enters the {@link #STATE_SELECT_PHONE_ACCOUNT} state. The list included here\n     * will have the same length and be in the same order as the list passed with\n     * {@link #AVAILABLE_PHONE_ACCOUNTS}.\n     ",
@@ -89,40 +95,35 @@
     "comment" : "\n     * Extra key used to indicate whether a {@link CallScreeningService} has requested to silence\n     * the ringtone for a call.  If the {@link InCallService} declares\n     * {@link TelecomManager#METADATA_IN_CALL_SERVICE_RINGING} in its manifest, it should not\n     * play a ringtone for an incoming call with this extra key set.\n     ",
     "links" : [ "android.telecom.InCallService", "android.telecom.TelecomManager#METADATA_IN_CALL_SERVICE_RINGING", "android.telecom.CallScreeningService" ]
   }, {
-    "name" : "EVENT_REQUEST_HANDOVER",
+    "name" : "EVENT_DISPLAY_DIAGNOSTIC_MESSAGE",
     "type" : "String",
-    "comment" : "\n     * Call event sent from a {@link Call} via {@link #sendCallEvent(String, Bundle)} to inform\n     * Telecom that the user has requested that the current {@link Call} should be handed over\n     * to another {@link ConnectionService}.\n     * <p>\n     * The caller must specify the {@link #EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE} to indicate to\n     * Telecom which {@link PhoneAccountHandle} the {@link Call} should be handed over to.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "android.telecom.PhoneAccountHandle", "#sendCallEvent(String", "#EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE", "android.telecom.Call", "android.telecom.ConnectionService", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * Event reported from the Telecom stack to report an in-call diagnostic message which the\n     * dialer app may opt to display to the user.  A diagnostic message is used to communicate\n     * scenarios the device has detected which may impact the quality of the ongoing call.\n     * <p>\n     * For example a problem with a bluetooth headset may generate a recommendation for the user to\n     * try using the speakerphone instead, or if the device detects it has entered a poor service\n     * area, the user might be warned so that they can finish their call prior to it dropping.\n     * <p>\n     * A diagnostic message is considered persistent in nature.  When the user enters a poor service\n     * area, for example, the accompanying diagnostic message persists until they leave the area\n     * of poor service.  Each message is accompanied with a {@link #EXTRA_DIAGNOSTIC_MESSAGE_ID}\n     * which uniquely identifies the diagnostic condition being reported.  The framework raises a\n     * call event of type {@link #EVENT_CLEAR_DIAGNOSTIC_MESSAGE} when the condition reported has\n     * been cleared.  The dialer app should display the diagnostic message until it is cleared.\n     * If multiple diagnostic messages are sent with different IDs (which have not yet been cleared)\n     * the dialer app should prioritize the most recently received message, but still provide the\n     * user with a means to review past messages.\n     * <p>\n     * The text of the message is found in {@link #EXTRA_DIAGNOSTIC_MESSAGE} in the form of a human\n     * readable {@link CharSequence} which is intended for display in the call UX.\n     * <p>\n     * The telecom framework audibly notifies the user of the presence of a diagnostic message, so\n     * the dialer app needs only to concern itself with visually displaying the message.\n     * <p>\n     * The dialer app receives this event via\n     * {@link Call.Callback#onConnectionEvent(Call, String, Bundle)}.\n     ",
+    "links" : [ "#EVENT_CLEAR_DIAGNOSTIC_MESSAGE", "#EXTRA_DIAGNOSTIC_MESSAGE_ID", "CharSequence", "Call.Callback#onConnectionEvent(Call", "#EXTRA_DIAGNOSTIC_MESSAGE" ]
   }, {
-    "name" : "EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE",
+    "name" : "EVENT_CLEAR_DIAGNOSTIC_MESSAGE",
     "type" : "String",
-    "comment" : "\n     * Extra key used with the {@link #EVENT_REQUEST_HANDOVER} call event.  Specifies the\n     * {@link PhoneAccountHandle} to which a call should be handed over to.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "android.telecom.PhoneAccountHandle", "#EVENT_REQUEST_HANDOVER", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * Event reported from the telecom framework when a diagnostic message previously raised with\n     * {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE} has cleared and is no longer pertinent.\n     * <p>\n     * The {@link #EXTRA_DIAGNOSTIC_MESSAGE_ID} indicates the diagnostic message which has been\n     * cleared.\n     * <p>\n     * The dialer app receives this event via\n     * {@link Call.Callback#onConnectionEvent(Call, String, Bundle)}.\n     ",
+    "links" : [ "#EXTRA_DIAGNOSTIC_MESSAGE_ID", "#EVENT_DISPLAY_DIAGNOSTIC_MESSAGE", "Call.Callback#onConnectionEvent(Call" ]
   }, {
-    "name" : "EXTRA_HANDOVER_VIDEO_STATE",
+    "name" : "EXTRA_DIAGNOSTIC_MESSAGE_ID",
     "type" : "String",
-    "comment" : "\n     * Integer extra key used with the {@link #EVENT_REQUEST_HANDOVER} call event.  Specifies the\n     * video state of the call when it is handed over to the new {@link PhoneAccount}.\n     * <p>\n     * Valid values: {@link VideoProfile#STATE_AUDIO_ONLY},\n     * {@link VideoProfile#STATE_BIDIRECTIONAL}, {@link VideoProfile#STATE_RX_ENABLED}, and\n     * {@link VideoProfile#STATE_TX_ENABLED}.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "android.telecom.PhoneAccount", "#EVENT_REQUEST_HANDOVER", "android.telecom.VideoProfile#STATE_BIDIRECTIONAL", "android.telecom.VideoProfile#STATE_RX_ENABLED", "android.telecom.VideoProfile#STATE_AUDIO_ONLY", "android.telecom.VideoProfile#STATE_TX_ENABLED", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * Integer extra representing a message ID for a message posted via\n     * {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE}.  Used to ensure that the dialer app knows when\n     * the message in question has cleared via {@link #EVENT_CLEAR_DIAGNOSTIC_MESSAGE}.\n     ",
+    "links" : [ "#EVENT_CLEAR_DIAGNOSTIC_MESSAGE", "#EVENT_DISPLAY_DIAGNOSTIC_MESSAGE" ]
   }, {
-    "name" : "EXTRA_HANDOVER_EXTRAS",
+    "name" : "EXTRA_DIAGNOSTIC_MESSAGE",
     "type" : "String",
-    "comment" : "\n     * Extra key used with the {@link #EVENT_REQUEST_HANDOVER} call event.  Used by the\n     * {@link InCallService} initiating a handover to provide a {@link Bundle} with extra\n     * information to the handover {@link ConnectionService} specified by\n     * {@link #EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE}.\n     * <p>\n     * This {@link Bundle} is not interpreted by Telecom, but passed as-is to the\n     * {@link ConnectionService} via the request extras when\n     * {@link ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}\n     * is called to initate the handover.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "android.telecom.InCallService", "android.os.Bundle", "#EVENT_REQUEST_HANDOVER", "android.telecom.ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle", "#EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE", "android.telecom.ConnectionService", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * {@link CharSequence} extra used with {@link #EVENT_DISPLAY_DIAGNOSTIC_MESSAGE}.  This is the\n     * diagnostic message the dialer app should display.\n     ",
+    "links" : [ "#EVENT_DISPLAY_DIAGNOSTIC_MESSAGE", "CharSequence" ]
   }, {
-    "name" : "EVENT_HANDOVER_COMPLETE",
+    "name" : "EXTRA_IS_BUSINESS_CALL",
     "type" : "String",
-    "comment" : "\n     * Call event sent from Telecom to the handover {@link ConnectionService} via\n     * {@link Connection#onCallEvent(String, Bundle)} to inform a {@link Connection} that a handover\n     * to the {@link ConnectionService} has completed successfully.\n     * <p>\n     * A handover is initiated with the {@link #EVENT_REQUEST_HANDOVER} call event.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "#EVENT_REQUEST_HANDOVER", "android.telecom.Connection#onCallEvent(String", "android.telecom.Connection", "android.telecom.ConnectionService", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * Boolean indicating that the call is a verified business call.\n     *\n     * {@link Connection#setExtras(Bundle)} or {@link Connection#putExtras(Bundle)}\n     * should be used to notify Telecom this extra has been set.\n     ",
+    "links" : [ "android.telecom.Connection#putExtras(Bundle)", "android.telecom.Connection#setExtras(Bundle)" ]
   }, {
-    "name" : "EVENT_HANDOVER_SOURCE_DISCONNECTED",
+    "name" : "EXTRA_ASSERTED_DISPLAY_NAME",
     "type" : "String",
-    "comment" : "\n     * Call event sent from Telecom to the handover destination {@link ConnectionService} via\n     * {@link Connection#onCallEvent(String, Bundle)} to inform the handover destination that the\n     * source connection has disconnected.  The {@link Bundle} parameter for the call event will be\n     * {@code null}.\n     * <p>\n     * A handover is initiated with the {@link #EVENT_REQUEST_HANDOVER} call event.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "android.os.Bundle", "#EVENT_REQUEST_HANDOVER", "android.telecom.Connection#onCallEvent(String", "android.telecom.ConnectionService", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
-  }, {
-    "name" : "EVENT_HANDOVER_FAILED",
-    "type" : "String",
-    "comment" : "\n     * Call event sent from Telecom to the handover {@link ConnectionService} via\n     * {@link Connection#onCallEvent(String, Bundle)} to inform a {@link Connection} that a handover\n     * to the {@link ConnectionService} has failed.\n     * <p>\n     * A handover is initiated with the {@link #EVENT_REQUEST_HANDOVER} call event.\n     * @hide\n     * @deprecated Use {@link Call#handoverTo(PhoneAccountHandle, int, Bundle)} and its associated\n     * APIs instead.\n     ",
-    "links" : [ "#EVENT_REQUEST_HANDOVER", "android.telecom.Connection#onCallEvent(String", "android.telecom.Connection", "android.telecom.ConnectionService", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+    "comment" : "\n     * String value indicating the asserted display name reported via\n     * ImsCallProfile#EXTRA_ASSERTED_DISPLAY_NAME.\n     *\n     * {@link Connection#setExtras(Bundle)} or {@link Connection#putExtras(Bundle)}\n     * should be used to notify Telecom this extra has been set.\n     ",
+    "links" : [ "android.telecom.Connection#putExtras(Bundle)", "android.telecom.Connection#setExtras(Bundle)" ]
   }, {
     "name" : "REJECT_REASON_DECLINED",
     "type" : "int",
@@ -267,7 +268,7 @@
   }, {
     "name" : "public void transfer(@NonNull Uri targetNumber, boolean isConfirmationRequired)",
     "returnType" : "void",
-    "comment" : "\n     * Instructs this {@code Call} to be transferred to another number.\n     *\n     * @param targetNumber The address to which the call will be transferred.\n     * @param isConfirmationRequired if {@code true} it will initiate ASSURED transfer,\n     * if {@code false}, it will initiate BLIND transfer.\n     *\n     * @hide\n     ",
+    "comment" : "\n     * Instructs this {@code Call} to be transferred to another number.\n     *\n     * @param targetNumber The address to which the call will be transferred.\n     * @param isConfirmationRequired if {@code true} it will initiate a confirmed transfer,\n     * if {@code false}, it will initiate an unconfirmed transfer.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void transfer(@NonNull android.telecom.Call toCall)",
@@ -302,8 +303,8 @@
   }, {
     "name" : "public void playDtmfTone(char digit)",
     "returnType" : "void",
-    "comment" : "\n     * Instructs this {@code Call} to play a dual-tone multi-frequency signaling (DTMF) tone.\n     *\n     * Any other currently playing DTMF tone in the specified call is immediately stopped.\n     *\n     * @param digit A character representing the DTMF digit for which to play the tone. This\n     *         value must be one of {@code '0'} through {@code '9'}, {@code '*'} or {@code '#'}.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Instructs this {@code Call} to play a dual-tone multi-frequency signaling (DTMF) tone.\n     * <p>\n     * Tones are both played locally for the user to hear and sent to the network to be relayed\n     * to the remote device.\n     * <p>\n     * You must ensure that any call to {@link #playDtmfTone(char)} is followed by a matching\n     * call to {@link #stopDtmfTone()} and that each tone is stopped before a new one is started.\n     * The play and stop commands are relayed to the underlying\n     * {@link android.telecom.ConnectionService} as executed; implementations may not correctly\n     * handle out of order commands.\n     *\n     * @param digit A character representing the DTMF digit for which to play the tone. This\n     *         value must be one of {@code '0'} through {@code '9'}, {@code '*'} or {@code '#'}.\n     ",
+    "links" : [ "#playDtmfTone(char)", "#stopDtmfTone()", "android.telecom.ConnectionService" ]
   }, {
     "name" : "public void stopDtmfTone()",
     "returnType" : "void",
@@ -342,7 +343,7 @@
   }, {
     "name" : "public void addConferenceParticipants(@NonNull List<Uri> participants)",
     "returnType" : "void",
-    "comment" : "\n     * Pulls participants to existing call by forming a conference call.\n     * See {@link Details#CAPABILITY_ADD_PARTICIPANT}.\n     *\n     * @param participants participants to be pulled to existing call.\n     * @hide\n     ",
+    "comment" : "\n     * Pulls participants to existing call by forming a conference call.\n     * See {@link Details#CAPABILITY_ADD_PARTICIPANT}.\n     *\n     * @param participants participants to be pulled to existing call.\n     ",
     "links" : [ "#CAPABILITY_ADD_PARTICIPANT" ]
   }, {
     "name" : "public void pullExternalCall()",
@@ -377,8 +378,8 @@
   }, {
     "name" : "public final void putExtras(Bundle extras)",
     "returnType" : "void",
-    "comment" : "\n     * Adds some extras to this {@link Call}.  Existing keys are replaced and new ones are\n     * added.\n     * <p>\n     * No assumptions should be made as to how an In-Call UI or service will handle these\n     * extras.  Keys should be fully qualified (e.g., com.example.MY_EXTRA) to avoid conflicts.\n     *\n     * @param extras The extras to add.\n     ",
-    "links" : [ "android.telecom.Call" ]
+    "comment" : "\n     * Adds some extras to this {@link Call}.  Existing keys are replaced and new ones are\n     * added.\n     * <p>\n     * No assumptions should be made as to how an In-Call UI or service will handle these\n     * extras.  Keys should be fully qualified (e.g., com.example.MY_EXTRA) to avoid conflicts.\n     * <p>\n     * Extras added using this method will be made available to the {@link ConnectionService}\n     * associated with this {@link Call} and notified via\n     * {@link Connection#onExtrasChanged(Bundle)}.\n     * <p>\n     * Extras added using this method will also be available to other running {@link InCallService}s\n     * and notified via {@link Call.Callback#onDetailsChanged(Call, Details)}.  The extras can be\n     * accessed via {@link Details#getExtras()}.\n     *\n     * @param extras The extras to add.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.Connection#onExtrasChanged(Bundle)", "#getExtras()", "Call.Callback#onDetailsChanged(Call", "android.telecom.Call", "android.telecom.ConnectionService" ]
   }, {
     "name" : "public final void putExtra(String key, boolean value)",
     "returnType" : "void",
@@ -422,8 +423,8 @@
   }, {
     "name" : "public int getState()",
     "returnType" : "int",
-    "comment" : "\n     * Obtains the state of this {@code Call}.\n     *\n     * @return A state value, chosen from the {@code STATE_*} constants.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Obtains the state of this {@code Call}.\n     *\n     * @return The call state.\n     * @deprecated The call state is available via {@link Call.Details#getState()}.\n     ",
+    "links" : [ "Call.Details#getState()" ]
   }, {
     "name" : "public Call getGenericConferenceActiveChildCall()",
     "returnType" : "Call",
@@ -432,8 +433,8 @@
   }, {
     "name" : "public List<String> getCannedTextResponses()",
     "returnType" : "List<String>",
-    "comment" : "\n     * Obtains a list of canned, pre-configured message responses to present to the user as\n     * ways of rejecting this {@code Call} using via a text message.\n     *\n     * @see #reject(boolean, String)\n     *\n     * @return A list of canned text message responses.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Obtains a list of canned, pre-configured message responses to present to the user as\n     * ways of rejecting an incoming {@code Call} using via a text message.\n     * <p>\n     * <em>Note:</em> Since canned responses may be loaded from the file system, they are not\n     * guaranteed to be present when this {@link Call} is first added to the {@link InCallService}\n     * via {@link InCallService#onCallAdded(Call)}.  The callback\n     * {@link Call.Callback#onCannedTextResponsesLoaded(Call, List)} will be called when/if canned\n     * responses for the call become available.\n     *\n     * @see #reject(boolean, String)\n     *\n     * @return A list of canned text message responses.\n     ",
+    "links" : [ "Call.Callback#onCannedTextResponsesLoaded(Call", "android.telecom.InCallService", "android.telecom.InCallService#onCallAdded(Call)", "android.telecom.Call" ]
   }, {
     "name" : "public InCallService.VideoCall getVideoCall()",
     "returnType" : "InCallService.VideoCall",
@@ -600,6 +601,6 @@
     "comment" : "\n     * Determines if two bundles are equal.\n     *\n     * @param bundle The original bundle.\n     * @param newBundle The bundle to compare with.\n     * @retrun {@code true} if the bundles are equal, {@code false} otherwise.\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "STATE_NEW", "STATE_DIALING", "STATE_RINGING", "STATE_HOLDING", "STATE_ACTIVE", "STATE_DISCONNECTED", "STATE_SELECT_PHONE_ACCOUNT", "STATE_PRE_DIAL_WAIT", "STATE_CONNECTING", "STATE_DISCONNECTING", "STATE_PULLING_CALL", "STATE_AUDIO_PROCESSING", "STATE_SIMULATED_RINGING", "AVAILABLE_PHONE_ACCOUNTS", "EXTRA_SUGGESTED_PHONE_ACCOUNTS", "EXTRA_LAST_EMERGENCY_CALLBACK_TIME_MILLIS", "EXTRA_SILENT_RINGING_REQUESTED", "EVENT_REQUEST_HANDOVER", "EXTRA_HANDOVER_PHONE_ACCOUNT_HANDLE", "EXTRA_HANDOVER_VIDEO_STATE", "EXTRA_HANDOVER_EXTRAS", "EVENT_HANDOVER_COMPLETE", "EVENT_HANDOVER_SOURCE_DISCONNECTED", "EVENT_HANDOVER_FAILED", "REJECT_REASON_DECLINED", "REJECT_REASON_UNWANTED", "mPhone", "mTelecomCallId", "mInCallAdapter", "mChildrenIds", "mChildren", "mUnmodifiableChildren", "mCallbackRecords", "mConferenceableCalls", "mUnmodifiableConferenceableCalls", "mChildrenCached", "mParentId", "mActiveGenericConferenceChild", "mState", "mCannedTextResponses", "mCallingPackage", "mTargetSdkVersion", "mRemainingPostDialSequence", "mVideoCallImpl", "mRttCall", "mDetails", "mExtras" ],
-  "methodNames" : [ "public String getRemainingPostDialSequence()", "public void answer(@VideoProfile.VideoState int videoState)", "public void deflect(Uri address)", "public void reject(boolean rejectWithMessage, String textMessage)", "public void reject(@RejectReason int rejectReason)", "public void transfer(@NonNull Uri targetNumber, boolean isConfirmationRequired)", "public void transfer(@NonNull android.telecom.Call toCall)", "public void disconnect()", "public void hold()", "public void unhold()", "public void enterBackgroundAudioProcessing()", "public void exitBackgroundAudioProcessing(boolean shouldRing)", "public void playDtmfTone(char digit)", "public void stopDtmfTone()", "public void postDialContinue(boolean proceed)", "public void phoneAccountSelected(PhoneAccountHandle accountHandle, boolean setDefault)", "public void conference(Call callToConferenceWith)", "public void splitFromConference()", "public void mergeConference()", "public void swapConference()", "public void addConferenceParticipants(@NonNull List<Uri> participants)", "public void pullExternalCall()", "public void sendCallEvent(String event, Bundle extras)", "public void sendRttRequest()", "public void respondToRttRequest(int id, boolean accept)", "public void handoverTo(PhoneAccountHandle toHandle, @VideoProfile.VideoState int videoState, Bundle extras)", "public void stopRtt()", "public final void putExtras(Bundle extras)", "public final void putExtra(String key, boolean value)", "public final void putExtra(String key, int value)", "public final void putExtra(String key, String value)", "public final void removeExtras(List<String> keys)", "public final void removeExtras(String... keys)", "public Call getParent()", "public List<Call> getChildren()", "public List<Call> getConferenceableCalls()", "public int getState()", "public Call getGenericConferenceActiveChildCall()", "public List<String> getCannedTextResponses()", "public InCallService.VideoCall getVideoCall()", "public Details getDetails()", "public RttCall getRttCall()", "public boolean isRttActive()", "public void registerCallback(Callback callback)", "public void registerCallback(Callback callback, Handler handler)", "public void unregisterCallback(Callback callback)", "public String toString()", "private static String stateToString(int state)", "public void addListener(Listener listener)", "public void removeListener(Listener listener)", " final String internalGetCallId()", " final void internalUpdate(ParcelableCall parcelableCall, Map<String, Call> callIdMap)", " final void internalSetPostDialWait(String remaining)", " final void internalSetDisconnected()", " final void internalOnConnectionEvent(String event, Bundle extras)", " final void internalOnRttUpgradeRequest(final int requestId)", " final void internalOnRttInitiationFailure(int reason)", " final void internalOnHandoverFailed(int error)", " final void internalOnHandoverComplete()", "private void fireStateChanged(final int newState)", "private void fireParentChanged(final Call newParent)", "private void fireChildrenChanged(final List<Call> children)", "private void fireDetailsChanged(final Details details)", "private void fireCannedTextResponsesLoaded(final List<String> cannedTextResponses)", "private void fireVideoCallChanged(final InCallService.VideoCall videoCall)", "private void firePostDialWait(final String remainingPostDialSequence)", "private void fireCallDestroyed()", "private void fireConferenceableCallsChanged()", "private void fireOnConnectionEvent(final String event, final Bundle extras)", "private void fireOnIsRttChanged(final boolean enabled, final RttCall rttCall)", "private void fireOnRttModeChanged(final int mode)", "private static boolean areBundlesEqual(Bundle bundle, Bundle newBundle)" ]
+  "methodNames" : [ "public String getRemainingPostDialSequence()", "public void answer(@VideoProfile.VideoState int videoState)", "public void deflect(Uri address)", "public void reject(boolean rejectWithMessage, String textMessage)", "public void reject(@RejectReason int rejectReason)", "public void transfer(@NonNull Uri targetNumber, boolean isConfirmationRequired)", "public void transfer(@NonNull android.telecom.Call toCall)", "public void disconnect()", "public void hold()", "public void unhold()", "public void enterBackgroundAudioProcessing()", "public void exitBackgroundAudioProcessing(boolean shouldRing)", "public void playDtmfTone(char digit)", "public void stopDtmfTone()", "public void postDialContinue(boolean proceed)", "public void phoneAccountSelected(PhoneAccountHandle accountHandle, boolean setDefault)", "public void conference(Call callToConferenceWith)", "public void splitFromConference()", "public void mergeConference()", "public void swapConference()", "public void addConferenceParticipants(@NonNull List<Uri> participants)", "public void pullExternalCall()", "public void sendCallEvent(String event, Bundle extras)", "public void sendRttRequest()", "public void respondToRttRequest(int id, boolean accept)", "public void handoverTo(PhoneAccountHandle toHandle, @VideoProfile.VideoState int videoState, Bundle extras)", "public void stopRtt()", "public final void putExtras(Bundle extras)", "public final void putExtra(String key, boolean value)", "public final void putExtra(String key, int value)", "public final void putExtra(String key, String value)", "public final void removeExtras(List<String> keys)", "public final void removeExtras(String... keys)", "public Call getParent()", "public List<Call> getChildren()", "public List<Call> getConferenceableCalls()", "public int getState()", "public Call getGenericConferenceActiveChildCall()", "public List<String> getCannedTextResponses()", "public InCallService.VideoCall getVideoCall()", "public Details getDetails()", "public RttCall getRttCall()", "public boolean isRttActive()", "public void registerCallback(Callback callback)", "public void registerCallback(Callback callback, Handler handler)", "public void unregisterCallback(Callback callback)", "public String toString()", "private static String stateToString(int state)", "public void addListener(Listener listener)", "public void removeListener(Listener listener)", " final String internalGetCallId()", " final void internalUpdate(ParcelableCall parcelableCall, Map<String, Call> callIdMap)", " final void internalSetPostDialWait(String remaining)", " final void internalSetDisconnected()", " final void internalOnConnectionEvent(String event, Bundle extras)", " final void internalOnRttUpgradeRequest(final int requestId)", " final void internalOnRttInitiationFailure(int reason)", " final void internalOnHandoverFailed(int error)", " final void internalOnHandoverComplete()", "private void fireStateChanged(final int newState)", "private void fireParentChanged(final Call newParent)", "private void fireChildrenChanged(final List<Call> children)", "private void fireDetailsChanged(final Details details)", "private void fireCannedTextResponsesLoaded(final List<String> cannedTextResponses)", "private void fireVideoCallChanged(final InCallService.VideoCall videoCall)", "private void firePostDialWait(final String remainingPostDialSequence)", "private void fireCallDestroyed()", "private void fireConferenceableCallsChanged()", "private void fireOnConnectionEvent(final String event, final Bundle extras)", "private void fireOnIsRttChanged(final boolean enabled, final RttCall rttCall)", "private void fireOnRttModeChanged(final int mode)", "private static boolean areBundlesEqual(Bundle bundle, Bundle newBundle)" ],
+  "variableNames" : [ "STATE_NEW", "STATE_DIALING", "STATE_RINGING", "STATE_HOLDING", "STATE_ACTIVE", "STATE_DISCONNECTED", "STATE_SELECT_PHONE_ACCOUNT", "STATE_PRE_DIAL_WAIT", "STATE_CONNECTING", "STATE_DISCONNECTING", "STATE_PULLING_CALL", "STATE_AUDIO_PROCESSING", "STATE_SIMULATED_RINGING", "AVAILABLE_PHONE_ACCOUNTS", "EXTRA_IS_SUPPRESSED_BY_DO_NOT_DISTURB", "EXTRA_SUGGESTED_PHONE_ACCOUNTS", "EXTRA_LAST_EMERGENCY_CALLBACK_TIME_MILLIS", "EXTRA_SILENT_RINGING_REQUESTED", "EVENT_DISPLAY_DIAGNOSTIC_MESSAGE", "EVENT_CLEAR_DIAGNOSTIC_MESSAGE", "EXTRA_DIAGNOSTIC_MESSAGE_ID", "EXTRA_DIAGNOSTIC_MESSAGE", "EXTRA_IS_BUSINESS_CALL", "EXTRA_ASSERTED_DISPLAY_NAME", "REJECT_REASON_DECLINED", "REJECT_REASON_UNWANTED", "mPhone", "mTelecomCallId", "mInCallAdapter", "mChildrenIds", "mChildren", "mUnmodifiableChildren", "mCallbackRecords", "mConferenceableCalls", "mUnmodifiableConferenceableCalls", "mChildrenCached", "mParentId", "mActiveGenericConferenceChild", "mState", "mCannedTextResponses", "mCallingPackage", "mTargetSdkVersion", "mRemainingPostDialSequence", "mVideoCallImpl", "mRttCall", "mDetails", "mExtras" ]
 }

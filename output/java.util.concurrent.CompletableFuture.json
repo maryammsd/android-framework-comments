@@ -1,0 +1,716 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/CompletableFuture.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "CompletableFuture",
+  "comment" : "\n * A {@link Future} that may be explicitly completed (setting its\n * value and status), and may be used as a {@link CompletionStage},\n * supporting dependent functions and actions that trigger upon its\n * completion.\n *\n * <p>When two or more threads attempt to\n * {@link #complete complete},\n * {@link #completeExceptionally completeExceptionally}, or\n * {@link #cancel cancel}\n * a CompletableFuture, only one of them succeeds.\n *\n * <p>In addition to these and related methods for directly\n * manipulating status and results, CompletableFuture implements\n * interface {@link CompletionStage} with the following policies: <ul>\n *\n * <li>Actions supplied for dependent completions of\n * <em>non-async</em> methods may be performed by the thread that\n * completes the current CompletableFuture, or by any other caller of\n * a completion method.\n *\n * <li>All <em>async</em> methods without an explicit Executor\n * argument are performed using the {@link ForkJoinPool#commonPool()}\n * (unless it does not support a parallelism level of at least two, in\n * which case, a new Thread is created to run each task).\n * To simplify monitoring, debugging,\n * and tracking, all generated asynchronous tasks are instances of the\n * marker interface {@link AsynchronousCompletionTask}.  Operations\n * with time-delays can use adapter methods defined in this class, for\n * example: {@code supplyAsync(supplier, delayedExecutor(timeout,\n * timeUnit))}.  To support methods with delays and timeouts, this\n * class maintains at most one daemon thread for triggering and\n * cancelling actions, not for running them.\n *\n * <li>All CompletionStage methods are implemented independently of\n * other public methods, so the behavior of one method is not impacted\n * by overrides of others in subclasses.\n *\n * </ul>\n *\n * <p>CompletableFuture also implements {@link Future} with the following\n * policies: <ul>\n *\n * <li>Since (unlike {@link FutureTask}) this class has no direct\n * control over the computation that causes it to be completed,\n * cancellation is treated as just another form of exceptional\n * completion.  Method {@link #cancel cancel} has the same effect as\n * {@code completeExceptionally(new CancellationException())}. Method\n * {@link #isCompletedExceptionally} can be used to determine if a\n * CompletableFuture completed in any exceptional fashion.\n *\n * <li>In case of exceptional completion with a CompletionException,\n * methods {@link #get()} and {@link #get(long, TimeUnit)} throw an\n * {@link ExecutionException} with the same cause as held in the\n * corresponding CompletionException.  To simplify usage in most\n * contexts, this class also defines methods {@link #join()} and\n * {@link #getNow} that instead throw the CompletionException directly\n * in these cases.\n * </ul>\n *\n * <p>Arguments used to pass a completion result (that is, for\n * parameters of type {@code T}) for methods accepting them may be\n * null, but passing a null value for any other parameter will result\n * in a {@link NullPointerException} being thrown.\n *\n * @author Doug Lea\n * @param <T> The result type returned by this future's {@code join}\n * and {@code get} methods\n * @since 1.8\n ",
+  "links" : [ "#get()", "#completeExceptionally", "#getNow", "AsynchronousCompletionTask", "#join()", "#cancel", "java.util.concurrent.FutureTask", "java.util.concurrent.ExecutionException", "java.util.concurrent.Future", "java.util.concurrent.CompletionStage", "#get(long", "NullPointerException", "#complete", "#isCompletedExceptionally", "java.util.concurrent.ForkJoinPool#commonPool()" ],
+  "variables" : [ {
+    "name" : "result",
+    "type" : "Object",
+    "comment" : " Either the result or boxed AltResult",
+    "links" : [ ]
+  }, {
+    "name" : "stack",
+    "type" : "Completion",
+    "comment" : " Top of Treiber stack of dependent actions",
+    "links" : [ ]
+  }, {
+    "name" : "NIL",
+    "type" : "AltResult",
+    "comment" : " The encoding of the null value. ",
+    "links" : [ ]
+  }, {
+    "name" : "USE_COMMON_POOL",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ASYNC_POOL",
+    "type" : "Executor",
+    "comment" : "\n     * Default executor -- ForkJoinPool.commonPool() unless it cannot\n     * support parallelism.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNC",
+    "type" : "int",
+    "comment" : " Modes for Completion.tryFire. Signedness matters.",
+    "links" : [ ]
+  }, {
+    "name" : "ASYNC",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NESTED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "RESULT",
+    "type" : "VarHandle",
+    "comment" : " VarHandle mechanics",
+    "links" : [ ]
+  }, {
+    "name" : "STACK",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NEXT",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " final boolean internalComplete(Object r)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean tryPushStack(Completion c)",
+    "returnType" : "boolean",
+    "comment" : " Returns true if successfully pushed c onto stack. ",
+    "links" : [ ]
+  }, {
+    "name" : " final void pushStack(Completion c)",
+    "returnType" : "void",
+    "comment" : " Unconditionally pushes c onto stack, retrying if necessary. ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean completeNull()",
+    "returnType" : "boolean",
+    "comment" : " Completes with the null value, unless already completed. ",
+    "links" : [ ]
+  }, {
+    "name" : " final Object encodeValue(T t)",
+    "returnType" : "Object",
+    "comment" : " Returns the encoding of the given non-exceptional value. ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean completeValue(T t)",
+    "returnType" : "boolean",
+    "comment" : " Completes with a non-exceptional result, unless already completed. ",
+    "links" : [ ]
+  }, {
+    "name" : " static AltResult encodeThrowable(Throwable x)",
+    "returnType" : "AltResult",
+    "comment" : "\n     * Returns the encoding of the given (non-null) exception as a\n     * wrapped CompletionException unless it is one already.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean completeThrowable(Throwable x)",
+    "returnType" : "boolean",
+    "comment" : " Completes with an exceptional result, unless already completed. ",
+    "links" : [ ]
+  }, {
+    "name" : " static Object encodeThrowable(Throwable x, Object r)",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns the encoding of the given (non-null) exception as a\n     * wrapped CompletionException unless it is one already.  May\n     * return the given Object r (which must have been the result of a\n     * source future) if it is equivalent, i.e. if this is a simple\n     * relay of an existing CompletionException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean completeThrowable(Throwable x, Object r)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Completes with the given (non-null) exceptional result as a\n     * wrapped CompletionException unless it is one already, unless\n     * already completed.  May complete with the given Object r\n     * (which must have been the result of a source future) if it is\n     * equivalent, i.e. if this is a simple propagation of an\n     * existing CompletionException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " Object encodeOutcome(T t, Throwable x)",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns the encoding of the given arguments: if the exception\n     * is non-null, encodes as AltResult.  Otherwise uses the given\n     * value, boxed as NIL if null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static Object encodeRelay(Object r)",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns the encoding of a copied outcome; if exceptional,\n     * rewraps as a CompletionException, else returns argument.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean completeRelay(Object r)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Completes with r or a copy of r, unless already completed.\n     * If exceptional, r is first coerced to a CompletionException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Object reportGet(Object r) throws InterruptedException, ExecutionException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reports result using Future.get conventions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Object reportJoin(Object r)",
+    "returnType" : "Object",
+    "comment" : "\n     * Decodes outcome to return result or throw unchecked exception.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static Executor screenExecutor(Executor e)",
+    "returnType" : "Executor",
+    "comment" : "\n     * Null-checks user executor argument, and translates uses of\n     * commonPool to ASYNC_POOL in case parallelism disabled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void postComplete()",
+    "returnType" : "void",
+    "comment" : "\n     * Pops and tries to trigger all reachable dependents.  Call only\n     * when known to be done.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void cleanStack()",
+    "returnType" : "void",
+    "comment" : " Traverses stack and unlinks one or more dead Completions, if found. ",
+    "links" : [ ]
+  }, {
+    "name" : " final void unipush(Completion c)",
+    "returnType" : "void",
+    "comment" : "\n     * Pushes the given completion unless it completes while trying.\n     * Caller should first check that result is null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final CompletableFuture<T> postFire(CompletableFuture<?> a, int mode)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Post-processing by dependent after successful UniCompletion tryFire.\n     * Tries to clean stack of source a, and then either runs postComplete\n     * or returns this to caller, depending on mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> uniApplyStage(Executor e, Function<? super T, ? extends V> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> uniApplyNow(Object r, Executor e, Function<? super T, ? extends V> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> uniAcceptStage(Executor e, Consumer<? super T> f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> uniAcceptNow(Object r, Executor e, Consumer<? super T> f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> uniRunStage(Executor e, Runnable f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> uniRunNow(Object r, Executor e, Runnable f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean uniWhenComplete(Object r, BiConsumer<? super T, ? super Throwable> f, UniWhenComplete<T> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<T> uniWhenCompleteStage(Executor e, BiConsumer<? super T, ? super Throwable> f)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean uniHandle(Object r, BiFunction<? super S, Throwable, ? extends T> f, UniHandle<S, T> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> uniHandleStage(Executor e, BiFunction<? super T, Throwable, ? extends V> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean uniExceptionally(Object r, Function<? super Throwable, ? extends T> f, UniExceptionally<T> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<T> uniExceptionallyStage(Executor e, Function<Throwable, ? extends T> f)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<T> uniComposeExceptionallyStage(Executor e, Function<Throwable, ? extends CompletionStage<T>> f)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static CompletableFuture<U> uniCopyStage(CompletableFuture<T> src)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private MinimalStage<T> uniAsMinimalStage()",
+    "returnType" : "MinimalStage<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> uniComposeStage(Executor e, Function<? super T, ? extends CompletionStage<V>> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void bipush(CompletableFuture<?> b, BiCompletion<?, ?, ?> c)",
+    "returnType" : "void",
+    "comment" : "\n     * Pushes completion to this and b unless both done.\n     * Caller should first check that either result or b.result is null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final CompletableFuture<T> postFire(CompletableFuture<?> a, CompletableFuture<?> b, int mode)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Post-processing after successful BiCompletion tryFire. ",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean biApply(Object r, Object s, BiFunction<? super R, ? super S, ? extends T> f, BiApply<R, S, T> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> biApplyStage(Executor e, CompletionStage<U> o, BiFunction<? super T, ? super U, ? extends V> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean biAccept(Object r, Object s, BiConsumer<? super R, ? super S> f, BiAccept<R, S> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> biAcceptStage(Executor e, CompletionStage<U> o, BiConsumer<? super T, ? super U> f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean biRun(Object r, Object s, Runnable f, BiRun<?, ?> c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> biRunStage(Executor e, CompletionStage<?> o, Runnable f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static CompletableFuture<Void> andTree(CompletableFuture<?>[] cfs, int lo, int hi)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : " Recursively constructs a tree of completions. ",
+    "links" : [ ]
+  }, {
+    "name" : " final void orpush(CompletableFuture<?> b, BiCompletion<?, ?, ?> c)",
+    "returnType" : "void",
+    "comment" : "\n     * Pushes completion to this and b unless either done.\n     * Caller should first check that result and b.result are both null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<V> orApplyStage(Executor e, CompletionStage<U> o, Function<? super T, ? extends V> f)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> orAcceptStage(Executor e, CompletionStage<U> o, Consumer<? super T> f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CompletableFuture<Void> orRunStage(Executor e, CompletionStage<?> o, Runnable f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static CompletableFuture<U> asyncSupplyStage(Executor e, Supplier<U> f)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static CompletableFuture<Void> asyncRunStage(Executor e, Runnable f)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Object waitingGet(boolean interruptible)",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns raw result after waiting, or null if interruptible and\n     * interrupted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object timedGet(long nanos) throws TimeoutException",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns raw result after waiting, or null if interrupted, or\n     * throws TimeoutException on timeout.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletableFuture<U> supplyAsync(Supplier<U> supplier)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "\n     * Returns a new CompletableFuture that is asynchronously completed\n     * by a task running in the {@link ForkJoinPool#commonPool()} with\n     * the value obtained by calling the given Supplier.\n     *\n     * @param supplier a function returning the value to be used\n     * to complete the returned CompletableFuture\n     * @param <U> the function's return type\n     * @return the new CompletableFuture\n     ",
+    "links" : [ "java.util.concurrent.ForkJoinPool#commonPool()" ]
+  }, {
+    "name" : "public static CompletableFuture<U> supplyAsync(Supplier<U> supplier, Executor executor)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "\n     * Returns a new CompletableFuture that is asynchronously completed\n     * by a task running in the given executor with the value obtained\n     * by calling the given Supplier.\n     *\n     * @param supplier a function returning the value to be used\n     * to complete the returned CompletableFuture\n     * @param executor the executor to use for asynchronous execution\n     * @param <U> the function's return type\n     * @return the new CompletableFuture\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletableFuture<Void> runAsync(Runnable runnable)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "\n     * Returns a new CompletableFuture that is asynchronously completed\n     * by a task running in the {@link ForkJoinPool#commonPool()} after\n     * it runs the given action.\n     *\n     * @param runnable the action to run before completing the\n     * returned CompletableFuture\n     * @return the new CompletableFuture\n     ",
+    "links" : [ "java.util.concurrent.ForkJoinPool#commonPool()" ]
+  }, {
+    "name" : "public static CompletableFuture<Void> runAsync(Runnable runnable, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "\n     * Returns a new CompletableFuture that is asynchronously completed\n     * by a task running in the given executor after it runs the given\n     * action.\n     *\n     * @param runnable the action to run before completing the\n     * returned CompletableFuture\n     * @param executor the executor to use for asynchronous execution\n     * @return the new CompletableFuture\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletableFuture<U> completedFuture(U value)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "\n     * Returns a new CompletableFuture that is already completed with\n     * the given value.\n     *\n     * @param value the value\n     * @param <U> the type of the value\n     * @return the completed CompletableFuture\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isDone()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if completed in any fashion: normally,\n     * exceptionally, or via cancellation.\n     *\n     * @return {@code true} if completed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public T get() throws InterruptedException, ExecutionException",
+    "returnType" : "T",
+    "comment" : "\n     * Waits if necessary for this future to complete, and then\n     * returns its result.\n     *\n     * @return the result value\n     * @throws CancellationException if this future was cancelled\n     * @throws ExecutionException if this future completed exceptionally\n     * @throws InterruptedException if the current thread was interrupted\n     * while waiting\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException",
+    "returnType" : "T",
+    "comment" : "\n     * Waits if necessary for at most the given time for this future\n     * to complete, and then returns its result, if available.\n     *\n     * @param timeout the maximum time to wait\n     * @param unit the time unit of the timeout argument\n     * @return the result value\n     * @throws CancellationException if this future was cancelled\n     * @throws ExecutionException if this future completed exceptionally\n     * @throws InterruptedException if the current thread was interrupted\n     * while waiting\n     * @throws TimeoutException if the wait timed out\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public T join()",
+    "returnType" : "T",
+    "comment" : "\n     * Returns the result value when complete, or throws an\n     * (unchecked) exception if completed exceptionally. To better\n     * conform with the use of common functional forms, if a\n     * computation involved in the completion of this\n     * CompletableFuture threw an exception, this method throws an\n     * (unchecked) {@link CompletionException} with the underlying\n     * exception as its cause.\n     *\n     * @return the result value\n     * @throws CancellationException if the computation was cancelled\n     * @throws CompletionException if this future completed\n     * exceptionally or a completion computation threw an exception\n     ",
+    "links" : [ "java.util.concurrent.CompletionException" ]
+  }, {
+    "name" : "public T getNow(T valueIfAbsent)",
+    "returnType" : "T",
+    "comment" : "\n     * Returns the result value (or throws any encountered exception)\n     * if completed, else returns the given valueIfAbsent.\n     *\n     * @param valueIfAbsent the value to return if not completed\n     * @return the result value, if completed, else the given valueIfAbsent\n     * @throws CancellationException if the computation was cancelled\n     * @throws CompletionException if this future completed\n     * exceptionally or a completion computation threw an exception\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean complete(T value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * If not already completed, sets the value returned by {@link\n     * #get()} and related methods to the given value.\n     *\n     * @param value the result value\n     * @return {@code true} if this invocation caused this CompletableFuture\n     * to transition to a completed state, else {@code false}\n     ",
+    "links" : [ "#get()" ]
+  }, {
+    "name" : "public boolean completeExceptionally(Throwable ex)",
+    "returnType" : "boolean",
+    "comment" : "\n     * If not already completed, causes invocations of {@link #get()}\n     * and related methods to throw the given exception.\n     *\n     * @param ex the exception\n     * @return {@code true} if this invocation caused this CompletableFuture\n     * to transition to a completed state, else {@code false}\n     ",
+    "links" : [ "#get()" ]
+  }, {
+    "name" : "public CompletableFuture<U> thenApply(Function<? super T, ? extends U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> thenApplyAsync(Function<? super T, ? extends U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> thenApplyAsync(Function<? super T, ? extends U> fn, Executor executor)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAccept(Consumer<? super T> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenRun(Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenRunAsync(Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenRunAsync(Runnable action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<V> thenCombine(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn, Executor executor)",
+    "returnType" : "CompletableFuture<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterBoth(CompletionStage<?> other, Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterEither(CompletionStage<?> other, Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> whenComplete(BiConsumer<? super T, ? super Throwable> action)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> toCompletableFuture()",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Returns this CompletableFuture.\n     *\n     * @return this CompletableFuture\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn, Executor executor)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionallyCompose(Function<Throwable, ? extends CompletionStage<T>> fn)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionallyComposeAsync(Function<Throwable, ? extends CompletionStage<T>> fn)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> exceptionallyComposeAsync(Function<Throwable, ? extends CompletionStage<T>> fn, Executor executor)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : " Android-added: Override annotation to mark this as overriding from CompletionStage.",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "\n     * Returns a new CompletableFuture that is completed when all of\n     * the given CompletableFutures complete.  If any of the given\n     * CompletableFutures complete exceptionally, then the returned\n     * CompletableFuture also does so, with a CompletionException\n     * holding this exception as its cause.  Otherwise, the results,\n     * if any, of the given CompletableFutures are not reflected in\n     * the returned CompletableFuture, but may be obtained by\n     * inspecting them individually. If no CompletableFutures are\n     * provided, returns a CompletableFuture completed with the value\n     * {@code null}.\n     *\n     * <p>Among the applications of this method is to await completion\n     * of a set of independent CompletableFutures before continuing a\n     * program, as in: {@code CompletableFuture.allOf(c1, c2,\n     * c3).join();}.\n     *\n     * @param cfs the CompletableFutures\n     * @return a new CompletableFuture that is completed when all of the\n     * given CompletableFutures complete\n     * @throws NullPointerException if the array or any of its elements are\n     * {@code null}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs)",
+    "returnType" : "CompletableFuture<Object>",
+    "comment" : "\n     * Returns a new CompletableFuture that is completed when any of\n     * the given CompletableFutures complete, with the same result.\n     * Otherwise, if it completed exceptionally, the returned\n     * CompletableFuture also does so, with a CompletionException\n     * holding this exception as its cause.  If no CompletableFutures\n     * are provided, returns an incomplete CompletableFuture.\n     *\n     * @param cfs the CompletableFutures\n     * @return a new CompletableFuture that is completed with the\n     * result or exception of any of the given CompletableFutures when\n     * one completes\n     * @throws NullPointerException if the array or any of its elements are\n     * {@code null}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean cancel(boolean mayInterruptIfRunning)",
+    "returnType" : "boolean",
+    "comment" : "\n     * If not already completed, completes this CompletableFuture with\n     * a {@link CancellationException}. Dependent CompletableFutures\n     * that have not already completed will also complete\n     * exceptionally, with a {@link CompletionException} caused by\n     * this {@code CancellationException}.\n     *\n     * @param mayInterruptIfRunning this value has no effect in this\n     * implementation because interrupts are not used to control\n     * processing.\n     *\n     * @return {@code true} if this task is now cancelled\n     ",
+    "links" : [ "java.util.concurrent.CancellationException", "java.util.concurrent.CompletionException" ]
+  }, {
+    "name" : "public boolean isCancelled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this CompletableFuture was cancelled\n     * before it completed normally.\n     *\n     * @return {@code true} if this CompletableFuture was cancelled\n     * before it completed normally\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isCompletedExceptionally()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this CompletableFuture completed\n     * exceptionally, in any way. Possible causes include\n     * cancellation, explicit invocation of {@code\n     * completeExceptionally}, and abrupt termination of a\n     * CompletionStage action.\n     *\n     * @return {@code true} if this CompletableFuture completed\n     * exceptionally\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void obtrudeValue(T value)",
+    "returnType" : "void",
+    "comment" : "\n     * Forcibly sets or resets the value subsequently returned by\n     * method {@link #get()} and related methods, whether or not\n     * already completed. This method is designed for use only in\n     * error recovery actions, and even in such situations may result\n     * in ongoing dependent completions using established versus\n     * overwritten outcomes.\n     *\n     * @param value the completion value\n     ",
+    "links" : [ "#get()" ]
+  }, {
+    "name" : "public void obtrudeException(Throwable ex)",
+    "returnType" : "void",
+    "comment" : "\n     * Forcibly causes subsequent invocations of method {@link #get()}\n     * and related methods to throw the given exception, whether or\n     * not already completed. This method is designed for use only in\n     * error recovery actions, and even in such situations may result\n     * in ongoing dependent completions using established versus\n     * overwritten outcomes.\n     *\n     * @param ex the exception\n     * @throws NullPointerException if the exception is null\n     ",
+    "links" : [ "#get()" ]
+  }, {
+    "name" : "public int getNumberOfDependents()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the estimated number of CompletableFutures whose\n     * completions are awaiting completion of this CompletableFuture.\n     * This method is designed for use in monitoring system state, not\n     * for synchronization control.\n     *\n     * @return the number of dependent CompletableFutures\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string identifying this CompletableFuture, as well as\n     * its completion state.  The state, in brackets, contains the\n     * String {@code \"Completed Normally\"} or the String {@code\n     * \"Completed Exceptionally\"}, or the String {@code \"Not\n     * completed\"} followed by the number of CompletableFutures\n     * dependent upon its completion, if any.\n     *\n     * @return a string identifying this CompletableFuture, as well as its state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<U> newIncompleteFuture()",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "\n     * Returns a new incomplete CompletableFuture of the type to be\n     * returned by a CompletionStage method. Subclasses should\n     * normally override this method to return an instance of the same\n     * class as this CompletableFuture. The default implementation\n     * returns an instance of class CompletableFuture.\n     *\n     * @param <U> the type of the value\n     * @return a new CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Executor defaultExecutor()",
+    "returnType" : "Executor",
+    "comment" : "\n     * Returns the default Executor used for async methods that do not\n     * specify an Executor. This class uses the {@link\n     * ForkJoinPool#commonPool()} if it supports more than one\n     * parallel thread, or else an Executor using one thread per async\n     * task.  This method may be overridden in subclasses to return\n     * an Executor that provides at least one independent thread.\n     *\n     * @return the executor\n     * @since 9\n     ",
+    "links" : [ "java.util.concurrent.ForkJoinPool#commonPool()" ]
+  }, {
+    "name" : "public CompletableFuture<T> copy()",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Returns a new CompletableFuture that is completed normally with\n     * the same value as this CompletableFuture when it completes\n     * normally. If this CompletableFuture completes exceptionally,\n     * then the returned CompletableFuture completes exceptionally\n     * with a CompletionException with this exception as cause. The\n     * behavior is equivalent to {@code thenApply(x -> x)}. This\n     * method may be useful as a form of \"defensive copying\", to\n     * prevent clients from completing, while still being able to\n     * arrange dependent actions.\n     *\n     * @return the new CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletionStage<T> minimalCompletionStage()",
+    "returnType" : "CompletionStage<T>",
+    "comment" : "\n     * Returns a new CompletionStage that is completed normally with\n     * the same value as this CompletableFuture when it completes\n     * normally, and cannot be independently completed or otherwise\n     * used in ways not defined by the methods of interface {@link\n     * CompletionStage}.  If this CompletableFuture completes\n     * exceptionally, then the returned CompletionStage completes\n     * exceptionally with a CompletionException with this exception as\n     * cause.\n     *\n     * <p>Unless overridden by a subclass, a new non-minimal\n     * CompletableFuture with all methods available can be obtained from\n     * a minimal CompletionStage via {@link #toCompletableFuture()}.\n     * For example, completion of a minimal stage can be awaited by\n     *\n     * <pre> {@code minimalStage.toCompletableFuture().join(); }</pre>\n     *\n     * @return the new CompletionStage\n     * @since 9\n     ",
+    "links" : [ "#toCompletableFuture()", "java.util.concurrent.CompletionStage" ]
+  }, {
+    "name" : "public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier, Executor executor)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Completes this CompletableFuture with the result of\n     * the given Supplier function invoked from an asynchronous\n     * task using the given executor.\n     *\n     * @param supplier a function returning the value to be used\n     * to complete this CompletableFuture\n     * @param executor the executor to use for asynchronous execution\n     * @return this CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Completes this CompletableFuture with the result of the given\n     * Supplier function invoked from an asynchronous task using the\n     * default executor.\n     *\n     * @param supplier a function returning the value to be used\n     * to complete this CompletableFuture\n     * @return this CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<T> orTimeout(long timeout, TimeUnit unit)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Exceptionally completes this CompletableFuture with\n     * a {@link TimeoutException} if not otherwise completed\n     * before the given timeout.\n     *\n     * @param timeout how long to wait before completing exceptionally\n     *        with a TimeoutException, in units of {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     *        {@code timeout} parameter\n     * @return this CompletableFuture\n     * @since 9\n     ",
+    "links" : [ "java.util.concurrent.TimeoutException" ]
+  }, {
+    "name" : "public CompletableFuture<T> completeOnTimeout(T value, long timeout, TimeUnit unit)",
+    "returnType" : "CompletableFuture<T>",
+    "comment" : "\n     * Completes this CompletableFuture with the given value if not\n     * otherwise completed before the given timeout.\n     *\n     * @param value the value to use upon timeout\n     * @param timeout how long to wait before completing normally\n     *        with the given value, in units of {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     *        {@code timeout} parameter\n     * @return this CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Executor delayedExecutor(long delay, TimeUnit unit, Executor executor)",
+    "returnType" : "Executor",
+    "comment" : "\n     * Returns a new Executor that submits a task to the given base\n     * executor after the given delay (or no delay if non-positive).\n     * Each delay commences upon invocation of the returned executor's\n     * {@code execute} method.\n     *\n     * @param delay how long to delay, in units of {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     *        {@code delay} parameter\n     * @param executor the base executor\n     * @return the new delayed executor\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Executor delayedExecutor(long delay, TimeUnit unit)",
+    "returnType" : "Executor",
+    "comment" : "\n     * Returns a new Executor that submits a task to the default\n     * executor after the given delay (or no delay if non-positive).\n     * Each delay commences upon invocation of the returned executor's\n     * {@code execute} method.\n     *\n     * @param delay how long to delay, in units of {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     *        {@code delay} parameter\n     * @return the new delayed executor\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletionStage<U> completedStage(U value)",
+    "returnType" : "CompletionStage<U>",
+    "comment" : "\n     * Returns a new CompletionStage that is already completed with\n     * the given value and supports only those methods in\n     * interface {@link CompletionStage}.\n     *\n     * @param value the value\n     * @param <U> the type of the value\n     * @return the completed CompletionStage\n     * @since 9\n     ",
+    "links" : [ "java.util.concurrent.CompletionStage" ]
+  }, {
+    "name" : "public static CompletableFuture<U> failedFuture(Throwable ex)",
+    "returnType" : "CompletableFuture<U>",
+    "comment" : "\n     * Returns a new CompletableFuture that is already completed\n     * exceptionally with the given exception.\n     *\n     * @param ex the exception\n     * @param <U> the type of the value\n     * @return the exceptionally completed CompletableFuture\n     * @since 9\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CompletionStage<U> failedStage(Throwable ex)",
+    "returnType" : "CompletionStage<U>",
+    "comment" : "\n     * Returns a new CompletionStage that is already completed\n     * exceptionally with the given exception and supports only those\n     * methods in interface {@link CompletionStage}.\n     *\n     * @param ex the exception\n     * @param <U> the type of the value\n     * @return the exceptionally completed CompletionStage\n     * @since 9\n     ",
+    "links" : [ "java.util.concurrent.CompletionStage" ]
+  } ],
+  "methodNames" : [ " final boolean internalComplete(Object r)", " final boolean tryPushStack(Completion c)", " final void pushStack(Completion c)", " final boolean completeNull()", " final Object encodeValue(T t)", " final boolean completeValue(T t)", " static AltResult encodeThrowable(Throwable x)", " final boolean completeThrowable(Throwable x)", " static Object encodeThrowable(Throwable x, Object r)", " final boolean completeThrowable(Throwable x, Object r)", " Object encodeOutcome(T t, Throwable x)", " static Object encodeRelay(Object r)", " final boolean completeRelay(Object r)", "private static Object reportGet(Object r) throws InterruptedException, ExecutionException", "private static Object reportJoin(Object r)", " static Executor screenExecutor(Executor e)", " final void postComplete()", " final void cleanStack()", " final void unipush(Completion c)", " final CompletableFuture<T> postFire(CompletableFuture<?> a, int mode)", "private CompletableFuture<V> uniApplyStage(Executor e, Function<? super T, ? extends V> f)", "private CompletableFuture<V> uniApplyNow(Object r, Executor e, Function<? super T, ? extends V> f)", "private CompletableFuture<Void> uniAcceptStage(Executor e, Consumer<? super T> f)", "private CompletableFuture<Void> uniAcceptNow(Object r, Executor e, Consumer<? super T> f)", "private CompletableFuture<Void> uniRunStage(Executor e, Runnable f)", "private CompletableFuture<Void> uniRunNow(Object r, Executor e, Runnable f)", " final boolean uniWhenComplete(Object r, BiConsumer<? super T, ? super Throwable> f, UniWhenComplete<T> c)", "private CompletableFuture<T> uniWhenCompleteStage(Executor e, BiConsumer<? super T, ? super Throwable> f)", " final boolean uniHandle(Object r, BiFunction<? super S, Throwable, ? extends T> f, UniHandle<S, T> c)", "private CompletableFuture<V> uniHandleStage(Executor e, BiFunction<? super T, Throwable, ? extends V> f)", " final boolean uniExceptionally(Object r, Function<? super Throwable, ? extends T> f, UniExceptionally<T> c)", "private CompletableFuture<T> uniExceptionallyStage(Executor e, Function<Throwable, ? extends T> f)", "private CompletableFuture<T> uniComposeExceptionallyStage(Executor e, Function<Throwable, ? extends CompletionStage<T>> f)", "private static CompletableFuture<U> uniCopyStage(CompletableFuture<T> src)", "private MinimalStage<T> uniAsMinimalStage()", "private CompletableFuture<V> uniComposeStage(Executor e, Function<? super T, ? extends CompletionStage<V>> f)", " final void bipush(CompletableFuture<?> b, BiCompletion<?, ?, ?> c)", " final CompletableFuture<T> postFire(CompletableFuture<?> a, CompletableFuture<?> b, int mode)", " final boolean biApply(Object r, Object s, BiFunction<? super R, ? super S, ? extends T> f, BiApply<R, S, T> c)", "private CompletableFuture<V> biApplyStage(Executor e, CompletionStage<U> o, BiFunction<? super T, ? super U, ? extends V> f)", " final boolean biAccept(Object r, Object s, BiConsumer<? super R, ? super S> f, BiAccept<R, S> c)", "private CompletableFuture<Void> biAcceptStage(Executor e, CompletionStage<U> o, BiConsumer<? super T, ? super U> f)", " final boolean biRun(Object r, Object s, Runnable f, BiRun<?, ?> c)", "private CompletableFuture<Void> biRunStage(Executor e, CompletionStage<?> o, Runnable f)", " static CompletableFuture<Void> andTree(CompletableFuture<?>[] cfs, int lo, int hi)", " final void orpush(CompletableFuture<?> b, BiCompletion<?, ?, ?> c)", "private CompletableFuture<V> orApplyStage(Executor e, CompletionStage<U> o, Function<? super T, ? extends V> f)", "private CompletableFuture<Void> orAcceptStage(Executor e, CompletionStage<U> o, Consumer<? super T> f)", "private CompletableFuture<Void> orRunStage(Executor e, CompletionStage<?> o, Runnable f)", " static CompletableFuture<U> asyncSupplyStage(Executor e, Supplier<U> f)", " static CompletableFuture<Void> asyncRunStage(Executor e, Runnable f)", "private Object waitingGet(boolean interruptible)", "private Object timedGet(long nanos) throws TimeoutException", "public static CompletableFuture<U> supplyAsync(Supplier<U> supplier)", "public static CompletableFuture<U> supplyAsync(Supplier<U> supplier, Executor executor)", "public static CompletableFuture<Void> runAsync(Runnable runnable)", "public static CompletableFuture<Void> runAsync(Runnable runnable, Executor executor)", "public static CompletableFuture<U> completedFuture(U value)", "public boolean isDone()", "public T get() throws InterruptedException, ExecutionException", "public T get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException", "public T join()", "public T getNow(T valueIfAbsent)", "public boolean complete(T value)", "public boolean completeExceptionally(Throwable ex)", "public CompletableFuture<U> thenApply(Function<? super T, ? extends U> fn)", "public CompletableFuture<U> thenApplyAsync(Function<? super T, ? extends U> fn)", "public CompletableFuture<U> thenApplyAsync(Function<? super T, ? extends U> fn, Executor executor)", "public CompletableFuture<Void> thenAccept(Consumer<? super T> action)", "public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action)", "public CompletableFuture<Void> thenAcceptAsync(Consumer<? super T> action, Executor executor)", "public CompletableFuture<Void> thenRun(Runnable action)", "public CompletableFuture<Void> thenRunAsync(Runnable action)", "public CompletableFuture<Void> thenRunAsync(Runnable action, Executor executor)", "public CompletableFuture<V> thenCombine(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn)", "public CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn)", "public CompletableFuture<V> thenCombineAsync(CompletionStage<? extends U> other, BiFunction<? super T, ? super U, ? extends V> fn, Executor executor)", "public CompletableFuture<Void> thenAcceptBoth(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action)", "public CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action)", "public CompletableFuture<Void> thenAcceptBothAsync(CompletionStage<? extends U> other, BiConsumer<? super T, ? super U> action, Executor executor)", "public CompletableFuture<Void> runAfterBoth(CompletionStage<?> other, Runnable action)", "public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action)", "public CompletableFuture<Void> runAfterBothAsync(CompletionStage<?> other, Runnable action, Executor executor)", "public CompletableFuture<U> applyToEither(CompletionStage<? extends T> other, Function<? super T, U> fn)", "public CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn)", "public CompletableFuture<U> applyToEitherAsync(CompletionStage<? extends T> other, Function<? super T, U> fn, Executor executor)", "public CompletableFuture<Void> acceptEither(CompletionStage<? extends T> other, Consumer<? super T> action)", "public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action)", "public CompletableFuture<Void> acceptEitherAsync(CompletionStage<? extends T> other, Consumer<? super T> action, Executor executor)", "public CompletableFuture<Void> runAfterEither(CompletionStage<?> other, Runnable action)", "public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action)", "public CompletableFuture<Void> runAfterEitherAsync(CompletionStage<?> other, Runnable action, Executor executor)", "public CompletableFuture<U> thenCompose(Function<? super T, ? extends CompletionStage<U>> fn)", "public CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn)", "public CompletableFuture<U> thenComposeAsync(Function<? super T, ? extends CompletionStage<U>> fn, Executor executor)", "public CompletableFuture<T> whenComplete(BiConsumer<? super T, ? super Throwable> action)", "public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action)", "public CompletableFuture<T> whenCompleteAsync(BiConsumer<? super T, ? super Throwable> action, Executor executor)", "public CompletableFuture<U> handle(BiFunction<? super T, Throwable, ? extends U> fn)", "public CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn)", "public CompletableFuture<U> handleAsync(BiFunction<? super T, Throwable, ? extends U> fn, Executor executor)", "public CompletableFuture<T> toCompletableFuture()", "public CompletableFuture<T> exceptionally(Function<Throwable, ? extends T> fn)", "public CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn)", "public CompletableFuture<T> exceptionallyAsync(Function<Throwable, ? extends T> fn, Executor executor)", "public CompletableFuture<T> exceptionallyCompose(Function<Throwable, ? extends CompletionStage<T>> fn)", "public CompletableFuture<T> exceptionallyComposeAsync(Function<Throwable, ? extends CompletionStage<T>> fn)", "public CompletableFuture<T> exceptionallyComposeAsync(Function<Throwable, ? extends CompletionStage<T>> fn, Executor executor)", "public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs)", "public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs)", "public boolean cancel(boolean mayInterruptIfRunning)", "public boolean isCancelled()", "public boolean isCompletedExceptionally()", "public void obtrudeValue(T value)", "public void obtrudeException(Throwable ex)", "public int getNumberOfDependents()", "public String toString()", "public CompletableFuture<U> newIncompleteFuture()", "public Executor defaultExecutor()", "public CompletableFuture<T> copy()", "public CompletionStage<T> minimalCompletionStage()", "public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier, Executor executor)", "public CompletableFuture<T> completeAsync(Supplier<? extends T> supplier)", "public CompletableFuture<T> orTimeout(long timeout, TimeUnit unit)", "public CompletableFuture<T> completeOnTimeout(T value, long timeout, TimeUnit unit)", "public static Executor delayedExecutor(long delay, TimeUnit unit, Executor executor)", "public static Executor delayedExecutor(long delay, TimeUnit unit)", "public static CompletionStage<U> completedStage(U value)", "public static CompletableFuture<U> failedFuture(Throwable ex)", "public static CompletionStage<U> failedStage(Throwable ex)" ],
+  "variableNames" : [ "result", "stack", "NIL", "USE_COMMON_POOL", "ASYNC_POOL", "SYNC", "ASYNC", "NESTED", "RESULT", "STACK", "NEXT" ]
+}

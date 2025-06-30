@@ -1,12 +1,18 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/IpSecManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/net/IpSecManager.java",
   "packageName" : "android.net",
   "className" : "IpSecManager",
   "comment" : "\n * This class contains methods for managing IPsec sessions. Once configured, the kernel will apply\n * confidentiality (encryption) and integrity (authentication) to IP traffic.\n *\n * <p>Note that not all aspects of IPsec are permitted by this API. Applications may create\n * transport mode security associations and apply them to individual sockets. Applications looking\n * to create an IPsec VPN should use {@link VpnManager} and {@link Ikev2VpnProfile}.\n *\n * @see <a href=\"https://tools.ietf.org/html/rfc4301\">RFC 4301, Security Architecture for the\n *     Internet Protocol</a>\n ",
+  "links" : [ "android.net.Ikev2VpnProfile", "android.net.VpnManager" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FEATURE_IPSEC_TUNNEL_MIGRATION",
+    "type" : "String",
+    "comment" : " platforms before FEATURE_IPSEC_TUNNEL_MIGRATION API is released.",
     "links" : [ ]
   }, {
     "name" : "DIRECTION_IN",
@@ -17,6 +23,11 @@
     "name" : "DIRECTION_OUT",
     "type" : "int",
     "comment" : "\n     * Used when applying a transform to direct traffic through an {@link IpSecTransform}\n     * away from the host.\n     *\n     * <p>See {@link #applyTransportModeTransform(Socket, int, IpSecTransform)}.\n     ",
+    "links" : [ "#applyTransportModeTransform(Socket", "android.net.IpSecTransform" ]
+  }, {
+    "name" : "DIRECTION_FWD",
+    "type" : "int",
+    "comment" : "\n     * Used when applying a transform to direct traffic through an {@link IpSecTransform} for\n     * forwarding between interfaces.\n     *\n     * <p>See {@link #applyTransportModeTransform(Socket, int, IpSecTransform)}.\n     *\n     * @hide\n     ",
     "links" : [ "#applyTransportModeTransform(Socket", "android.net.IpSecTransform" ]
   }, {
     "name" : "INVALID_SECURITY_PARAMETER_INDEX",
@@ -42,13 +53,13 @@
   "methods" : [ {
     "name" : "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress) throws ResourceUnavailableException",
     "returnType" : "SecurityParameterIndex",
-    "comment" : "\n     * Reserve a random SPI for traffic bound to or from the specified destination address.\n     *\n     * <p>If successful, this SPI is guaranteed available until released by a call to {@link\n     * SecurityParameterIndex#close()}.\n     *\n     * @param destinationAddress the destination address for traffic bearing the requested SPI.\n     *     For inbound traffic, the destination should be an address currently assigned on-device.\n     * @return the reserved SecurityParameterIndex\n     * @throws {@link #ResourceUnavailableException} indicating that too many SPIs are\n     *     currently allocated for this user\n     ",
-    "links" : [ "#ResourceUnavailableException", "#close()" ]
+    "comment" : "\n     * Reserve a random SPI for traffic bound to or from the specified destination address.\n     *\n     * <p>If successful, this SPI is guaranteed available until released by a call to {@link\n     * SecurityParameterIndex#close()}.\n     *\n     * @param destinationAddress the destination address for traffic bearing the requested SPI.\n     *     For inbound traffic, the destination should be an address currently assigned on-device.\n     * @return the reserved SecurityParameterIndex\n     * @throws ResourceUnavailableException indicating that too many SPIs are\n     *     currently allocated for this user\n     ",
+    "links" : [ "#close()" ]
   }, {
     "name" : "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress, int requestedSpi) throws SpiUnavailableException, ResourceUnavailableException",
     "returnType" : "SecurityParameterIndex",
-    "comment" : "\n     * Reserve the requested SPI for traffic bound to or from the specified destination address.\n     *\n     * <p>If successful, this SPI is guaranteed available until released by a call to {@link\n     * SecurityParameterIndex#close()}.\n     *\n     * @param destinationAddress the destination address for traffic bearing the requested SPI.\n     *     For inbound traffic, the destination should be an address currently assigned on-device.\n     * @param requestedSpi the requested SPI. The range 1-255 is reserved and may not be used. See\n     *     RFC 4303 Section 2.1.\n     * @return the reserved SecurityParameterIndex\n     * @throws {@link #ResourceUnavailableException} indicating that too many SPIs are\n     *     currently allocated for this user\n     * @throws {@link #SpiUnavailableException} indicating that the requested SPI could not be\n     *     reserved\n     ",
-    "links" : [ "#ResourceUnavailableException", "#close()", "#SpiUnavailableException" ]
+    "comment" : "\n     * Reserve the requested SPI for traffic bound to or from the specified destination address.\n     *\n     * <p>If successful, this SPI is guaranteed available until released by a call to {@link\n     * SecurityParameterIndex#close()}.\n     *\n     * @param destinationAddress the destination address for traffic bearing the requested SPI.\n     *     For inbound traffic, the destination should be an address currently assigned on-device.\n     * @param requestedSpi the requested SPI. The range 1-255 is reserved and may not be used. See\n     *     RFC 4303 Section 2.1.\n     * @return the reserved SecurityParameterIndex\n     * @throws ResourceUnavailableException indicating that too many SPIs are\n     *     currently allocated for this user\n     * @throws SpiUnavailableException indicating that the requested SPI could not be\n     *     reserved\n     ",
+    "links" : [ "#close()" ]
   }, {
     "name" : "public void applyTransportModeTransform(@NonNull Socket socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException",
     "returnType" : "void",
@@ -102,8 +113,28 @@
   }, {
     "name" : "public void applyTunnelModeTransform(@NonNull IpSecTunnelInterface tunnel, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException",
     "returnType" : "void",
-    "comment" : "\n     * Apply an active Tunnel Mode IPsec Transform to a {@link IpSecTunnelInterface}, which will\n     * tunnel all traffic for the given direction through the underlying network's interface with\n     * IPsec (applies an outer IP header and IPsec Header to all traffic, and expects an additional\n     * IP header and IPsec Header on all inbound traffic).\n     * <p>Applications should probably not use this API directly.\n     *\n     *\n     * @param tunnel The {@link IpSecManager#IpSecTunnelInterface} that will use the supplied\n     *        transform.\n     * @param direction the direction, {@link DIRECTION_OUT} or {@link #DIRECTION_IN} in which\n     *        the transform will be used.\n     * @param transform an {@link IpSecTransform} created in tunnel mode\n     * @throws IOException indicating that the transform could not be applied due to a lower\n     *         layer failure.\n     * @hide\n     ",
+    "comment" : "\n     * Apply an active Tunnel Mode IPsec Transform to a {@link IpSecTunnelInterface}, which will\n     * tunnel all traffic for the given direction through the underlying network's interface with\n     * IPsec (applies an outer IP header and IPsec Header to all traffic, and expects an additional\n     * IP header and IPsec Header on all inbound traffic).\n     * <p>Applications should probably not use this API directly.\n     *\n     * @param tunnel The {@link IpSecManager#IpSecTunnelInterface} that will use the supplied\n     *        transform.\n     * @param direction the direction, {@link DIRECTION_OUT} or {@link #DIRECTION_IN} in which\n     *        the transform will be used.\n     * @param transform an {@link IpSecTransform} created in tunnel mode\n     * @throws IOException indicating that the transform could not be applied due to a lower\n     *         layer failure.\n     * @hide\n     ",
     "links" : [ "IpSecTunnelInterface", "DIRECTION_OUT", "android.net.IpSecManager#IpSecTunnelInterface", "#DIRECTION_IN", "android.net.IpSecTransform" ]
+  }, {
+    "name" : "public void startTunnelModeTransformMigration(@NonNull IpSecTransform transform, @NonNull InetAddress newSourceAddress, @NonNull InetAddress newDestinationAddress)",
+    "returnType" : "void",
+    "comment" : "\n     * Migrate an active Tunnel Mode IPsec Transform to new source/destination addresses.\n     *\n     * <p>Begins the process of migrating a transform and cache the new addresses. To complete the\n     * migration once started, callers MUST apply the same transform to the appropriate tunnel using\n     * {@link IpSecManager#applyTunnelModeTransform}. Otherwise, the address update will not be\n     * committed and the transform will still only process traffic between the current source and\n     * destination address. One common use case is that the control plane will start the migration\n     * process and then hand off the transform to the IPsec caller to perform the actual migration\n     * when the tunnel is ready.\n     *\n     * <p>If this method is called multiple times before {@link\n     * IpSecManager#applyTunnelModeTransform} is called, when the transform is applied, it will be\n     * migrated to the addresses from the last call.\n     *\n     * <p>The provided source and destination addresses MUST share the same address family, but they\n     * can have a different family from the current addresses.\n     *\n     * <p>Transform migration is only supported for tunnel mode transforms. Calling this method on\n     * other types of transforms will throw an {@code UnsupportedOperationException}.\n     *\n     * @see IpSecTunnelInterface#setUnderlyingNetwork\n     * @param transform a tunnel mode {@link IpSecTransform}\n     * @param newSourceAddress the new source address\n     * @param newDestinationAddress the new destination address\n     * @hide\n     ",
+    "links" : [ "android.net.IpSecManager#applyTunnelModeTransform", "android.net.IpSecTransform" ]
+  }, {
+    "name" : "public IpSecTransformResponse createTransform(IpSecConfig config, IBinder binder, String callingPackage)",
+    "returnType" : "IpSecTransformResponse",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void deleteTransform(int resourceId)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public IpSecTransformState getTransformState(int transformId) throws IllegalStateException, RemoteException",
+    "returnType" : "IpSecTransformState",
+    "comment" : " @hide ",
+    "links" : [ ]
   }, {
     "name" : "private static void maybeHandleServiceSpecificException(ServiceSpecificException sse)",
     "returnType" : "void",
@@ -120,6 +151,6 @@
     "comment" : " package",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DIRECTION_IN", "DIRECTION_OUT", "INVALID_SECURITY_PARAMETER_INDEX", "INVALID_RESOURCE_ID", "mContext", "mService" ],
-  "methodNames" : [ "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress) throws ResourceUnavailableException", "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress, int requestedSpi) throws SpiUnavailableException, ResourceUnavailableException", "public void applyTransportModeTransform(@NonNull Socket socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void applyTransportModeTransform(@NonNull DatagramSocket socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void applyTransportModeTransform(@NonNull FileDescriptor socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void removeTransportModeTransforms(@NonNull Socket socket) throws IOException", "public void removeTransportModeTransforms(@NonNull DatagramSocket socket) throws IOException", "public void removeTransportModeTransforms(@NonNull FileDescriptor socket) throws IOException", "public void removeTunnelModeTransform(Network net, IpSecTransform transform)", "public UdpEncapsulationSocket openUdpEncapsulationSocket(int port) throws IOException, ResourceUnavailableException", "public UdpEncapsulationSocket openUdpEncapsulationSocket() throws IOException, ResourceUnavailableException", "public IpSecTunnelInterface createIpSecTunnelInterface(@NonNull InetAddress localAddress, @NonNull InetAddress remoteAddress, @NonNull Network underlyingNetwork) throws ResourceUnavailableException, IOException", "public void applyTunnelModeTransform(@NonNull IpSecTunnelInterface tunnel, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "private static void maybeHandleServiceSpecificException(ServiceSpecificException sse)", " static RuntimeException rethrowUncheckedExceptionFromServiceSpecificException(ServiceSpecificException sse)", " static IOException rethrowCheckedExceptionFromServiceSpecificException(ServiceSpecificException sse) throws IOException" ]
+  "methodNames" : [ "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress) throws ResourceUnavailableException", "public SecurityParameterIndex allocateSecurityParameterIndex(@NonNull InetAddress destinationAddress, int requestedSpi) throws SpiUnavailableException, ResourceUnavailableException", "public void applyTransportModeTransform(@NonNull Socket socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void applyTransportModeTransform(@NonNull DatagramSocket socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void applyTransportModeTransform(@NonNull FileDescriptor socket, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void removeTransportModeTransforms(@NonNull Socket socket) throws IOException", "public void removeTransportModeTransforms(@NonNull DatagramSocket socket) throws IOException", "public void removeTransportModeTransforms(@NonNull FileDescriptor socket) throws IOException", "public void removeTunnelModeTransform(Network net, IpSecTransform transform)", "public UdpEncapsulationSocket openUdpEncapsulationSocket(int port) throws IOException, ResourceUnavailableException", "public UdpEncapsulationSocket openUdpEncapsulationSocket() throws IOException, ResourceUnavailableException", "public IpSecTunnelInterface createIpSecTunnelInterface(@NonNull InetAddress localAddress, @NonNull InetAddress remoteAddress, @NonNull Network underlyingNetwork) throws ResourceUnavailableException, IOException", "public void applyTunnelModeTransform(@NonNull IpSecTunnelInterface tunnel, @PolicyDirection int direction, @NonNull IpSecTransform transform) throws IOException", "public void startTunnelModeTransformMigration(@NonNull IpSecTransform transform, @NonNull InetAddress newSourceAddress, @NonNull InetAddress newDestinationAddress)", "public IpSecTransformResponse createTransform(IpSecConfig config, IBinder binder, String callingPackage)", "public void deleteTransform(int resourceId)", "public IpSecTransformState getTransformState(int transformId) throws IllegalStateException, RemoteException", "private static void maybeHandleServiceSpecificException(ServiceSpecificException sse)", " static RuntimeException rethrowUncheckedExceptionFromServiceSpecificException(ServiceSpecificException sse)", " static IOException rethrowCheckedExceptionFromServiceSpecificException(ServiceSpecificException sse) throws IOException" ],
+  "variableNames" : [ "TAG", "FEATURE_IPSEC_TUNNEL_MIGRATION", "DIRECTION_IN", "DIRECTION_OUT", "DIRECTION_FWD", "INVALID_SECURITY_PARAMETER_INDEX", "INVALID_RESOURCE_ID", "mContext", "mService" ]
 }

@@ -1,0 +1,936 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/UnicodeSet.java",
+  "packageName" : "android.icu.text",
+  "className" : "UnicodeSet",
+  "comment" : "\n * A mutable set of Unicode characters and multicharacter strings.\n * Objects of this class represent <em>character classes</em> used\n * in regular expressions. A character specifies a subset of Unicode\n * code points.  Legal code points are U+0000 to U+10FFFF, inclusive.\n *\n * Note: method freeze() will not only make the set immutable, but\n * also makes important methods much higher performance:\n * contains(c), containsNone(...), span(...), spanBack(...) etc.\n * After the object is frozen, any subsequent call that wants to change\n * the object will throw UnsupportedOperationException.\n *\n * <p>The UnicodeSet class is not designed to be subclassed.\n *\n * <p><code>UnicodeSet</code> supports two APIs. The first is the\n * <em>operand</em> API that allows the caller to modify the value of\n * a <code>UnicodeSet</code> object. It conforms to Java 2's\n * <code>java.util.Set</code> interface, although\n * <code>UnicodeSet</code> does not actually implement that\n * interface. All methods of <code>Set</code> are supported, with the\n * modification that they take a character range or single character\n * instead of an <code>Object</code>, and they take a\n * <code>UnicodeSet</code> instead of a <code>Collection</code>.  The\n * operand API may be thought of in terms of boolean logic: a boolean\n * OR is implemented by <code>add</code>, a boolean AND is implemented\n * by <code>retain</code>, a boolean XOR is implemented by\n * <code>complement</code> taking an argument, and a boolean NOT is\n * implemented by <code>complement</code> with no argument.  In terms\n * of traditional set theory function names, <code>add</code> is a\n * union, <code>retain</code> is an intersection, <code>remove</code>\n * is an asymmetric difference, and <code>complement</code> with no\n * argument is a set complement with respect to the superset range\n * <code>MIN_VALUE-MAX_VALUE</code>\n *\n * <p>The second API is the\n * <code>applyPattern()</code>/<code>toPattern()</code> API from the\n * <code>java.text.Format</code>-derived classes.  Unlike the\n * methods that add characters, add categories, and control the logic\n * of the set, the method <code>applyPattern()</code> sets all\n * attributes of a <code>UnicodeSet</code> at once, based on a\n * string pattern.\n *\n * <p><b>Pattern syntax</b></p>\n *\n * Patterns are accepted by the constructors and the\n * <code>applyPattern()</code> methods and returned by the\n * <code>toPattern()</code> method.  These patterns follow a syntax\n * similar to that employed by version 8 regular expression character\n * classes.  Here are some simple examples:\n *\n * <blockquote>\n *   <table>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[]</code></td>\n *       <td style=\"vertical-align: top;\">No characters</td>\n *     </tr><tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[a]</code></td>\n *       <td style=\"vertical-align: top;\">The character 'a'</td>\n *     </tr><tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[ae]</code></td>\n *       <td style=\"vertical-align: top;\">The characters 'a' and 'e'</td>\n *     </tr>\n *     <tr>\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[a-e]</code></td>\n *       <td style=\"vertical-align: top;\">The characters 'a' through 'e' inclusive, in Unicode code\n *       point order</td>\n *     </tr>\n *     <tr>\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[\\\\u4E01]</code></td>\n *       <td style=\"vertical-align: top;\">The character U+4E01</td>\n *     </tr>\n *     <tr>\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[a{ab}{ac}]</code></td>\n *       <td style=\"vertical-align: top;\">The character 'a' and the multicharacter strings &quot;ab&quot; and\n *       &quot;ac&quot;</td>\n *     </tr>\n *     <tr>\n *       <td style=\"white-space: nowrap; vertical-align: top; horizontal-align: left;\"><code>[\\p{Lu}]</code></td>\n *       <td style=\"vertical-align: top;\">All characters in the general category Uppercase Letter</td>\n *     </tr>\n *   </table>\n * </blockquote>\n *\n * Any character may be preceded by a backslash in order to remove any special\n * meaning.  White space characters, as defined by the Unicode Pattern_White_Space property, are\n * ignored, unless they are escaped.\n *\n * <p>Property patterns specify a set of characters having a certain\n * property as defined by the Unicode standard.  Both the POSIX-like\n * \"[:Lu:]\" and the Perl-like syntax \"\\p{Lu}\" are recognized.  For a\n * complete list of supported property patterns, see the User's Guide\n * for UnicodeSet at\n * <a href=\"https://unicode-org.github.io/icu/userguide/strings/unicodeset\">\n * https://unicode-org.github.io/icu/userguide/strings/unicodeset</a>.\n * Actual determination of property data is defined by the underlying\n * Unicode database as implemented by UCharacter.\n *\n * <p>Patterns specify individual characters, ranges of characters, and\n * Unicode property sets.  When elements are concatenated, they\n * specify their union.  To complement a set, place a '^' immediately\n * after the opening '['.  Property patterns are inverted by modifying\n * their delimiters; \"[:^foo]\" and \"\\P{foo}\".  In any other location,\n * '^' has no special meaning.\n *\n * <p>Since ICU 70, \"[^...]\", \"[:^foo]\", \"\\P{foo}\", and \"[:binaryProperty=No:]\"\n * perform a “code point complement” (all code points minus the original set),\n * removing all multicharacter strings,\n * equivalent to .{@link #complement()}.{@link #removeAllStrings()} .\n * The {@link #complement()} API function continues to perform a\n * symmetric difference with all code points and thus retains all multicharacter strings.\n *\n * <p>Ranges are indicated by placing two a '-' between two\n * characters, as in \"a-z\".  This specifies the range of all\n * characters from the left to the right, in Unicode order.  If the\n * left character is greater than or equal to the\n * right character it is a syntax error.  If a '-' occurs as the first\n * character after the opening '[' or '[^', or if it occurs as the\n * last character before the closing ']', then it is taken as a\n * literal.  Thus \"[a\\\\-b]\", \"[-ab]\", and \"[ab-]\" all indicate the same\n * set of three characters, 'a', 'b', and '-'.\n *\n * <p>Sets may be intersected using the '&amp;' operator or the asymmetric\n * set difference may be taken using the '-' operator, for example,\n * \"[[:L:]&amp;[\\\\u0000-\\\\u0FFF]]\" indicates the set of all Unicode letters\n * with values less than 4096.  Operators ('&amp;' and '|') have equal\n * precedence and bind left-to-right.  Thus\n * \"[[:L:]-[a-z]-[\\\\u0100-\\\\u01FF]]\" is equivalent to\n * \"[[[:L:]-[a-z]]-[\\\\u0100-\\\\u01FF]]\".  This only really matters for\n * difference; intersection is commutative.\n *\n * <table>\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[a]</code><td>The set containing 'a'\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[a-z]</code><td>The set containing 'a'\n * through 'z' and all letters in between, in Unicode order\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[^a-z]</code><td>The set containing\n * all characters but 'a' through 'z',\n * that is, U+0000 through 'a'-1 and 'z'+1 through U+10FFFF\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[[<em>pat1</em>][<em>pat2</em>]]</code>\n * <td>The union of sets specified by <em>pat1</em> and <em>pat2</em>\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[[<em>pat1</em>]&amp;[<em>pat2</em>]]</code>\n * <td>The intersection of sets specified by <em>pat1</em> and <em>pat2</em>\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[[<em>pat1</em>]-[<em>pat2</em>]]</code>\n * <td>The asymmetric difference of sets specified by <em>pat1</em> and\n * <em>pat2</em>\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[:Lu:] or \\p{Lu}</code>\n * <td>The set of characters having the specified\n * Unicode property; in\n * this case, Unicode uppercase letters\n * <tr style=\"vertical-align: top;\"><td style=\"white-space: nowrap;\"><code>[:^Lu:] or \\P{Lu}</code>\n * <td>The set of characters <em>not</em> having the given\n * Unicode property\n * </table>\n *\n * <p><b>Formal syntax</b></p>\n *\n * <blockquote>\n *   <table>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>pattern :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>('[' '^'? item* ']') |\n *       property</code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>item :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>char | (char '-' char) | pattern-expr<br>\n *       </code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>pattern-expr :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>pattern | pattern-expr pattern |\n *       pattern-expr op pattern<br>\n *       </code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>op :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>'&amp;' | '-'<br>\n *       </code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>special :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>'[' | ']' | '-'<br>\n *       </code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>char :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><em>any character that is not</em><code> special<br>\n *       | ('\\\\' </code><em>any character</em><code>)<br>\n *       | ('&#92;u' hex hex hex hex)<br>\n *       </code></td>\n *     </tr>\n *     <tr style=\"vertical-align: top\">\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>hex :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><code>'0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' |<br>\n *       &nbsp;&nbsp;&nbsp;&nbsp;'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'</code></td>\n *     </tr>\n *     <tr>\n *       <td style=\"white-space: nowrap; vertical-align: top;\" align=\"right\"><code>property :=&nbsp; </code></td>\n *       <td style=\"vertical-align: top;\"><em>a Unicode property set pattern</em></td>\n *     </tr>\n *   </table>\n *   <br>\n *   <table border=\"1\">\n *     <tr>\n *       <td>Legend: <table>\n *         <tr>\n *           <td style=\"white-space: nowrap; vertical-align: top;\"><code>a := b</code></td>\n *           <td style=\"width: 20; vertical-align: top;\">&nbsp; </td>\n *           <td style=\"vertical-align: top;\"><code>a</code> may be replaced by <code>b</code> </td>\n *         </tr>\n *         <tr>\n *           <td style=\"white-space: nowrap; vertical-align: top;\"><code>a?</code></td>\n *           <td style=\"vertical-align: top;\"></td>\n *           <td style=\"vertical-align: top;\">zero or one instance of <code>a</code><br>\n *           </td>\n *         </tr>\n *         <tr>\n *           <td style=\"white-space: nowrap; vertical-align: top;\"><code>a*</code></td>\n *           <td style=\"vertical-align: top;\"></td>\n *           <td style=\"vertical-align: top;\">one or more instances of <code>a</code><br>\n *           </td>\n *         </tr>\n *         <tr>\n *           <td style=\"white-space: nowrap; vertical-align: top;\"><code>a | b</code></td>\n *           <td style=\"vertical-align: top;\"></td>\n *           <td style=\"vertical-align: top;\">either <code>a</code> or <code>b</code><br>\n *           </td>\n *         </tr>\n *         <tr>\n *           <td style=\"white-space: nowrap; vertical-align: top;\"><code>'a'</code></td>\n *           <td style=\"vertical-align: top;\"></td>\n *           <td style=\"vertical-align: top;\">the literal string between the quotes </td>\n *         </tr>\n *       </table>\n *       </td>\n *     </tr>\n *   </table>\n * </blockquote>\n * <p>To iterate over contents of UnicodeSet, the following are available:\n * <ul><li>{@link #ranges()} to iterate through the ranges</li>\n * <li>{@link #strings()} to iterate through the strings</li>\n * <li>{@link #iterator()} to iterate through the entire contents in a single loop.\n * That method is, however, not particularly efficient, since it \"boxes\" each code point into a String.\n * </ul>\n * All of the above can be used in <b>for</b> loops.\n * The {@link android.icu.text.UnicodeSetIterator UnicodeSetIterator} can also be used, but not in <b>for</b> loops.\n * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n *\n * @author Alan Liu\n * @see UnicodeSetIterator\n * @see UnicodeSetSpanner\n ",
+  "links" : [ "#strings()", "#iterator()", "android.icu.text.UnicodeSetSpanner", "#removeAllStrings()", "#ranges()", "#complement()", "android.icu.text.UnicodeSetIterator" ],
+  "variables" : [ {
+    "name" : "EMPTY_STRINGS",
+    "type" : "SortedSet<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY",
+    "type" : "UnicodeSet",
+    "comment" : "\n     * Constant for the empty set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ALL_CODE_POINTS",
+    "type" : "UnicodeSet",
+    "comment" : "\n     * Constant for the set of all code points. (Since UnicodeSets can include strings, does not include everything that a UnicodeSet can.)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "XSYMBOL_TABLE",
+    "type" : "XSymbolTable",
+    "comment" : " for overriding the the function processing",
+    "links" : [ ]
+  }, {
+    "name" : "LOW",
+    "type" : "int",
+    "comment" : " LOW <= all valid values. ZERO for codepoints",
+    "links" : [ ]
+  }, {
+    "name" : "HIGH",
+    "type" : "int",
+    "comment" : " HIGH > all valid values. 10000 for code units.",
+    "links" : [ ]
+  }, {
+    "name" : "INITIAL_CAPACITY",
+    "type" : "int",
+    "comment" : "\n     * Enough for sets with few ranges.\n     * For example, White_Space has 10 ranges, list length 21.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_LENGTH",
+    "type" : "int",
+    "comment" : " Max list [0, 1, 2, ..., max code point, HIGH] ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_VALUE",
+    "type" : "int",
+    "comment" : "\n     * Minimum value that can be stored in a UnicodeSet.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_VALUE",
+    "type" : "int",
+    "comment" : "\n     * Maximum value that can be stored in a UnicodeSet.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "len",
+    "type" : "int",
+    "comment" : " length used; list may be longer to minimize reallocs",
+    "links" : [ ]
+  }, {
+    "name" : "list",
+    "type" : "int[]",
+    "comment" : " MUST be terminated with HIGH",
+    "links" : [ ]
+  }, {
+    "name" : "rangeList",
+    "type" : "int[]",
+    "comment" : " internal buffer",
+    "links" : [ ]
+  }, {
+    "name" : "buffer",
+    "type" : "int[]",
+    "comment" : " internal buffer",
+    "links" : [ ]
+  }, {
+    "name" : "strings",
+    "type" : "SortedSet<String>",
+    "comment" : " is not private so that UnicodeSetIterator can get access",
+    "links" : [ ]
+  }, {
+    "name" : "pat",
+    "type" : "String",
+    "comment" : "\n     * The pattern representation of this set.  This may not be the\n     * most economical pattern.  It is the pattern supplied to\n     * applyPattern(), with variables substituted and whitespace\n     * removed.  For sets constructed without applyPattern(), or\n     * modified using the non-pattern API, this string will be null,\n     * indicating that toPattern() must generate a pattern\n     * representation from the inversion list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ANY_ID",
+    "type" : "String",
+    "comment" : " [\\u0000-\\U0010FFFF]",
+    "links" : [ ]
+  }, {
+    "name" : "ASCII_ID",
+    "type" : "String",
+    "comment" : " [\\u0000-\\u007F]",
+    "links" : [ ]
+  }, {
+    "name" : "ASSIGNED",
+    "type" : "String",
+    "comment" : " [:^Cn:]",
+    "links" : [ ]
+  }, {
+    "name" : "bmpSet",
+    "type" : "BMPSet",
+    "comment" : " The set is frozen if bmpSet or stringSpan is not null.",
+    "links" : [ ]
+  }, {
+    "name" : "stringSpan",
+    "type" : "UnicodeSetStringSpan",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAST0_START",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAST1_RANGE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAST2_SET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MODE0_NONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MODE1_INBRACKET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MODE2_OUTBRACKET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SETMODE0_NONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SETMODE1_UNICODESET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SETMODE2_PROPERTYPAT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SETMODE3_PREPARSED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_DEPTH",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NO_VERSION",
+    "type" : "VersionInfo",
+    "comment" : " VersionInfo for unassigned characters",
+    "links" : [ ]
+  }, {
+    "name" : "IGNORE_SPACE",
+    "type" : "int",
+    "comment" : "\n     * Bitmask for constructor and applyPattern() indicating that\n     * white space should be ignored.  If set, ignore Unicode Pattern_White_Space characters,\n     * unless they are quoted or escaped.  This may be ORed together\n     * with other selectors.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CASE",
+    "type" : "int",
+    "comment" : "\n     * Alias for {@link #CASE_INSENSITIVE}.\n     *\n     * @deprecated ICU 73 Use {@link #CASE_INSENSITIVE} instead.\n     ",
+    "links" : [ "#CASE_INSENSITIVE" ]
+  }, {
+    "name" : "CASE_INSENSITIVE",
+    "type" : "int",
+    "comment" : "\n     * Enable case insensitive matching.  E.g., \"[ab]\" with this flag\n     * will match 'a', 'A', 'b', and 'B'.  \"[^ab]\" with this flag will\n     * match all except 'a', 'A', 'b', and 'B'. This performs a full\n     * closure over case mappings, e.g. 'ſ' (U+017F long s) for 's'.\n     *\n     * <p>This value is an options bit set value for some\n     * constructors, applyPattern(), and closeOver().\n     * It can be ORed together with other, unrelated options.\n     *\n     * <p>The resulting set is a superset of the input for the code points but\n     * not for the strings.\n     * It performs a case mapping closure of the code points and adds\n     * full case folding strings for the code points, and reduces strings of\n     * the original set to their full case folding equivalents.\n     *\n     * <p>This is designed for case-insensitive matches, for example\n     * in regular expressions. The full code point case closure allows checking of\n     * an input character directly against the closure set.\n     * Strings are matched by comparing the case-folded form from the closure\n     * set with an incremental case folding of the string in question.\n     *\n     * <p>The closure set will also contain single code points if the original\n     * set contained case-equivalent strings (like U+00DF for \"ss\" or \"Ss\" etc.).\n     * This is not necessary (that is, redundant) for the above matching method\n     * but results in the same closure sets regardless of whether the original\n     * set contained the code point or a string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ADD_CASE_MAPPINGS",
+    "type" : "int",
+    "comment" : "\n     * Adds all case mappings for each element in the set.\n     * This adds the full lower-, title-, and uppercase mappings as well as the full case folding\n     * of each existing element in the set.\n     *\n     * <p>This value is an options bit set value for some\n     * constructors, applyPattern(), and closeOver().\n     * It can be ORed together with other, unrelated options.\n     *\n     * <p>Unlike the “case insensitive” options, this does not perform a closure.\n     * For example, it does not add 'ſ' (U+017F long s) for 's',\n     * 'K' (U+212A Kelvin sign) for 'k', or replace set strings by their case-folded versions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SIMPLE_CASE_INSENSITIVE",
+    "type" : "int",
+    "comment" : "\n     * Enable case insensitive matching.\n     * Same as {@link #CASE_INSENSITIVE} but using only Simple_Case_Folding (scf) mappings,\n     * which map each code point to one code point,\n     * not full Case_Folding (cf) mappings, which map some code points to multiple code points.\n     *\n     * <p>This is designed for case-insensitive matches, for example in certain\n     * regular expression implementations where only Simple_Case_Folding mappings are used,\n     * such as in ECMAScript (JavaScript) regular expressions.\n     *\n     * <p>This value is an options bit set value for some\n     * constructors, applyPattern(), and closeOver().\n     * It can be ORed together with other, unrelated options.\n     *\n     * @hide unsupported on Android\n     ",
+    "links" : [ "#CASE_INSENSITIVE" ]
+  }, {
+    "name" : "CASE_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Return a new set that is equivalent to this one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet set(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Make this object represent the range <code>start - end</code>.\n     * If <code>start &gt; end</code> then this object is set to an empty range.\n     *\n     * @param start first character in the set, inclusive\n     * @param end last character in the set, inclusive\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet set(UnicodeSet other)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Make this object represent the same set as <code>other</code>.\n     * @param other a <code>UnicodeSet</code> whose value will be\n     * copied to this object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet applyPattern(String pattern)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to represent the set specified by the given pattern.\n     * See the class description for the syntax of the pattern language.\n     * Whitespace is ignored.\n     * @param pattern a string specifying what characters are in the set\n     * @exception java.lang.IllegalArgumentException if the pattern\n     * contains a syntax error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyPattern(String pattern, boolean ignoreWhitespace)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to represent the set specified by the given pattern,\n     * optionally ignoring whitespace.\n     * See the class description for the syntax of the pattern language.\n     * @param pattern a string specifying what characters are in the set\n     * @param ignoreWhitespace if true then Unicode Pattern_White_Space characters are ignored\n     * @exception java.lang.IllegalArgumentException if the pattern\n     * contains a syntax error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyPattern(String pattern, int options)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to represent the set specified by the given pattern,\n     * optionally ignoring whitespace.\n     * See the class description for the syntax of the pattern language.\n     * @param pattern a string specifying what characters are in the set\n     * @param options a bitmask indicating which options to apply.\n     * Valid options are {@link #IGNORE_SPACE} and\n     * at most one of {@link #CASE_INSENSITIVE}, {@link #ADD_CASE_MAPPINGS},\n     * {@link #SIMPLE_CASE_INSENSITIVE}. These case options are mutually exclusive.\n     * @exception java.lang.IllegalArgumentException if the pattern\n     * contains a syntax error.\n     ",
+    "links" : [ "#ADD_CASE_MAPPINGS", "#CASE_INSENSITIVE", "#SIMPLE_CASE_INSENSITIVE", "#IGNORE_SPACE" ]
+  }, {
+    "name" : "public static boolean resemblesPattern(String pattern, int pos)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given position, in the given pattern, appears\n     * to be the start of a UnicodeSet pattern.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void appendCodePoint(Appendable app, int c)",
+    "returnType" : "void",
+    "comment" : "\n     * TODO: create Appendable version of UTF16.append(buf, c),\n     * maybe in new class Appendables?\n     * @throws IOException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void append(Appendable app, CharSequence s)",
+    "returnType" : "void",
+    "comment" : "\n     * TODO: create class Appendables?\n     * @throws IOException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static T _appendToPat(T buf, String s, boolean escapeUnprintable)",
+    "returnType" : "T",
+    "comment" : "\n     * Append the <code>toPattern()</code> representation of a\n     * string to the given <code>Appendable</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static T _appendToPat(T buf, int c, boolean escapeUnprintable)",
+    "returnType" : "T",
+    "comment" : "\n     * Append the <code>toPattern()</code> representation of a\n     * character to the given <code>Appendable</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static T _appendToPat(T result, int start, int end, boolean escapeUnprintable)",
+    "returnType" : "T",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String toPattern(boolean escapeUnprintable)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string representation of this set.  If the result of\n     * calling this function is passed to a UnicodeSet constructor, it\n     * will produce another set that is equal to this one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private T _toPattern(T result, boolean escapeUnprintable)",
+    "returnType" : "T",
+    "comment" : "\n     * Append a string representation of this set to result.  This will be\n     * a cleaned version of the string passed to applyPattern(), if there\n     * is one.  Otherwise it will be generated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer _generatePattern(StringBuffer result, boolean escapeUnprintable)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Generate and append a string representation of this set to result.\n     * This does not use this.pat, the cleaned up copy of the string\n     * passed to applyPattern().\n     *\n     * @param result the buffer into which to generate the pattern\n     * @param escapeUnprintable escape unprintable characters if true\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer _generatePattern(StringBuffer result, boolean escapeUnprintable, boolean includeStrings)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Generate and append a string representation of this set to result.\n     * This does not use this.pat, the cleaned up copy of the string\n     * passed to applyPattern().\n     *\n     * @param result the buffer into which to generate the pattern\n     * @param escapeUnprintable escape unprintable characters if true\n     * @param includeStrings if false, doesn't include the strings.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private T appendNewPattern(T result, boolean escapeUnprintable, boolean includeStrings)",
+    "returnType" : "T",
+    "comment" : " Allows other callers to use a StringBuilder while the existing API is stuck with StringBuffer.",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of elements in this set (its cardinality)\n     * Note than the elements of a set may include both individual\n     * codepoints and strings.\n     *\n     * @return the number of elements in this set (its cardinality).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns <tt>true</tt> if this set contains no elements.\n     *\n     * @return <tt>true</tt> if this set contains no elements.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasStrings()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if this set contains multi-character strings or the empty string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean matchesIndexValue(int v)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Implementation of UnicodeMatcher API.  Returns <tt>true</tt> if\n     * this set contains any character whose low byte is the given\n     * value.  This is used by <tt>RuleBasedTransliterator</tt> for\n     * indexing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int matches(Replaceable text, int[] offset, int limit, boolean incremental)",
+    "returnType" : "int",
+    "comment" : "\n     * Implementation of UnicodeMatcher.matches().  Always matches the\n     * longest possible multichar string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int matchRest(Replaceable text, int start, int limit, String s)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the longest match for s in text at the given position.\n     * If limit > start then match forward from start+1 to limit\n     * matching all characters except s.charAt(0).  If limit < start,\n     * go backward starting from start-1 matching all characters\n     * except s.charAt(s.length()-1).  This method assumes that the\n     * first character, text.charAt(start), matches s, so it does not\n     * check it.\n     * @param text the text to match\n     * @param start the first character to match.  In the forward\n     * direction, text.charAt(start) is matched against s.charAt(0).\n     * In the reverse direction, it is matched against\n     * s.charAt(s.length()-1).\n     * @param limit the limit offset for matching, either last+1 in\n     * the forward direction, or last-1 in the reverse direction,\n     * where last is the index of the last character to match.\n     * @return If part of s matches up to the limit, return |limit -\n     * start|.  If all of s matches before reaching the limit, return\n     * s.length().  If there is a mismatch between s and text, return\n     * 0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int matchesAt(CharSequence text, int offset)",
+    "returnType" : "int",
+    "comment" : "\n     * Tests whether the text matches at the offset. If so, returns the end of the longest substring that it matches. If not, returns -1.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int matchesAt(CharSequence text, int offsetInText, CharSequence substring)",
+    "returnType" : "int",
+    "comment" : " Note: This method was moved from CollectionUtilities",
+    "links" : [ ]
+  }, {
+    "name" : "public void addMatchSetTo(UnicodeSet toUnionTo)",
+    "returnType" : "void",
+    "comment" : "\n     * Implementation of UnicodeMatcher API.  Union the set of all\n     * characters that may be matched by this object into the given\n     * set.\n     * @param toUnionTo the set into which to union the source characters\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int indexOf(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the index of the given character within this set, where\n     * the set is ordered by ascending code point.  If the character\n     * is not in this set, return -1.  The inverse of this method is\n     * <code>charAt()</code>.\n     * @return an index from 0..size()-1, or -1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int charAt(int index)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the character at the given index within this set, where\n     * the set is ordered by ascending code point.  If the index is\n     * out of range, return -1.  The inverse of this method is\n     * <code>indexOf()</code>.\n     * @param index an index from 0..size()-1\n     * @return the character at the given index, or -1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet add(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds the specified range to this set if it is not already\n     * present.  If this set already contains the specified range,\n     * the call leaves this set unchanged.  If <code>start &gt; end</code>\n     * then an empty range is added, leaving the set unchanged.\n     *\n     * @param start first character, inclusive, of range to be added\n     * to this set.\n     * @param end last character, inclusive, of range to be added\n     * to this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet addAll(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds all characters in range (uses preferred naming convention).\n     * @param start The index of where to start on adding all characters.\n     * @param end The index of where to end on adding all characters.\n     * @return a reference to this object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private UnicodeSet add_unchecked(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : " for internal use, after checkFrozen has been called",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet add(int c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds the specified character to this set if it is not already\n     * present.  If this set already contains the specified character,\n     * the call leaves this set unchanged.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final UnicodeSet add_unchecked(int c)",
+    "returnType" : "UnicodeSet",
+    "comment" : " for internal use only, after checkFrozen has been called",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet add(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds the specified multicharacter to this set if it is not already\n     * present.  If this set already contains the multicharacter,\n     * the call leaves this set unchanged.\n     * Thus \"ch\" =&gt; {\"ch\"}\n     *\n     * @param s the source string\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addString(CharSequence s)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getSingleCP(CharSequence s)",
+    "returnType" : "int",
+    "comment" : "\n     * Utility for getting code point from single code point CharSequence.\n     * See the public UTF16.getSingleCodePoint() (which returns -1 for null rather than throwing NPE).\n     *\n     * @return a code point IF the string consists of a single one.\n     * otherwise returns -1.\n     * @param s to test\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet addAll(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds each of the characters in this string to the set. Thus \"ch\" =&gt; {\"c\", \"h\"}\n     * If this set already any particular character, it has no effect on that character.\n     * @param s the source string\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet retainAll(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Retains EACH of the characters in this string. Note: \"ch\" == {\"c\", \"h\"}\n     * If this set already any particular character, it has no effect on that character.\n     * @param s the source string\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet complementAll(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Complement EACH of the characters in this string. Note: \"ch\" == {\"c\", \"h\"}\n     * If this set already any particular character, it has no effect on that character.\n     * @param s the source string\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet removeAll(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Remove EACH of the characters in this string. Note: \"ch\" == {\"c\", \"h\"}\n     * If this set already any particular character, it has no effect on that character.\n     * @param s the source string\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet removeAllStrings()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Remove all strings from this UnicodeSet\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static UnicodeSet from(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Makes a set from a multicharacter string. Thus \"ch\" =&gt; {\"ch\"}\n     *\n     * @param s the source string\n     * @return a newly created set containing the given string\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static UnicodeSet fromAll(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Makes a set from each of the characters in the string. Thus \"ch\" =&gt; {\"c\", \"h\"}\n     * @param s the source string\n     * @return a newly created set containing the given characters\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet retain(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Retain only the elements in this set that are contained in the\n     * specified range.  If <code>start &gt; end</code> then an empty range is\n     * retained, leaving the set empty.\n     *\n     * @param start first character, inclusive, of range\n     * @param end last character, inclusive, of range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet retain(int c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Retain the specified character from this set if it is present.\n     * Upon return this set will be empty if it did not contain c, or\n     * will only contain c if it did contain c.\n     * @param c the character to be retained\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet retain(CharSequence cs)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Retain the specified string in this set if it is present.\n     * Upon return this set will be empty if it did not contain s, or\n     * will only contain s if it did contain s.\n     * @param cs the string to be retained\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet remove(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Removes the specified range from this set if it is present.\n     * The set will not contain the specified range once the call\n     * returns.  If <code>start &gt; end</code> then an empty range is\n     * removed, leaving the set unchanged.\n     *\n     * @param start first character, inclusive, of range to be removed\n     * from this set.\n     * @param end last character, inclusive, of range to be removed\n     * from this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet remove(int c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Removes the specified character from this set if it is present.\n     * The set will not contain the specified character once the call\n     * returns.\n     * @param c the character to be removed\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet remove(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Removes the specified string from this set if it is present.\n     * The set will not contain the specified string once the call\n     * returns.\n     * @param s the string to be removed\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet complement(int start, int end)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Complements the specified range in this set.  Any character in\n     * the range will be removed if it is in this set, or will be\n     * added if it is not in this set.  If <code>start &gt; end</code>\n     * then an empty range is complemented, leaving the set unchanged.\n     *\n     * @param start first character, inclusive, of range\n     * @param end last character, inclusive, of range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UnicodeSet complement(int c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Complements the specified character in this set.  The character\n     * will be removed if it is in this set, or will be added if it is\n     * not in this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet complement()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * This is equivalent to\n     * <code>complement(MIN_VALUE, MAX_VALUE)</code>.\n     *\n     * <p><strong>Note:</strong> This performs a symmetric difference with all code points\n     * <em>and thus retains all multicharacter strings</em>.\n     * In order to achieve a “code point complement” (all code points minus this set),\n     * the easiest is to .{@link #complement()}.{@link #removeAllStrings()} .\n     ",
+    "links" : [ "#removeAllStrings()", "#complement()" ]
+  }, {
+    "name" : "public final UnicodeSet complement(CharSequence s)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Complement the specified string in this set.\n     * The set will not contain the specified string once the call\n     * returns.\n     *\n     * @param s the string to complement\n     * @return this object, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean contains(int c)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains the given character.\n     * @param c character to be checked for containment\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final int findCodePoint(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the smallest value i such that c < list[i].  Caller\n     * must ensure that c is a legal value or this method will enter\n     * an infinite loop.  This method performs a binary search.\n     * @param c a character in the range MIN_VALUE..MAX_VALUE\n     * inclusive\n     * @return the smallest integer i in the range 0..len-1,\n     * inclusive, such that c < list[i]\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean contains(int start, int end)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains every character\n     * of the given range.\n     * @param start first character, inclusive, of the range\n     * @param end last character, inclusive, of the range\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean contains(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns <tt>true</tt> if this set contains the given\n     * multicharacter string.\n     * @param s string to be checked for containment\n     * @return <tt>true</tt> if this set contains the specified string\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsAll(UnicodeSet b)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains all the characters and strings\n     * of the given set.\n     * @param b set to be checked for containment\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsAll(String s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if there is a partition of the string such that this set contains each of the partitioned strings.\n     * For example, for the Unicode set [a{bc}{cd}]<br>\n     * containsAll is true for each of: \"a\", \"bc\", \"\"cdbca\"<br>\n     * containsAll is false for each of: \"acb\", \"bcda\", \"bcx\"<br>\n     * @param s string containing characters to be checked for containment\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean containsAll(String s, int i)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Recursive routine called if we fail to find a match in containsAll, and there are strings\n     * @param s source string\n     * @param i point to match to the end on\n     * @return true if ok\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getRegexEquivalent()",
+    "returnType" : "String",
+    "comment" : "\n     * Get the Regex equivalent for this UnicodeSet\n     * @return regex pattern equivalent to this UnicodeSet\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsNone(int start, int end)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains none of the characters\n     * of the given range.\n     * @param start first character, inclusive, of the range\n     * @param end last character, inclusive, of the range\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsNone(UnicodeSet b)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if none of the characters or strings in this UnicodeSet appears in the string.\n     * For example, for the Unicode set [a{bc}{cd}]<br>\n     * containsNone is true for: \"xy\", \"cb\"<br>\n     * containsNone is false for: \"a\", \"bc\", \"bcd\"<br>\n     * @param b set to be checked for containment\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsNone(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains none of the characters\n     * of the given string.\n     * @param s string containing characters to be checked for containment\n     * @return true if the test condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean containsSome(int start, int end)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains one or more of the characters\n     * in the given range.\n     * @param start first character, inclusive, of the range\n     * @param end last character, inclusive, of the range\n     * @return true if the condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean containsSome(UnicodeSet s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains one or more of the characters\n     * and strings of the given set.\n     * @param s set to be checked for containment\n     * @return true if the condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean containsSome(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this set contains one or more of the characters\n     * of the given string.\n     * @param s string containing characters to be checked for containment\n     * @return true if the condition is met\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet addAll(UnicodeSet c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Adds all of the elements in the specified set to this set if\n     * they're not already present.  This operation effectively\n     * modifies this set so that its value is the <i>union</i> of the two\n     * sets.  The behavior of this operation is unspecified if the specified\n     * collection is modified while the operation is in progress.\n     *\n     * @param c set whose elements are to be added to this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet retainAll(UnicodeSet c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Retains only the elements in this set that are contained in the\n     * specified set.  In other words, removes from this set all of\n     * its elements that are not contained in the specified set.  This\n     * operation effectively modifies this set so that its value is\n     * the <i>intersection</i> of the two sets.\n     *\n     * @param c set that defines which elements this set will retain.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet removeAll(UnicodeSet c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Removes from this set all of its elements that are contained in the\n     * specified set.  This operation effectively modifies this\n     * set so that its value is the <i>asymmetric set difference</i> of\n     * the two sets.\n     *\n     * @param c set that defines which elements will be removed from\n     *          this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet complementAll(UnicodeSet c)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Complements in this set all elements contained in the specified\n     * set.  Any character in the other set will be removed if it is\n     * in this set, or will be added if it is not in this set.\n     *\n     * @param c set that defines which elements will be complemented from\n     *          this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet clear()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Removes all of the elements from this set.  This set will be\n     * empty after this call returns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRangeCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Iteration method that returns the number of ranges contained in\n     * this set.\n     * @see #getRangeStart\n     * @see #getRangeEnd\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRangeStart(int index)",
+    "returnType" : "int",
+    "comment" : "\n     * Iteration method that returns the first character in the\n     * specified range of this set.\n     * @exception ArrayIndexOutOfBoundsException if index is outside\n     * the range <code>0..getRangeCount()-1</code>\n     * @see #getRangeCount\n     * @see #getRangeEnd\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRangeEnd(int index)",
+    "returnType" : "int",
+    "comment" : "\n     * Iteration method that returns the last character in the\n     * specified range of this set.\n     * @exception ArrayIndexOutOfBoundsException if index is outside\n     * the range <code>0..getRangeCount()-1</code>\n     * @see #getRangeStart\n     * @see #getRangeEnd\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet compact()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Reallocate this objects internal structures to take up the least\n     * possible space, without changing this object's value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object o)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the specified object with this set for equality.  Returns\n     * <tt>true</tt> if the specified object is also a set, the two sets\n     * have the same size, and every member of the specified set is\n     * contained in this set (or equivalently, every member of this set is\n     * contained in the specified set).\n     *\n     * @param o Object to be compared for equality with this set.\n     * @return <tt>true</tt> if the specified Object is equal to this set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the hash code value for this set.\n     *\n     * @return the hash code value for this set.\n     * @see java.lang.Object#hashCode()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Return a programmer-readable string representation of this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyPattern(String pattern, ParsePosition pos, SymbolTable symbols, int options)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Parses the given pattern, starting at the given position.  The character\n     * at pattern.charAt(pos.getIndex()) must be '[', or the parse fails.\n     * Parsing continues until the corresponding closing ']'.  If a syntax error\n     * is encountered between the opening and closing brace, the parse fails.\n     * Upon return from a successful parse, the ParsePosition is updated to\n     * point to the character following the closing ']', and an inversion\n     * list for the parsed pattern is returned.  This method\n     * calls itself recursively to parse embedded subpatterns.\n     *\n     * @param pattern the string containing the pattern to be parsed.  The\n     * portion of the string from pos.getIndex(), which must be a '[', to the\n     * corresponding closing ']', is parsed.\n     * @param pos upon entry, the position at which to being parsing.  The\n     * character at pattern.charAt(pos.getIndex()) must be a '['.  Upon return\n     * from a successful parse, pos.getIndex() is either the character after the\n     * closing ']' of the parsed pattern, or pattern.length() if the closing ']'\n     * is the last character of the pattern string.\n     * @return an inversion list for the parsed substring\n     * of <code>pattern</code>\n     * @exception java.lang.IllegalArgumentException if the parse fails.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void applyPattern(RuleCharacterIterator chars, SymbolTable symbols, Appendable rebuiltPat, int options, int depth)",
+    "returnType" : "void",
+    "comment" : "\n     * Parse the pattern from the given RuleCharacterIterator.  The\n     * iterator is advanced over the parsed pattern.\n     * @param chars iterator over the pattern characters.  Upon return\n     * it will be advanced to the first character after the parsed\n     * pattern, or the end of the iteration if all characters are\n     * parsed.\n     * @param symbols symbol table to use to parse and dereference\n     * variables, or null if none.\n     * @param rebuiltPat the pattern that was parsed, rebuilt or\n     * copied from the input pattern, as appropriate.\n     * @param options a bit mask.\n     * Valid options are {@link #IGNORE_SPACE} and\n     * at most one of {@link #CASE_INSENSITIVE}, {@link #ADD_CASE_MAPPINGS},\n     * {@link #SIMPLE_CASE_INSENSITIVE}. These case options are mutually exclusive.\n     ",
+    "links" : [ "#ADD_CASE_MAPPINGS", "#CASE_INSENSITIVE", "#SIMPLE_CASE_INSENSITIVE", "#IGNORE_SPACE" ]
+  }, {
+    "name" : "private static void syntaxError(RuleCharacterIterator chars, String msg)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public T addAllTo(T target)",
+    "returnType" : "T",
+    "comment" : "\n     * Add the contents of the UnicodeSet (as strings) into a collection.\n     * @param target collection to add into\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] addAllTo(String[] target)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Add the contents of the UnicodeSet (as strings) into a collection.\n     * @param target collection to add into\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String[] toArray(UnicodeSet set)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Add the contents of the UnicodeSet (as strings) into an array.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet add(Iterable<?> source)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Add the contents of the collection (as strings) into this UnicodeSet.\n     * The collection must not contain null.\n     * @param source the collection to add\n     * @return a reference to this object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet addAll(Iterable<?> source)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Add a collection (as strings) into this UnicodeSet.\n     * Uses standard naming convention.\n     * @param source collection to add into\n     * @return a reference to this object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int nextCapacity(int minCapacity)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureCapacity(int newLen)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureBufferCapacity(int newLen)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int[] range(int start, int end)",
+    "returnType" : "int[]",
+    "comment" : "\n     * Assumes start <= end.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private UnicodeSet xor(int[] other, int otherLen, int polarity)",
+    "returnType" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private UnicodeSet add(int[] other, int otherLen, int polarity)",
+    "returnType" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private UnicodeSet retain(int[] other, int otherLen, int polarity)",
+    "returnType" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final int max(int a, int b)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void applyFilter(Filter filter, UnicodeSet inclusions)",
+    "returnType" : "void",
+    "comment" : "\n     * Generic filter-based scanning code for UCD property UnicodeSets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String mungeCharName(String source)",
+    "returnType" : "String",
+    "comment" : "\n     * Remove leading and trailing Pattern_White_Space and compress\n     * internal Pattern_White_Space to a single space character.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyIntPropertyValue(int prop, int value)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to contain those code points which have the\n     * given value for the given binary or enumerated property, as\n     * returned by UCharacter.getIntPropertyValue.  Prior contents of\n     * this set are lost.\n     *\n     * @param prop a property in the range\n     * UProperty.BIN_START..UProperty.BIN_LIMIT-1 or\n     * UProperty.INT_START..UProperty.INT_LIMIT-1 or.\n     * UProperty.MASK_START..UProperty.MASK_LIMIT-1.\n     *\n     * @param value a value in the range\n     * UCharacter.getIntPropertyMinValue(prop)..\n     * UCharacter.getIntPropertyMaxValue(prop), with one exception.\n     * If prop is UProperty.GENERAL_CATEGORY_MASK, then value should not be\n     * a UCharacter.getType() result, but rather a mask value produced\n     * by logically ORing (1 &lt;&lt; UCharacter.getType()) values together.\n     * This allows grouped categories such as [:L:] to be represented.\n     *\n     * @return a reference to this set\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyPropertyAlias(String propertyAlias, String valueAlias)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to contain those code points which have the\n     * given value for the given property.  Prior contents of this\n     * set are lost.\n     *\n     * @param propertyAlias a property alias, either short or long.\n     * The name is matched loosely.  See PropertyAliases.txt for names\n     * and a description of loose matching.  If the value string is\n     * empty, then this string is interpreted as either a\n     * General_Category value alias, a Script value alias, a binary\n     * property alias, or a special ID.  Special IDs are matched\n     * loosely and correspond to the following sets:\n     *\n     * \"ANY\" = [\\\\u0000-\\\\U0010FFFF],\n     * \"ASCII\" = [\\\\u0000-\\\\u007F].\n     *\n     * @param valueAlias a value alias, either short or long.  The\n     * name is matched loosely.  See PropertyValueAliases.txt for\n     * names and a description of loose matching.  In addition to\n     * aliases listed, numeric values and canonical combining classes\n     * may be expressed numerically, e.g., (\"nv\", \"0.5\") or (\"ccc\",\n     * \"220\").  The value string may also be empty.\n     *\n     * @return a reference to this set\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet applyPropertyAlias(String propertyAlias, String valueAlias, SymbolTable symbols)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Modifies this set to contain those code points which have the\n     * given value for the given property.  Prior contents of this\n     * set are lost.\n     * @param propertyAlias A string of the property alias.\n     * @param valueAlias A string of the value alias.\n     * @param symbols if not null, then symbols are first called to see if a property\n     * is available. If true, then everything else is skipped.\n     * @return this set\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean resemblesPropertyPattern(String pattern, int pos)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given position, in the given pattern, appears\n     * to be the start of a property set pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean resemblesPropertyPattern(RuleCharacterIterator chars, int iterOpts)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given iterator appears to point at a\n     * property pattern.  Regardless of the result, return with the\n     * iterator unchanged.\n     * @param chars iterator over the pattern characters.  Upon return\n     * it will be unchanged.\n     * @param iterOpts RuleCharacterIterator options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private UnicodeSet applyPropertyPattern(String pattern, ParsePosition ppos, SymbolTable symbols)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Parse the given property pattern at the given parse position.\n     * @param symbols TODO\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void applyPropertyPattern(RuleCharacterIterator chars, Appendable rebuiltPat, SymbolTable symbols)",
+    "returnType" : "void",
+    "comment" : "\n     * Parse a property pattern.\n     * @param chars iterator over the pattern characters.  Upon return\n     * it will be advanced to the first character after the parsed\n     * pattern, or the end of the iteration if all characters are\n     * parsed.\n     * @param rebuiltPat the pattern that was parsed, rebuilt or\n     * copied from the input pattern, as appropriate.\n     * @param symbols TODO\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final void addCaseMapping(UnicodeSet set, int result, StringBuilder full)",
+    "returnType" : "void",
+    "comment" : "  use str as a temporary string to avoid constructing one",
+    "links" : [ ]
+  }, {
+    "name" : " UnicodeSet maybeOnlyCaseSensitive(UnicodeSet src)",
+    "returnType" : "UnicodeSet",
+    "comment" : " For case closure on a large set, look only at code points with relevant properties. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final boolean scfString(CharSequence s, StringBuilder scf)",
+    "returnType" : "boolean",
+    "comment" : " (Normally when we case-fold a string we use full case foldings.)",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet closeOver(int attribute)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Close this set over the given attribute.  For the attribute\n     * {@link #CASE_INSENSITIVE}, the result is to modify this set so that:\n     *\n     * <ol>\n     * <li>For each character or string 'a' in this set, all strings\n     * 'b' such that foldCase(a) == foldCase(b) are added to this set.\n     * (For most 'a' that are single characters, 'b' will have\n     * b.length() == 1.)\n     *\n     * <li>For each string 'e' in the resulting set, if e !=\n     * foldCase(e), 'e' will be removed.\n     * </ol>\n     *\n     * <p>Example: [aq\\u00DF{Bc}{bC}{Fi}] =&gt; [aAqQ\\u00DF\\uFB01{ss}{bc}{fi}]\n     *\n     * <p>(Here foldCase(x) refers to the operation\n     * UCharacter.foldCase(x, true), and a == b actually denotes\n     * a.equals(b), not pointer comparison.)\n     *\n     * @param attribute bitmask for attributes to close over.\n     * Valid options:\n     * At most one of {@link #CASE_INSENSITIVE}, {@link #ADD_CASE_MAPPINGS},\n     * {@link #SIMPLE_CASE_INSENSITIVE}. These case options are mutually exclusive.\n     * Unrelated options bits are ignored.\n     * @return a reference to this set.\n     ",
+    "links" : [ "#ADD_CASE_MAPPINGS", "#CASE_INSENSITIVE", "#SIMPLE_CASE_INSENSITIVE" ]
+  }, {
+    "name" : "private void closeOverCaseInsensitive(boolean simple)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeOverAddCaseMappings()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFrozen()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Is this frozen, according to the Freezable interface?\n     *\n     * @return value\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet freeze()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Freeze this class, according to the Freezable interface.\n     *\n     * @return this\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int span(CharSequence s, SpanCondition spanCondition)",
+    "returnType" : "int",
+    "comment" : "\n     * Span a string using this UnicodeSet.\n     * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n     * @param s The string to be spanned\n     * @param spanCondition The span condition\n     * @return the length of the span\n     ",
+    "links" : [ "android.icu.text.UnicodeSetSpanner" ]
+  }, {
+    "name" : "public int span(CharSequence s, int start, SpanCondition spanCondition)",
+    "returnType" : "int",
+    "comment" : "\n     * Span a string using this UnicodeSet.\n     *   If the start index is less than 0, span will start from 0.\n     *   If the start index is greater than the string length, span returns the string length.\n     * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n     * @param s The string to be spanned\n     * @param start The start index that the span begins\n     * @param spanCondition The span condition\n     * @return the string index which ends the span (i.e. exclusive)\n     ",
+    "links" : [ "android.icu.text.UnicodeSetSpanner" ]
+  }, {
+    "name" : "public int spanAndCount(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)",
+    "returnType" : "int",
+    "comment" : "\n     * Same as span() but also counts the smallest number of set elements on any path across the span.\n     * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n     * @param outCount An output-only object (must not be null) for returning the count.\n     * @return the limit (exclusive end) of the span\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "android.icu.text.UnicodeSetSpanner" ]
+  }, {
+    "name" : "private int spanCodePointsAndCount(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int spanBack(CharSequence s, SpanCondition spanCondition)",
+    "returnType" : "int",
+    "comment" : "\n     * Span a string backwards (from the end) using this UnicodeSet.\n     * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n     * @param s The string to be spanned\n     * @param spanCondition The span condition\n     * @return The string index which starts the span (i.e. inclusive).\n     ",
+    "links" : [ "android.icu.text.UnicodeSetSpanner" ]
+  }, {
+    "name" : "public int spanBack(CharSequence s, int fromIndex, SpanCondition spanCondition)",
+    "returnType" : "int",
+    "comment" : "\n     * Span a string backwards (from the fromIndex) using this UnicodeSet.\n     * If the fromIndex is less than 0, spanBack will return 0.\n     * If fromIndex is greater than the string length, spanBack will start from the string length.\n     * <p>To replace, count elements, or delete spans, see {@link android.icu.text.UnicodeSetSpanner UnicodeSetSpanner}.\n     * @param s The string to be spanned\n     * @param fromIndex The index of the char (exclusive) that the string should be spanned backwards\n     * @param spanCondition The span condition\n     * @return The string index which starts the span (i.e. inclusive).\n     ",
+    "links" : [ "android.icu.text.UnicodeSetSpanner" ]
+  }, {
+    "name" : "public UnicodeSet cloneAsThawed()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Clone a thawed version of this class, according to the Freezable interface.\n     * @return the clone, not frozen\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkFrozen()",
+    "returnType" : "void",
+    "comment" : " internal function",
+    "links" : [ ]
+  }, {
+    "name" : "public Iterable<EntryRange> ranges()",
+    "returnType" : "Iterable<EntryRange>",
+    "comment" : "\n     * Provide for faster iteration than by String. Returns an Iterable/Iterator over ranges of code points.\n     * The UnicodeSet must not be altered during the iteration.\n     * The EntryRange instance is the same each time; the contents are just reset.\n     *\n     * <p><b>Warning: </b>To iterate over the full contents, you have to also iterate over the strings.\n     *\n     * <p><b>Warning: </b>For speed, UnicodeSet iteration does not check for concurrent modification.\n     * Do not alter the UnicodeSet while iterating.\n     *\n     * <pre>\n     * // Sample code\n     * for (EntryRange range : us1.ranges()) {\n     *     // do something with code points between range.codepoint and range.codepointEnd;\n     * }\n     * for (String s : us1.strings()) {\n     *     // do something with each string;\n     * }\n     * </pre>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Iterator<String> iterator()",
+    "returnType" : "Iterator<String>",
+    "comment" : "\n     * Returns a string iterator. Uses the same order of iteration as {@link UnicodeSetIterator}.\n     * <p><b>Warning: </b>For speed, UnicodeSet iteration does not check for concurrent modification.\n     * Do not alter the UnicodeSet while iterating.\n     * @see java.util.Set#iterator()\n     ",
+    "links" : [ "android.icu.text.UnicodeSetIterator" ]
+  }, {
+    "name" : "public boolean containsAll(Iterable<T> collection)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @see #containsAll(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsNone(Iterable<T> collection)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @see #containsNone(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean containsSome(Iterable<T> collection)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @see #containsAll(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet addAll(T... collection)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * @see #addAll(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet removeAll(Iterable<T> collection)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * @see #removeAll(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet retainAll(Iterable<T> collection)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * @see #retainAll(android.icu.text.UnicodeSet)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compareTo(UnicodeSet o)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares UnicodeSets, where shorter come first, and otherwise lexicographically\n     * (according to the comparison of the first characters that differ).\n     * @see java.lang.Comparable#compareTo(java.lang.Object)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compareTo(UnicodeSet o, ComparisonStyle style)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares UnicodeSets, in three different ways.\n     * @see java.lang.Comparable#compareTo(java.lang.Object)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compareTo(Iterable<String> other)",
+    "returnType" : "int",
+    "comment" : "\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int compare(CharSequence string, int codePoint)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int compare(int codePoint, CharSequence string)",
+    "returnType" : "int",
+    "comment" : "\n     * Utility to compare a string to a code point.\n     * Same results as turning the code point into a string and comparing, but much faster (no object creation).\n     * Actually, there is one difference; a null compares as less.\n     * Note that this (=String) order is UTF-16 order -- <i>not</i> code point order.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int compare(Iterable<T> collection1, Iterable<T> collection2)",
+    "returnType" : "int",
+    "comment" : "\n     * Utility to compare two iterables. Warning: the ordering in iterables is important. For Collections that are ordered,\n     * like Lists, that is expected. However, Sets in Java violate Leibniz's law when it comes to iteration.\n     * That means that sets can't be compared directly with this method, unless they are TreeSets without\n     * (or with the same) comparator. Unfortunately, it is impossible to reliably detect in Java whether subclass of\n     * Collection satisfies the right criteria, so it is left to the user to avoid those circumstances.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int compare(Iterator<T> first, Iterator<T> other)",
+    "returnType" : "int",
+    "comment" : "\n     * Utility to compare two iterators. Warning: the ordering in iterables is important. For Collections that are ordered,\n     * like Lists, that is expected. However, Sets in Java violate Leibniz's law when it comes to iteration.\n     * That means that sets can't be compared directly with this method, unless they are TreeSets without\n     * (or with the same) comparator. Unfortunately, it is impossible to reliably detect in Java whether subclass of\n     * Collection satisfies the right criteria, so it is left to the user to avoid those circumstances.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int compare(Collection<T> collection1, Collection<T> collection2, ComparisonStyle style)",
+    "returnType" : "int",
+    "comment" : "\n     * Utility to compare two collections, optionally by size, and then lexicographically.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static U addAllTo(Iterable<T> source, U target)",
+    "returnType" : "U",
+    "comment" : "\n     * Utility for adding the contents of an iterable to a collection.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static T[] addAllTo(Iterable<T> source, T[] target)",
+    "returnType" : "T[]",
+    "comment" : "\n     * Utility for adding the contents of an iterable to a collection.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<String> strings()",
+    "returnType" : "Collection<String>",
+    "comment" : "\n     * For iterating through the strings in the set. Example:\n     * <pre>\n     * for (String key : myUnicodeSet.strings()) {\n     *   doSomethingWith(key);\n     * }\n     * </pre>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getSingleCodePoint(CharSequence s)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the value of the first code point, if the string is exactly one code point. Otherwise return Integer.MAX_VALUE.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public UnicodeSet addBridges(UnicodeSet dontCare)",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Simplify the ranges in a Unicode set by merging any ranges that are only separated by characters in the dontCare set.\n     * For example, the ranges: \\\\u2E80-\\\\u2E99\\\\u2E9B-\\\\u2EF3\\\\u2F00-\\\\u2FD5\\\\u2FF0-\\\\u2FFB\\\\u3000-\\\\u303E change to \\\\u2E80-\\\\u303E\n     * if the dontCare set includes unassigned characters (for a particular version of Unicode).\n     * @param dontCare Set with the don't-care characters for spanning\n     * @return the input set, modified\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int findIn(CharSequence value, int fromIndex, boolean findNot)",
+    "returnType" : "int",
+    "comment" : "\n     * Find the first index at or after fromIndex where the UnicodeSet matches at that index.\n     * If findNot is true, then reverse the sense of the match: find the first place where the UnicodeSet doesn't match.\n     * If there is no match, length is returned.\n     * @deprecated This API is ICU internal only. Use span instead.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int findLastIn(CharSequence value, int fromIndex, boolean findNot)",
+    "returnType" : "int",
+    "comment" : "\n     * Find the last index before fromIndex where the UnicodeSet matches at that index.\n     * If findNot is true, then reverse the sense of the match: find the last place where the UnicodeSet doesn't match.\n     * If there is no match, -1 is returned.\n     * BEFORE index is not in the UnicodeSet.\n     * @deprecated This API is ICU internal only. Use spanBack instead.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String stripFrom(CharSequence source, boolean matches)",
+    "returnType" : "String",
+    "comment" : "\n     * Strips code points from source. If matches is true, script all that match <i>this</i>. If matches is false, then strip all that <i>don't</i> match.\n     * @param source The source of the CharSequence to strip from.\n     * @param matches A boolean to either strip all that matches or don't match with the current UnicodeSet object.\n     * @return The string after it has been stripped.\n     * @deprecated This API is ICU internal only. Use replaceFrom.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static XSymbolTable getDefaultXSymbolTable()",
+    "returnType" : "XSymbolTable",
+    "comment" : "\n     * Get the default symbol table. Null means ordinary processing. For internal use only.\n     * @return the symbol table\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setDefaultXSymbolTable(XSymbolTable xSymbolTable)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the default symbol table. Null means ordinary processing. For internal use only. Will affect all subsequent parsing\n     * of UnicodeSets.\n     * <p>\n     * WARNING: If this function is used with a UnicodeProperty, and the\n     * Unassigned characters (gc=Cn) are different than in ICU, you MUST call\n     * {@code UnicodeProperty.ResetCacheProperties} afterwards. If you then call {@code UnicodeSet.setDefaultXSymbolTable}\n     * with null to clear the value, you MUST also call {@code UnicodeProperty.ResetCacheProperties}.\n     *\n     * @param xSymbolTable the new default symbol table.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public Object clone()", "public UnicodeSet set(int start, int end)", "public UnicodeSet set(UnicodeSet other)", "public final UnicodeSet applyPattern(String pattern)", "public UnicodeSet applyPattern(String pattern, boolean ignoreWhitespace)", "public UnicodeSet applyPattern(String pattern, int options)", "public static boolean resemblesPattern(String pattern, int pos)", "private static void appendCodePoint(Appendable app, int c)", "private static void append(Appendable app, CharSequence s)", "private static T _appendToPat(T buf, String s, boolean escapeUnprintable)", "private static T _appendToPat(T buf, int c, boolean escapeUnprintable)", "private static T _appendToPat(T result, int start, int end, boolean escapeUnprintable)", "public String toPattern(boolean escapeUnprintable)", "private T _toPattern(T result, boolean escapeUnprintable)", "public StringBuffer _generatePattern(StringBuffer result, boolean escapeUnprintable)", "public StringBuffer _generatePattern(StringBuffer result, boolean escapeUnprintable, boolean includeStrings)", "private T appendNewPattern(T result, boolean escapeUnprintable, boolean includeStrings)", "public int size()", "public boolean isEmpty()", "public boolean hasStrings()", "public boolean matchesIndexValue(int v)", "public int matches(Replaceable text, int[] offset, int limit, boolean incremental)", "private static int matchRest(Replaceable text, int start, int limit, String s)", "public int matchesAt(CharSequence text, int offset)", "private static int matchesAt(CharSequence text, int offsetInText, CharSequence substring)", "public void addMatchSetTo(UnicodeSet toUnionTo)", "public int indexOf(int c)", "public int charAt(int index)", "public UnicodeSet add(int start, int end)", "public UnicodeSet addAll(int start, int end)", "private UnicodeSet add_unchecked(int start, int end)", "public final UnicodeSet add(int c)", "private final UnicodeSet add_unchecked(int c)", "public final UnicodeSet add(CharSequence s)", "private void addString(CharSequence s)", "private static int getSingleCP(CharSequence s)", "public final UnicodeSet addAll(CharSequence s)", "public final UnicodeSet retainAll(CharSequence s)", "public final UnicodeSet complementAll(CharSequence s)", "public final UnicodeSet removeAll(CharSequence s)", "public final UnicodeSet removeAllStrings()", "public static UnicodeSet from(CharSequence s)", "public static UnicodeSet fromAll(CharSequence s)", "public UnicodeSet retain(int start, int end)", "public final UnicodeSet retain(int c)", "public final UnicodeSet retain(CharSequence cs)", "public UnicodeSet remove(int start, int end)", "public final UnicodeSet remove(int c)", "public final UnicodeSet remove(CharSequence s)", "public UnicodeSet complement(int start, int end)", "public final UnicodeSet complement(int c)", "public UnicodeSet complement()", "public final UnicodeSet complement(CharSequence s)", "public boolean contains(int c)", "private final int findCodePoint(int c)", "public boolean contains(int start, int end)", "public final boolean contains(CharSequence s)", "public boolean containsAll(UnicodeSet b)", "public boolean containsAll(String s)", "private boolean containsAll(String s, int i)", "public String getRegexEquivalent()", "public boolean containsNone(int start, int end)", "public boolean containsNone(UnicodeSet b)", "public boolean containsNone(CharSequence s)", "public final boolean containsSome(int start, int end)", "public final boolean containsSome(UnicodeSet s)", "public final boolean containsSome(CharSequence s)", "public UnicodeSet addAll(UnicodeSet c)", "public UnicodeSet retainAll(UnicodeSet c)", "public UnicodeSet removeAll(UnicodeSet c)", "public UnicodeSet complementAll(UnicodeSet c)", "public UnicodeSet clear()", "public int getRangeCount()", "public int getRangeStart(int index)", "public int getRangeEnd(int index)", "public UnicodeSet compact()", "public boolean equals(Object o)", "public int hashCode()", "public String toString()", "public UnicodeSet applyPattern(String pattern, ParsePosition pos, SymbolTable symbols, int options)", "private void applyPattern(RuleCharacterIterator chars, SymbolTable symbols, Appendable rebuiltPat, int options, int depth)", "private static void syntaxError(RuleCharacterIterator chars, String msg)", "public T addAllTo(T target)", "public String[] addAllTo(String[] target)", "public static String[] toArray(UnicodeSet set)", "public UnicodeSet add(Iterable<?> source)", "public UnicodeSet addAll(Iterable<?> source)", "private int nextCapacity(int minCapacity)", "private void ensureCapacity(int newLen)", "private void ensureBufferCapacity(int newLen)", "private int[] range(int start, int end)", "private UnicodeSet xor(int[] other, int otherLen, int polarity)", "private UnicodeSet add(int[] other, int otherLen, int polarity)", "private UnicodeSet retain(int[] other, int otherLen, int polarity)", "private static final int max(int a, int b)", "private void applyFilter(Filter filter, UnicodeSet inclusions)", "private static String mungeCharName(String source)", "public UnicodeSet applyIntPropertyValue(int prop, int value)", "public UnicodeSet applyPropertyAlias(String propertyAlias, String valueAlias)", "public UnicodeSet applyPropertyAlias(String propertyAlias, String valueAlias, SymbolTable symbols)", "private static boolean resemblesPropertyPattern(String pattern, int pos)", "private static boolean resemblesPropertyPattern(RuleCharacterIterator chars, int iterOpts)", "private UnicodeSet applyPropertyPattern(String pattern, ParsePosition ppos, SymbolTable symbols)", "private void applyPropertyPattern(RuleCharacterIterator chars, Appendable rebuiltPat, SymbolTable symbols)", "private static final void addCaseMapping(UnicodeSet set, int result, StringBuilder full)", " UnicodeSet maybeOnlyCaseSensitive(UnicodeSet src)", "private static final boolean scfString(CharSequence s, StringBuilder scf)", "public UnicodeSet closeOver(int attribute)", "private void closeOverCaseInsensitive(boolean simple)", "private void closeOverAddCaseMappings()", "public boolean isFrozen()", "public UnicodeSet freeze()", "public int span(CharSequence s, SpanCondition spanCondition)", "public int span(CharSequence s, int start, SpanCondition spanCondition)", "public int spanAndCount(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)", "private int spanCodePointsAndCount(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)", "public int spanBack(CharSequence s, SpanCondition spanCondition)", "public int spanBack(CharSequence s, int fromIndex, SpanCondition spanCondition)", "public UnicodeSet cloneAsThawed()", "private void checkFrozen()", "public Iterable<EntryRange> ranges()", "public Iterator<String> iterator()", "public boolean containsAll(Iterable<T> collection)", "public boolean containsNone(Iterable<T> collection)", "public final boolean containsSome(Iterable<T> collection)", "public UnicodeSet addAll(T... collection)", "public UnicodeSet removeAll(Iterable<T> collection)", "public UnicodeSet retainAll(Iterable<T> collection)", "public int compareTo(UnicodeSet o)", "public int compareTo(UnicodeSet o, ComparisonStyle style)", "public int compareTo(Iterable<String> other)", "public static int compare(CharSequence string, int codePoint)", "public static int compare(int codePoint, CharSequence string)", "public static int compare(Iterable<T> collection1, Iterable<T> collection2)", "public static int compare(Iterator<T> first, Iterator<T> other)", "public static int compare(Collection<T> collection1, Collection<T> collection2, ComparisonStyle style)", "public static U addAllTo(Iterable<T> source, U target)", "public static T[] addAllTo(Iterable<T> source, T[] target)", "public Collection<String> strings()", "public static int getSingleCodePoint(CharSequence s)", "public UnicodeSet addBridges(UnicodeSet dontCare)", "public int findIn(CharSequence value, int fromIndex, boolean findNot)", "public int findLastIn(CharSequence value, int fromIndex, boolean findNot)", "public String stripFrom(CharSequence source, boolean matches)", "public static XSymbolTable getDefaultXSymbolTable()", "public static void setDefaultXSymbolTable(XSymbolTable xSymbolTable)" ],
+  "variableNames" : [ "EMPTY_STRINGS", "EMPTY", "ALL_CODE_POINTS", "XSYMBOL_TABLE", "LOW", "HIGH", "INITIAL_CAPACITY", "MAX_LENGTH", "MIN_VALUE", "MAX_VALUE", "len", "list", "rangeList", "buffer", "strings", "pat", "ANY_ID", "ASCII_ID", "ASSIGNED", "bmpSet", "stringSpan", "LAST0_START", "LAST1_RANGE", "LAST2_SET", "MODE0_NONE", "MODE1_INBRACKET", "MODE2_OUTBRACKET", "SETMODE0_NONE", "SETMODE1_UNICODESET", "SETMODE2_PROPERTYPAT", "SETMODE3_PREPARSED", "MAX_DEPTH", "NO_VERSION", "IGNORE_SPACE", "CASE", "CASE_INSENSITIVE", "ADD_CASE_MAPPINGS", "SIMPLE_CASE_INSENSITIVE", "CASE_MASK" ]
+}

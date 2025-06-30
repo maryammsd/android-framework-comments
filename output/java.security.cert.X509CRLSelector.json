@@ -1,0 +1,166 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/security/cert/X509CRLSelector.java",
+  "packageName" : "java.security.cert",
+  "className" : "X509CRLSelector",
+  "comment" : "\n * A {@code CRLSelector} that selects {@code X509CRLs} that\n * match all specified criteria. This class is particularly useful when\n * selecting CRLs from a {@code CertStore} to check revocation status\n * of a particular certificate.\n * <p>\n * When first constructed, an {@code X509CRLSelector} has no criteria\n * enabled and each of the {@code get} methods return a default\n * value ({@code null}). Therefore, the {@link #match match} method\n * would return {@code true} for any {@code X509CRL}. Typically,\n * several criteria are enabled (by calling {@link #setIssuers setIssuers}\n * or {@link #setDateAndTime setDateAndTime}, for instance) and then the\n * {@code X509CRLSelector} is passed to\n * {@link CertStore#getCRLs CertStore.getCRLs} or some similar\n * method.\n * <p>\n * Please refer to <a href=\"http://tools.ietf.org/html/rfc5280\">RFC 5280:\n * Internet X.509 Public Key Infrastructure Certificate and CRL Profile</a>\n * for definitions of the X.509 CRL fields and extensions mentioned below.\n * <p>\n * <b>Concurrent Access</b>\n * <p>\n * Unless otherwise specified, the methods defined in this class are not\n * thread-safe. Multiple threads that need to access a single\n * object concurrently should synchronize amongst themselves and\n * provide the necessary locking. Multiple threads each manipulating\n * separate objects need not synchronize.\n *\n * @see CRLSelector\n * @see X509CRL\n *\n * @since       1.4\n * @author      Steve Hanna\n ",
+  "links" : [ "#setIssuers", "#match", "#setDateAndTime", "java.security.cert.CertStore#getCRLs" ],
+  "variables" : [ {
+    "name" : "debug",
+    "type" : "Debug",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "issuerNames",
+    "type" : "HashSet<Object>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "issuerX500Principals",
+    "type" : "HashSet<X500Principal>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "minCRL",
+    "type" : "BigInteger",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "maxCRL",
+    "type" : "BigInteger",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "dateAndTime",
+    "type" : "Date",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "certChecking",
+    "type" : "X509Certificate",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "skew",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void setIssuers(Collection<X500Principal> issuers)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the issuerNames criterion. The issuer distinguished name in the\n     * {@code X509CRL} must match at least one of the specified\n     * distinguished names. If {@code null}, any issuer distinguished name\n     * will do.\n     * <p>\n     * This method allows the caller to specify, with a single method call,\n     * the complete set of issuer names which {@code X509CRLs} may contain.\n     * The specified value replaces the previous value for the issuerNames\n     * criterion.\n     * <p>\n     * The {@code names} parameter (if not {@code null}) is a\n     * {@code Collection} of {@code X500Principal}s.\n     * <p>\n     * Note that the {@code names} parameter can contain duplicate\n     * distinguished names, but they may be removed from the\n     * {@code Collection} of names returned by the\n     * {@link #getIssuers getIssuers} method.\n     * <p>\n     * Note that a copy is performed on the {@code Collection} to\n     * protect against subsequent modifications.\n     *\n     * @param issuers a {@code Collection} of X500Principals\n     *   (or {@code null})\n     * @see #getIssuers\n     * @since 1.5\n     ",
+    "links" : [ "#getIssuers" ]
+  }, {
+    "name" : "public void setIssuerNames(Collection<?> names) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>Note:</strong> use {@linkplain #setIssuers(Collection)} instead\n     * or only specify the byte array form of distinguished names when using\n     * this method. See {@link #addIssuerName(String)} for more information.\n     * <p>\n     * Sets the issuerNames criterion. The issuer distinguished name in the\n     * {@code X509CRL} must match at least one of the specified\n     * distinguished names. If {@code null}, any issuer distinguished name\n     * will do.\n     * <p>\n     * This method allows the caller to specify, with a single method call,\n     * the complete set of issuer names which {@code X509CRLs} may contain.\n     * The specified value replaces the previous value for the issuerNames\n     * criterion.\n     * <p>\n     * The {@code names} parameter (if not {@code null}) is a\n     * {@code Collection} of names. Each name is a {@code String}\n     * or a byte array representing a distinguished name (in\n     * <a href=\"http://www.ietf.org/rfc/rfc2253.txt\">RFC 2253</a> or\n     * ASN.1 DER encoded form, respectively). If {@code null} is supplied\n     * as the value for this argument, no issuerNames check will be performed.\n     * <p>\n     * Note that the {@code names} parameter can contain duplicate\n     * distinguished names, but they may be removed from the\n     * {@code Collection} of names returned by the\n     * {@link #getIssuerNames getIssuerNames} method.\n     * <p>\n     * If a name is specified as a byte array, it should contain a single DER\n     * encoded distinguished name, as defined in X.501. The ASN.1 notation for\n     * this structure is as follows.\n     * <pre>{@code\n     * Name ::= CHOICE {\n     *   RDNSequence }\n     *\n     * RDNSequence ::= SEQUENCE OF RelativeDistinguishedName\n     *\n     * RelativeDistinguishedName ::=\n     *   SET SIZE (1 .. MAX) OF AttributeTypeAndValue\n     *\n     * AttributeTypeAndValue ::= SEQUENCE {\n     *   type     AttributeType,\n     *   value    AttributeValue }\n     *\n     * AttributeType ::= OBJECT IDENTIFIER\n     *\n     * AttributeValue ::= ANY DEFINED BY AttributeType\n     * ....\n     * DirectoryString ::= CHOICE {\n     *       teletexString           TeletexString (SIZE (1..MAX)),\n     *       printableString         PrintableString (SIZE (1..MAX)),\n     *       universalString         UniversalString (SIZE (1..MAX)),\n     *       utf8String              UTF8String (SIZE (1.. MAX)),\n     *       bmpString               BMPString (SIZE (1..MAX)) }\n     * }</pre>\n     * <p>\n     * Note that a deep copy is performed on the {@code Collection} to\n     * protect against subsequent modifications.\n     *\n     * @param names a {@code Collection} of names (or {@code null})\n     * @throws IOException if a parsing error occurs\n     * @see #getIssuerNames\n     ",
+    "links" : [ "#getIssuerNames", "#addIssuerName(String)" ]
+  }, {
+    "name" : "public void addIssuer(X500Principal issuer)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a name to the issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names.\n     * <p>\n     * This method allows the caller to add a name to the set of issuer names\n     * which {@code X509CRLs} may contain. The specified name is added to\n     * any previous value for the issuerNames criterion.\n     * If the specified name is a duplicate, it may be ignored.\n     *\n     * @param issuer the issuer as X500Principal\n     * @since 1.5\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addIssuerName(String name) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>Denigrated</strong>, use\n     * {@linkplain #addIssuer(X500Principal)} or\n     * {@linkplain #addIssuerName(byte[])} instead. This method should not be\n     * relied on as it can fail to match some CRLs because of a loss of\n     * encoding information in the RFC 2253 String form of some distinguished\n     * names.\n     * <p>\n     * Adds a name to the issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names.\n     * <p>\n     * This method allows the caller to add a name to the set of issuer names\n     * which {@code X509CRLs} may contain. The specified name is added to\n     * any previous value for the issuerNames criterion.\n     * If the specified name is a duplicate, it may be ignored.\n     *\n     * @param name the name in RFC 2253 form\n     * @throws IOException if a parsing error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addIssuerName(byte[] name) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a name to the issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names.\n     * <p>\n     * This method allows the caller to add a name to the set of issuer names\n     * which {@code X509CRLs} may contain. The specified name is added to\n     * any previous value for the issuerNames criterion. If the specified name\n     * is a duplicate, it may be ignored.\n     * If a name is specified as a byte array, it should contain a single DER\n     * encoded distinguished name, as defined in X.501. The ASN.1 notation for\n     * this structure is as follows.\n     * <p>\n     * The name is provided as a byte array. This byte array should contain\n     * a single DER encoded distinguished name, as defined in X.501. The ASN.1\n     * notation for this structure appears in the documentation for\n     * {@link #setIssuerNames setIssuerNames(Collection names)}.\n     * <p>\n     * Note that the byte array supplied here is cloned to protect against\n     * subsequent modifications.\n     *\n     * @param name a byte array containing the name in ASN.1 DER encoded form\n     * @throws IOException if a parsing error occurs\n     ",
+    "links" : [ "#setIssuerNames" ]
+  }, {
+    "name" : "private void addIssuerNameInternal(Object name, X500Principal principal)",
+    "returnType" : "void",
+    "comment" : "\n     * A private method that adds a name (String or byte array) to the\n     * issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names.\n     *\n     * @param name the name in string or byte array form\n     * @param principal the name in X500Principal form\n     * @throws IOException if a parsing error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static HashSet<Object> cloneAndCheckIssuerNames(Collection<?> names) throws IOException",
+    "returnType" : "HashSet<Object>",
+    "comment" : "\n     * Clone and check an argument of the form passed to\n     * setIssuerNames. Throw an IOException if the argument is malformed.\n     *\n     * @param names a {@code Collection} of names. Each entry is a\n     *              String or a byte array (the name, in string or ASN.1\n     *              DER encoded form, respectively). {@code null} is\n     *              not an acceptable value.\n     * @return a deep copy of the specified {@code Collection}\n     * @throws IOException if a parsing error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static HashSet<Object> cloneIssuerNames(Collection<Object> names)",
+    "returnType" : "HashSet<Object>",
+    "comment" : "\n     * Clone an argument of the form passed to setIssuerNames.\n     * Throw a RuntimeException if the argument is malformed.\n     * <p>\n     * This method wraps cloneAndCheckIssuerNames, changing any IOException\n     * into a RuntimeException. This method should be used when the object being\n     * cloned has already been checked, so there should never be any exceptions.\n     *\n     * @param names a {@code Collection} of names. Each entry is a\n     *              String or a byte array (the name, in string or ASN.1\n     *              DER encoded form, respectively). {@code null} is\n     *              not an acceptable value.\n     * @return a deep copy of the specified {@code Collection}\n     * @throws RuntimeException if a parsing error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static HashSet<X500Principal> parseIssuerNames(Collection<Object> names) throws IOException",
+    "returnType" : "HashSet<X500Principal>",
+    "comment" : "\n     * Parse an argument of the form passed to setIssuerNames,\n     * returning a Collection of issuerX500Principals.\n     * Throw an IOException if the argument is malformed.\n     *\n     * @param names a {@code Collection} of names. Each entry is a\n     *              String or a byte array (the name, in string or ASN.1\n     *              DER encoded form, respectively). <Code>Null</Code> is\n     *              not an acceptable value.\n     * @return a HashSet of issuerX500Principals\n     * @throws IOException if a parsing error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMinCRLNumber(BigInteger minCRL)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the minCRLNumber criterion. The {@code X509CRL} must have a\n     * CRL number extension whose value is greater than or equal to the\n     * specified value. If {@code null}, no minCRLNumber check will be\n     * done.\n     *\n     * @param minCRL the minimum CRL number accepted (or {@code null})\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMaxCRLNumber(BigInteger maxCRL)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the maxCRLNumber criterion. The {@code X509CRL} must have a\n     * CRL number extension whose value is less than or equal to the\n     * specified value. If {@code null}, no maxCRLNumber check will be\n     * done.\n     *\n     * @param maxCRL the maximum CRL number accepted (or {@code null})\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDateAndTime(Date dateAndTime)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the dateAndTime criterion. The specified date must be\n     * equal to or later than the value of the thisUpdate component\n     * of the {@code X509CRL} and earlier than the value of the\n     * nextUpdate component. There is no match if the {@code X509CRL}\n     * does not contain a nextUpdate component.\n     * If {@code null}, no dateAndTime check will be done.\n     * <p>\n     * Note that the {@code Date} supplied here is cloned to protect\n     * against subsequent modifications.\n     *\n     * @param dateAndTime the {@code Date} to match against\n     *                    (or {@code null})\n     * @see #getDateAndTime\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void setDateAndTime(Date dateAndTime, long skew)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the dateAndTime criterion and allows for the specified clock skew\n     * (in milliseconds) when checking against the validity period of the CRL.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCertificateChecking(X509Certificate cert)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the certificate being checked. This is not a criterion. Rather,\n     * it is optional information that may help a {@code CertStore}\n     * find CRLs that would be relevant when checking revocation for the\n     * specified certificate. If {@code null} is specified, then no\n     * such optional information is provided.\n     *\n     * @param cert the {@code X509Certificate} being checked\n     *             (or {@code null})\n     * @see #getCertificateChecking\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<X500Principal> getIssuers()",
+    "returnType" : "Collection<X500Principal>",
+    "comment" : "\n     * Returns the issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names. If the value returned is {@code null}, any\n     * issuer distinguished name will do.\n     * <p>\n     * If the value returned is not {@code null}, it is a\n     * unmodifiable {@code Collection} of {@code X500Principal}s.\n     *\n     * @return an unmodifiable {@code Collection} of names\n     *   (or {@code null})\n     * @see #setIssuers\n     * @since 1.5\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<Object> getIssuerNames()",
+    "returnType" : "Collection<Object>",
+    "comment" : "\n     * Returns a copy of the issuerNames criterion. The issuer distinguished\n     * name in the {@code X509CRL} must match at least one of the specified\n     * distinguished names. If the value returned is {@code null}, any\n     * issuer distinguished name will do.\n     * <p>\n     * If the value returned is not {@code null}, it is a\n     * {@code Collection} of names. Each name is a {@code String}\n     * or a byte array representing a distinguished name (in RFC 2253 or\n     * ASN.1 DER encoded form, respectively).  Note that the\n     * {@code Collection} returned may contain duplicate names.\n     * <p>\n     * If a name is specified as a byte array, it should contain a single DER\n     * encoded distinguished name, as defined in X.501. The ASN.1 notation for\n     * this structure is given in the documentation for\n     * {@link #setIssuerNames setIssuerNames(Collection names)}.\n     * <p>\n     * Note that a deep copy is performed on the {@code Collection} to\n     * protect against subsequent modifications.\n     *\n     * @return a {@code Collection} of names (or {@code null})\n     * @see #setIssuerNames\n     ",
+    "links" : [ "#setIssuerNames" ]
+  }, {
+    "name" : "public BigInteger getMinCRL()",
+    "returnType" : "BigInteger",
+    "comment" : "\n     * Returns the minCRLNumber criterion. The {@code X509CRL} must have a\n     * CRL number extension whose value is greater than or equal to the\n     * specified value. If {@code null}, no minCRLNumber check will be done.\n     *\n     * @return the minimum CRL number accepted (or {@code null})\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public BigInteger getMaxCRL()",
+    "returnType" : "BigInteger",
+    "comment" : "\n     * Returns the maxCRLNumber criterion. The {@code X509CRL} must have a\n     * CRL number extension whose value is less than or equal to the\n     * specified value. If {@code null}, no maxCRLNumber check will be\n     * done.\n     *\n     * @return the maximum CRL number accepted (or {@code null})\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Date getDateAndTime()",
+    "returnType" : "Date",
+    "comment" : "\n     * Returns the dateAndTime criterion. The specified date must be\n     * equal to or later than the value of the thisUpdate component\n     * of the {@code X509CRL} and earlier than the value of the\n     * nextUpdate component. There is no match if the\n     * {@code X509CRL} does not contain a nextUpdate component.\n     * If {@code null}, no dateAndTime check will be done.\n     * <p>\n     * Note that the {@code Date} returned is cloned to protect against\n     * subsequent modifications.\n     *\n     * @return the {@code Date} to match against (or {@code null})\n     * @see #setDateAndTime\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public X509Certificate getCertificateChecking()",
+    "returnType" : "X509Certificate",
+    "comment" : "\n     * Returns the certificate being checked. This is not a criterion. Rather,\n     * it is optional information that may help a {@code CertStore}\n     * find CRLs that would be relevant when checking revocation for the\n     * specified certificate. If the value returned is {@code null}, then\n     * no such optional information is provided.\n     *\n     * @return the certificate being checked (or {@code null})\n     * @see #setCertificateChecking\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a printable representation of the {@code X509CRLSelector}.\n     *\n     * @return a {@code String} describing the contents of the\n     *         {@code X509CRLSelector}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean match(CRL crl)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Decides whether a {@code CRL} should be selected.\n     *\n     * @param crl the {@code CRL} to be checked\n     * @return {@code true} if the {@code CRL} should be selected,\n     *         {@code false} otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Returns a copy of this object.\n     *\n     * @return the copy\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void setIssuers(Collection<X500Principal> issuers)", "public void setIssuerNames(Collection<?> names) throws IOException", "public void addIssuer(X500Principal issuer)", "public void addIssuerName(String name) throws IOException", "public void addIssuerName(byte[] name) throws IOException", "private void addIssuerNameInternal(Object name, X500Principal principal)", "private static HashSet<Object> cloneAndCheckIssuerNames(Collection<?> names) throws IOException", "private static HashSet<Object> cloneIssuerNames(Collection<Object> names)", "private static HashSet<X500Principal> parseIssuerNames(Collection<Object> names) throws IOException", "public void setMinCRLNumber(BigInteger minCRL)", "public void setMaxCRLNumber(BigInteger maxCRL)", "public void setDateAndTime(Date dateAndTime)", " void setDateAndTime(Date dateAndTime, long skew)", "public void setCertificateChecking(X509Certificate cert)", "public Collection<X500Principal> getIssuers()", "public Collection<Object> getIssuerNames()", "public BigInteger getMinCRL()", "public BigInteger getMaxCRL()", "public Date getDateAndTime()", "public X509Certificate getCertificateChecking()", "public String toString()", "public boolean match(CRL crl)", "public Object clone()" ],
+  "variableNames" : [ "debug", "issuerNames", "issuerX500Principals", "minCRL", "maxCRL", "dateAndTime", "certChecking", "skew" ]
+}

@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/Bundle.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/Bundle.java",
   "packageName" : "android.os",
   "className" : "Bundle",
-  "comment" : "\n * A mapping from String keys to various {@link Parcelable} values.\n *\n * @see PersistableBundle\n ",
+  "comment" : "\n * A mapping from String keys to various {@link Parcelable} values.\n *\n * <p><b>Warning:</b> Note that {@link Bundle} is a lazy container and as such it does NOT implement\n * {@link #equals(Object)} or {@link #hashCode()}.\n *\n * @see PersistableBundle\n ",
+  "links" : [ "android.os.Parcelable", "android.os.Bundle", "#equals(Object)", "#hashCode()" ],
   "variables" : [ {
     "name" : "FLAG_HAS_FDS",
     "type" : "int",
@@ -19,10 +20,35 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "EMPTY",
-    "type" : "Bundle",
+    "name" : "FLAG_HAS_BINDERS_KNOWN",
+    "type" : "int",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "FLAG_HAS_BINDERS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_BINDERS_NOT_PRESENT",
+    "type" : "int",
+    "comment" : "\n     * Status when the Bundle can <b>assert</b> that the underlying Parcel DOES NOT contain\n     * Binder object(s).\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_BINDERS_PRESENT",
+    "type" : "int",
+    "comment" : "\n     * Status when the Bundle can <b>assert</b> that there are Binder object(s) in the Parcel.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_BINDERS_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * Status when the Bundle cannot be checked for Binders and there is no parcelled data\n     * available to check either.\n     * <p> This could happen when a Bundle is unparcelled or was never parcelled, and modified such\n     * that it is not possible to assert if the Bundle has any Binder objects in the current state.\n     *\n     * For e.g. calling {@link #putParcelable} or {@link #putBinder} could have added a Binder\n     * object to the Bundle but it is not possible to assert this fact unless the Bundle is written\n     * to a Parcel.\n     * </p>\n     *\n     * @hide\n     ",
+    "links" : [ "#putBinder", "#putParcelable" ]
+  }, {
+    "name" : "EMPTY",
+    "type" : "Bundle",
+    "comment" : " An unmodifiable {@code Bundle} that is always {@link #isEmpty() empty}. ",
+    "links" : [ "#isEmpty()" ]
   }, {
     "name" : "STRIPPED",
     "type" : "Bundle",
@@ -105,9 +131,9 @@
     "comment" : "\n     * Reports whether the bundle contains any parcelled file descriptors.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public Bundle filterValues()",
-    "returnType" : "Bundle",
-    "comment" : "\n     * Filter values in Bundle to only basic types.\n     * @hide\n     ",
+    "name" : "public int hasBinders()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a status indicating whether the bundle contains any parcelled Binder objects.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void putObject(@Nullable String key, @Nullable Object value)",
@@ -302,27 +328,52 @@
   }, {
     "name" : "public T getParcelable(@Nullable String key)",
     "returnType" : "T",
-    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a {@code null}\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return a Parcelable value, or {@code null}\n     ",
-    "links" : [ "ClassLoader", "#setClassLoader(ClassLoader)" ]
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a {@code null}\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return a Parcelable value, or {@code null}\n     *\n     * @deprecated Use the type-safer {@link #getParcelable(String, Class)} starting from Android\n     *      {@link Build.VERSION_CODES#TIRAMISU}.\n     ",
+    "links" : [ "#getParcelable(String", "Build.VERSION_CODES#TIRAMISU", "ClassLoader", "#setClassLoader(ClassLoader)" ]
+  }, {
+    "name" : "public T getParcelable(@Nullable String key, @NonNull Class<T> clazz)",
+    "returnType" : "T",
+    "comment" : "\n     * Returns the value associated with the given key or {@code null} if:\n     * <ul>\n     *     <li>No mapping of the desired type exists for the given key.\n     *     <li>A {@code null} value is explicitly associated with the key.\n     *     <li>The object is not of type {@code clazz}.\n     * </ul>\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * <p><b>Warning: </b> the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #getParcelable(String)} instead.\n     *\n     * @param key a String, or {@code null}\n     * @param clazz The type of the object expected\n     * @return a Parcelable value, or {@code null}\n     ",
+    "links" : [ "android.os.Parcelable", "#getEnclosingClass()", "#getParcelable(String)", "ClassLoader", "#setClassLoader(ClassLoader)" ]
   }, {
     "name" : "public Parcelable[] getParcelableArray(@Nullable String key)",
     "returnType" : "Parcelable[]",
-    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return a Parcelable[] value, or {@code null}\n     ",
-    "links" : [ "ClassLoader", "#setClassLoader(ClassLoader)" ]
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return a Parcelable[] value, or {@code null}\n     *\n     * @deprecated Use the type-safer {@link #getParcelableArray(String, Class)} starting from\n     *      Android {@link Build.VERSION_CODES#TIRAMISU}.\n     ",
+    "links" : [ "#getParcelableArray(String", "Build.VERSION_CODES#TIRAMISU", "ClassLoader", "#setClassLoader(ClassLoader)" ]
+  }, {
+    "name" : "public T[] getParcelableArray(@Nullable String key, @NonNull Class<T> clazz)",
+    "returnType" : "T[]",
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if:\n     * <ul>\n     *     <li>No mapping of the desired type exists for the given key.\n     *     <li>A {@code null} value is explicitly associated with the key.\n     *     <li>The object is not of type {@code clazz}.\n     * </ul>\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #getParcelableArray(String)} instead.\n     *\n     * @param key a String, or {@code null}\n     * @param clazz The type of the items inside the array. This is only verified when unparceling.\n     * @return a Parcelable[] value, or {@code null}\n     ",
+    "links" : [ "#getParcelableArray(String)", "android.os.Parcelable", "#getEnclosingClass()", "ClassLoader", "#setClassLoader(ClassLoader)" ]
   }, {
     "name" : "public ArrayList<T> getParcelableArrayList(@Nullable String key)",
     "returnType" : "ArrayList<T>",
-    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a {@code null}\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return an ArrayList<T> value, or {@code null}\n     ",
-    "links" : [ "ClassLoader", "#setClassLoader(ClassLoader)" ]
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if\n     * no mapping of the desired type exists for the given key or a {@code null}\n     * value is explicitly associated with the key.\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * @param key a String, or {@code null}\n     * @return an ArrayList<T> value, or {@code null}\n     *\n     * @deprecated Use the type-safer {@link #getParcelable(String, Class)} starting from Android\n     *      {@link Build.VERSION_CODES#TIRAMISU}.\n     ",
+    "links" : [ "#getParcelable(String", "Build.VERSION_CODES#TIRAMISU", "ClassLoader", "#setClassLoader(ClassLoader)" ]
+  }, {
+    "name" : "public ArrayList<T> getParcelableArrayList(@Nullable String key, @NonNull Class<? extends T> clazz)",
+    "returnType" : "ArrayList<T>",
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if:\n     * <ul>\n     *     <li>No mapping of the desired type exists for the given key.\n     *     <li>A {@code null} value is explicitly associated with the key.\n     *     <li>The object is not of type {@code clazz}.\n     * </ul>\n     *\n     * <p><b>Note: </b> if the expected value is not a class provided by the Android platform,\n     * you must call {@link #setClassLoader(ClassLoader)} with the proper {@link ClassLoader} first.\n     * Otherwise, this method might throw an exception or return {@code null}.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #getParcelableArrayList(String)} instead.\n     *\n     * @param key   a String, or {@code null}\n     * @param clazz The type of the items inside the array list. This is only verified when\n     *     unparceling.\n     * @return an ArrayList<T> value, or {@code null}\n     ",
+    "links" : [ "#getParcelableArrayList(String)", "android.os.Parcelable", "#getEnclosingClass()", "ClassLoader", "#setClassLoader(ClassLoader)" ]
   }, {
     "name" : "public SparseArray<T> getSparseParcelableArray(@Nullable String key)",
     "returnType" : "SparseArray<T>",
-    "comment" : "\n     * Returns the value associated with the given key, or null if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * @param key a String, or null\n     *\n     * @return a SparseArray of T values, or null\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Returns the value associated with the given key, or null if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * @param key a String, or null\n     * @return a SparseArray of T values, or null\n     *\n     * @deprecated Use the type-safer {@link #getSparseParcelableArray(String, Class)} starting from\n     *      Android {@link Build.VERSION_CODES#TIRAMISU}.\n     ",
+    "links" : [ "Build.VERSION_CODES#TIRAMISU", "#getSparseParcelableArray(String" ]
+  }, {
+    "name" : "public SparseArray<T> getSparseParcelableArray(@Nullable String key, @NonNull Class<? extends T> clazz)",
+    "returnType" : "SparseArray<T>",
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if:\n     * <ul>\n     *     <li>No mapping of the desired type exists for the given key.\n     *     <li>A {@code null} value is explicitly associated with the key.\n     *     <li>The object is not of type {@code clazz}.\n     * </ul>\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #getSparseParcelableArray(String)} instead.\n     *\n     * @param key a String, or null\n     * @param clazz The type of the items inside the sparse array. This is only verified when\n     *     unparceling.\n     * @return a SparseArray of T values, or null\n     ",
+    "links" : [ "android.os.Parcelable", "#getSparseParcelableArray(String)", "#getEnclosingClass()" ]
   }, {
     "name" : "public Serializable getSerializable(@Nullable String key)",
     "returnType" : "Serializable",
-    "comment" : "\n     * Returns the value associated with the given key, or null if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * @param key a String, or null\n     * @return a Serializable value, or null\n     ",
+    "comment" : "\n     * Returns the value associated with the given key, or null if\n     * no mapping of the desired type exists for the given key or a null\n     * value is explicitly associated with the key.\n     *\n     * @param key a String, or null\n     * @return a Serializable value, or null\n     *\n     * @deprecated Use the type-safer {@link #getSerializable(String, Class)} starting from Android\n     *      {@link Build.VERSION_CODES#TIRAMISU}.\n     ",
+    "links" : [ "#getSerializable(String", "Build.VERSION_CODES#TIRAMISU" ]
+  }, {
+    "name" : "public T getSerializable(@Nullable String key, @NonNull Class<T> clazz)",
+    "returnType" : "T",
+    "comment" : "\n     * Returns the value associated with the given key, or {@code null} if:\n     * <ul>\n     *     <li>No mapping of the desired type exists for the given key.\n     *     <li>A {@code null} value is explicitly associated with the key.\n     *     <li>The object is not of type {@code clazz}.\n     * </ul>\n     *\n     * @param key   a String, or null\n     * @param clazz The expected class of the returned type\n     * @return a Serializable value, or null\n     ",
     "links" : [ ]
   }, {
     "name" : "public ArrayList<Integer> getIntegerArrayList(@Nullable String key)",
@@ -392,8 +443,8 @@
   }, {
     "name" : "public synchronized String toString()",
     "returnType" : "String",
-    "comment" : "",
-    "links" : [ ]
+    "comment" : "\n     * Returns a string representation of the {@link Bundle} that may be suitable for debugging. It\n     * won't print the internal map if its content hasn't been unparcelled.\n     ",
+    "links" : [ "android.os.Bundle" ]
   }, {
     "name" : "public synchronized String toShortString()",
     "returnType" : "String",
@@ -405,6 +456,6 @@
     "comment" : " @hide ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "FLAG_HAS_FDS", "FLAG_HAS_FDS_KNOWN", "FLAG_ALLOW_FDS", "EMPTY", "STRIPPED", "CREATOR" ],
-  "methodNames" : [ "private void maybePrefillHasFds()", "public static Bundle forPair(String key, String value)", "public void setClassLoader(ClassLoader loader)", "public ClassLoader getClassLoader()", "public boolean setAllowFds(boolean allowFds)", "public void setDefusable(boolean defusable)", "public static Bundle setDefusable(Bundle bundle, boolean defusable)", "public Object clone()", "public Bundle deepCopy()", "public void clear()", "public void remove(String key)", "public void putAll(Bundle bundle)", "public int getSize()", "public boolean hasFileDescriptors()", "public Bundle filterValues()", "public void putObject(@Nullable String key, @Nullable Object value)", "public void putByte(@Nullable String key, byte value)", "public void putChar(@Nullable String key, char value)", "public void putShort(@Nullable String key, short value)", "public void putFloat(@Nullable String key, float value)", "public void putCharSequence(@Nullable String key, @Nullable CharSequence value)", "public void putParcelable(@Nullable String key, @Nullable Parcelable value)", "public void putSize(@Nullable String key, @Nullable Size value)", "public void putSizeF(@Nullable String key, @Nullable SizeF value)", "public void putParcelableArray(@Nullable String key, @Nullable Parcelable[] value)", "public void putParcelableArrayList(@Nullable String key, @Nullable ArrayList<? extends Parcelable> value)", "public void putParcelableList(String key, List<? extends Parcelable> value)", "public void putSparseParcelableArray(@Nullable String key, @Nullable SparseArray<? extends Parcelable> value)", "public void putIntegerArrayList(@Nullable String key, @Nullable ArrayList<Integer> value)", "public void putStringArrayList(@Nullable String key, @Nullable ArrayList<String> value)", "public void putCharSequenceArrayList(@Nullable String key, @Nullable ArrayList<CharSequence> value)", "public void putSerializable(@Nullable String key, @Nullable Serializable value)", "public void putByteArray(@Nullable String key, @Nullable byte[] value)", "public void putShortArray(@Nullable String key, @Nullable short[] value)", "public void putCharArray(@Nullable String key, @Nullable char[] value)", "public void putFloatArray(@Nullable String key, @Nullable float[] value)", "public void putCharSequenceArray(@Nullable String key, @Nullable CharSequence[] value)", "public void putBundle(@Nullable String key, @Nullable Bundle value)", "public void putBinder(@Nullable String key, @Nullable IBinder value)", "public void putIBinder(@Nullable String key, @Nullable IBinder value)", "public byte getByte(String key)", "public Byte getByte(String key, byte defaultValue)", "public char getChar(String key)", "public char getChar(String key, char defaultValue)", "public short getShort(String key)", "public short getShort(String key, short defaultValue)", "public float getFloat(String key)", "public float getFloat(String key, float defaultValue)", "public CharSequence getCharSequence(@Nullable String key)", "public CharSequence getCharSequence(@Nullable String key, CharSequence defaultValue)", "public Size getSize(@Nullable String key)", "public SizeF getSizeF(@Nullable String key)", "public Bundle getBundle(@Nullable String key)", "public T getParcelable(@Nullable String key)", "public Parcelable[] getParcelableArray(@Nullable String key)", "public ArrayList<T> getParcelableArrayList(@Nullable String key)", "public SparseArray<T> getSparseParcelableArray(@Nullable String key)", "public Serializable getSerializable(@Nullable String key)", "public ArrayList<Integer> getIntegerArrayList(@Nullable String key)", "public ArrayList<String> getStringArrayList(@Nullable String key)", "public ArrayList<CharSequence> getCharSequenceArrayList(@Nullable String key)", "public byte[] getByteArray(@Nullable String key)", "public short[] getShortArray(@Nullable String key)", "public char[] getCharArray(@Nullable String key)", "public float[] getFloatArray(@Nullable String key)", "public CharSequence[] getCharSequenceArray(@Nullable String key)", "public IBinder getBinder(@Nullable String key)", "public IBinder getIBinder(@Nullable String key)", "public int describeContents()", "public void writeToParcel(Parcel parcel, int flags)", "public void readFromParcel(Parcel parcel)", "public synchronized String toString()", "public synchronized String toShortString()", "public void dumpDebug(ProtoOutputStream proto, long fieldId)" ]
+  "methodNames" : [ "private void maybePrefillHasFds()", "public static Bundle forPair(String key, String value)", "public void setClassLoader(ClassLoader loader)", "public ClassLoader getClassLoader()", "public boolean setAllowFds(boolean allowFds)", "public void setDefusable(boolean defusable)", "public static Bundle setDefusable(Bundle bundle, boolean defusable)", "public Object clone()", "public Bundle deepCopy()", "public void clear()", "public void remove(String key)", "public void putAll(Bundle bundle)", "public int getSize()", "public boolean hasFileDescriptors()", "public int hasBinders()", "public void putObject(@Nullable String key, @Nullable Object value)", "public void putByte(@Nullable String key, byte value)", "public void putChar(@Nullable String key, char value)", "public void putShort(@Nullable String key, short value)", "public void putFloat(@Nullable String key, float value)", "public void putCharSequence(@Nullable String key, @Nullable CharSequence value)", "public void putParcelable(@Nullable String key, @Nullable Parcelable value)", "public void putSize(@Nullable String key, @Nullable Size value)", "public void putSizeF(@Nullable String key, @Nullable SizeF value)", "public void putParcelableArray(@Nullable String key, @Nullable Parcelable[] value)", "public void putParcelableArrayList(@Nullable String key, @Nullable ArrayList<? extends Parcelable> value)", "public void putParcelableList(String key, List<? extends Parcelable> value)", "public void putSparseParcelableArray(@Nullable String key, @Nullable SparseArray<? extends Parcelable> value)", "public void putIntegerArrayList(@Nullable String key, @Nullable ArrayList<Integer> value)", "public void putStringArrayList(@Nullable String key, @Nullable ArrayList<String> value)", "public void putCharSequenceArrayList(@Nullable String key, @Nullable ArrayList<CharSequence> value)", "public void putSerializable(@Nullable String key, @Nullable Serializable value)", "public void putByteArray(@Nullable String key, @Nullable byte[] value)", "public void putShortArray(@Nullable String key, @Nullable short[] value)", "public void putCharArray(@Nullable String key, @Nullable char[] value)", "public void putFloatArray(@Nullable String key, @Nullable float[] value)", "public void putCharSequenceArray(@Nullable String key, @Nullable CharSequence[] value)", "public void putBundle(@Nullable String key, @Nullable Bundle value)", "public void putBinder(@Nullable String key, @Nullable IBinder value)", "public void putIBinder(@Nullable String key, @Nullable IBinder value)", "public byte getByte(String key)", "public Byte getByte(String key, byte defaultValue)", "public char getChar(String key)", "public char getChar(String key, char defaultValue)", "public short getShort(String key)", "public short getShort(String key, short defaultValue)", "public float getFloat(String key)", "public float getFloat(String key, float defaultValue)", "public CharSequence getCharSequence(@Nullable String key)", "public CharSequence getCharSequence(@Nullable String key, CharSequence defaultValue)", "public Size getSize(@Nullable String key)", "public SizeF getSizeF(@Nullable String key)", "public Bundle getBundle(@Nullable String key)", "public T getParcelable(@Nullable String key)", "public T getParcelable(@Nullable String key, @NonNull Class<T> clazz)", "public Parcelable[] getParcelableArray(@Nullable String key)", "public T[] getParcelableArray(@Nullable String key, @NonNull Class<T> clazz)", "public ArrayList<T> getParcelableArrayList(@Nullable String key)", "public ArrayList<T> getParcelableArrayList(@Nullable String key, @NonNull Class<? extends T> clazz)", "public SparseArray<T> getSparseParcelableArray(@Nullable String key)", "public SparseArray<T> getSparseParcelableArray(@Nullable String key, @NonNull Class<? extends T> clazz)", "public Serializable getSerializable(@Nullable String key)", "public T getSerializable(@Nullable String key, @NonNull Class<T> clazz)", "public ArrayList<Integer> getIntegerArrayList(@Nullable String key)", "public ArrayList<String> getStringArrayList(@Nullable String key)", "public ArrayList<CharSequence> getCharSequenceArrayList(@Nullable String key)", "public byte[] getByteArray(@Nullable String key)", "public short[] getShortArray(@Nullable String key)", "public char[] getCharArray(@Nullable String key)", "public float[] getFloatArray(@Nullable String key)", "public CharSequence[] getCharSequenceArray(@Nullable String key)", "public IBinder getBinder(@Nullable String key)", "public IBinder getIBinder(@Nullable String key)", "public int describeContents()", "public void writeToParcel(Parcel parcel, int flags)", "public void readFromParcel(Parcel parcel)", "public synchronized String toString()", "public synchronized String toShortString()", "public void dumpDebug(ProtoOutputStream proto, long fieldId)" ],
+  "variableNames" : [ "FLAG_HAS_FDS", "FLAG_HAS_FDS_KNOWN", "FLAG_ALLOW_FDS", "FLAG_HAS_BINDERS_KNOWN", "FLAG_HAS_BINDERS", "STATUS_BINDERS_NOT_PRESENT", "STATUS_BINDERS_PRESENT", "STATUS_BINDERS_UNKNOWN", "EMPTY", "STRIPPED", "CREATOR" ]
 }

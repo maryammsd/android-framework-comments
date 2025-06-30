@@ -1,0 +1,211 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/util/ChineseCalendar.java",
+  "packageName" : "android.icu.util",
+  "className" : "ChineseCalendar",
+  "comment" : "\n * <code>ChineseCalendar</code> is a concrete subclass of {@link Calendar}\n * that implements a traditional Chinese calendar.  The traditional Chinese\n * calendar is a lunisolar calendar: Each month starts on a new moon, and\n * the months are numbered according to solar events, specifically, to\n * guarantee that month 11 always contains the winter solstice.  In order\n * to accomplish this, leap months are inserted in certain years.  Leap\n * months are numbered the same as the month they follow.  The decision of\n * which month is a leap month depends on the relative movements of the sun\n * and moon.\n *\n * <p>All astronomical computations are performed with respect to a time\n * zone of GMT+8:00 and a longitude of 120 degrees east.  Although some\n * calendars implement a historically more accurate convention of using\n * Beijing's local longitude (116 degrees 25 minutes east) and time zone\n * (GMT+7:45:40) for dates before 1929, we do not implement this here.\n *\n * <p>Years are counted in two different ways in the Chinese calendar.  The\n * first method is by sequential numbering from the 61st year of the reign\n * of Huang Di, 2637 BCE, which is designated year 1 on the Chinese\n * calendar.  The second method uses 60-year cycles from the same starting\n * point, which is designated year 1 of cycle 1.  In this class, the\n * <code>EXTENDED_YEAR</code> field contains the sequential year count.\n * The <code>ERA</code> field contains the cycle number, and the\n * <code>YEAR</code> field contains the year of the cycle, a value between\n * 1 and 60.\n *\n * <p>There is some variation in what is considered the starting point of\n * the calendar, with some sources starting in the first year of the reign\n * of Huang Di, rather than the 61st.  This gives continuous year numbers\n * 60 years greater and cycle numbers one greater than what this class\n * implements.\n *\n * <p>Because <code>ChineseCalendar</code> defines an additional field and\n * redefines the way the <code>ERA</code> field is used, it requires a new\n * format class, <code>ChineseDateFormat</code>.  As always, use the\n * methods <code>DateFormat.getXxxInstance(Calendar cal,...)</code> to\n * obtain a formatter for this calendar.\n *\n * <p>References:<ul>\n * \n * <li>Dershowitz and Reingold, <i>Calendrical Calculations</i>,\n * Cambridge University Press, 1997</li>\n * \n * <li>The <a href=\"http://www.tondering.dk/claus/calendar.html\">\n * Calendar FAQ</a></li>\n *\n * </ul>\n *\n * <p>\n * This class should not be subclassed.</p>\n * <p>\n * ChineseCalendar usually should be instantiated using \n * {@link android.icu.util.Calendar#getInstance(ULocale)} passing in a <code>ULocale</code>\n * with the tag <code>\"@calendar=chinese\"</code>.</p>\n *\n * @see android.icu.util.Calendar\n * @author Alan Liu\n ",
+  "links" : [ "android.icu.util.Calendar#getInstance(ULocale)", "android.icu.util.Calendar" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " jdk1.4.2 serialver",
+    "links" : [ ]
+  }, {
+    "name" : "epochYear",
+    "type" : "int",
+    "comment" : "\n     * The start year of this Chinese calendar instance. \n     ",
+    "links" : [ ]
+  }, {
+    "name" : "zoneAstro",
+    "type" : "TimeZone",
+    "comment" : "\n     * The zone used for the astronomical calculation of this Chinese\n     * calendar instance.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "winterSolsticeCache",
+    "type" : "CalendarCache",
+    "comment" : "\n     * Cache that maps Gregorian year to local days of winter solstice.\n     * @see #winterSolstice\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "newYearCache",
+    "type" : "CalendarCache",
+    "comment" : "\n     * Cache that maps Gregorian year to local days of Chinese new year.\n     * @see #newYear\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "hasLeapMonthBetweenWinterSolstices",
+    "type" : "boolean",
+    "comment" : "\n     * True if there is a leap month between the Winter Solstice before and after the\n     * current date.This is different from leap year because in some year, such as\n     * 1813 and 2033, the leap month is after the Winter Solstice of that year. So\n     * this value could be false for a date prior to the Winter Solstice of that\n     * year but that year still has a leap month and therefor is a leap year.\n     * @see #computeChineseFields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LIMITS",
+    "type" : "int[][]",
+    "comment" : "\n     * Array defining the limits of field values for this class.  Field\n     * limits which are invariant with respect to calendar system and\n     * defined by Calendar are left blank.\n     *\n     * Notes:\n     *\n     * ERA 5000000 / 60 = 83333.\n     *\n     * MONTH There are 12 or 13 lunar months in a year.  However, we always\n     * number them 0..11, with an intercalated, identically numbered leap\n     * month, when necessary.\n     *\n     * DAY_OF_YEAR In a non-leap year there are 353, 354, or 355 days.  In\n     * a leap year there are 383, 384, or 385 days.\n     *\n     * WEEK_OF_YEAR The least maximum occurs if there are 353 days in the\n     * year, and the first 6 are the last week of the previous year.  Then\n     * we have 49 full weeks and 4 days in the last week: 6 + 49*7 + 4 =\n     * 353.  So the least maximum is 50.  The maximum occurs if there are\n     * 385 days in the year, and WOY 1 extends 6 days into the prior year.\n     * Then there are 54 full weeks, and 6 days in the last week: 1 + 54*7\n     * + 6 = 385.  The 6 days of the last week will fall into WOY 1 of the\n     * next year.  Maximum is 55.\n     *\n     * WEEK_OF_MONTH In a 29 day month, if the first 7 days make up week 1\n     * that leaves 3 full weeks and 1 day at the end.  The least maximum is\n     * thus 5.  In a 30 days month, if the previous 6 days belong WOM 1 of\n     * this month, we have 4 full weeks and 1 days at the end (which\n     * technically will be WOM 1 of the next month, but will be reported by\n     * time->fields and hence by getActualMaximum as WOM 6 of this month).\n     * Maximum is 6.\n     *\n     * DAY_OF_WEEK_IN_MONTH In a 29 or 30 day month, there are 4 full weeks\n     * plus 1 or 2 days at the end, so the maximum is always 5.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CHINESE_DATE_PRECEDENCE",
+    "type" : "int[][][]",
+    "comment" : "\n     * Field resolution table that incorporates IS_LEAP_MONTH.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CHINESE_EPOCH_YEAR",
+    "type" : "int",
+    "comment" : " Gregorian year",
+    "links" : [ ]
+  }, {
+    "name" : "CHINA_ZONE",
+    "type" : "TimeZone",
+    "comment" : "\n     * The time zone used for performing astronomical computations.\n     * Some sources use a different historically accurate\n     * offset of GMT+7:45:40 for years before 1929; we do not do this.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SYNODIC_GAP",
+    "type" : "int",
+    "comment" : "\n     * Value to be added or subtracted from the local days of a new moon to\n     * get close to the next or prior new moon, but not cross it.  Must be\n     * >= 1 and < CalendarAstronomer.SYNODIC_MONTH.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "gTemporalLeapMonthCodes",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected int handleGetLimit(int field, int limitType)",
+    "returnType" : "int",
+    "comment" : "\n     * Override Calendar to return the limit value for the given field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleGetExtendedYear()",
+    "returnType" : "int",
+    "comment" : "\n     * Implement abstract Calendar method to return the extended year\n     * defined by the current fields.  This will use either the ERA and\n     * YEAR field as the cycle and year-of-cycle, or the EXTENDED_YEAR\n     * field as the continuous year count, depending on which is newer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleGetMonthLength(int extendedYear, int month)",
+    "returnType" : "int",
+    "comment" : "\n     * Override Calendar method to return the number of days in the given\n     * extended year and month.\n     *\n     * <p>Note: This method also reads the IS_LEAP_MONTH field to determine\n     * whether or not the given month is a leap month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormat handleGetDateFormat(String pattern, String override, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int[][][] getFieldResolutionTable()",
+    "returnType" : "int[][][]",
+    "comment" : "\n     * Override Calendar to add IS_LEAP_MONTH to the field resolution\n     * table.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void offsetMonth(int newMoon, int dom, int delta)",
+    "returnType" : "void",
+    "comment" : "\n     * Adjust this calendar to be delta months before or after a given\n     * start position, pinning the day of month if necessary.  The start\n     * position is given as a local days number for the start of the month\n     * and a day-of-month.  Used by add() and roll().\n     * @param newMoon the local days of the first day of the month of the\n     * start position (days after January 1, 1970 0:00 Asia/Shanghai)\n     * @param dom the 1-based day-of-month of the start position\n     * @param delta the number of months to move forward or backward from\n     * the start position\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void add(int field, int amount)",
+    "returnType" : "void",
+    "comment" : "\n     * Override Calendar to handle leap months properly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void roll(int field, int amount)",
+    "returnType" : "void",
+    "comment" : "\n     * Override Calendar to handle leap months properly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final long daysToMillis(int days)",
+    "returnType" : "long",
+    "comment" : "\n     * Convert local days to UTC epoch milliseconds.\n     * This is not an accurate conversion in terms that getTimezoneOffset \n     * takes the milliseconds in GMT (not local time).  In theory, more \n     * accurate algorithm can be implemented but practically we do not need \n     * to go through that complication as long as the historically timezone \n     * changes did not happen around the 'tricky' new moon (new moon around \n     * the midnight). \n     *  \n     * @param days days after January 1, 1970 0:00 in the astronomical base zone\n     * @return milliseconds after January 1, 1970 0:00 GMT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final int millisToDays(long millis)",
+    "returnType" : "int",
+    "comment" : "\n     * Convert UTC epoch milliseconds to local days.\n     * @param millis milliseconds after January 1, 1970 0:00 GMT\n     * @return days days after January 1, 1970 0:00 in the astronomical base zone\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int winterSolstice(int gyear)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the major solar term on or after December 15 of the given\n     * Gregorian year, that is, the winter solstice of the given year.\n     * Computations are relative to Asia/Shanghai time zone.\n     * @param gyear a Gregorian year\n     * @return days after January 1, 1970 0:00 Asia/Shanghai of the\n     * winter solstice of the given year\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int newMoonNear(int days, boolean after)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the closest new moon to the given date, searching either\n     * forward or backward in time.\n     * @param days days after January 1, 1970 0:00 Asia/Shanghai\n     * @param after if true, search for a new moon on or after the given\n     * date; otherwise, search for a new moon before it\n     * @return days after January 1, 1970 0:00 Asia/Shanghai of the nearest\n     * new moon after or before <code>days</code>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int synodicMonthsBetween(int day1, int day2)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the nearest integer number of synodic months between\n     * two dates.\n     * @param day1 days after January 1, 1970 0:00 Asia/Shanghai\n     * @param day2 days after January 1, 1970 0:00 Asia/Shanghai\n     * @return the nearest integer number of months between day1 and day2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int majorSolarTerm(int days)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the major solar term on or before a given date.  This\n     * will be an integer from 1..12, with 1 corresponding to 330 degrees,\n     * 2 to 0 degrees, 3 to 30 degrees,..., and 12 to 300 degrees.\n     * @param days days after January 1, 1970 0:00 Asia/Shanghai\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean hasNoMajorSolarTerm(int newMoon)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given month lacks a major solar term.\n     * @param newMoon days after January 1, 1970 0:00 Asia/Shanghai of a new\n     * moon\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isLeapMonthBetween(int newMoon1, int newMoon2)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if there is a leap month on or after month newMoon1 and\n     * at or before month newMoon2.\n     * @param newMoon1 days after January 1, 1970 0:00 astronomical base zone of a\n     * new moon\n     * @param newMoon2 days after January 1, 1970 0:00 astronomical base zone of a\n     * new moon\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void handleComputeFields(int julianDay)",
+    "returnType" : "void",
+    "comment" : "\n     * Override Calendar to compute several fields specific to the Chinese\n     * calendar system.  These are:\n     *\n     * <ul><li>ERA\n     * <li>YEAR\n     * <li>MONTH\n     * <li>DAY_OF_MONTH\n     * <li>DAY_OF_YEAR\n     * <li>EXTENDED_YEAR</ul>\n     * \n     * The DAY_OF_WEEK and DOW_LOCAL fields are already set when this\n     * method is called.  The getGregorianXxx() methods return Gregorian\n     * calendar equivalents for the given Julian day.\n     *\n     * <p>Compute the ChineseCalendar-specific field IS_LEAP_MONTH.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void computeChineseFields(int days, int gyear, int gmonth, boolean setAllFields)",
+    "returnType" : "void",
+    "comment" : "\n     * Compute fields for the Chinese calendar system.  This method can\n     * either set all relevant fields, as required by\n     * <code>handleComputeFields()</code>, or it can just set the MONTH and\n     * IS_LEAP_MONTH fields, as required by\n     * <code>handleComputeMonthStart()</code>.\n     *\n     * <p>As a side effect, this method sets {@link #hasLeapMonthBetweenWinterSolstices}.\n     * @param days days after January 1, 1970 0:00 astronomical base zone of the\n     * date to compute fields for\n     * @param gyear the Gregorian year of the given date\n     * @param gmonth the Gregorian month of the given date\n     * @param setAllFields if true, set the EXTENDED_YEAR, ERA, YEAR,\n     * DAY_OF_MONTH, and DAY_OF_YEAR fields.  In either case set the MONTH\n     * and IS_LEAP_MONTH fields.\n     ",
+    "links" : [ "#hasLeapMonthBetweenWinterSolstices" ]
+  }, {
+    "name" : "private int newYear(int gyear)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the Chinese new year of the given Gregorian year.\n     * @param gyear a Gregorian year\n     * @return days after January 1, 1970 0:00 astronomical base zone of the\n     * Chinese new year of the given year (this will be a new moon)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int handleComputeMonthStart(int eyear, int month, boolean useMonth)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the Julian day number of day before the first day of the\n     * given month in the given extended year.\n     * \n     * <p>Note: This method reads the IS_LEAP_MONTH field to determine\n     * whether the given month is a leap month.\n     * @param eyear the extended year\n     * @param month the zero-based month.  The month is also determined\n     * by reading the IS_LEAP_MONTH field.\n     * @return the Julian day number of the day before the first\n     * day of the given month and year\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getType()",
+    "returnType" : "String",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean haveDefaultCentury()",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Override readObject.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean inTemporalLeapYear()",
+    "returnType" : "boolean",
+    "comment" : "\n     * <strong>[icu]</strong> Returns true if the date is in a leap year. Recalculate the current time\n     * field values if the time value has been changed by a call to setTime().\n     * This method is semantically const, but may alter the object in memory.\n     * A \"leap year\" is a year that contains more days than other years (for\n     * solar or lunar calendars) or more months than other years (for lunisolar\n     * calendars like Hebrew or Chinese), as defined in the ECMAScript Temporal\n     * proposal.\n     * @return true if the date in the fields is in a Temporal proposal\n     *               defined leap year. False otherwise.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getTemporalMonthCode()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets The Temporal monthCode value corresponding to the month for the date.\n     * The value is a string identifier that starts with the literal grapheme\n     * \"M\" followed by two graphemes representing the zero-padded month number\n     * of the current month in a normal (non-leap) year and suffixed by an\n     * optional literal grapheme \"L\" if this is a leap month in a lunisolar\n     * calendar. For the Chinese calendar, the values are \"M01\" .. \"M12\" for\n     * non-leap year and * in leap year with another monthCode in \"M01L\" .. \"M12L\".\n     *\n     * @return       One of 24 possible strings in {\"M01\"..\"M12\", \"M01L\"..\"M12L\"}.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTemporalMonthCode(String temporalMonth)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets The Temporal monthCode which is a string identifier that starts\n     * with the literal grapheme \"M\" followed by two graphemes representing\n     * the zero-padded month number of the current month in a normal\n     * (non-leap) year and suffixed by an optional literal grapheme \"L\" if this\n     * is a leap month in a lunisolar calendar.\n     * For the Chinese calendar, the values are \"M01\" .. \"M12\" for non-leap year and\n     * in leap year with another monthCode in \"M01L\" .. \"M12L\".\n     * @param temporalMonth One of 25 possible strings in {\"M01\".. \"M12\", \"M13\", \"M01L\",\n     *  \"M12L\"}.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int internalGetMonth()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int internalGetMonth(int defaultValue)",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected int handleGetLimit(int field, int limitType)", "protected int handleGetExtendedYear()", "protected int handleGetMonthLength(int extendedYear, int month)", "protected DateFormat handleGetDateFormat(String pattern, String override, ULocale locale)", "protected int[][][] getFieldResolutionTable()", "private void offsetMonth(int newMoon, int dom, int delta)", "public void add(int field, int amount)", "public void roll(int field, int amount)", "private final long daysToMillis(int days)", "private final int millisToDays(long millis)", "private int winterSolstice(int gyear)", "private int newMoonNear(int days, boolean after)", "private int synodicMonthsBetween(int day1, int day2)", "private int majorSolarTerm(int days)", "private boolean hasNoMajorSolarTerm(int newMoon)", "private boolean isLeapMonthBetween(int newMoon1, int newMoon2)", "protected void handleComputeFields(int julianDay)", "private void computeChineseFields(int days, int gyear, int gmonth, boolean setAllFields)", "private int newYear(int gyear)", "protected int handleComputeMonthStart(int eyear, int month, boolean useMonth)", "public String getType()", "public boolean haveDefaultCentury()", "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException", "public boolean inTemporalLeapYear()", "public String getTemporalMonthCode()", "public void setTemporalMonthCode(String temporalMonth)", "protected int internalGetMonth()", "protected int internalGetMonth(int defaultValue)" ],
+  "variableNames" : [ "serialVersionUID", "epochYear", "zoneAstro", "winterSolsticeCache", "newYearCache", "hasLeapMonthBetweenWinterSolstices", "LIMITS", "CHINESE_DATE_PRECEDENCE", "CHINESE_EPOCH_YEAR", "CHINA_ZONE", "SYNODIC_GAP", "gTemporalLeapMonthCodes" ]
+}

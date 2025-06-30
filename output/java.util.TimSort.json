@@ -1,0 +1,141 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/TimSort.java",
+  "packageName" : "java.util",
+  "className" : "TimSort",
+  "comment" : "\n * A stable, adaptive, iterative mergesort that requires far fewer than\n * n lg(n) comparisons when running on partially sorted arrays, while\n * offering performance comparable to a traditional mergesort when run\n * on random arrays.  Like all proper mergesorts, this sort is stable and\n * runs O(n log n) time (worst case).  In the worst case, this sort requires\n * temporary storage space for n/2 object references; in the best case,\n * it requires only a small constant amount of space.\n *\n * This implementation was adapted from Tim Peters's list sort for\n * Python, which is described in detail here:\n *\n *   http://svn.python.org/projects/python/trunk/Objects/listsort.txt\n *\n * Tim's C code may be found here:\n *\n *   http://svn.python.org/projects/python/trunk/Objects/listobject.c\n *\n * The underlying techniques are described in this paper (and may have\n * even earlier origins):\n *\n *  \"Optimistic Sorting and Information Theoretic Complexity\"\n *  Peter McIlroy\n *  SODA (Fourth Annual ACM-SIAM Symposium on Discrete Algorithms),\n *  pp 467-474, Austin, Texas, 25-27 January 1993.\n *\n * While the API to this class consists solely of static methods, it is\n * (privately) instantiable; a TimSort instance holds the state of an ongoing\n * sort, assuming the input array is large enough to warrant the full-blown\n * TimSort. Small arrays are sorted in place, using a binary insertion sort.\n *\n * @author Josh Bloch\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "MIN_MERGE",
+    "type" : "int",
+    "comment" : "\n     * This is the minimum sized sequence that will be merged.  Shorter\n     * sequences will be lengthened by calling binarySort.  If the entire\n     * array is less than this length, no merges will be performed.\n     *\n     * This constant should be a power of two.  It was 64 in Tim Peter's C\n     * implementation, but 32 was empirically determined to work better in\n     * this implementation.  In the unlikely event that you set this constant\n     * to be a number that's not a power of two, you'll need to change the\n     * {@link #minRunLength} computation.\n     *\n     * If you decrease this constant, you must change the stackLen\n     * computation in the TimSort constructor, or you risk an\n     * ArrayOutOfBounds exception.  See listsort.txt for a discussion\n     * of the minimum stack length required as a function of the length\n     * of the array being sorted and the minimum merge sequence length.\n     ",
+    "links" : [ "#minRunLength" ]
+  }, {
+    "name" : "a",
+    "type" : "T[]",
+    "comment" : "\n     * The array being sorted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "c",
+    "type" : "Comparator<? super T>",
+    "comment" : "\n     * The comparator for this sort.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_GALLOP",
+    "type" : "int",
+    "comment" : "\n     * When we get into galloping mode, we stay there until both runs win less\n     * often than MIN_GALLOP consecutive times.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "minGallop",
+    "type" : "int",
+    "comment" : "\n     * This controls when we get *into* galloping mode.  It is initialized\n     * to MIN_GALLOP.  The mergeLo and mergeHi methods nudge it higher for\n     * random data, and lower for highly structured data.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INITIAL_TMP_STORAGE_LENGTH",
+    "type" : "int",
+    "comment" : "\n     * Maximum initial size of tmp array, which is used for merging.  The array\n     * can grow to accommodate demand.\n     *\n     * Unlike Tim's original C version, we do not allocate this much storage\n     * when sorting smaller arrays.  This change was required for performance.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "tmp",
+    "type" : "T[]",
+    "comment" : "\n     * Temp storage for merges. A workspace array may optionally be\n     * provided in constructor, and if so will be used as long as it\n     * is big enough.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "tmpBase",
+    "type" : "int",
+    "comment" : " base of tmp array slice",
+    "links" : [ ]
+  }, {
+    "name" : "tmpLen",
+    "type" : "int",
+    "comment" : " length of tmp array slice",
+    "links" : [ ]
+  }, {
+    "name" : "stackSize",
+    "type" : "int",
+    "comment" : " Number of pending runs on stack",
+    "links" : [ ]
+  }, {
+    "name" : "runBase",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "runLen",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static void sort(T[] a, int lo, int hi, Comparator<? super T> c, T[] work, int workBase, int workLen)",
+    "returnType" : "void",
+    "comment" : "\n     * Sorts the given range, using the given workspace array slice\n     * for temp storage when possible. This method is designed to be\n     * invoked from public methods (in class Arrays) after performing\n     * any necessary array bounds checks and expanding parameters into\n     * the required forms.\n     *\n     * @param a the array to be sorted\n     * @param lo the index of the first element, inclusive, to be sorted\n     * @param hi the index of the last element, exclusive, to be sorted\n     * @param c the comparator to use\n     * @param work a workspace array (slice)\n     * @param workBase origin of usable space in work array\n     * @param workLen usable size of work array\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void binarySort(T[] a, int lo, int hi, int start, Comparator<? super T> c)",
+    "returnType" : "void",
+    "comment" : "\n     * Sorts the specified portion of the specified array using a binary\n     * insertion sort.  This is the best method for sorting small numbers\n     * of elements.  It requires O(n log n) compares, but O(n^2) data\n     * movement (worst case).\n     *\n     * If the initial part of the specified range is already sorted,\n     * this method can take advantage of it: the method assumes that the\n     * elements from index {@code lo}, inclusive, to {@code start},\n     * exclusive are already sorted.\n     *\n     * @param a the array in which a range is to be sorted\n     * @param lo the index of the first element in the range to be sorted\n     * @param hi the index after the last element in the range to be sorted\n     * @param start the index of the first element in the range that is\n     *        not already known to be sorted ({@code lo <= start <= hi})\n     * @param c comparator to used for the sort\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countRunAndMakeAscending(T[] a, int lo, int hi, Comparator<? super T> c)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the length of the run beginning at the specified position in\n     * the specified array and reverses the run if it is descending (ensuring\n     * that the run will always be ascending when the method returns).\n     *\n     * A run is the longest ascending sequence with:\n     *\n     *    a[lo] <= a[lo + 1] <= a[lo + 2] <= ...\n     *\n     * or the longest descending sequence with:\n     *\n     *    a[lo] >  a[lo + 1] >  a[lo + 2] >  ...\n     *\n     * For its intended use in a stable mergesort, the strictness of the\n     * definition of \"descending\" is needed so that the call can safely\n     * reverse a descending sequence without violating stability.\n     *\n     * @param a the array in which a run is to be counted and possibly reversed\n     * @param lo index of the first element in the run\n     * @param hi index after the last element that may be contained in the run.\n     *        It is required that {@code lo < hi}.\n     * @param c the comparator to used for the sort\n     * @return  the length of the run beginning at the specified position in\n     *          the specified array\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void reverseRange(Object[] a, int lo, int hi)",
+    "returnType" : "void",
+    "comment" : "\n     * Reverse the specified range of the specified array.\n     *\n     * @param a the array in which a range is to be reversed\n     * @param lo the index of the first element in the range to be reversed\n     * @param hi the index after the last element in the range to be reversed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int minRunLength(int n)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the minimum acceptable run length for an array of the specified\n     * length. Natural runs shorter than this will be extended with\n     * {@link #binarySort}.\n     *\n     * Roughly speaking, the computation is:\n     *\n     *  If n < MIN_MERGE, return n (it's too small to bother with fancy stuff).\n     *  Else if n is an exact power of 2, return MIN_MERGE/2.\n     *  Else return an int k, MIN_MERGE/2 <= k <= MIN_MERGE, such that n/k\n     *   is close to, but strictly less than, an exact power of 2.\n     *\n     * For the rationale, see listsort.txt.\n     *\n     * @param n the length of the array to be sorted\n     * @return the length of the minimum run to be merged\n     ",
+    "links" : [ "#binarySort" ]
+  }, {
+    "name" : "private void pushRun(int runBase, int runLen)",
+    "returnType" : "void",
+    "comment" : "\n     * Pushes the specified run onto the pending-run stack.\n     *\n     * @param runBase index of the first element in the run\n     * @param runLen  the number of elements in the run\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeCollapse()",
+    "returnType" : "void",
+    "comment" : "\n     * Examines the stack of runs waiting to be merged and merges adjacent runs\n     * until the stack invariants are reestablished:\n     *\n     *     1. runLen[i - 3] > runLen[i - 2] + runLen[i - 1]\n     *     2. runLen[i - 2] > runLen[i - 1]\n     *\n     * This method is called each time a new run is pushed onto the stack,\n     * so the invariants are guaranteed to hold for i < stackSize upon\n     * entry to the method.\n     *\n     * Thanks to Stijn de Gouw, Jurriaan Rot, Frank S. de Boer,\n     * Richard Bubel and Reiner Hahnle, this is fixed with respect to\n     * the analysis in \"On the Worst-Case Complexity of TimSort\" by\n     * Nicolas Auger, Vincent Jug, Cyril Nicaud, and Carine Pivoteau.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeForceCollapse()",
+    "returnType" : "void",
+    "comment" : "\n     * Merges all runs on the stack until only one remains.  This method is\n     * called once, to complete the sort.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeAt(int i)",
+    "returnType" : "void",
+    "comment" : "\n     * Merges the two runs at stack indices i and i+1.  Run i must be\n     * the penultimate or antepenultimate run on the stack.  In other words,\n     * i must be equal to stackSize-2 or stackSize-3.\n     *\n     * @param i stack index of the first of the two runs to merge\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int gallopLeft(T key, T[] a, int base, int len, int hint, Comparator<? super T> c)",
+    "returnType" : "int",
+    "comment" : "\n     * Locates the position at which to insert the specified key into the\n     * specified sorted range; if the range contains an element equal to key,\n     * returns the index of the leftmost equal element.\n     *\n     * @param key the key whose insertion point to search for\n     * @param a the array in which to search\n     * @param base the index of the first element in the range\n     * @param len the length of the range; must be > 0\n     * @param hint the index at which to begin the search, 0 <= hint < n.\n     *     The closer hint is to the result, the faster this method will run.\n     * @param c the comparator used to order the range, and to search\n     * @return the int k,  0 <= k <= n such that a[b + k - 1] < key <= a[b + k],\n     *    pretending that a[b - 1] is minus infinity and a[b + n] is infinity.\n     *    In other words, key belongs at index b + k; or in other words,\n     *    the first k elements of a should precede key, and the last n - k\n     *    should follow it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int gallopRight(T key, T[] a, int base, int len, int hint, Comparator<? super T> c)",
+    "returnType" : "int",
+    "comment" : "\n     * Like gallopLeft, except that if the range contains an element equal to\n     * key, gallopRight returns the index after the rightmost equal element.\n     *\n     * @param key the key whose insertion point to search for\n     * @param a the array in which to search\n     * @param base the index of the first element in the range\n     * @param len the length of the range; must be > 0\n     * @param hint the index at which to begin the search, 0 <= hint < n.\n     *     The closer hint is to the result, the faster this method will run.\n     * @param c the comparator used to order the range, and to search\n     * @return the int k,  0 <= k <= n such that a[b + k - 1] <= key < a[b + k]\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeLo(int base1, int len1, int base2, int len2)",
+    "returnType" : "void",
+    "comment" : "\n     * Merges two adjacent runs in place, in a stable fashion.  The first\n     * element of the first run must be greater than the first element of the\n     * second run (a[base1] > a[base2]), and the last element of the first run\n     * (a[base1 + len1-1]) must be greater than all elements of the second run.\n     *\n     * For performance, this method should be called only when len1 <= len2;\n     * its twin, mergeHi should be called if len1 >= len2.  (Either method\n     * may be called if len1 == len2.)\n     *\n     * @param base1 index of first element in first run to be merged\n     * @param len1  length of first run to be merged (must be > 0)\n     * @param base2 index of first element in second run to be merged\n     *        (must be aBase + aLen)\n     * @param len2  length of second run to be merged (must be > 0)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeHi(int base1, int len1, int base2, int len2)",
+    "returnType" : "void",
+    "comment" : "\n     * Like mergeLo, except that this method should be called only if\n     * len1 >= len2; mergeLo should be called if len1 <= len2.  (Either method\n     * may be called if len1 == len2.)\n     *\n     * @param base1 index of first element in first run to be merged\n     * @param len1  length of first run to be merged (must be > 0)\n     * @param base2 index of first element in second run to be merged\n     *        (must be aBase + aLen)\n     * @param len2  length of second run to be merged (must be > 0)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private T[] ensureCapacity(int minCapacity)",
+    "returnType" : "T[]",
+    "comment" : "\n     * Ensures that the external array tmp has at least the specified\n     * number of elements, increasing its size if necessary.  The size\n     * increases exponentially to ensure amortized linear time complexity.\n     *\n     * @param minCapacity the minimum required capacity of the tmp array\n     * @return tmp, whether or not it grew\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " static void sort(T[] a, int lo, int hi, Comparator<? super T> c, T[] work, int workBase, int workLen)", "private static void binarySort(T[] a, int lo, int hi, int start, Comparator<? super T> c)", "private static int countRunAndMakeAscending(T[] a, int lo, int hi, Comparator<? super T> c)", "private static void reverseRange(Object[] a, int lo, int hi)", "private static int minRunLength(int n)", "private void pushRun(int runBase, int runLen)", "private void mergeCollapse()", "private void mergeForceCollapse()", "private void mergeAt(int i)", "private static int gallopLeft(T key, T[] a, int base, int len, int hint, Comparator<? super T> c)", "private static int gallopRight(T key, T[] a, int base, int len, int hint, Comparator<? super T> c)", "private void mergeLo(int base1, int len1, int base2, int len2)", "private void mergeHi(int base1, int len1, int base2, int len2)", "private T[] ensureCapacity(int minCapacity)" ],
+  "variableNames" : [ "MIN_MERGE", "a", "c", "MIN_GALLOP", "minGallop", "INITIAL_TMP_STORAGE_LENGTH", "tmp", "tmpBase", "tmpLen", "stackSize", "runBase", "runLen" ]
+}

@@ -10,6 +10,7 @@ public class ClassInfo {
     private String packageName;
     private String className;
     private String comment;
+    private List<String> links = new ArrayList<>(); // Field to store @link references
     private List<VariableInfo> variables = new ArrayList<>();
     private List<MethodInfo> methods = new ArrayList<>();
 
@@ -105,6 +106,15 @@ public class ClassInfo {
                     m.setComment(comment);
                 });
         }
+    }
+
+    
+    public List<String> getLinks() {
+        return links;
+    }
+
+    public void setLinks(List<String> links) {
+        this.links.addAll(links);
     }
 
 }

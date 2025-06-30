@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/incremental/IncrementalStorage.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/incremental/IncrementalStorage.java",
   "packageName" : "android.os.incremental",
   "className" : "IncrementalStorage",
   "comment" : "\n * Provides operations on an Incremental File System directory, using IncrementalServiceNative.\n * Example usage:\n *\n * <blockquote><pre>\n * IncrementalManager manager = (IncrementalManager) getSystemService(Context.INCREMENTAL_SERVICE);\n * IncrementalStorage storage = manager.openStorage(\"/path/to/incremental/dir\");\n * storage.makeDirectory(\"subdir\");\n * </pre></blockquote>\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -75,9 +76,9 @@
     "comment" : "\n     * Creates a sub-directory under the current storage directory. If its parent dirs do not exist,\n     * create the parent dirs as well.\n     *\n     * @param path Full path.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void makeFile(@NonNull String path, long size, @Nullable UUID id, @Nullable byte[] metadata, @Nullable byte[] v4signatureBytes) throws IOException",
+    "name" : "public void makeFile(@NonNull String path, long size, int mode, @Nullable UUID id, @Nullable byte[] metadata, @Nullable byte[] v4signatureBytes, @Nullable byte[] content) throws IOException",
     "returnType" : "void",
-    "comment" : "\n     * Creates a file under the current storage directory.\n     *\n     * @param path             Relative path of the new file.\n     * @param size             Size of the new file in bytes.\n     * @param metadata         Metadata bytes.\n     * @param v4signatureBytes Serialized V4SignatureProto.\n     ",
+    "comment" : "\n     * Creates a file under the current storage directory.\n     *\n     * @param path             Relative path of the new file.\n     * @param size             Size of the new file in bytes.\n     * @param mode             File access permission mode.\n     * @param metadata         Metadata bytes.\n     * @param v4signatureBytes Serialized V4SignatureProto.\n     * @param content          Optionally set file content.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void makeFileFromRange(@NonNull String destPath, @NonNull String sourcePath, long rangeStart, long rangeEnd) throws IOException",
@@ -105,14 +106,19 @@
     "comment" : "\n     * Move a directory, which is bind-mounted to a given storage, to a new location. The bind mount\n     * will be persistent between reboots.\n     *\n     * @param sourcePath The old path of the directory as an absolute path.\n     * @param destPath   The new path of the directory as an absolute path, expected to already\n     *                   exist.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public boolean isFileFullyLoaded(@NonNull String path)",
+    "name" : "public boolean isFileFullyLoaded(@NonNull String path) throws IOException",
     "returnType" : "boolean",
     "comment" : "\n     * Checks whether a file under the current storage directory is fully loaded.\n     *\n     * @param path The relative path of the file.\n     * @return True if the file is fully loaded.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public boolean isFileRangeLoaded(@NonNull String path, long start, long end)",
+    "name" : "public boolean isFullyLoaded() throws IOException",
     "returnType" : "boolean",
-    "comment" : "\n     * Checks whether a range in a file if loaded.\n     *\n     * @param path The relative path of the file.\n     * @param start            The starting offset of the range.\n     * @param end              The ending offset of the range.\n     * @return True if the file is fully loaded.\n     ",
+    "comment" : "\n     * Checks if all files in the storage are fully loaded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float getLoadingProgress() throws IOException",
+    "returnType" : "float",
+    "comment" : "\n     * Returns the loading progress of a storage\n     *\n     * @return progress value between [0, 1].\n     ",
     "links" : [ ]
   }, {
     "name" : "public byte[] getFileMetadata(@NonNull String path)",
@@ -125,9 +131,14 @@
     "comment" : "\n     * Returns the metadata object of an IncFs File.\n     *\n     * @param id The file id.\n     * @return Byte array that contains metadata bytes.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public boolean startLoading()",
+    "name" : "public boolean startLoading(@NonNull DataLoaderParams dataLoaderParams, @Nullable IDataLoaderStatusListener statusListener, @Nullable StorageHealthCheckParams healthCheckParams, @Nullable IStorageHealthListener healthListener, @NonNull PerUidReadTimeouts[] perUidReadTimeouts)",
     "returnType" : "boolean",
-    "comment" : "\n     * Informs the data loader service associated with the current storage to start data loader\n     *\n     * @return True if data loader is successfully started.\n     ",
+    "comment" : "\n     * Initializes and starts the DataLoader.\n     * This makes sure all install-time parameters are applied.\n     * Does not affect persistent DataLoader params.\n     * @return True if start request was successfully queued.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onInstallationComplete()",
+    "returnType" : "void",
+    "comment" : "\n     * Marks the completion of installation.\n     ",
     "links" : [ ]
   }, {
     "name" : "public static byte[] idToBytes(@Nullable UUID id)",
@@ -140,7 +151,7 @@
     "comment" : "\n     * Converts UUID from a byte array usable for Incremental API calls\n     *\n     * @param bytes The id in byte array format, 16 bytes long\n     * @return UUID constructed from the byte array.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void disableReadLogs()",
+    "name" : "public void disallowReadLogs()",
     "returnType" : "void",
     "comment" : "\n     * Permanently disable readlogs collection.\n     ",
     "links" : [ ]
@@ -159,7 +170,22 @@
     "returnType" : "boolean",
     "comment" : "\n     * Waits for all native binary extraction operations to complete on the storage.\n     *\n     * @return Success of not.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public boolean registerLoadingProgressListener(IStorageLoadingProgressListener listener)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Register to listen to loading progress of all the files on this storage.\n     * @param listener To report progress from Incremental Service to the caller.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean unregisterLoadingProgressListener()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Unregister to stop listening to storage loading progress.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public PersistableBundle getMetrics()",
+    "returnType" : "PersistableBundle",
+    "comment" : "\n     * Returns the metrics of the current storage.\n     * {@see IIncrementalService} for metrics keys.\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "mId", "mService", "UUID_BYTE_SIZE", "INCFS_MAX_HASH_SIZE", "INCFS_MAX_ADD_DATA_SIZE" ],
-  "methodNames" : [ "public int getId()", "public void bind(@NonNull String targetPath) throws IOException", "public void bind(@NonNull String sourcePath, @NonNull String targetPath) throws IOException", "public void bindPermanent(@NonNull String targetPath) throws IOException", "public void bindPermanent(@NonNull String sourcePath, @NonNull String targetPath) throws IOException", "public void unBind(@NonNull String targetPath) throws IOException", "public void makeDirectory(@NonNull String path) throws IOException", "public void makeDirectories(@NonNull String path) throws IOException", "public void makeFile(@NonNull String path, long size, @Nullable UUID id, @Nullable byte[] metadata, @Nullable byte[] v4signatureBytes) throws IOException", "public void makeFileFromRange(@NonNull String destPath, @NonNull String sourcePath, long rangeStart, long rangeEnd) throws IOException", "public void makeLink(@NonNull String sourcePath, IncrementalStorage destStorage, @NonNull String destPath) throws IOException", "public void unlink(@NonNull String path) throws IOException", "public void moveFile(@NonNull String sourcepath, @NonNull String destpath) throws IOException", "public void moveDir(@NonNull String sourcePath, @NonNull String destPath) throws IOException", "public boolean isFileFullyLoaded(@NonNull String path)", "public boolean isFileRangeLoaded(@NonNull String path, long start, long end)", "public byte[] getFileMetadata(@NonNull String path)", "public byte[] getFileMetadata(@NonNull UUID id)", "public boolean startLoading()", "public static byte[] idToBytes(@Nullable UUID id)", "public static UUID bytesToId(byte[] bytes) throws IllegalArgumentException", "public void disableReadLogs()", "private static void validateV4Signature(@Nullable byte[] v4signatureBytes) throws IOException", "public boolean configureNativeBinaries(String apkFullPath, String libDirRelativePath, String abi, boolean extractNativeLibs)", "public boolean waitForNativeBinariesExtraction()" ]
+  "methodNames" : [ "public int getId()", "public void bind(@NonNull String targetPath) throws IOException", "public void bind(@NonNull String sourcePath, @NonNull String targetPath) throws IOException", "public void bindPermanent(@NonNull String targetPath) throws IOException", "public void bindPermanent(@NonNull String sourcePath, @NonNull String targetPath) throws IOException", "public void unBind(@NonNull String targetPath) throws IOException", "public void makeDirectory(@NonNull String path) throws IOException", "public void makeDirectories(@NonNull String path) throws IOException", "public void makeFile(@NonNull String path, long size, int mode, @Nullable UUID id, @Nullable byte[] metadata, @Nullable byte[] v4signatureBytes, @Nullable byte[] content) throws IOException", "public void makeFileFromRange(@NonNull String destPath, @NonNull String sourcePath, long rangeStart, long rangeEnd) throws IOException", "public void makeLink(@NonNull String sourcePath, IncrementalStorage destStorage, @NonNull String destPath) throws IOException", "public void unlink(@NonNull String path) throws IOException", "public void moveFile(@NonNull String sourcepath, @NonNull String destpath) throws IOException", "public void moveDir(@NonNull String sourcePath, @NonNull String destPath) throws IOException", "public boolean isFileFullyLoaded(@NonNull String path) throws IOException", "public boolean isFullyLoaded() throws IOException", "public float getLoadingProgress() throws IOException", "public byte[] getFileMetadata(@NonNull String path)", "public byte[] getFileMetadata(@NonNull UUID id)", "public boolean startLoading(@NonNull DataLoaderParams dataLoaderParams, @Nullable IDataLoaderStatusListener statusListener, @Nullable StorageHealthCheckParams healthCheckParams, @Nullable IStorageHealthListener healthListener, @NonNull PerUidReadTimeouts[] perUidReadTimeouts)", "public void onInstallationComplete()", "public static byte[] idToBytes(@Nullable UUID id)", "public static UUID bytesToId(byte[] bytes) throws IllegalArgumentException", "public void disallowReadLogs()", "private static void validateV4Signature(@Nullable byte[] v4signatureBytes) throws IOException", "public boolean configureNativeBinaries(String apkFullPath, String libDirRelativePath, String abi, boolean extractNativeLibs)", "public boolean waitForNativeBinariesExtraction()", "public boolean registerLoadingProgressListener(IStorageLoadingProgressListener listener)", "public boolean unregisterLoadingProgressListener()", "public PersistableBundle getMetrics()" ],
+  "variableNames" : [ "TAG", "mId", "mService", "UUID_BYTE_SIZE", "INCFS_MAX_HASH_SIZE", "INCFS_MAX_ADD_DATA_SIZE" ]
 }

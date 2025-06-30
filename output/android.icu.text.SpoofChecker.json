@@ -1,0 +1,226 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/SpoofChecker.java",
+  "packageName" : "android.icu.text",
+  "className" : "SpoofChecker",
+  "comment" : "\n * <p>\n * This class, based on <a href=\"http://unicode.org/reports/tr36\">Unicode Technical Report #36</a> and\n * <a href=\"http://unicode.org/reports/tr39\">Unicode Technical Standard #39</a>, has two main functions:\n *\n * <ol>\n * <li>Checking whether two strings are visually <em>confusable</em> with each other, such as \"desparejado\" and\n * \"ԁеѕрагејаԁо\".</li>\n * <li>Checking whether an individual string is likely to be an attempt at confusing the reader (<em>spoof\n * detection</em>), such as \"pаypаl\" spelled with Cyrillic 'а' characters.</li>\n * </ol>\n *\n * <p>\n * Although originally designed as a method for flagging suspicious identifier strings such as URLs,\n * <code>SpoofChecker</code> has a number of other practical use cases, such as preventing attempts to evade bad-word\n * content filters.\n *\n * <h2>Confusables</h2>\n *\n * <p>\n * The following example shows how to use <code>SpoofChecker</code> to check for confusability between two strings:\n *\n * <pre>\n * <code>\n * SpoofChecker sc = new SpoofChecker.Builder().setChecks(SpoofChecker.CONFUSABLE).build();\n * int result = sc.areConfusable(\"desparejado\", \"ԁеѕрагејаԁо\");\n * System.out.println(result != 0);  // true\n * </code>\n * </pre>\n *\n * <p>\n * <code>SpoofChecker</code> uses a builder paradigm: options are specified within the context of a lightweight\n * {@link SpoofChecker.Builder} object, and upon calling {@link SpoofChecker.Builder#build}, expensive data loading\n * operations are performed, and an immutable <code>SpoofChecker</code> is returned.\n *\n * <p>\n * The first line of the example creates a <code>SpoofChecker</code> object with confusable-checking enabled; the second\n * line performs the confusability test. For best performance, the instance should be created once (e.g., upon\n * application startup), and the more efficient {@link SpoofChecker#areConfusable} method can be used at runtime.\n *\n * <p>\n * If the paragraph direction used to display the strings is known, it should be passed to {@link SpoofChecker#areConfusable}:\n *\n * <pre>\n * <code>\n * // These strings look identical when rendered in a left-to-right context.\n * // They look distinct in a right-to-left context.\n * String s1 = \"A1\\u05D0\";  // A1א\n * String s2 = \"A\\u05D01\";  // Aא1\n *\n * SpoofChecker sc = new SpoofChecker.Builder().setChecks(SpoofChecker.CONFUSABLE).build();\n * int result = sc.areConfusable(Bidi.DIRECTION_LEFT_TO_RIGHT, s1, s2);\n * System.out.println(result != 0);  // true\n * </code>\n * </pre>\n *\n * <p>\n * UTS 39 defines two strings to be <em>confusable</em> if they map to the same skeleton. A <em>skeleton</em> is a\n * sequence of families of confusable characters, where each family has a single exemplar character.\n * {@link SpoofChecker#getSkeleton} computes the skeleton for a particular string, so the following snippet is\n * equivalent to the example above:\n *\n * <pre>\n * <code>\n * SpoofChecker sc = new SpoofChecker.Builder().setChecks(SpoofChecker.CONFUSABLE).build();\n * boolean result = sc.getSkeleton(\"desparejado\").equals(sc.getSkeleton(\"ԁеѕрагејаԁо\"));\n * System.out.println(result);  // true\n * </code>\n * </pre>\n *\n * <p>\n * If you need to check if a string is confusable with any string in a dictionary of many strings, rather than calling\n * {@link SpoofChecker#areConfusable} many times in a loop, {@link SpoofChecker#getSkeleton} can be used instead, as\n * shown below:\n *\n * <pre>\n * // Setup:\n * String[] DICTIONARY = new String[]{ \"lorem\", \"ipsum\" }; // example\n * SpoofChecker sc = new SpoofChecker.Builder().setChecks(SpoofChecker.CONFUSABLE).build();\n * HashSet&lt;String&gt; skeletons = new HashSet&lt;String&gt;();\n * for (String word : DICTIONARY) {\n *   skeletons.add(sc.getSkeleton(word));\n * }\n *\n * // Live Check:\n * boolean result = skeletons.contains(sc.getSkeleton(\"1orern\"));\n * System.out.println(result);  // true\n * </pre>\n *\n * <p>\n * <b>Note:</b> Since the Unicode confusables mapping table is frequently updated, confusable skeletons are <em>not</em>\n * guaranteed to be the same between ICU releases. We therefore recommend that you always compute confusable skeletons\n * at runtime and do not rely on creating a permanent, or difficult to update, database of skeletons.\n *\n * <h2>Spoof Detection</h2>\n *\n * <p>\n * The following snippet shows a minimal example of using <code>SpoofChecker</code> to perform spoof detection on a\n * string:\n *\n * <pre>\n * SpoofChecker sc = new SpoofChecker.Builder()\n *     .setAllowedChars(SpoofChecker.RECOMMENDED.cloneAsThawed().addAll(SpoofChecker.INCLUSION))\n *     .setRestrictionLevel(SpoofChecker.RestrictionLevel.MODERATELY_RESTRICTIVE)\n *     .setChecks(SpoofChecker.ALL_CHECKS &~ SpoofChecker.CONFUSABLE)\n *     .build();\n * boolean result = sc.failsChecks(\"pаypаl\");  // with Cyrillic 'а' characters\n * System.out.println(result);  // true\n * </pre>\n *\n * <p>\n * As in the case for confusability checking, it is good practice to create one <code>SpoofChecker</code> instance at\n * startup, and call the cheaper {@link SpoofChecker#failsChecks} online. In the second line, we specify the set of\n * allowed characters to be those with type RECOMMENDED or INCLUSION, according to the recommendation in UTS 39. In the\n * third line, the CONFUSABLE checks are disabled. It is good practice to disable them if you won't be using the\n * instance to perform confusability checking.\n *\n * <p>\n * To get more details on why a string failed the checks, use a {@link SpoofChecker.CheckResult}:\n *\n * <pre>\n * <code>\n * SpoofChecker sc = new SpoofChecker.Builder()\n *     .setAllowedChars(SpoofChecker.RECOMMENDED.cloneAsThawed().addAll(SpoofChecker.INCLUSION))\n *     .setRestrictionLevel(SpoofChecker.RestrictionLevel.MODERATELY_RESTRICTIVE)\n *     .setChecks(SpoofChecker.ALL_CHECKS &~ SpoofChecker.CONFUSABLE)\n *     .build();\n * SpoofChecker.CheckResult checkResult = new SpoofChecker.CheckResult();\n * boolean result = sc.failsChecks(\"pаypаl\", checkResult);\n * System.out.println(checkResult.checks);  // 16\n * </code>\n * </pre>\n *\n * <p>\n * The return value is a bitmask of the checks that failed. In this case, there was one check that failed:\n * {@link SpoofChecker#RESTRICTION_LEVEL}, corresponding to the fifth bit (16). The possible checks are:\n *\n * <ul>\n * <li><code>RESTRICTION_LEVEL</code>: flags strings that violate the\n * <a href=\"http://unicode.org/reports/tr39/#Restriction_Level_Detection\">Restriction Level</a> test as specified in UTS\n * 39; in most cases, this means flagging strings that contain characters from multiple different scripts.</li>\n * <li><code>INVISIBLE</code>: flags strings that contain invisible characters, such as zero-width spaces, or character\n * sequences that are likely not to display, such as multiple occurrences of the same non-spacing mark.</li>\n * <li><code>CHAR_LIMIT</code>: flags strings that contain characters outside of a specified set of acceptable\n * characters. See {@link SpoofChecker.Builder#setAllowedChars} and {@link SpoofChecker.Builder#setAllowedLocales}.</li>\n * <li><code>MIXED_NUMBERS</code>: flags strings that contain digits from multiple different numbering systems.</li>\n * </ul>\n *\n * <p>\n * These checks can be enabled independently of each other. For example, if you were interested in checking for only the\n * INVISIBLE and MIXED_NUMBERS conditions, you could do:\n *\n * <pre>\n * <code>\n * SpoofChecker sc = new SpoofChecker.Builder()\n *     .setChecks(SpoofChecker.INVISIBLE | SpoofChecker.MIXED_NUMBERS)\n *     .build();\n * boolean result = sc.failsChecks(\"৪8\");\n * System.out.println(result);  // true\n * </code>\n * </pre>\n *\n * <p>\n * <b>Note:</b> The Restriction Level is the most powerful of the checks. The full logic is documented in\n * <a href=\"http://unicode.org/reports/tr39/#Restriction_Level_Detection\">UTS 39</a>, but the basic idea is that strings\n * are restricted to contain characters from only a single script, <em>except</em> that most scripts are allowed to have\n * Latin characters interspersed. Although the default restriction level is <code>HIGHLY_RESTRICTIVE</code>, it is\n * recommended that users set their restriction level to <code>MODERATELY_RESTRICTIVE</code>, which allows Latin mixed\n * with all other scripts except Cyrillic, Greek, and Cherokee, with which it is often confusable. For more details on\n * the levels, see UTS 39 or {@link SpoofChecker.RestrictionLevel}. The Restriction Level test is aware of the set of\n * allowed characters set in {@link SpoofChecker.Builder#setAllowedChars}. Note that characters which have script code\n * COMMON or INHERITED, such as numbers and punctuation, are ignored when computing whether a string has multiple\n * scripts.\n *\n * <h2>Advanced bidirectional usage</h2>\n * If the paragraph direction with which the identifiers will be displayed is not known, there are\n * multiple options for confusable detection depending on the circumstances.\n *\n * <p>\n * In some circumstances, the only concern is confusion between identifiers displayed with the same\n * paragraph direction.\n *\n * <p>\n * An example is the case where identifiers are usernames prefixed with the @ symbol.\n * That symbol will appear to the left in a left-to-right context, and to the right in a\n * right-to-left context, so that an identifier displayed in a left-to-right context can never be\n * confused with an identifier displayed in a right-to-left context:\n * <ul>\n * <li>\n * The usernames \"A1א\" (A one aleph) and \"Aא1\" (A aleph 1)\n * would be considered confusable, since they both appear as @A1א in a left-to-right context, and the\n * usernames \"אA_1\" (aleph A underscore one) and \"א1_A\" (aleph one underscore A) would be considered\n * confusable, since they both appear as A_1א@ in a right-to-left context.\n * </li>\n * <li>\n * The username \"Mark_\" would not be considered confusable with the username \"_Mark\",\n * even though the latter would appear as Mark_@ in a right-to-left context, and the\n * former as @Mark_ in a left-to-right context.\n * </li>\n * </ul>\n * <p>\n * In that case, the caller should check for both LTR-confusability and RTL-confusability:\n *\n * <pre>\n * <code>\n * boolean confusableInEitherDirection =\n *     sc.areConfusable(Bidi.DIRECTION_LEFT_TO_RIGHT, id1, id2) ||\n *     sc.areConfusable(Bidi.DIRECTION_RIGHT_TO_LEFT, id1, id2);\n * </code>\n * </pre>\n *\n * If the bidiSkeleton is used, the LTR and RTL skeleta should be kept separately and compared, LTR\n * with LTR and RTL with RTL.\n *\n * <p>\n * In cases where confusability between the visual appearances of an identifier displayed in a\n * left-to-right context with another identifier displayed in a right-to-left context is a concern,\n * the LTR skeleton of one can be compared with the RTL skeleton of the other.  However, this\n * very broad definition of confusability may have unexpected results; for instance, it treats the\n * ASCII identifiers \"Mark_\" and \"_Mark\" as confusable.\n *\n * <h2>Additional Information</h2>\n *\n * <p>\n * A <code>SpoofChecker</code> instance may be used repeatedly to perform checks on any number of identifiers.\n *\n * <p>\n * <b>Thread Safety:</b> The methods on <code>SpoofChecker</code> objects are thread safe. The test functions for\n * checking a single identifier, or for testing whether two identifiers are potentially confusable, may called\n * concurrently from multiple threads using the same <code>SpoofChecker</code> instance.\n *\n * @hide Only a subset of ICU is exposed in Android\n ",
+  "links" : [ "SpoofChecker.CheckResult", "android.icu.text.SpoofChecker#RESTRICTION_LEVEL", "SpoofChecker.RestrictionLevel", "android.icu.text.SpoofChecker#failsChecks", "SpoofChecker.Builder#build", "SpoofChecker.Builder", "android.icu.text.SpoofChecker#getSkeleton", "SpoofChecker.Builder#setAllowedLocales", "android.icu.text.SpoofChecker#areConfusable", "SpoofChecker.Builder#setAllowedChars" ],
+  "variables" : [ {
+    "name" : "INCLUSION",
+    "type" : "UnicodeSet",
+    "comment" : "\n     * Security Profile constant from UTS 39 for use in {@link SpoofChecker.Builder#setAllowedChars}.\n     ",
+    "links" : [ "SpoofChecker.Builder#setAllowedChars" ]
+  }, {
+    "name" : "RECOMMENDED",
+    "type" : "UnicodeSet",
+    "comment" : "\n     * Security Profile constant from UTS 39 for use in {@link SpoofChecker.Builder#setAllowedChars}.\n     ",
+    "links" : [ "SpoofChecker.Builder#setAllowedChars" ]
+  }, {
+    "name" : "SINGLE_SCRIPT_CONFUSABLE",
+    "type" : "int",
+    "comment" : "\n     * When performing the two-string {@link SpoofChecker#areConfusable} test, this flag in the return value indicates\n     * that the two strings are visually confusable and that they are from the same script, according to UTS 39 section\n     * 4.\n     ",
+    "links" : [ "android.icu.text.SpoofChecker#areConfusable" ]
+  }, {
+    "name" : "MIXED_SCRIPT_CONFUSABLE",
+    "type" : "int",
+    "comment" : "\n     * When performing the two-string {@link SpoofChecker#areConfusable} test, this flag in the return value indicates\n     * that the two strings are visually confusable and that they are <b>not</b> from the same script, according to UTS\n     * 39 section 4.\n     ",
+    "links" : [ "android.icu.text.SpoofChecker#areConfusable" ]
+  }, {
+    "name" : "WHOLE_SCRIPT_CONFUSABLE",
+    "type" : "int",
+    "comment" : "\n     * When performing the two-string {@link SpoofChecker#areConfusable} test, this flag in the return value indicates\n     * that the two strings are visually confusable and that they are not from the same script but both of them are\n     * single-script strings, according to UTS 39 section 4.\n     ",
+    "links" : [ "android.icu.text.SpoofChecker#areConfusable" ]
+  }, {
+    "name" : "CONFUSABLE",
+    "type" : "int",
+    "comment" : "\n     * Enable this flag in {@link SpoofChecker.Builder#setChecks} to turn on all types of confusables. You may set the\n     * checks to some subset of SINGLE_SCRIPT_CONFUSABLE, MIXED_SCRIPT_CONFUSABLE, or WHOLE_SCRIPT_CONFUSABLE to make\n     * {@link SpoofChecker#areConfusable} return only those types of confusables.\n     ",
+    "links" : [ "android.icu.text.SpoofChecker#areConfusable", "SpoofChecker.Builder#setChecks" ]
+  }, {
+    "name" : "ANY_CASE",
+    "type" : "int",
+    "comment" : "\n     * This flag is deprecated and no longer affects the behavior of SpoofChecker.\n     *\n     * @deprecated ICU 58 Any case confusable mappings were removed from UTS 39; the corresponding ICU API was\n     * deprecated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESTRICTION_LEVEL",
+    "type" : "int",
+    "comment" : "\n     * Check that an identifier satisfies the requirements for the restriction level specified in\n     * {@link SpoofChecker.Builder#setRestrictionLevel}. The default restriction level is\n     * {@link RestrictionLevel#HIGHLY_RESTRICTIVE}.\n     ",
+    "links" : [ "#HIGHLY_RESTRICTIVE", "SpoofChecker.Builder#setRestrictionLevel" ]
+  }, {
+    "name" : "SINGLE_SCRIPT",
+    "type" : "int",
+    "comment" : "\n     * Check that an identifier contains only characters from a single script (plus chars from the common and inherited\n     * scripts.) Applies to checks of a single identifier check only.\n     *\n     * @deprecated ICU 51 Use RESTRICTION_LEVEL\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INVISIBLE",
+    "type" : "int",
+    "comment" : "\n     * Check an identifier for the presence of invisible characters, such as zero-width spaces, or character sequences\n     * that are likely not to display, such as multiple occurrences of the same non-spacing mark. This check does not\n     * test the input string as a whole for conformance to any particular syntax for identifiers.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CHAR_LIMIT",
+    "type" : "int",
+    "comment" : "\n     * Check that an identifier contains only characters from a specified set of acceptable characters. See\n     * {@link Builder#setAllowedChars} and {@link Builder#setAllowedLocales}. Note that a string that fails this check\n     * will also fail the {@link #RESTRICTION_LEVEL} check.\n     ",
+    "links" : [ "#setAllowedChars", "#RESTRICTION_LEVEL", "#setAllowedLocales" ]
+  }, {
+    "name" : "MIXED_NUMBERS",
+    "type" : "int",
+    "comment" : "\n     * Check that an identifier does not mix numbers from different numbering systems. For more information, see UTS 39\n     * section 5.3.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HIDDEN_OVERLAY",
+    "type" : "int",
+    "comment" : "\n     * Check that an identifier does not have a combining character following a character in which that\n     * combining character would be hidden; for example 'i' followed by a U+0307 combining dot.\n     * <p>\n     * More specifically, the following characters are forbidden from preceding a U+0307:\n     * <ul>\n     * <li>Those with the Soft_Dotted Unicode property (which includes 'i' and 'j')</li>\n     * <li>Latin lowercase letter 'l'</li>\n     * <li>Dotless 'i' and 'j' ('ı' and 'ȷ', U+0131 and U+0237)</li>\n     * <li>Any character whose confusable prototype ends with such a character\n     * (Soft_Dotted, 'l', 'ı', or 'ȷ')</li>\n     * </ul>\n     * In addition, combining characters are allowed between the above characters and U+0307 except those\n     * with combining class 0 or combining class \"Above\" (230, same class as U+0307).\n     * <p>\n     * This list and the number of combing characters considered by this check may grow over time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ALL_CHECKS",
+    "type" : "int",
+    "comment" : "\n     * Enable all spoof checks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ASCII",
+    "type" : "UnicodeSet",
+    "comment" : " Used for checking for ASCII-Only restriction level",
+    "links" : [ ]
+  }, {
+    "name" : "fChecks",
+    "type" : "int",
+    "comment" : " Bit vector of checks to perform.",
+    "links" : [ ]
+  }, {
+    "name" : "fSpoofData",
+    "type" : "SpoofData",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "fAllowedLocales",
+    "type" : "Set<ULocale>",
+    "comment" : " The Set of allowed locales.",
+    "links" : [ ]
+  }, {
+    "name" : "fAllowedCharsSet",
+    "type" : "UnicodeSet",
+    "comment" : " The UnicodeSet of allowed characters.",
+    "links" : [ ]
+  }, {
+    "name" : "fRestrictionLevel",
+    "type" : "RestrictionLevel",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "nfdNormalizer",
+    "type" : "Normalizer2",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public RestrictionLevel getRestrictionLevel()",
+    "returnType" : "RestrictionLevel",
+    "comment" : "\n     * Get the Restriction Level that is being tested.\n     *\n     * @return The restriction level\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getChecks()",
+    "returnType" : "int",
+    "comment" : "\n     * Get the set of checks that this Spoof Checker has been configured to perform.\n     *\n     * @return The set of checks that this spoof checker will perform.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Set<ULocale> getAllowedLocales()",
+    "returnType" : "Set<ULocale>",
+    "comment" : "\n     * Get a read-only set of locales for the scripts that are acceptable in strings to be checked. If no limitations on\n     * scripts have been specified, an empty set will be returned.\n     *\n     * setAllowedChars() will reset the list of allowed locales to be empty.\n     *\n     * The returned set may not be identical to the originally specified set that is supplied to setAllowedLocales();\n     * the information other than languages from the originally specified locales may be omitted.\n     *\n     * @return A set of locales corresponding to the acceptable scripts.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Set<Locale> getAllowedJavaLocales()",
+    "returnType" : "Set<Locale>",
+    "comment" : "\n     * Get a set of {@link java.util.Locale} instances for the scripts that are acceptable in strings to be checked. If\n     * no limitations on scripts have been specified, an empty set will be returned.\n     *\n     * @return A set of locales corresponding to the acceptable scripts.\n     ",
+    "links" : [ "java.util.Locale" ]
+  }, {
+    "name" : "public UnicodeSet getAllowedChars()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Get a UnicodeSet for the characters permitted in an identifier. This corresponds to the limits imposed by the Set\n     * Allowed Characters functions. Limitations imposed by other checks will not be reflected in the set returned by\n     * this function.\n     *\n     * The returned set will be frozen, meaning that it cannot be modified by the caller.\n     *\n     * @return A UnicodeSet containing the characters that are permitted by the CHAR_LIMIT test.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean failsChecks(String text, CheckResult checkResult)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check the specified string for possible security issues. The text to be checked will typically be an identifier\n     * of some sort. The set of checks to be performed was specified when building the SpoofChecker.\n     *\n     * @param text\n     *            A String to be checked for possible security issues.\n     * @param checkResult\n     *            Output parameter, indicates which specific tests failed. May be null if the information is not wanted.\n     * @return True there any issue is found with the input string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean failsChecks(String text)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check the specified string for possible security issues. The text to be checked will typically be an identifier\n     * of some sort. The set of checks to be performed was specified when building the SpoofChecker.\n     *\n     * @param text\n     *            A String to be checked for possible security issues.\n     * @return True there any issue is found with the input string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int areConfusable(String s1, String s2)",
+    "returnType" : "int",
+    "comment" : "\n     * Check whether two specified strings are visually confusable. The types of confusability to be tested - single\n     * script, mixed script, or whole script - are determined by the check options set for the SpoofChecker.\n     *\n     * The tests to be performed are controlled by the flags SINGLE_SCRIPT_CONFUSABLE MIXED_SCRIPT_CONFUSABLE\n     * WHOLE_SCRIPT_CONFUSABLE At least one of these tests must be selected.\n     *\n     * ANY_CASE is a modifier for the tests. Select it if the identifiers may be of mixed case. If identifiers are case\n     * folded for comparison and display to the user, do not select the ANY_CASE option.\n     *\n     *\n     * @param s1\n     *            The first of the two strings to be compared for confusability.\n     * @param s2\n     *            The second of the two strings to be compared for confusability.\n     * @return Non-zero if s1 and s1 are confusable. If not 0, the value will indicate the type(s) of confusability\n     *         found, as defined by spoof check test constants.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int areConfusable(int direction, CharSequence s1, CharSequence s2)",
+    "returnType" : "int",
+    "comment" : "\n     * Check whether two specified strings are visually when displayed in a paragraph with the given direction.\n     * The types of confusability to be tested—single script, mixed script, or whole script—are determined by the check options set for the SpoofChecker.\n     *\n     * The tests to be performed are controlled by the flags SINGLE_SCRIPT_CONFUSABLE MIXED_SCRIPT_CONFUSABLE\n     * WHOLE_SCRIPT_CONFUSABLE At least one of these tests must be selected.\n     *\n     * ANY_CASE is a modifier for the tests. Select it if the identifiers may be of mixed case. If identifiers are case\n     * folded for comparison and display to the user, do not select the ANY_CASE option.\n     *\n     *\n     * @param direction The paragraph direction with which the identifiers are displayed.\n     *                  Must be either {@link Bidi#DIRECTION_LEFT_TO_RIGHT} or {@link Bidi#DIRECTION_RIGHT_TO_LEFT}.\n     * @param s1\n     *            The first of the two strings to be compared for confusability.\n     * @param s2\n     *            The second of the two strings to be compared for confusability.\n     * @return Non-zero if s1 and s1 are confusable. If not 0, the value will indicate the type(s) of confusability\n     *         found, as defined by spoof check test constants.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "android.icu.text.Bidi#DIRECTION_RIGHT_TO_LEFT", "android.icu.text.Bidi#DIRECTION_LEFT_TO_RIGHT" ]
+  }, {
+    "name" : "public String getBidiSkeleton(int direction, CharSequence str)",
+    "returnType" : "String",
+    "comment" : "\n     * Get the \"bidiSkeleton\" for an identifier string and a direction.\n     * Skeletons are a transformation of the input string;\n     * Two identifiers are LTR-confusable if their LTR bidiSkeletons are identical;\n     * they are RTL-confusable if their RTL bidiSkeletons are identical.\n     * See Unicode Technical Standard #39 for additional information:\n     * https://www.unicode.org/reports/tr39/#Confusable_Detection.\n     *\n     * Using skeletons directly makes it possible to quickly check whether an identifier is confusable with any of some\n     * large set of existing identifiers, by creating an efficiently searchable collection of the skeletons.\n     *\n     * Skeletons are computed using the algorithm and data described in UTS #39.\n     *\n     * @param direction The paragraph direction with which the string is displayed.\n     *                  Must be either {@link Bidi#DIRECTION_LEFT_TO_RIGHT} or {@link Bidi#DIRECTION_RIGHT_TO_LEFT}.\n     * @param str The input string whose bidiSkeleton will be generated.\n     * @return The output skeleton string.\n     *\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "android.icu.text.Bidi#DIRECTION_RIGHT_TO_LEFT", "android.icu.text.Bidi#DIRECTION_LEFT_TO_RIGHT" ]
+  }, {
+    "name" : "public String getSkeleton(CharSequence str)",
+    "returnType" : "String",
+    "comment" : "\n     * Get the \"skeleton\" for an identifier string. Skeletons are a transformation of the input string; Two strings are\n     * confusable if their skeletons are identical. See Unicode UAX 39 for additional information.\n     *\n     * Using skeletons directly makes it possible to quickly check whether an identifier is confusable with any of some\n     * large set of existing identifiers, by creating an efficiently searchable collection of the skeletons.\n     *\n     * Skeletons are computed using the algorithm and data described in Unicode UAX 39.\n     *\n     * @param str\n     *            The input string whose skeleton will be generated.\n     * @return The output skeleton string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getSkeleton(int type, String id)",
+    "returnType" : "String",
+    "comment" : "\n     * Calls {@link SpoofChecker#getSkeleton(CharSequence id)}. Starting with ICU 55, the \"type\" parameter has been\n     * ignored, and starting with ICU 58, this function has been deprecated.\n     *\n     * @param type\n     *            No longer supported. Prior to ICU 55, was used to specify the mapping table SL, SA, ML, or MA.\n     * @param id\n     *            The input identifier whose skeleton will be generated.\n     * @return The output skeleton string.\n     *\n     * @deprecated ICU 58\n     ",
+    "links" : [ "android.icu.text.SpoofChecker#getSkeleton(CharSequence" ]
+  }, {
+    "name" : "public boolean equals(Object other)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Equality function. Return true if the two SpoofChecker objects incorporate the same confusable data and have\n     * enabled the same set of checks.\n     *\n     * @param other\n     *            the SpoofChecker being compared with.\n     * @return true if the two SpoofCheckers are equal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Overrides {@link Object#hashCode()}.\n     ",
+    "links" : [ "#hashCode()" ]
+  }, {
+    "name" : "private static void getAugmentedScriptSet(int codePoint, ScriptSet result)",
+    "returnType" : "void",
+    "comment" : "\n     * Computes the augmented script set for a code point, according to UTS 39 section 5.1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void getResolvedScriptSet(CharSequence input, ScriptSet result)",
+    "returnType" : "void",
+    "comment" : "\n     * Computes the resolved script set for a string, according to UTS 39 section 5.1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void getResolvedScriptSetWithout(CharSequence input, int script, ScriptSet result)",
+    "returnType" : "void",
+    "comment" : "\n     * Computes the resolved script set for a string, omitting characters having the specified script. If\n     * UScript.CODE_LIMIT is passed as the second argument, all characters are included.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void getNumerics(String input, UnicodeSet result)",
+    "returnType" : "void",
+    "comment" : "\n     * Computes the set of numerics for a string, according to UTS 39 section 5.3.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private RestrictionLevel getRestrictionLevel(String input)",
+    "returnType" : "RestrictionLevel",
+    "comment" : "\n     * Computes the restriction level of a string, according to UTS 39 section 5.2.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " int findHiddenOverlay(String input)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isIllegalCombiningDotLeadCharacterNoLookup(int cp)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isIllegalCombiningDotLeadCharacter(int cp, StringBuilder sb)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public RestrictionLevel getRestrictionLevel()", "public int getChecks()", "public Set<ULocale> getAllowedLocales()", "public Set<Locale> getAllowedJavaLocales()", "public UnicodeSet getAllowedChars()", "public boolean failsChecks(String text, CheckResult checkResult)", "public boolean failsChecks(String text)", "public int areConfusable(String s1, String s2)", "public int areConfusable(int direction, CharSequence s1, CharSequence s2)", "public String getBidiSkeleton(int direction, CharSequence str)", "public String getSkeleton(CharSequence str)", "public String getSkeleton(int type, String id)", "public boolean equals(Object other)", "public int hashCode()", "private static void getAugmentedScriptSet(int codePoint, ScriptSet result)", "private void getResolvedScriptSet(CharSequence input, ScriptSet result)", "private void getResolvedScriptSetWithout(CharSequence input, int script, ScriptSet result)", "private void getNumerics(String input, UnicodeSet result)", "private RestrictionLevel getRestrictionLevel(String input)", " int findHiddenOverlay(String input)", " boolean isIllegalCombiningDotLeadCharacterNoLookup(int cp)", " boolean isIllegalCombiningDotLeadCharacter(int cp, StringBuilder sb)" ],
+  "variableNames" : [ "INCLUSION", "RECOMMENDED", "SINGLE_SCRIPT_CONFUSABLE", "MIXED_SCRIPT_CONFUSABLE", "WHOLE_SCRIPT_CONFUSABLE", "CONFUSABLE", "ANY_CASE", "RESTRICTION_LEVEL", "SINGLE_SCRIPT", "INVISIBLE", "CHAR_LIMIT", "MIXED_NUMBERS", "HIDDEN_OVERLAY", "ALL_CHECKS", "ASCII", "fChecks", "fSpoofData", "fAllowedLocales", "fAllowedCharsSet", "fRestrictionLevel", "nfdNormalizer" ]
+}

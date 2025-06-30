@@ -1,9 +1,25 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/util/NtpTrustedTime.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/util/NtpTrustedTime.java",
   "packageName" : "android.util",
   "className" : "NtpTrustedTime",
   "comment" : "\n * A singleton that connects with a remote NTP server as its trusted time source. This class\n * is thread-safe. The {@link #forceRefresh()} method is synchronous, i.e. it may occupy the\n * current thread while performing an NTP request. All other threads calling {@link #forceRefresh()}\n * will block during that request.\n *\n * @hide\n ",
+  "links" : [ "#forceRefresh()" ],
   "variables" : [ {
+    "name" : "URI_SCHEME_NTP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NTP_SETTING_SERVER_NAME_DELIMITER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NTP_SETTING_SERVER_NAME_DELIMITER_REGEXP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "TAG",
     "type" : "String",
     "comment" : "",
@@ -19,20 +35,30 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mContext",
-    "type" : "Context",
-    "comment" : "",
+    "name" : "mRefreshLock",
+    "type" : "Object",
+    "comment" : " A lock to prevent multiple refreshes taking place at the same time. ",
     "links" : [ ]
   }, {
-    "name" : "mConnectivityManagerSupplier",
-    "type" : "Supplier<ConnectivityManager>",
-    "comment" : "\n     * A supplier that returns the ConnectivityManager. The Supplier can return null if\n     * ConnectivityService isn't running yet.\n     ",
+    "name" : "mConfigLock",
+    "type" : "Object",
+    "comment" : " A lock to ensure safe read/writes to configuration. ",
+    "links" : [ ]
+  }, {
+    "name" : "mNtpConfigForTests",
+    "type" : "NtpConfig",
+    "comment" : " An in-memory config override for use during tests. ",
     "links" : [ ]
   }, {
     "name" : "mTimeResult",
     "type" : "TimeResult",
-    "comment" : " forceRefresh().",
-    "links" : [ ]
+    "comment" : "\n     * The latest time result.\n     *\n     * <p>Written when holding {@link #mRefreshLock} but declared volatile and can be read outside\n     * synchronized blocks to avoid blocking dump() during {@link #forceRefresh}.\n     ",
+    "links" : [ "#forceRefresh", "#mRefreshLock" ]
+  }, {
+    "name" : "mLastSuccessfulNtpServerUri",
+    "type" : "URI",
+    "comment" : "\n     * The last successful NTP server URI, i.e. the one used to obtain {@link #mTimeResult} when it\n     * is non-null.\n     *\n     * <p>Written when holding {@link #mRefreshLock} but declared volatile and can be read outside\n     * synchronized blocks to avoid blocking dump() during {@link #forceRefresh}.\n     ",
+    "links" : [ "#mTimeResult", "#forceRefresh", "#mRefreshLock" ]
   } ],
   "methods" : [ {
     "name" : "public static synchronized NtpTrustedTime getInstance(Context context)",
@@ -40,9 +66,49 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "public void setServerConfigForTests(@NonNull NtpConfig ntpConfig)",
+    "returnType" : "void",
+    "comment" : "\n     * Overrides the NTP server config for tests. Passing {@code null} to a parameter clears the\n     * test value, i.e. so the normal value will be used next time.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public boolean forceRefresh()",
     "returnType" : "boolean",
+    "comment" : " Forces a refresh using the default network. ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean forceRefresh(@NonNull Network network)",
+    "returnType" : "boolean",
+    "comment" : " Forces a refresh using the specified network. ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean forceRefreshLocked(@NonNull Network network)",
+    "returnType" : "boolean",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private NtpConfig getNtpConfig()",
+    "returnType" : "NtpConfig",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract NtpConfig getNtpConfigInternal()",
+    "returnType" : "NtpConfig",
+    "comment" : "\n     * Returns the {@link NtpConfig} to use during an NTP query. This method can return {@code null}\n     * if there is no config, or the config found is invalid.\n     *\n     * <p>This method has been made public for easy replacement during tests.\n     ",
+    "links" : [ "NtpConfig" ]
+  }, {
+    "name" : "public abstract Network getDefaultNetwork()",
+    "returnType" : "Network",
+    "comment" : "\n     * Returns the default {@link Network} to use during an NTP query when no network is specified.\n     * This method can return {@code null} if the device hasn't fully initialized or there is no\n     * active network.\n     *\n     * <p>This method has been made public for easy replacement during tests.\n     ",
+    "links" : [ "android.net.Network" ]
+  }, {
+    "name" : "public abstract boolean isNetworkConnected(@NonNull Network network)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if there is likely to be connectivity on the supplied network.\n     *\n     * <p>This method has been made public for easy replacement during tests.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract TimeResult queryNtpServer(@NonNull Network network, @NonNull URI ntpServerUri, @NonNull Duration timeout)",
+    "returnType" : "TimeResult",
+    "comment" : "\n     * Queries the specified NTP server. This is a blocking call. Returns {@code null} if the query\n     * fails.\n     *\n     * <p>This method has been made public for easy replacement during tests.\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean hasCache()",
@@ -75,11 +141,36 @@
     "comment" : "\n     * Returns an object containing the latest NTP information available. Can return {@code null} if\n     * no information is available.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private NtpConnectionInfo getNtpConnectionInfo()",
-    "returnType" : "NtpConnectionInfo",
-    "comment" : "",
+    "name" : "public void setCachedTimeResult(TimeResult timeResult)",
+    "returnType" : "void",
+    "comment" : " Sets the last received NTP time. Intended for use during tests. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearCachedTimeResult()",
+    "returnType" : "void",
+    "comment" : " Clears the last received NTP time. Intended for use during tests. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static URI parseNtpUriStrict(@NonNull String ntpServerUriString) throws URISyntaxException",
+    "returnType" : "URI",
+    "comment" : "\n     * Parses and returns an NTP server config URI, or throws an exception if the URI doesn't\n     * conform to expectations.\n     *\n     * <p>NTP server config URIs are in the form \"ntp://{hostname}[:port]\". This is not a registered\n     * IANA URI scheme.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static List<URI> parseNtpServerSetting(@Nullable String ntpServerSetting)",
+    "returnType" : "List<URI>",
+    "comment" : "\n     * Parses a setting string and returns a list of URIs that will be accepted by {@link\n     * NtpConfig}, or {@code null} if the string is invalid.\n     *\n     * <p>The setting string is expected to be one or more server values separated by a pipe (\"|\")\n     * character.\n     *\n     * <p>NTP server config URIs are in the form \"ntp://{hostname}[:port]\". This is not a registered\n     * IANA URI scheme.\n     *\n     * <p>Unlike {@link #parseNtpUriStrict(String)} this method will not throw an exception. It\n     * checks each value for a leading \"ntp:\" and will call through to {@link\n     * #parseNtpUriStrict(String)} to attempt to parse it, returning {@code null} if it fails.\n     * To support legacy settings values, it will also accept string values that only consists of a\n     * server name, which will be coerced into a URI in the form \"ntp://{server name}\".\n     ",
+    "links" : [ "#parseNtpUriStrict(String)", "NtpConfig" ]
+  }, {
+    "name" : "private static URI validateNtpServerUri(@NonNull URI uri) throws URISyntaxException",
+    "returnType" : "URI",
+    "comment" : "\n     * Checks that the supplied URI can be used to identify an NTP server.\n     * This method currently ignores Uri components that are not used, only checking the parts that\n     * must be present. Returns the supplied {@code uri} if validation is successful.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(PrintWriter pw)",
+    "returnType" : "void",
+    "comment" : " Prints debug information. ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "LOGD", "sSingleton", "mContext", "mConnectivityManagerSupplier", "mTimeResult" ],
-  "methodNames" : [ "public static synchronized NtpTrustedTime getInstance(Context context)", "public boolean forceRefresh()", "public boolean hasCache()", "public long getCacheAge()", "public long currentTimeMillis()", "public long getCachedNtpTime()", "public long getCachedNtpTimeReference()", "public TimeResult getCachedTimeResult()", "private NtpConnectionInfo getNtpConnectionInfo()" ]
+  "methodNames" : [ "public static synchronized NtpTrustedTime getInstance(Context context)", "public void setServerConfigForTests(@NonNull NtpConfig ntpConfig)", "public boolean forceRefresh()", "public boolean forceRefresh(@NonNull Network network)", "private boolean forceRefreshLocked(@NonNull Network network)", "private NtpConfig getNtpConfig()", "public abstract NtpConfig getNtpConfigInternal()", "public abstract Network getDefaultNetwork()", "public abstract boolean isNetworkConnected(@NonNull Network network)", "public abstract TimeResult queryNtpServer(@NonNull Network network, @NonNull URI ntpServerUri, @NonNull Duration timeout)", "public boolean hasCache()", "public long getCacheAge()", "public long currentTimeMillis()", "public long getCachedNtpTime()", "public long getCachedNtpTimeReference()", "public TimeResult getCachedTimeResult()", "public void setCachedTimeResult(TimeResult timeResult)", "public void clearCachedTimeResult()", "public static URI parseNtpUriStrict(@NonNull String ntpServerUriString) throws URISyntaxException", "public static List<URI> parseNtpServerSetting(@Nullable String ntpServerSetting)", "private static URI validateNtpServerUri(@NonNull URI uri) throws URISyntaxException", "public void dump(PrintWriter pw)" ],
+  "variableNames" : [ "URI_SCHEME_NTP", "NTP_SETTING_SERVER_NAME_DELIMITER", "NTP_SETTING_SERVER_NAME_DELIMITER_REGEXP", "TAG", "LOGD", "sSingleton", "mRefreshLock", "mConfigLock", "mNtpConfigForTests", "mTimeResult", "mLastSuccessfulNtpServerUri" ]
 }

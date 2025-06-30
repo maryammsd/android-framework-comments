@@ -1,0 +1,596 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/ArabicShaping.java",
+  "packageName" : "android.icu.text",
+  "className" : "ArabicShaping",
+  "comment" : "\n * Shape Arabic text on a character basis.\n *\n * <p>ArabicShaping performs basic operations for \"shaping\" Arabic text. It is most\n * useful for use with legacy data formats and legacy display technology\n * (simple terminals). All operations are performed on Unicode characters.</p>\n *\n * <p>Text-based shaping means that some character code points in the text are\n * replaced by others depending on the context. It transforms one kind of text\n * into another. In comparison, modern displays for Arabic text select\n * appropriate, context-dependent font glyphs for each text element, which means\n * that they transform text into a glyph vector.</p>\n *\n * <p>Text transformations are necessary when modern display technology is not\n * available or when text needs to be transformed to or from legacy formats that\n * use \"shaped\" characters. Since the Arabic script is cursive, connecting\n * adjacent letters to each other, computers select images for each letter based\n * on the surrounding letters. This usually results in four images per Arabic\n * letter: initial, middle, final, and isolated forms. In Unicode, on the other\n * hand, letters are normally stored abstract, and a display system is expected\n * to select the necessary glyphs. (This makes searching and other text\n * processing easier because the same letter has only one code.) It is possible\n * to mimic this with text transformations because there are characters in\n * Unicode that are rendered as letters with a specific shape\n * (or cursive connectivity). They were included for interoperability with\n * legacy systems and codepages, and for unsophisticated display systems.</p>\n *\n * <p>A second kind of text transformations is supported for Arabic digits:\n * For compatibility with legacy codepages that only include European digits,\n * it is possible to replace one set of digits by another, changing the\n * character code points. These operations can be performed for either\n * Arabic-Indic Digits (U+0660...U+0669) or Eastern (Extended) Arabic-Indic\n * digits (U+06f0...U+06f9).</p>\n *\n * <p>Some replacements may result in more or fewer characters (code points).\n * By default, this means that the destination buffer may receive text with a\n * length different from the source length. Some legacy systems rely on the\n * length of the text to be constant. They expect extra spaces to be added\n * or consumed either next to the affected character or at the end of the\n * text.</p>\n * @hide Only a subset of ICU is exposed in Android\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "options",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "isLogical",
+    "type" : "boolean",
+    "comment" : " convenience",
+    "links" : [ ]
+  }, {
+    "name" : "spacesRelativeToTextBeginEnd",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "tailChar",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SEEN_TWOCELL_NEAR",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping mode: The SEEN family character will expand into two characters using space near\n     *               the SEEN family character(i.e. the space after the character).\n     *               if there are no spaces found, ArabicShapingException will be thrown\n     *\n     * De-shaping mode: Any Seen character followed by Tail character will be\n     *                  replaced by one cell Seen and a space will replace the Tail.\n     * Affects: Seen options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SEEN_MASK",
+    "type" : "int",
+    "comment" : " Bit mask for Seen memory options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEHHAMZA_TWOCELL_NEAR",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping mode: The YEHHAMZA character will expand into two characters using space near it\n     *              (i.e. the space after the character)\n     *               if there are no spaces found, ArabicShapingException will be thrown\n     *\n     * De-shaping mode: Any Yeh (final or isolated) character followed by Hamza character will be\n     *                  replaced by one cell YehHamza and space will replace the Hamza.\n     * Affects: YehHamza options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEHHAMZA_MASK",
+    "type" : "int",
+    "comment" : " Bit mask for YehHamza memory options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_BEGIN",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping mode: Tashkeel characters will be replaced by spaces.\n     *               Spaces will be placed at beginning of the buffer\n     *\n     * De-shaping mode: N/A\n     * Affects: Tashkeel options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_END",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping mode: Tashkeel characters will be replaced by spaces.\n     *               Spaces will be placed at end of the buffer\n     *\n     * De-shaping mode: N/A\n     * Affects: Tashkeel options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_RESIZE",
+    "type" : "int",
+    "comment" : "\n     * Memory option: allow the result to have a different length than the source.\n     * Shaping mode: Tashkeel characters will be removed, buffer length will shrink.\n     * De-shaping mode: N/A\n     *\n     * Affects: Tashkeel options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_REPLACE_BY_TATWEEL",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping mode: Tashkeel characters will be replaced by Tatweel if it is connected to adjacent\n     *               characters (i.e. shaped on Tatweel) or replaced by space if it is not connected.\n     *\n     * De-shaping mode: N/A\n     * Affects: YehHamza options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_MASK",
+    "type" : "int",
+    "comment" : " Bit mask for Tashkeel replacement with Space or Tatweel memory options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SPACES_RELATIVE_TO_TEXT_BEGIN_END",
+    "type" : "int",
+    "comment" : "\n     * This option effects the meaning of BEGIN and END options. if this option is not used the default\n     * for BEGIN and END will be as following:\n     * The Default (for both Visual LTR, Visual RTL and Logical Text)\n     *           1. BEGIN always refers to the start address of physical memory.\n     *           2. END always refers to the end address of physical memory.\n     *\n     * If this option is used it will swap the meaning of BEGIN and END only for Visual LTR text.\n     *\n     * The affect on BEGIN and END Memory Options will be as following:\n     *    A. BEGIN For Visual LTR text: This will be the beginning (right side) of the visual text\n     *       (corresponding to the physical memory address end, same as END in default behavior)\n     *    B. BEGIN For Logical text: Same as BEGIN in default behavior.\n     *    C. END For Visual LTR text: This will be the end (left side) of the visual text. (corresponding to\n     *      the physical memory address beginning, same as BEGIN in default behavior)\n     *    D. END For Logical text: Same as END in default behavior.\n     * Affects: All LamAlef BEGIN, END and AUTO options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SPACES_RELATIVE_TO_TEXT_MASK",
+    "type" : "int",
+    "comment" : " Bit mask for swapping BEGIN and END for Visual LTR text\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHAPE_TAIL_NEW_UNICODE",
+    "type" : "int",
+    "comment" : "\n     * If this option is used, shaping will use the new Unicode code point for TAIL (i.e. 0xFE73).\n     * If this option is not specified (Default), old unofficial Unicode TAIL code point is used (i.e. 0x200B)\n     * De-shaping will not use this option as it will always search for both the new Unicode code point for the\n     * TAIL (i.e. 0xFE73) or the old unofficial Unicode TAIL code point (i.e. 0x200B) and de-shape the\n     * Seen-Family letter accordingly.\n     *\n     * Shaping Mode: Only shaping.\n     * De-shaping Mode: N/A.\n     * Affects: All Seen options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHAPE_TAIL_TYPE_MASK",
+    "type" : "int",
+    "comment" : " Bit mask for new Unicode Tail option\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LENGTH_GROW_SHRINK",
+    "type" : "int",
+    "comment" : "\n     * Memory option: allow the result to have a different length than the source.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_RESIZE",
+    "type" : "int",
+    "comment" : "\n     * Memory option: allow the result to have a different length than the source.\n     * Affects: LamAlef options\n     * This option is an alias to LENGTH_GROW_SHRINK\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LENGTH_FIXED_SPACES_NEAR",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces next to modified characters.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_NEAR",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces next to modified characters.\n     * Affects: LamAlef options\n     * This option is an alias to LENGTH_FIXED_SPACES_NEAR\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LENGTH_FIXED_SPACES_AT_END",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces at the end of the text.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_END",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces at the end of the text.\n     * Affects: LamAlef options\n     * This option is an alias to LENGTH_FIXED_SPACES_AT_END\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LENGTH_FIXED_SPACES_AT_BEGINNING",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces at the beginning of the text.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_BEGIN",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * If more room is necessary, then try to consume spaces at the beginning of the text.\n     * Affects: LamAlef options\n     * This option is an alias to LENGTH_FIXED_SPACES_AT_BEGINNING\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_AUTO",
+    "type" : "int",
+    "comment" : "\n     * Memory option: the result must have the same length as the source.\n     * Shaping Mode: For each LAMALEF character found, expand LAMALEF using space at end.\n     *               If there is no space at end, use spaces at beginning of the buffer. If there\n     *               is no space at beginning of the buffer, use spaces at the near (i.e. the space\n     *               after the LAMALEF character).\n     *\n     * Deshaping Mode: Perform the same function as the flag equals LAMALEF_END.\n     * Affects: LamAlef options\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LENGTH_MASK",
+    "type" : "int",
+    "comment" : "\n     * Bit mask for memory options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TEXT_DIRECTION_LOGICAL",
+    "type" : "int",
+    "comment" : "\n     * Direction indicator: the source is in logical (keyboard) order.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TEXT_DIRECTION_VISUAL_RTL",
+    "type" : "int",
+    "comment" : "\n     * Direction indicator:the source is in visual RTL order,\n     * the rightmost displayed character stored first.\n     * This option is an alias to U_SHAPE_TEXT_DIRECTION_LOGICAL\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TEXT_DIRECTION_VISUAL_LTR",
+    "type" : "int",
+    "comment" : "\n     * Direction indicator: the source is in visual (display) order, that is,\n     * the leftmost displayed character is stored first.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TEXT_DIRECTION_MASK",
+    "type" : "int",
+    "comment" : "\n     * Bit mask for direction indicators.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LETTERS_NOOP",
+    "type" : "int",
+    "comment" : "\n     * Letter shaping option: do not perform letter shaping.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LETTERS_SHAPE",
+    "type" : "int",
+    "comment" : "\n     * Letter shaping option: replace normative letter characters in the U+0600 (Arabic) block,\n     * by shaped ones in the U+FE70 (Presentation Forms B) block. Performs Lam-Alef ligature\n     * substitution.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LETTERS_UNSHAPE",
+    "type" : "int",
+    "comment" : "\n     * Letter shaping option: replace shaped letter characters in the U+FE70 (Presentation Forms B) block\n     * by normative ones in the U+0600 (Arabic) block.  Converts Lam-Alef ligatures to pairs of Lam and\n     * Alef characters, consuming spaces if required.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LETTERS_SHAPE_TASHKEEL_ISOLATED",
+    "type" : "int",
+    "comment" : "\n     * Letter shaping option: replace normative letter characters in the U+0600 (Arabic) block,\n     * except for the TASHKEEL characters at U+064B...U+0652, by shaped ones in the U+Fe70\n     * (Presentation Forms B) block.  The TASHKEEL characters will always be converted to\n     * the isolated forms rather than to their correct shape.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LETTERS_MASK",
+    "type" : "int",
+    "comment" : "\n     * Bit mask for letter shaping options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_NOOP",
+    "type" : "int",
+    "comment" : "\n     * Digit shaping option: do not perform digit shaping.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_EN2AN",
+    "type" : "int",
+    "comment" : "\n     * Digit shaping option: Replace European digits (U+0030...U+0039) by Arabic-Indic digits.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_AN2EN",
+    "type" : "int",
+    "comment" : "\n     * Digit shaping option: Replace Arabic-Indic digits by European digits (U+0030...U+0039).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_EN2AN_INIT_LR",
+    "type" : "int",
+    "comment" : "\n     * Digit shaping option:\n     * Replace European digits (U+0030...U+0039) by Arabic-Indic digits\n     * if the most recent strongly directional character\n     * is an Arabic letter (its Bidi direction value is RIGHT_TO_LEFT_ARABIC).\n     * The initial state at the start of the text is assumed to be not an Arabic,\n     * letter, so European digits at the start of the text will not change.\n     * Compare to DIGITS_ALEN2AN_INIT_AL.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_EN2AN_INIT_AL",
+    "type" : "int",
+    "comment" : "\n     * Digit shaping option:\n     * Replace European digits (U+0030...U+0039) by Arabic-Indic digits\n     * if the most recent strongly directional character\n     * is an Arabic letter (its Bidi direction value is RIGHT_TO_LEFT_ARABIC).\n     * The initial state at the start of the text is assumed to be an Arabic,\n     * letter, so European digits at the start of the text will change.\n     * Compare to DIGITS_ALEN2AN_INT_LR.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGITS_MASK",
+    "type" : "int",
+    "comment" : "\n     * Bit mask for digit shaping options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGIT_TYPE_AN",
+    "type" : "int",
+    "comment" : "\n     * Digit type option: Use Arabic-Indic digits (U+0660...U+0669).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGIT_TYPE_AN_EXTENDED",
+    "type" : "int",
+    "comment" : "\n     * Digit type option: Use Eastern (Extended) Arabic-Indic digits (U+06f0...U+06f9).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DIGIT_TYPE_MASK",
+    "type" : "int",
+    "comment" : " 0x3f00?",
+    "links" : [ ]
+  }, {
+    "name" : "HAMZAFE_CHAR",
+    "type" : "char",
+    "comment" : "\n     * some constants\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HAMZA06_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "YEH_HAMZA_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "YEH_HAMZAFE_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAMALEF_SPACE_SUB",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TASHKEEL_SPACE_SUB",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAM_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SPACE_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHADDA_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHADDA06_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TATWEEL_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHADDA_TATWEEL_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NEW_TAIL_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "OLD_TAIL_CHAR",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHAPE_MODE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DESHAPE_MODE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "IRRELEVANT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LAMTYPE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ALEFTYPE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LINKR",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LINKL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LINK_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "irrelevantPos",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "tailFamilyIsolatedFinal",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "tashkeelMedial",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "yehHamzaToYeh",
+    "type" : "char[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "convertNormalizedLamAlef",
+    "type" : "char[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "araLink",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "presLink",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "convertFEto06",
+    "type" : "int[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "shapeTable",
+    "type" : "int[][][]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public int shape(char[] source, int sourceStart, int sourceLength, char[] dest, int destStart, int destSize) throws ArabicShapingException",
+    "returnType" : "int",
+    "comment" : "\n     * Convert a range of text in the source array, putting the result\n     * into a range of text in the destination array, and return the number\n     * of characters written.\n     *\n     * @param source An array containing the input text\n     * @param sourceStart The start of the range of text to convert\n     * @param sourceLength The length of the range of text to convert\n     * @param dest The destination array that will receive the result.\n     *   It may be <code>NULL</code> only if  <code>destSize</code> is 0.\n     * @param destStart The start of the range of the destination buffer to use.\n     * @param destSize The size (capacity) of the destination buffer.\n     *   If <code>destSize</code> is 0, then no output is produced,\n     *   but the necessary buffer size is returned (\"preflighting\").  This\n     *   does not validate the text against the options, for example,\n     *   if letters are being unshaped, and spaces are being consumed\n     *   following lamalef, this will not detect a lamalef without a\n     *   corresponding space.  An error will be thrown when the actual\n     *   conversion is attempted.\n     * @return The number of chars written to the destination buffer.\n     *   If an error occurs, then no output was written, or it may be\n     *   incomplete.\n     * @throws ArabicShapingException if the text cannot be converted according to the options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void shape(char[] source, int start, int length) throws ArabicShapingException",
+    "returnType" : "void",
+    "comment" : "\n     * Convert a range of text in place.  This may only be used if the Length option\n     * does not grow or shrink the text.\n     *\n     * @param source An array containing the input text\n     * @param start The start of the range of text to convert\n     * @param length The length of the range of text to convert\n     * @throws ArabicShapingException if the text cannot be converted according to the options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String shape(String text) throws ArabicShapingException",
+    "returnType" : "String",
+    "comment" : "\n     * Convert a string, returning the new string.\n     *\n     * @param text the string to convert\n     * @return the converted string\n     * @throws ArabicShapingException if the string cannot be converted according to the options.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object rhs)",
+    "returnType" : "boolean",
+    "comment" : "\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "/CLOVER:OFF",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void shapeToArabicDigitsWithContext(char[] dest, int start, int length, char digitBase, boolean lastStrongWasAL)",
+    "returnType" : "void",
+    "comment" : "\n     * This function shapes European digits to Arabic-Indic digits\n     * in-place, writing over the input characters.  Data is in visual\n     * order.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void invertBuffer(char[] buffer, int start, int length)",
+    "returnType" : "void",
+    "comment" : "\n     * Name    : invertBuffer\n     * Function: This function inverts the buffer, it's used\n     *           in case the user specifies the buffer to be\n     *           TEXT_DIRECTION_LOGICAL\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static char changeLamAlef(char ch)",
+    "returnType" : "char",
+    "comment" : "\n     * Name    : changeLamAlef\n     * Function: Converts the Alef characters into an equivalent\n     *           LamAlef location in the 0x06xx Range, this is an\n     *           intermediate stage in the operation of the program\n     *           later it'll be converted into the 0xFExx LamAlefs\n     *           in the shaping function.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int specialChar(char ch)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : specialChar\n     * Function: Special Arabic characters need special handling in the shapeUnicode\n     *           function, this function returns 1 or 2 for these special characters\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getLink(char ch)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : getLink\n     * Function: Resolves the link between the characters as\n     *           Arabic characters have four forms :\n     *           Isolated, Initial, Middle and Final Form\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countSpacesLeft(char[] dest, int start, int count)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : countSpaces\n     * Function: Counts the number of spaces\n     *           at each end of the logical buffer\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countSpacesRight(char[] dest, int start, int count)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTashkeelChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Name    : isTashkeelChar\n     * Function: Returns true for Tashkeel characters else return false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int isSeenTailFamilyChar(char ch)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int isSeenFamilyChar(char ch)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTailChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isAlefMaksouraChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     *Name     : isAlefMaksouraChar\n     *Function : returns true if the character is a Alef Maksoura Final or isolated\n     *           otherwise returns false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isYehHamzaChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Name     : isYehHamzaChar\n     * Function : returns true if the character is a yehHamza isolated or yehhamza\n     *            final is found otherwise returns false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTashkeelCharFE(char ch)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int isTashkeelOnTatweelChar(char ch)",
+    "returnType" : "int",
+    "comment" : "\n     * Name: isTashkeelOnTatweelChar\n     * Function: Checks if the Tashkeel Character is on Tatweel or not,if the\n     *           Tashkeel on tatweel (FE range), it returns 1 else if the\n     *           Tashkeel with shadda on tatweel (FC range)return 2 otherwise\n     *           returns 0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int isIsolatedTashkeelChar(char ch)",
+    "returnType" : "int",
+    "comment" : "\n     * Name: isIsolatedTashkeelChar\n     * Function: Checks if the Tashkeel Character is in the isolated form\n     *           (i.e. Unicode FE range) returns 1 else if the Tashkeel\n     *           with shadda is in the isolated form (i.e. Unicode FC range)\n     *           returns 1 otherwise returns 0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isAlefChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Name    : isAlefChar\n     * Function: Returns 1 for Alef characters else return 0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isLamAlefChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Name    : isLamAlefChar\n     * Function: Returns true for LamAlef characters else return false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isNormalizedLamAlefChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int calculateSize(char[] source, int sourceStart, int sourceLength)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : calculateSize\n     * Function: This function calculates the destSize to be used in preflighting\n     *           when the destSize is equal to 0\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countSpaceSub(char[] dest, int length, char subChar)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : countSpaceSub\n     * Function: Counts number of times the subChar appears in the array\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void shiftArray(char[] dest, int start, int e, char subChar)",
+    "returnType" : "void",
+    "comment" : "\n     * Name    : shiftArray\n     * Function: Shifts characters to replace space sub characters\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int flipArray(char[] dest, int start, int e, int w)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : flipArray\n     * Function: inverts array, so that start becomes end and vice versa\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int handleTashkeelWithTatweel(char[] dest, int sourceLength)",
+    "returnType" : "int",
+    "comment" : "\n     * Name     : handleTashkeelWithTatweel\n     * Function : Replaces Tashkeel as following:\n     *            Case 1 :if the Tashkeel on tatweel, replace it with Tatweel.\n     *            Case 2 :if the Tashkeel aggregated with Shadda on Tatweel, replace\n     *                   it with Shadda on Tatweel.\n     *            Case 3: if the Tashkeel is isolated replace it with Space.\n     *\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int handleGeneratedSpaces(char[] dest, int start, int length)",
+    "returnType" : "int",
+    "comment" : "\n     *Name     : handleGeneratedSpaces\n     *Function : The shapeUnicode function converts Lam + Alef into LamAlef + space,\n     *           and Tashkeel to space.\n     *           handleGeneratedSpaces function puts these generated spaces\n     *           according to the options the user specifies. LamAlef and Tashkeel\n     *           spaces can be replaced at begin, at end, at near or decrease the\n     *           buffer size.\n     *\n     *           There is also Auto option for LamAlef and tashkeel, which will put\n     *           the spaces at end of the buffer (or end of text if the user used\n     *           the option SPACES_RELATIVE_TO_TEXT_BEGIN_END).\n     *\n     *           If the text type was visual_LTR and the option\n     *           SPACES_RELATIVE_TO_TEXT_BEGIN_END was selected the END\n     *           option will place the space at the beginning of the buffer and\n     *           BEGIN will place the space at the end of the buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean expandCompositCharAtBegin(char[] dest, int start, int length, int lacount)",
+    "returnType" : "boolean",
+    "comment" : "\n   *Name     :expandCompositCharAtBegin\n   *Function :Expands the LamAlef character to Lam and Alef consuming the required\n   *         space from beginning of the buffer. If the text type was visual_LTR\n   *         and the option SPACES_RELATIVE_TO_TEXT_BEGIN_END was selected\n   *         the spaces will be located at end of buffer.\n   *         If there are no spaces to expand the LamAlef, an exception is thrown.\n",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean expandCompositCharAtEnd(char[] dest, int start, int length, int lacount)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean expandCompositCharAtNear(char[] dest, int start, int length, int yehHamzaOption, int seenTailOption, int lamAlefOption)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int expandCompositChar(char[] dest, int start, int length, int lacount, int shapingMode) throws ArabicShapingException",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : expandCompositChar\n     * Function: LamAlef needs special handling as the LamAlef is\n     *           one character while expanding it will give two\n     *           characters Lam + Alef, so we need to expand the LamAlef\n     *           in near or far spaces according to the options the user\n     *           specifies or increase the buffer size.\n     *           Dest has enough room for the expansion if we are growing.\n     *           lamalef are normalized to the 'special characters'\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int normalize(char[] dest, int start, int length)",
+    "returnType" : "int",
+    "comment" : " Convert the input buffer from FExx Range into 06xx Range\n     * to put all characters into the 06xx range\n     * even the lamalef is converted to the special region in\n     * the 06xx range.  Return the number of lamalef chars found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int deshapeNormalize(char[] dest, int start, int length)",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : deshapeNormalize\n     * Function: Convert the input buffer from FExx Range into 06xx Range\n     *           even the lamalef is converted to the special region in the 06xx range.\n     *           According to the options the user enters, all seen family characters\n     *           followed by a tail character are merged to seen tail family character and\n     *           any yeh followed by a hamza character are merged to yehhamza character.\n     *           Method returns the number of lamalef chars found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int shapeUnicode(char[] dest, int start, int length, int destSize, int tashkeelFlag) throws ArabicShapingException",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : shapeUnicode\n     * Function: Converts an Arabic Unicode buffer in 06xx Range into a shaped\n     *           arabic Unicode buffer in FExx Range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int deShapeUnicode(char[] dest, int start, int length, int destSize) throws ArabicShapingException",
+    "returnType" : "int",
+    "comment" : "\n     * Name    : deShapeUnicode\n     * Function: Converts an Arabic Unicode buffer in FExx Range into unshaped\n     *           arabic Unicode buffer in 06xx Range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int internalShape(char[] source, int sourceStart, int sourceLength, char[] dest, int destStart, int destSize) throws ArabicShapingException",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public int shape(char[] source, int sourceStart, int sourceLength, char[] dest, int destStart, int destSize) throws ArabicShapingException", "public void shape(char[] source, int start, int length) throws ArabicShapingException", "public String shape(String text) throws ArabicShapingException", "public boolean equals(Object rhs)", "public int hashCode()", "public String toString()", "private void shapeToArabicDigitsWithContext(char[] dest, int start, int length, char digitBase, boolean lastStrongWasAL)", "private static void invertBuffer(char[] buffer, int start, int length)", "private static char changeLamAlef(char ch)", "private static int specialChar(char ch)", "private static int getLink(char ch)", "private static int countSpacesLeft(char[] dest, int start, int count)", "private static int countSpacesRight(char[] dest, int start, int count)", "private static boolean isTashkeelChar(char ch)", "private static int isSeenTailFamilyChar(char ch)", "private static int isSeenFamilyChar(char ch)", "private static boolean isTailChar(char ch)", "private static boolean isAlefMaksouraChar(char ch)", "private static boolean isYehHamzaChar(char ch)", "private static boolean isTashkeelCharFE(char ch)", "private static int isTashkeelOnTatweelChar(char ch)", "private static int isIsolatedTashkeelChar(char ch)", "private static boolean isAlefChar(char ch)", "private static boolean isLamAlefChar(char ch)", "private static boolean isNormalizedLamAlefChar(char ch)", "private int calculateSize(char[] source, int sourceStart, int sourceLength)", "private static int countSpaceSub(char[] dest, int length, char subChar)", "private static void shiftArray(char[] dest, int start, int e, char subChar)", "private static int flipArray(char[] dest, int start, int e, int w)", "private static int handleTashkeelWithTatweel(char[] dest, int sourceLength)", "private int handleGeneratedSpaces(char[] dest, int start, int length)", "private boolean expandCompositCharAtBegin(char[] dest, int start, int length, int lacount)", "private boolean expandCompositCharAtEnd(char[] dest, int start, int length, int lacount)", "private boolean expandCompositCharAtNear(char[] dest, int start, int length, int yehHamzaOption, int seenTailOption, int lamAlefOption)", "private int expandCompositChar(char[] dest, int start, int length, int lacount, int shapingMode) throws ArabicShapingException", "private int normalize(char[] dest, int start, int length)", "private int deshapeNormalize(char[] dest, int start, int length)", "private int shapeUnicode(char[] dest, int start, int length, int destSize, int tashkeelFlag) throws ArabicShapingException", "private int deShapeUnicode(char[] dest, int start, int length, int destSize) throws ArabicShapingException", "private int internalShape(char[] source, int sourceStart, int sourceLength, char[] dest, int destStart, int destSize) throws ArabicShapingException" ],
+  "variableNames" : [ "options", "isLogical", "spacesRelativeToTextBeginEnd", "tailChar", "SEEN_TWOCELL_NEAR", "SEEN_MASK", "YEHHAMZA_TWOCELL_NEAR", "YEHHAMZA_MASK", "TASHKEEL_BEGIN", "TASHKEEL_END", "TASHKEEL_RESIZE", "TASHKEEL_REPLACE_BY_TATWEEL", "TASHKEEL_MASK", "SPACES_RELATIVE_TO_TEXT_BEGIN_END", "SPACES_RELATIVE_TO_TEXT_MASK", "SHAPE_TAIL_NEW_UNICODE", "SHAPE_TAIL_TYPE_MASK", "LENGTH_GROW_SHRINK", "LAMALEF_RESIZE", "LENGTH_FIXED_SPACES_NEAR", "LAMALEF_NEAR", "LENGTH_FIXED_SPACES_AT_END", "LAMALEF_END", "LENGTH_FIXED_SPACES_AT_BEGINNING", "LAMALEF_BEGIN", "LAMALEF_AUTO", "LENGTH_MASK", "LAMALEF_MASK", "TEXT_DIRECTION_LOGICAL", "TEXT_DIRECTION_VISUAL_RTL", "TEXT_DIRECTION_VISUAL_LTR", "TEXT_DIRECTION_MASK", "LETTERS_NOOP", "LETTERS_SHAPE", "LETTERS_UNSHAPE", "LETTERS_SHAPE_TASHKEEL_ISOLATED", "LETTERS_MASK", "DIGITS_NOOP", "DIGITS_EN2AN", "DIGITS_AN2EN", "DIGITS_EN2AN_INIT_LR", "DIGITS_EN2AN_INIT_AL", "DIGITS_MASK", "DIGIT_TYPE_AN", "DIGIT_TYPE_AN_EXTENDED", "DIGIT_TYPE_MASK", "HAMZAFE_CHAR", "HAMZA06_CHAR", "YEH_HAMZA_CHAR", "YEH_HAMZAFE_CHAR", "LAMALEF_SPACE_SUB", "TASHKEEL_SPACE_SUB", "LAM_CHAR", "SPACE_CHAR", "SHADDA_CHAR", "SHADDA06_CHAR", "TATWEEL_CHAR", "SHADDA_TATWEEL_CHAR", "NEW_TAIL_CHAR", "OLD_TAIL_CHAR", "SHAPE_MODE", "DESHAPE_MODE", "IRRELEVANT", "LAMTYPE", "ALEFTYPE", "LINKR", "LINKL", "LINK_MASK", "irrelevantPos", "tailFamilyIsolatedFinal", "tashkeelMedial", "yehHamzaToYeh", "convertNormalizedLamAlef", "araLink", "presLink", "convertFEto06", "shapeTable" ]
+}

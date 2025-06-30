@@ -1,21 +1,12 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/EthernetManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/net/EthernetManager.java",
   "packageName" : "android.net",
   "className" : "EthernetManager",
-  "comment" : "\n * A class representing the IP configuration of the Ethernet network.\n *\n * @hide\n ",
+  "comment" : "\n * A class that manages and configures Ethernet interfaces.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "MSG_AVAILABILITY_CHANGED",
-    "type" : "int",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mContext",
-    "type" : "Context",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -24,19 +15,59 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mHandler",
-    "type" : "Handler",
+    "name" : "mIfaceServiceListeners",
+    "type" : "ArrayMap<InterfaceStateListener, IEthernetServiceListener>",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mListeners",
-    "type" : "ArrayList<Listener>",
+    "name" : "mStateServiceListeners",
+    "type" : "ArrayMap<IntConsumer, IEthernetServiceListener>",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mServiceListener",
-    "type" : "IEthernetServiceListener.Stub",
+    "name" : "mListenerLock",
+    "type" : "Object",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ETHERNET_STATE_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that Ethernet is disabled.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ETHERNET_STATE_ENABLED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that Ethernet is enabled.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_ABSENT",
+    "type" : "int",
+    "comment" : "\n     * The interface is absent.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_LINK_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The interface is present but link is down.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_LINK_UP",
+    "type" : "int",
+    "comment" : "\n     * The interface is present and link is up.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ROLE_NONE",
+    "type" : "int",
+    "comment" : "\n     * The interface currently does not have any specific role.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ROLE_CLIENT",
+    "type" : "int",
+    "comment" : "\n     * The interface is in client mode (e.g., connected to the Internet).\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ROLE_SERVER",
+    "type" : "int",
+    "comment" : "\n     * Ethernet interface is in server mode (e.g., providing Internet access to tethered devices).\n     * @hide\n     ",
     "links" : [ ]
   } ],
   "methods" : [ {
@@ -45,7 +76,7 @@
     "comment" : "\n     * Get Ethernet configuration.\n     * @return the Ethernet Configuration, contained in {@link IpConfiguration}.\n     * @hide\n     ",
     "links" : [ "android.net.IpConfiguration" ]
   }, {
-    "name" : "public void setConfiguration(String iface, IpConfiguration config)",
+    "name" : "public void setConfiguration(@NonNull String iface, @NonNull IpConfiguration config)",
     "returnType" : "void",
     "comment" : "\n     * Set Ethernet configuration.\n     * @hide\n     ",
     "links" : [ ]
@@ -60,20 +91,45 @@
     "comment" : "\n     * Indicates whether the system has given interface.\n     *\n     * @param iface Ethernet interface name\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void addListener(Listener listener)",
+    "name" : "public void addListener(@NonNull Listener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Adds a listener.\n     * @param listener A {@link Listener} to add.\n     * @throws IllegalArgumentException If the listener is null.\n     * @hide\n     ",
-    "links" : [ "Listener" ]
+    "comment" : "\n     * Adds a listener.\n     * This has never been a supported API. Use {@link #addInterfaceStateListener} instead.\n     *\n     * @param listener A {@link Listener} to add.\n     * @throws IllegalArgumentException If the listener is null.\n     * @hide\n     ",
+    "links" : [ "Listener", "#addInterfaceStateListener" ]
+  }, {
+    "name" : "public void addListener(@NonNull Listener listener, @NonNull Executor executor)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a listener.\n     * This has never been a supported API. Use {@link #addInterfaceStateListener} instead.\n     *\n     * @param listener A {@link Listener} to add.\n     * @param executor Executor to run callbacks on.\n     * @throws IllegalArgumentException If the listener or executor is null.\n     * @hide\n     ",
+    "links" : [ "Listener", "#addInterfaceStateListener" ]
+  }, {
+    "name" : "public void addInterfaceStateListener(@NonNull Executor executor, @NonNull InterfaceStateListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Listen to changes in the state of Ethernet interfaces.\n     *\n     * Adds a listener to receive notification for any state change of all existing Ethernet\n     * interfaces.\n     * <p>{@link Listener#onInterfaceStateChanged} will be triggered immediately for all\n     * existing interfaces upon adding a listener. The same method will be called on the\n     * listener every time any of the interface changes state. In particular, if an\n     * interface is removed, it will be called with state {@link #STATE_ABSENT}.\n     * <p>Use {@link #removeInterfaceStateListener} with the same object to stop listening.\n     *\n     * @param executor Executor to run callbacks on.\n     * @param listener A {@link Listener} to add.\n     * @hide\n     ",
+    "links" : [ "Listener", "#STATE_ABSENT", "#onInterfaceStateChanged", "#removeInterfaceStateListener" ]
+  }, {
+    "name" : "private void addServiceListener(@NonNull final IEthernetServiceListener listener)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
   }, {
     "name" : "public String[] getAvailableInterfaces()",
     "returnType" : "String[]",
     "comment" : "\n     * Returns an array of available Ethernet interface names.\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void removeListener(Listener listener)",
+    "name" : "public void removeInterfaceStateListener(@NonNull InterfaceStateListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Removes a listener.\n     * @param listener A {@link Listener} to remove.\n     * @throws IllegalArgumentException If the listener is null.\n     * @hide\n     ",
+    "comment" : "\n     * Removes a listener.\n     *\n     * @param listener A {@link Listener} to remove.\n     * @hide\n     ",
     "links" : [ "Listener" ]
+  }, {
+    "name" : "private void maybeRemoveServiceListener(@Nullable final IEthernetServiceListener listener)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeListener(@NonNull Listener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a listener.\n     * This has never been a supported API. Use {@link #removeInterfaceStateListener} instead.\n     * @param listener A {@link Listener} to remove.\n     * @hide\n     ",
+    "links" : [ "Listener", "#removeInterfaceStateListener" ]
   }, {
     "name" : "public void setIncludeTestInterfaces(boolean include)",
     "returnType" : "void",
@@ -84,7 +140,47 @@
     "returnType" : "TetheredInterfaceRequest",
     "comment" : "\n     * Request a tethered interface in tethering mode.\n     *\n     * <p>When this method is called and there is at least one ethernet interface available, the\n     * system will designate one to act as a tethered interface. If there is already a tethered\n     * interface, the existing interface will be used.\n     * @param callback A callback to be called once the request has been fulfilled.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "private NetworkInterfaceOutcomeReceiver makeNetworkInterfaceOutcomeReceiver(@Nullable final Executor executor, @Nullable final OutcomeReceiver<String, EthernetNetworkManagementException> callback)",
+    "returnType" : "NetworkInterfaceOutcomeReceiver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void updateConfiguration(@NonNull String iface, @NonNull EthernetNetworkUpdateRequest request, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Updates the configuration of an automotive device's ethernet network.\n     *\n     * The {@link EthernetNetworkUpdateRequest} {@code request} argument describes how to update the\n     * configuration for this network.\n     * Use {@link StaticIpConfiguration.Builder} to build a {@code StaticIpConfiguration} object for\n     * this network to put inside the {@code request}.\n     * Similarly, use {@link NetworkCapabilities.Builder} to build a {@code NetworkCapabilities}\n     * object for this network to put inside the {@code request}.\n     *\n     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.\n     *\n     * @param iface the name of the interface to act upon.\n     * @param request the {@link EthernetNetworkUpdateRequest} used to set an ethernet network's\n     *                {@link StaticIpConfiguration} and {@link NetworkCapabilities} values.\n     * @param executor an {@link Executor} to execute the callback on. Optional if callback is null.\n     * @param callback an optional {@link OutcomeReceiver} to listen for completion of the\n     *                 operation. On success, {@link OutcomeReceiver#onResult} is called with the\n     *                 interface name. On error, {@link OutcomeReceiver#onError} is called with more\n     *                 information about the error.\n     * @throws SecurityException if the process doesn't hold\n     *                          {@link android.Manifest.permission.MANAGE_ETHERNET_NETWORKS}.\n     * @throws UnsupportedOperationException if the {@link NetworkCapabilities} are updated on a\n     *                                       non-automotive device or this function is called on an\n     *                                       unsupported interface.\n     * @hide\n     ",
+    "links" : [ "android.net.EthernetNetworkUpdateRequest", "android.os.OutcomeReceiver#onResult", "android.Manifest.permission.MANAGE_ETHERNET_NETWORKS", "StaticIpConfiguration.Builder", "android.net.StaticIpConfiguration", "android.net.NetworkCapabilities", "android.annotation.CallbackExecutor", "android.os.OutcomeReceiver#onError", "NetworkCapabilities.Builder", "android.os.OutcomeReceiver" ]
+  }, {
+    "name" : "public void enableInterface(@NonNull String iface, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable a network interface.\n     *\n     * Enables a previously disabled network interface. An attempt to enable an already-enabled\n     * interface is ignored.\n     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.\n     *\n     * @param iface the name of the interface to enable.\n     * @param executor an {@link Executor} to execute the callback on. Optional if callback is null.\n     * @param callback an optional {@link OutcomeReceiver} to listen for completion of the\n     *                 operation. On success, {@link OutcomeReceiver#onResult} is called with the\n     *                 interface name. On error, {@link OutcomeReceiver#onError} is called with more\n     *                 information about the error.\n     * @throws SecurityException if the process doesn't hold\n     *                          {@link android.Manifest.permission.MANAGE_ETHERNET_NETWORKS}.\n     * @hide\n     ",
+    "links" : [ "android.os.OutcomeReceiver#onResult", "android.Manifest.permission.MANAGE_ETHERNET_NETWORKS", "android.annotation.CallbackExecutor", "android.os.OutcomeReceiver#onError", "android.os.OutcomeReceiver" ]
+  }, {
+    "name" : "public void disableInterface(@NonNull String iface, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable a network interface.\n     *\n     * Disables the specified interface. If this interface is in use in a connected\n     * {@link android.net.Network}, then that {@code Network} will be torn down.\n     * The provided {@link OutcomeReceiver} is called once the operation has finished execution.\n     *\n     * @param iface the name of the interface to disable.\n     * @param executor an {@link Executor} to execute the callback on. Optional if callback is null.\n     * @param callback an optional {@link OutcomeReceiver} to listen for completion of the\n     *                 operation. On success, {@link OutcomeReceiver#onResult} is called with the\n     *                 interface name. On error, {@link OutcomeReceiver#onError} is called with more\n     *                 information about the error.\n     * @throws SecurityException if the process doesn't hold\n     *                          {@link android.Manifest.permission.MANAGE_ETHERNET_NETWORKS}.\n     * @hide\n     ",
+    "links" : [ "android.os.OutcomeReceiver#onResult", "android.Manifest.permission.MANAGE_ETHERNET_NETWORKS", "android.annotation.CallbackExecutor", "android.net.Network", "android.os.OutcomeReceiver#onError", "android.os.OutcomeReceiver" ]
+  }, {
+    "name" : "public void setEthernetEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Change ethernet setting.\n     *\n     * @param enabled enable or disable ethernet settings.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addEthernetStateListener(@NonNull Executor executor, @NonNull IntConsumer listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a IntConsumer to be called back on ethernet state changes.\n     *\n     * <p>{@link IntConsumer#accept} with the current ethernet state will be triggered immediately\n     * upon adding a listener. The same callback is invoked on Ethernet state change, i.e. when\n     * calling {@link #setEthernetEnabled}.\n     * <p>The reported state is represented by:\n     * {@link #ETHERNET_STATE_DISABLED}: ethernet is now disabled.\n     * {@link #ETHERNET_STATE_ENABLED}: ethernet is now enabled.\n     *\n     * @param executor to run callbacks on.\n     * @param listener to listen ethernet state changed.\n     *\n     * @hide\n     ",
+    "links" : [ "#setEthernetEnabled", "#ETHERNET_STATE_DISABLED", "#ETHERNET_STATE_ENABLED", "java.util.function.IntConsumer#accept" ]
+  }, {
+    "name" : "public void removeEthernetStateListener(@NonNull IntConsumer listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a listener.\n     *\n     * @param listener to listen ethernet state changed.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getInterfaceList()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Returns an array of existing Ethernet interface names regardless whether the interface\n     * is available or not currently.\n     * @hide\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "MSG_AVAILABILITY_CHANGED", "mContext", "mService", "mHandler", "mListeners", "mServiceListener" ],
-  "methodNames" : [ "public IpConfiguration getConfiguration(String iface)", "public void setConfiguration(String iface, IpConfiguration config)", "public boolean isAvailable()", "public boolean isAvailable(String iface)", "public void addListener(Listener listener)", "public String[] getAvailableInterfaces()", "public void removeListener(Listener listener)", "public void setIncludeTestInterfaces(boolean include)", "public TetheredInterfaceRequest requestTetheredInterface(@NonNull final Executor executor, @NonNull final TetheredInterfaceCallback callback)" ]
+  "methodNames" : [ "public IpConfiguration getConfiguration(String iface)", "public void setConfiguration(@NonNull String iface, @NonNull IpConfiguration config)", "public boolean isAvailable()", "public boolean isAvailable(String iface)", "public void addListener(@NonNull Listener listener)", "public void addListener(@NonNull Listener listener, @NonNull Executor executor)", "public void addInterfaceStateListener(@NonNull Executor executor, @NonNull InterfaceStateListener listener)", "private void addServiceListener(@NonNull final IEthernetServiceListener listener)", "public String[] getAvailableInterfaces()", "public void removeInterfaceStateListener(@NonNull InterfaceStateListener listener)", "private void maybeRemoveServiceListener(@Nullable final IEthernetServiceListener listener)", "public void removeListener(@NonNull Listener listener)", "public void setIncludeTestInterfaces(boolean include)", "public TetheredInterfaceRequest requestTetheredInterface(@NonNull final Executor executor, @NonNull final TetheredInterfaceCallback callback)", "private NetworkInterfaceOutcomeReceiver makeNetworkInterfaceOutcomeReceiver(@Nullable final Executor executor, @Nullable final OutcomeReceiver<String, EthernetNetworkManagementException> callback)", "public void updateConfiguration(@NonNull String iface, @NonNull EthernetNetworkUpdateRequest request, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)", "public void enableInterface(@NonNull String iface, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)", "public void disableInterface(@NonNull String iface, @Nullable @CallbackExecutor Executor executor, @Nullable OutcomeReceiver<String, EthernetNetworkManagementException> callback)", "public void setEthernetEnabled(boolean enabled)", "public void addEthernetStateListener(@NonNull Executor executor, @NonNull IntConsumer listener)", "public void removeEthernetStateListener(@NonNull IntConsumer listener)", "public List<String> getInterfaceList()" ],
+  "variableNames" : [ "TAG", "mService", "mIfaceServiceListeners", "mStateServiceListeners", "mListenerLock", "ETHERNET_STATE_DISABLED", "ETHERNET_STATE_ENABLED", "STATE_ABSENT", "STATE_LINK_DOWN", "STATE_LINK_UP", "ROLE_NONE", "ROLE_CLIENT", "ROLE_SERVER" ]
 }

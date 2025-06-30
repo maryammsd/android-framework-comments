@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/usage/UsageStatsManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/usage/UsageStatsManager.java",
   "packageName" : "android.app.usage",
   "className" : "UsageStatsManager",
   "comment" : "\n * Provides access to device usage history and statistics. Usage data is aggregated into\n * time intervals: days, weeks, months, and years.\n * <p />\n * When requesting usage data since a particular time, the request might look something like this:\n * <pre>\n * PAST                   REQUEST_TIME                    TODAY                   FUTURE\n * ————————————————————————————||———————————————————————————¦-----------------------|\n *                        YEAR ||                           ¦                       |\n * ————————————————————————————||———————————————————————————¦-----------------------|\n *  MONTH            |         ||                MONTH      ¦                       |\n * ——————————————————|—————————||———————————————————————————¦-----------------------|\n *   |      WEEK     |     WEEK||    |     WEEK     |     WE¦EK     |      WEEK     |\n * ————————————————————————————||———————————————————|———————¦-----------------------|\n *                             ||           |DAY|DAY|DAY|DAY¦DAY|DAY|DAY|DAY|DAY|DAY|\n * ————————————————————————————||———————————————————————————¦-----------------------|\n * </pre>\n * A request for data in the middle of a time interval will include that interval.\n * <p/>\n * <b>NOTE:</b> Most methods on this API require the permission\n * android.permission.PACKAGE_USAGE_STATS. However, declaring the permission implies intention to\n * use the API and the user of the device still needs to grant permission through the Settings\n * application.\n * See {@link android.provider.Settings#ACTION_USAGE_ACCESS_SETTINGS}.\n * Methods which only return the information for the calling package do not require this permission.\n * E.g. {@link #getAppStandbyBucket()} and {@link #queryEventsForSelf(long, long)}.\n ",
+  "links" : [ "#getAppStandbyBucket()", "#queryEventsForSelf(long", "android.provider.Settings#ACTION_USAGE_ACCESS_SETTINGS" ],
   "variables" : [ {
     "name" : "INTERVAL_DAILY",
     "type" : "int",
@@ -36,7 +37,7 @@
   }, {
     "name" : "STANDBY_BUCKET_EXEMPTED",
     "type" : "int",
-    "comment" : "\n     * The app is whitelisted for some reason and the bucket cannot be changed.\n     * {@hide}\n     ",
+    "comment" : "\n     * The app is exempted for some reason and the bucket cannot be changed.\n     * {@hide}\n     ",
     "links" : [ ]
   }, {
     "name" : "STANDBY_BUCKET_ACTIVE",
@@ -117,6 +118,11 @@
     "name" : "REASON_SUB_DEFAULT_APP_UPDATE",
     "type" : "int",
     "comment" : "\n     * The app was updated.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_SUB_DEFAULT_APP_RESTORED",
+    "type" : "int",
+    "comment" : "\n     * The app was restored.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "REASON_SUB_USAGE_SYSTEM_INTERACTION",
@@ -219,6 +225,11 @@
     "comment" : "\n     * The app was displaying buggy behavior.\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "REASON_SUB_FORCED_USER_FLAG_INTERACTION",
+    "type" : "int",
+    "comment" : "\n     * The app was moved to restricted bucket due to user interaction, i.e., toggling FAS.\n     *\n     * <p>\n     * Note: This should be coming from the more end-user facing UX, not from developer\n     * options nor adb command.\n     </p>\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "EXTRA_OBSERVER_ID",
     "type" : "String",
     "comment" : "\n     * Observer id of the registered observer for the group of packages that reached the usage\n     * time limit. Included as an extra in the PendingIntent that was registered.\n     * @hide\n     ",
@@ -233,6 +244,16 @@
     "type" : "String",
     "comment" : "\n     * Actual usage time in milliseconds for the group of packages that reached the specified time\n     * limit. Included as an extra in the PendingIntent that was registered.\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "EXTRA_EVENT_CATEGORY",
+    "type" : "String",
+    "comment" : "\n     * A String extra, when used with {@link UsageEvents.Event#getExtras}, that indicates\n     * the category of the user interaction associated with the event. The category cannot\n     * be more than 127 characters, longer value will be truncated to 127 characters.\n     ",
+    "links" : [ "UsageEvents.Event#getExtras" ]
+  }, {
+    "name" : "EXTRA_EVENT_ACTION",
+    "type" : "String",
+    "comment" : "\n     * A String extra, when used with {@link UsageEvents.Event#getExtras}, that indicates\n     * the action of the user interaction associated with the event. The action cannot be\n     * more than 127 characters, longer value will be truncated to 127 characters.\n     ",
+    "links" : [ "UsageEvents.Event#getExtras" ]
   }, {
     "name" : "USAGE_SOURCE_TASK_ROOT_ACTIVITY",
     "type" : "int",
@@ -277,18 +298,28 @@
   }, {
     "name" : "public UsageEvents queryEvents(long beginTime, long endTime)",
     "returnType" : "UsageEvents",
-    "comment" : "\n     * Query for events in the given time range. Events are only kept by the system for a few\n     * days.\n     * <p> The caller must have {@link android.Manifest.permission#PACKAGE_USAGE_STATS} </p>\n     * <em>Note: Starting from {@link android.os.Build.VERSION_CODES#R Android R}, if the user's\n     * device is not in an unlocked state (as defined by {@link UserManager#isUserUnlocked()}),\n     * then {@code null} will be returned.</em>\n     *\n     * @param beginTime The inclusive beginning of the range of events to include in the results.\n     *                 Defined in terms of \"Unix time\", see\n     *                 {@link java.lang.System#currentTimeMillis}.\n     * @param endTime The exclusive end of the range of events to include in the results. Defined\n     *               in terms of \"Unix time\", see {@link java.lang.System#currentTimeMillis}.\n     * @return A {@link UsageEvents}.\n     ",
+    "comment" : "\n     * Query for events in the given time range. Events are only kept by the system for a few\n     * days.\n     * <p> The caller must have {@link android.Manifest.permission#PACKAGE_USAGE_STATS} </p>\n     * <em>Note: Starting from {@link android.os.Build.VERSION_CODES#R Android R}, if the user's\n     * device is not in an unlocked state (as defined by {@link UserManager#isUserUnlocked()}),\n     * then {@code null} will be returned.</em>\n     *\n     * @param beginTime The inclusive beginning of the range of events to include in the results.\n     *                  Defined in terms of \"Unix time\", see\n     *                  {@link java.lang.System#currentTimeMillis}.\n     * @param endTime The exclusive end of the range of events to include in the results. Defined\n     *                in terms of \"Unix time\", see {@link java.lang.System#currentTimeMillis}.\n     * @return A {@link UsageEvents}.\n     ",
     "links" : [ "android.Manifest.permission#PACKAGE_USAGE_STATS", "android.os.Build.VERSION_CODES#R", "android.app.usage.UsageEvents", "android.os.UserManager#isUserUnlocked()", "java.lang.System#currentTimeMillis" ]
+  }, {
+    "name" : "public UsageEvents queryEvents(@NonNull UsageEventsQuery query)",
+    "returnType" : "UsageEvents",
+    "comment" : "\n     * Query for events with specific UsageEventsQuery object.\n     *\n     * <em>Note: if the user's device is not in an unlocked state (as defined by\n     * {@link UserManager#isUserUnlocked()}), then {@code null} will be returned.</em>\n     *\n     * @param query The query object used to specify the query parameters.\n     * @return A {@link UsageEvents} which contains the events matching the query parameters.\n     ",
+    "links" : [ "android.app.usage.UsageEvents", "android.os.UserManager#isUserUnlocked()" ]
   }, {
     "name" : "public UsageEvents queryEventsForSelf(long beginTime, long endTime)",
     "returnType" : "UsageEvents",
-    "comment" : "\n     * Like {@link #queryEvents(long, long)}, but only returns events for the calling package.\n     * <em>Note: Starting from {@link android.os.Build.VERSION_CODES#R Android R}, if the user's\n     * device is not in an unlocked state (as defined by {@link UserManager#isUserUnlocked()}),\n     * then {@code null} will be returned.</em>\n     *\n     * @param beginTime The inclusive beginning of the range of events to include in the results.\n     *                 Defined in terms of \"Unix time\", see\n     *                 {@link java.lang.System#currentTimeMillis}.\n     * @param endTime The exclusive end of the range of events to include in the results. Defined\n     *               in terms of \"Unix time\", see {@link java.lang.System#currentTimeMillis}.\n     * @return A {@link UsageEvents} object.\n     *\n     * @see #queryEvents(long, long)\n     ",
+    "comment" : "\n     * Like {@link #queryEvents(long, long)}, but only returns events for the calling package.\n     * <em>Note: Starting from {@link android.os.Build.VERSION_CODES#R Android R}, if the user's\n     * device is not in an unlocked state (as defined by {@link UserManager#isUserUnlocked()}),\n     * then {@code null} will be returned.</em>\n     *\n     * @param beginTime The inclusive beginning of the range of events to include in the results.\n     *                  Defined in terms of \"Unix time\", see\n     *                  {@link java.lang.System#currentTimeMillis}.\n     * @param endTime The exclusive end of the range of events to include in the results. Defined\n     *                in terms of \"Unix time\", see {@link java.lang.System#currentTimeMillis}.\n     * @return A {@link UsageEvents} object.\n     *\n     * @see #queryEvents(long, long)\n     ",
     "links" : [ "android.os.Build.VERSION_CODES#R", "android.app.usage.UsageEvents", "#queryEvents(long", "android.os.UserManager#isUserUnlocked()", "java.lang.System#currentTimeMillis" ]
   }, {
     "name" : "public Map<String, UsageStats> queryAndAggregateUsageStats(long beginTime, long endTime)",
     "returnType" : "Map<String, UsageStats>",
     "comment" : "\n     * A convenience method that queries for all stats in the given range (using the best interval\n     * for that range), merges the resulting data, and keys it by package name.\n     * See {@link #queryUsageStats(int, long, long)}.\n     * <p> The caller must have {@link android.Manifest.permission#PACKAGE_USAGE_STATS} </p>\n     *\n     * @param beginTime The inclusive beginning of the range of stats to include in the results.\n     *                  Defined in terms of \"Unix time\", see\n     *                  {@link java.lang.System#currentTimeMillis}.\n     * @param endTime The exclusive end of the range of stats to include in the results. Defined\n     *                in terms of \"Unix time\", see {@link java.lang.System#currentTimeMillis}.\n     * @return A {@link java.util.Map} keyed by package name\n     ",
     "links" : [ "android.Manifest.permission#PACKAGE_USAGE_STATS", "#queryUsageStats(int", "java.util.Map", "java.lang.System#currentTimeMillis" ]
+  }, {
+    "name" : "public boolean isAppStandbyEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether the app standby bucket feature is enabled.\n     * @hide\n     ",
+    "links" : [ ]
   }, {
     "name" : "public boolean isAppInactive(String packageName)",
     "returnType" : "boolean",
@@ -325,6 +356,21 @@
     "comment" : "\n     * {@hide}\n     * Changes the app standby bucket for multiple apps at once. The Map is keyed by the package\n     * name and the value is one of STANDBY_BUCKET_*. The caller will not be able to change an\n     * app's standby bucket if that app is in the {@link #STANDBY_BUCKET_RESTRICTED} bucket.\n     * @param appBuckets a map of package name to bucket value.\n     ",
     "links" : [ "#STANDBY_BUCKET_RESTRICTED" ]
   }, {
+    "name" : "public int getAppMinStandbyBucket(String packageName)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the lowest bucket this app can ever enter.\n     *\n     * @param packageName the package for which to fetch the minimum allowed standby bucket.\n     * {@hide}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEstimatedLaunchTimeMillis(@NonNull String packageName, @CurrentTimeMillisLong long estimatedLaunchTimeMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Changes an app's estimated launch time. An app is considered \"launched\" when a user opens\n     * one of its {@link android.app.Activity Activities}. The provided time is persisted across\n     * reboots and is used unless 1) the time is more than a week in the future and the platform\n     * thinks the app will be launched sooner, 2) the estimated time has passed. Passing in\n     * {@link Long#MAX_VALUE} effectively clears the previously set launch time for the app.\n     *\n     * @param packageName               The package name of the app to set the bucket for.\n     * @param estimatedLaunchTimeMillis The next time the app is expected to be launched. Units are\n     *                                  in milliseconds since epoch (the same as\n     *                                  {@link System#currentTimeMillis()}).\n     * @hide\n     ",
+    "links" : [ "#currentTimeMillis()", "android.app.Activity", "android.annotation.CurrentTimeMillisLong#MAX_VALUE" ]
+  }, {
+    "name" : "public void setEstimatedLaunchTimesMillis(@NonNull Map<String, Long> estimatedLaunchTimesMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Changes the estimated launch times for multiple apps at once. The map is keyed by the\n     * package name and the value is the estimated launch time.\n     *\n     * @param estimatedLaunchTimesMillis A map of package name to estimated launch time.\n     * @see #setEstimatedLaunchTimeMillis(String, long)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void registerAppUsageObserver(int observerId, @NonNull String[] observedEntities, long timeLimit, @NonNull TimeUnit timeUnit, @NonNull PendingIntent callbackIntent)",
     "returnType" : "void",
     "comment" : "\n     * @hide\n     * Register an app usage limit observer that receives a callback on the provided intent when\n     * the sum of usages of apps and tokens in the {@code observed} array exceeds the\n     * {@code timeLimit} specified. The structure of a token is a String with the reporting\n     * package's name and a token the reporting app will use, separated by the forward slash\n     * character. Example: com.reporting.package/5OM3*0P4QU3-7OK3N\n     * The observer will automatically be unregistered when the time limit is reached and the\n     * intent is delivered. Registering an {@code observerId} that was already registered will\n     * override the previous one. No more than 1000 unique {@code observerId} may be registered by\n     * a single uid at any one time.\n     * @param observerId A unique id associated with the group of apps to be monitored. There can\n     *                  be multiple groups with common packages and different time limits.\n     * @param observedEntities The list of packages and token to observe for usage time. Cannot be\n     *                         null and must include at least one package or token.\n     * @param timeLimit The total time the set of apps can be in the foreground before the\n     *                  callbackIntent is delivered. Must be at least one minute.\n     * @param timeUnit The unit for time specified in {@code timeLimit}. Cannot be null.\n     * @param callbackIntent The PendingIntent that will be dispatched when the usage limit is\n     *                       exceeded by the group of apps. The delivered Intent will also contain\n     *                       the extras {@link #EXTRA_OBSERVER_ID}, {@link #EXTRA_TIME_LIMIT} and\n     *                       {@link #EXTRA_TIME_USED}. Cannot be null.\n     * @throws SecurityException if the caller doesn't have the OBSERVE_APP_USAGE permission and\n     *                           is not the profile owner of this user.\n     ",
@@ -354,6 +400,16 @@
     "returnType" : "void",
     "comment" : "\n     * Unregister the app usage limit observer specified by the {@code observerId}.\n     * This will only apply to any observer registered by this application. Unregistering\n     * an observer that was already unregistered or never registered will have no effect.\n     *\n     * @param observerId The id of the observer that was previously registered.\n     * @throws SecurityException if the caller is neither the active supervision app nor does it\n     *                         have both SUSPEND_APPS and OBSERVE_APP_USAGE permissions.\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public void reportUserInteraction(@NonNull String packageName, int userId)",
+    "returnType" : "void",
+    "comment" : "\n     * Reports user interaction with a given package in the given user.\n     *\n     * <p><em>This method is only for use by the system</em>\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reportUserInteraction(@NonNull String packageName, @UserIdInt int userId, @NonNull PersistableBundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Reports user interaction with given package and a particular {@code extras}\n     * in the given user.\n     *\n     * <p>\n     * Note: The structure of {@code extras} is a {@link PersistableBundle} with the\n     * category {@link #EXTRA_EVENT_CATEGORY} and the action {@link #EXTRA_EVENT_ACTION}.\n     * Category provides additional detail about the user interaction, the value\n     * is defined in namespace based. Example: android.app.notification could be used to\n     * indicate that the reported user interaction is related to notification. Action\n     * indicates the general action that performed.\n     * </p>\n     *\n     * @param packageName The package name of the app\n     * @param userId The user id who triggers the user interaction\n     * @param extras The {@link PersistableBundle} that will be used to specify the\n     *               extra details for the user interaction event. The {@link PersistableBundle}\n     *               must contain the extras {@link #EXTRA_EVENT_CATEGORY},\n     *               {@link #EXTRA_EVENT_ACTION}. Cannot be empty.\n     * @hide\n     ",
+    "links" : [ "android.os.PersistableBundle", "#EXTRA_EVENT_ACTION", "#EXTRA_EVENT_CATEGORY" ]
   }, {
     "name" : "public void reportUsageStart(@NonNull Activity activity, @NonNull String token)",
     "returnType" : "void",
@@ -390,9 +446,14 @@
     "comment" : " @hide ",
     "links" : [ ]
   }, {
+    "name" : "public static String standbyBucketToString(int standbyBucket)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
     "name" : "public void whitelistAppTemporarily(String packageName, long duration, UserHandle user)",
     "returnType" : "void",
-    "comment" : "\n     * {@hide}\n     * Temporarily whitelist the specified app for a short duration. This is to allow an app\n     * receiving a high priority message to be able to access the network and acquire wakelocks\n     * even if the device is in power-save mode or the app is currently considered inactive.\n     * @param packageName The package name of the app to whitelist.\n     * @param duration Duration to whitelist the app for, in milliseconds. It is recommended that\n     * this be limited to 10s of seconds. Requested duration will be clamped to a few minutes.\n     * @param user The user for whom the package should be whitelisted. Passing in a user that is\n     * not the same as the caller's process will require the INTERACT_ACROSS_USERS permission.\n     * @see #isAppInactive(String)\n     *\n     * @deprecated Use\n     * {@link android.os.PowerWhitelistManager#whitelistAppTemporarily(String, long)} instead.\n     ",
+    "comment" : "\n     * {@hide}\n     * Temporarily allowlist the specified app for a short duration. This is to allow an app\n     * receiving a high priority message to be able to access the network and acquire wakelocks\n     * even if the device is in power-save mode or the app is currently considered inactive.\n     * @param packageName The package name of the app to allowlist.\n     * @param duration Duration to allowlist the app for, in milliseconds. It is recommended that\n     * this be limited to 10s of seconds. Requested duration will be clamped to a few minutes.\n     * @param user The user for whom the package should be allowlisted. Passing in a user that is\n     * not the same as the caller's process will require the INTERACT_ACROSS_USERS permission.\n     * @see #isAppInactive(String)\n     *\n     * @deprecated Use\n     * {@link android.os.PowerWhitelistManager#whitelistAppTemporarily(String, long)} instead.\n     ",
     "links" : [ "android.os.PowerWhitelistManager#whitelistAppTemporarily(String" ]
   }, {
     "name" : "public void onCarrierPrivilegedAppsChanged()",
@@ -404,7 +465,37 @@
     "returnType" : "void",
     "comment" : "\n     * Reports a Chooser action to the UsageStatsManager.\n     *\n     * @param packageName The package name of the app that is selected.\n     * @param userId The user id of who makes the selection.\n     * @param contentType The type of the content, e.g., Image, Video, App.\n     * @param annotations The annotations of the content, e.g., Game, Selfie.\n     * @param action The action type of Intent that invokes ChooserActivity.\n     * {@link UsageEvents}\n     * @hide\n     ",
     "links" : [ "android.app.usage.UsageEvents" ]
+  }, {
+    "name" : "public long getLastTimeAnyComponentUsed(@NonNull String packageName)",
+    "returnType" : "long",
+    "comment" : "\n     * Get the last time a package is used by any users including explicit user interaction and\n     * component usage, measured in milliseconds since the epoch and truncated to the boundary of\n     * last day before the exact time. For packages that are never used, the time will be the epoch.\n     * <p> Note that this usage stats is user-agnostic. </p>\n     * <p>\n     * Also note that component usage is only reported for component bindings (e.g. broadcast\n     * receiver, service, content provider) and only when such a binding would cause an app to leave\n     * the stopped state.\n     * See {@link UsageEvents.Event.USER_INTERACTION}, {@link UsageEvents.Event.APP_COMPONENT_USED}.\n     * </p>\n     *\n     * @param packageName The name of the package to be queried.\n     * @return last time the queried package is used since the epoch.\n     * @hide\n     ",
+    "links" : [ "UsageEvents.Event.USER_INTERACTION", "UsageEvents.Event.APP_COMPONENT_USED" ]
+  }, {
+    "name" : "public List<BroadcastResponseStats> queryBroadcastResponseStats(@Nullable String packageName, @IntRange(from = 0) long id)",
+    "returnType" : "List<BroadcastResponseStats>",
+    "comment" : "\n     * Returns the broadcast response stats since the last boot corresponding to\n     * {@code packageName} and {@code id}.\n     *\n     * <p> Broadcast response stats will include the aggregated data of what actions an app took\n     * upon receiving a broadcast. This data will consider the broadcasts that the caller sent to\n     * {@code packageName} and explicitly requested to record the response events using\n     * {@link BroadcastOptions#recordResponseEventWhileInBackground(long)}.\n     *\n     * <p> The returned list could one or more {@link BroadcastResponseStats} objects or be empty\n     * depending on the {@code packageName} and {@code id} and whether there is any data\n     * corresponding to these. If the {@code packageName} is not {@code null} and {@code id} is\n     * {@code > 0}, then the returned list would contain at most one {@link BroadcastResponseStats}\n     * object. Otherwise, the returned list could contain more than one\n     * {@link BroadcastResponseStats} object in no particular order.\n     *\n     * <p> Note: It is possible that same {@code id} was used for broadcasts sent to different\n     * packages. So, callers can query the data corresponding to\n     * all broadcasts with a particular {@code id} by passing {@code packageName} as {@code null}.\n     *\n     * @param packageName The name of the package that the caller wants to query for\n     *                    or {@code null} to indicate that data corresponding to all packages\n     *                    should be returned.\n     * @param id The ID corresponding to the broadcasts that the caller wants to query for, or\n     *           {@code 0} to indicate that data corresponding to all IDs should be returned.\n     *           This is the ID the caller specifies when requesting a broadcast response event\n     *           to be recorded using\n     *           {@link BroadcastOptions#recordResponseEventWhileInBackground(long)}.\n     *\n     * @return the list of broadcast response stats corresponding to {@code packageName}\n     *         and {@code id}.\n     *\n     * @see #clearBroadcastResponseStats(String, long)\n     * @hide\n     ",
+    "links" : [ "android.app.usage.BroadcastResponseStats", "android.app.BroadcastOptions#recordResponseEventWhileInBackground(long)" ]
+  }, {
+    "name" : "public void clearBroadcastResponseStats(@Nullable String packageName, @IntRange(from = 0) long id)",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the broadcast response stats corresponding to {@code packageName} and {@code id}.\n     *\n     * <p> When a caller uses this API, stats related to the events occurring till that point will\n     * be cleared and subsequent calls to {@link #queryBroadcastResponseStats(String, long)} will\n     * return stats related to events occurring after this.\n     *\n     * @param packageName The name of the package that the caller wants to clear the data for or\n     *                    {@code null} to indicate that data corresponding to all packages should\n     *                    be cleared.\n     * @param id The ID corresponding to the broadcasts that the caller wants to clear the data\n     *           for, or {code 0} to indicate that data corresponding to all IDs should be deleted.\n     *           This is the ID the caller specifies when requesting a broadcast response event\n     *           to be recorded using\n     *           {@link BroadcastOptions#recordResponseEventWhileInBackground(long)}.\n     *\n     * @see #queryBroadcastResponseStats(String, long)\n     * @hide\n     ",
+    "links" : [ "#queryBroadcastResponseStats(String", "android.app.BroadcastOptions#recordResponseEventWhileInBackground(long)" ]
+  }, {
+    "name" : "public void clearBroadcastEvents()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the broadcast events that were sent by the caller uid.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isPackageExemptedFromBroadcastResponseStats(@NonNull String packageName)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks whether the given {@code packageName} is exempted from broadcast response tracking.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getAppStandbyConstant(@NonNull String key)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "INTERVAL_DAILY", "INTERVAL_WEEKLY", "INTERVAL_MONTHLY", "INTERVAL_YEARLY", "INTERVAL_BEST", "INTERVAL_COUNT", "STANDBY_BUCKET_EXEMPTED", "STANDBY_BUCKET_ACTIVE", "STANDBY_BUCKET_WORKING_SET", "STANDBY_BUCKET_FREQUENT", "STANDBY_BUCKET_RARE", "STANDBY_BUCKET_RESTRICTED", "STANDBY_BUCKET_NEVER", "REASON_MAIN_MASK", "REASON_MAIN_DEFAULT", "REASON_MAIN_TIMEOUT", "REASON_MAIN_USAGE", "REASON_MAIN_FORCED_BY_USER", "REASON_MAIN_PREDICTED", "REASON_MAIN_FORCED_BY_SYSTEM", "REASON_SUB_MASK", "REASON_SUB_DEFAULT_UNDEFINED", "REASON_SUB_DEFAULT_APP_UPDATE", "REASON_SUB_USAGE_SYSTEM_INTERACTION", "REASON_SUB_USAGE_NOTIFICATION_SEEN", "REASON_SUB_USAGE_USER_INTERACTION", "REASON_SUB_USAGE_MOVE_TO_FOREGROUND", "REASON_SUB_USAGE_MOVE_TO_BACKGROUND", "REASON_SUB_USAGE_SYSTEM_UPDATE", "REASON_SUB_USAGE_ACTIVE_TIMEOUT", "REASON_SUB_USAGE_SYNC_ADAPTER", "REASON_SUB_USAGE_SLICE_PINNED", "REASON_SUB_USAGE_SLICE_PINNED_PRIV", "REASON_SUB_USAGE_EXEMPTED_SYNC_SCHEDULED_NON_DOZE", "REASON_SUB_USAGE_EXEMPTED_SYNC_SCHEDULED_DOZE", "REASON_SUB_USAGE_EXEMPTED_SYNC_START", "REASON_SUB_USAGE_UNEXEMPTED_SYNC_SCHEDULED", "REASON_SUB_USAGE_FOREGROUND_SERVICE_START", "REASON_SUB_PREDICTED_RESTORED", "REASON_SUB_FORCED_SYSTEM_FLAG_UNDEFINED", "REASON_SUB_FORCED_SYSTEM_FLAG_BACKGROUND_RESOURCE_USAGE", "REASON_SUB_FORCED_SYSTEM_FLAG_ABUSE", "REASON_SUB_FORCED_SYSTEM_FLAG_BUGGY", "EXTRA_OBSERVER_ID", "EXTRA_TIME_LIMIT", "EXTRA_TIME_USED", "USAGE_SOURCE_TASK_ROOT_ACTIVITY", "USAGE_SOURCE_CURRENT_ACTIVITY", "sEmptyResults", "mContext", "mService" ],
-  "methodNames" : [ "public List<UsageStats> queryUsageStats(int intervalType, long beginTime, long endTime)", "public List<ConfigurationStats> queryConfigurations(int intervalType, long beginTime, long endTime)", "public List<EventStats> queryEventStats(int intervalType, long beginTime, long endTime)", "public UsageEvents queryEvents(long beginTime, long endTime)", "public UsageEvents queryEventsForSelf(long beginTime, long endTime)", "public Map<String, UsageStats> queryAndAggregateUsageStats(long beginTime, long endTime)", "public boolean isAppInactive(String packageName)", "public void setAppInactive(String packageName, boolean inactive)", "public int getAppStandbyBucket()", "public int getAppStandbyBucket(String packageName)", "public void setAppStandbyBucket(String packageName, @StandbyBuckets int bucket)", "public Map<String, Integer> getAppStandbyBuckets()", "public void setAppStandbyBuckets(Map<String, Integer> appBuckets)", "public void registerAppUsageObserver(int observerId, @NonNull String[] observedEntities, long timeLimit, @NonNull TimeUnit timeUnit, @NonNull PendingIntent callbackIntent)", "public void unregisterAppUsageObserver(int observerId)", "public void registerUsageSessionObserver(int sessionObserverId, @NonNull String[] observedEntities, @NonNull Duration timeLimit, @NonNull Duration sessionThresholdTime, @NonNull PendingIntent limitReachedCallbackIntent, @Nullable PendingIntent sessionEndCallbackIntent)", "public void unregisterUsageSessionObserver(int sessionObserverId)", "public void registerAppUsageLimitObserver(int observerId, @NonNull String[] observedEntities, @NonNull Duration timeLimit, @NonNull Duration timeUsed, @Nullable PendingIntent callbackIntent)", "public void unregisterAppUsageLimitObserver(int observerId)", "public void reportUsageStart(@NonNull Activity activity, @NonNull String token)", "public void reportUsageStart(@NonNull Activity activity, @NonNull String token, long timeAgoMs)", "public void reportUsageStop(@NonNull Activity activity, @NonNull String token)", "public int getUsageSource()", "public void forceUsageSourceSettingRead()", "public static String reasonToString(int standbyReason)", "public static String usageSourceToString(int usageSource)", "public void whitelistAppTemporarily(String packageName, long duration, UserHandle user)", "public void onCarrierPrivilegedAppsChanged()", "public void reportChooserSelection(String packageName, int userId, String contentType, String[] annotations, String action)" ]
+  "methodNames" : [ "public List<UsageStats> queryUsageStats(int intervalType, long beginTime, long endTime)", "public List<ConfigurationStats> queryConfigurations(int intervalType, long beginTime, long endTime)", "public List<EventStats> queryEventStats(int intervalType, long beginTime, long endTime)", "public UsageEvents queryEvents(long beginTime, long endTime)", "public UsageEvents queryEvents(@NonNull UsageEventsQuery query)", "public UsageEvents queryEventsForSelf(long beginTime, long endTime)", "public Map<String, UsageStats> queryAndAggregateUsageStats(long beginTime, long endTime)", "public boolean isAppStandbyEnabled()", "public boolean isAppInactive(String packageName)", "public void setAppInactive(String packageName, boolean inactive)", "public int getAppStandbyBucket()", "public int getAppStandbyBucket(String packageName)", "public void setAppStandbyBucket(String packageName, @StandbyBuckets int bucket)", "public Map<String, Integer> getAppStandbyBuckets()", "public void setAppStandbyBuckets(Map<String, Integer> appBuckets)", "public int getAppMinStandbyBucket(String packageName)", "public void setEstimatedLaunchTimeMillis(@NonNull String packageName, @CurrentTimeMillisLong long estimatedLaunchTimeMillis)", "public void setEstimatedLaunchTimesMillis(@NonNull Map<String, Long> estimatedLaunchTimesMillis)", "public void registerAppUsageObserver(int observerId, @NonNull String[] observedEntities, long timeLimit, @NonNull TimeUnit timeUnit, @NonNull PendingIntent callbackIntent)", "public void unregisterAppUsageObserver(int observerId)", "public void registerUsageSessionObserver(int sessionObserverId, @NonNull String[] observedEntities, @NonNull Duration timeLimit, @NonNull Duration sessionThresholdTime, @NonNull PendingIntent limitReachedCallbackIntent, @Nullable PendingIntent sessionEndCallbackIntent)", "public void unregisterUsageSessionObserver(int sessionObserverId)", "public void registerAppUsageLimitObserver(int observerId, @NonNull String[] observedEntities, @NonNull Duration timeLimit, @NonNull Duration timeUsed, @Nullable PendingIntent callbackIntent)", "public void unregisterAppUsageLimitObserver(int observerId)", "public void reportUserInteraction(@NonNull String packageName, int userId)", "public void reportUserInteraction(@NonNull String packageName, @UserIdInt int userId, @NonNull PersistableBundle extras)", "public void reportUsageStart(@NonNull Activity activity, @NonNull String token)", "public void reportUsageStart(@NonNull Activity activity, @NonNull String token, long timeAgoMs)", "public void reportUsageStop(@NonNull Activity activity, @NonNull String token)", "public int getUsageSource()", "public void forceUsageSourceSettingRead()", "public static String reasonToString(int standbyReason)", "public static String usageSourceToString(int usageSource)", "public static String standbyBucketToString(int standbyBucket)", "public void whitelistAppTemporarily(String packageName, long duration, UserHandle user)", "public void onCarrierPrivilegedAppsChanged()", "public void reportChooserSelection(String packageName, int userId, String contentType, String[] annotations, String action)", "public long getLastTimeAnyComponentUsed(@NonNull String packageName)", "public List<BroadcastResponseStats> queryBroadcastResponseStats(@Nullable String packageName, @IntRange(from = 0) long id)", "public void clearBroadcastResponseStats(@Nullable String packageName, @IntRange(from = 0) long id)", "public void clearBroadcastEvents()", "public boolean isPackageExemptedFromBroadcastResponseStats(@NonNull String packageName)", "public String getAppStandbyConstant(@NonNull String key)" ],
+  "variableNames" : [ "INTERVAL_DAILY", "INTERVAL_WEEKLY", "INTERVAL_MONTHLY", "INTERVAL_YEARLY", "INTERVAL_BEST", "INTERVAL_COUNT", "STANDBY_BUCKET_EXEMPTED", "STANDBY_BUCKET_ACTIVE", "STANDBY_BUCKET_WORKING_SET", "STANDBY_BUCKET_FREQUENT", "STANDBY_BUCKET_RARE", "STANDBY_BUCKET_RESTRICTED", "STANDBY_BUCKET_NEVER", "REASON_MAIN_MASK", "REASON_MAIN_DEFAULT", "REASON_MAIN_TIMEOUT", "REASON_MAIN_USAGE", "REASON_MAIN_FORCED_BY_USER", "REASON_MAIN_PREDICTED", "REASON_MAIN_FORCED_BY_SYSTEM", "REASON_SUB_MASK", "REASON_SUB_DEFAULT_UNDEFINED", "REASON_SUB_DEFAULT_APP_UPDATE", "REASON_SUB_DEFAULT_APP_RESTORED", "REASON_SUB_USAGE_SYSTEM_INTERACTION", "REASON_SUB_USAGE_NOTIFICATION_SEEN", "REASON_SUB_USAGE_USER_INTERACTION", "REASON_SUB_USAGE_MOVE_TO_FOREGROUND", "REASON_SUB_USAGE_MOVE_TO_BACKGROUND", "REASON_SUB_USAGE_SYSTEM_UPDATE", "REASON_SUB_USAGE_ACTIVE_TIMEOUT", "REASON_SUB_USAGE_SYNC_ADAPTER", "REASON_SUB_USAGE_SLICE_PINNED", "REASON_SUB_USAGE_SLICE_PINNED_PRIV", "REASON_SUB_USAGE_EXEMPTED_SYNC_SCHEDULED_NON_DOZE", "REASON_SUB_USAGE_EXEMPTED_SYNC_SCHEDULED_DOZE", "REASON_SUB_USAGE_EXEMPTED_SYNC_START", "REASON_SUB_USAGE_UNEXEMPTED_SYNC_SCHEDULED", "REASON_SUB_USAGE_FOREGROUND_SERVICE_START", "REASON_SUB_PREDICTED_RESTORED", "REASON_SUB_FORCED_SYSTEM_FLAG_UNDEFINED", "REASON_SUB_FORCED_SYSTEM_FLAG_BACKGROUND_RESOURCE_USAGE", "REASON_SUB_FORCED_SYSTEM_FLAG_ABUSE", "REASON_SUB_FORCED_SYSTEM_FLAG_BUGGY", "REASON_SUB_FORCED_USER_FLAG_INTERACTION", "EXTRA_OBSERVER_ID", "EXTRA_TIME_LIMIT", "EXTRA_TIME_USED", "EXTRA_EVENT_CATEGORY", "EXTRA_EVENT_ACTION", "USAGE_SOURCE_TASK_ROOT_ACTIVITY", "USAGE_SOURCE_CURRENT_ACTIVITY", "sEmptyResults", "mContext", "mService" ]
 }

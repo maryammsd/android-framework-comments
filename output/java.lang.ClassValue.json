@@ -1,0 +1,126 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/lang/ClassValue.java",
+  "packageName" : "java.lang",
+  "className" : "ClassValue",
+  "comment" : "\n * Lazily associate a computed value with (potentially) every type.\n * For example, if a dynamic language needs to construct a message dispatch\n * table for each class encountered at a message send call site,\n * it can use a {@code ClassValue} to cache information needed to\n * perform the message send quickly, for each class encountered.\n * @author John Rose, JSR 292 EG\n * @since 1.7\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "EMPTY_CACHE",
+    "type" : "Entry<?>[]",
+    "comment" : " Initial, one-element, empty cache used by all Class instances.  Must never be filled. ",
+    "links" : [ ]
+  }, {
+    "name" : "hashCodeForCache",
+    "type" : "int",
+    "comment" : " Internal hash code for accessing Class.classValueMap.cacheArray. ",
+    "links" : [ ]
+  }, {
+    "name" : "nextHashCode",
+    "type" : "AtomicInteger",
+    "comment" : " Value stream for hashCodeForCache.  See similar structure in ThreadLocal. ",
+    "links" : [ ]
+  }, {
+    "name" : "HASH_INCREMENT",
+    "type" : "int",
+    "comment" : " Good for power-of-two tables.  See similar structure in ThreadLocal. ",
+    "links" : [ ]
+  }, {
+    "name" : "HASH_MASK",
+    "type" : "int",
+    "comment" : " Mask a hash code to be positive but not too large, to prevent wraparound. ",
+    "links" : [ ]
+  }, {
+    "name" : "identity",
+    "type" : "Identity",
+    "comment" : "\n     * This ClassValue's identity, expressed as an opaque object.\n     * The main object {@code ClassValue.this} is incorrect since\n     * subclasses may override {@code ClassValue.equals}, which\n     * could confuse keys in the ClassValueMap.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "version",
+    "type" : "Version<T>",
+    "comment" : "\n     * Current version for retrieving this class value from the cache.\n     * Any number of computeValue calls can be cached in association with one version.\n     * But the version changes when a remove (on any type) is executed.\n     * A version change invalidates all cache entries for the affected ClassValue,\n     * by marking them as stale.  Stale cache entries do not force another call\n     * to computeValue, but they do require a synchronized visit to a backing map.\n     * <p>\n     * All user-visible state changes on the ClassValue take place under\n     * a lock inside the synchronized methods of ClassValueMap.\n     * Readers (of ClassValue.get) are notified of such state changes\n     * when this.version is bumped to a new token.\n     * This variable must be volatile so that an unsynchronized reader\n     * will receive the notification without delay.\n     * <p>\n     * If version were not volatile, one thread T1 could persistently hold onto\n     * a stale value this.value == V1, while another thread T2 advances\n     * (under a lock) to this.value == V2.  This will typically be harmless,\n     * but if T1 and T2 interact causally via some other channel, such that\n     * T1's further actions are constrained (in the JMM) to happen after\n     * the V2 event, then T1's observation of V1 will be an error.\n     * <p>\n     * The practical effect of making this.version be volatile is that it cannot\n     * be hoisted out of a loop (by an optimizing JIT) or otherwise cached.\n     * Some machines may also require a barrier instruction to execute\n     * before this.version.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CRITICAL_SECTION",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "UNSAFE",
+    "type" : "Unsafe",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected abstract T computeValue(Class<?> type)",
+    "returnType" : "T",
+    "comment" : "\n     * Computes the given class's derived value for this {@code ClassValue}.\n     * <p>\n     * This method will be invoked within the first thread that accesses\n     * the value with the {@link #get get} method.\n     * <p>\n     * Normally, this method is invoked at most once per class,\n     * but it may be invoked again if there has been a call to\n     * {@link #remove remove}.\n     * <p>\n     * If this method throws an exception, the corresponding call to {@code get}\n     * will terminate abnormally with that exception, and no class value will be recorded.\n     *\n     * @param type the type whose class value must be computed\n     * @return the newly computed value associated with this {@code ClassValue}, for the given class or interface\n     * @see #get\n     * @see #remove\n     ",
+    "links" : [ "#get", "#remove" ]
+  }, {
+    "name" : "public T get(Class<?> type)",
+    "returnType" : "T",
+    "comment" : "\n     * Returns the value for the given class.\n     * If no value has yet been computed, it is obtained by\n     * an invocation of the {@link #computeValue computeValue} method.\n     * <p>\n     * The actual installation of the value on the class\n     * is performed atomically.\n     * At that point, if several racing threads have\n     * computed values, one is chosen, and returned to\n     * all the racing threads.\n     * <p>\n     * The {@code type} parameter is typically a class, but it may be any type,\n     * such as an interface, a primitive type (like {@code int.class}), or {@code void.class}.\n     * <p>\n     * In the absence of {@code remove} calls, a class value has a simple\n     * state diagram:  uninitialized and initialized.\n     * When {@code remove} calls are made,\n     * the rules for value observation are more complex.\n     * See the documentation for {@link #remove remove} for more information.\n     *\n     * @param type the type whose class value must be computed or retrieved\n     * @return the current value associated with this {@code ClassValue}, for the given class or interface\n     * @throws NullPointerException if the argument is null\n     * @see #remove\n     * @see #computeValue\n     ",
+    "links" : [ "#remove", "#computeValue" ]
+  }, {
+    "name" : "public void remove(Class<?> type)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes the associated value for the given class.\n     * If this value is subsequently {@linkplain #get read} for the same class,\n     * its value will be reinitialized by invoking its {@link #computeValue computeValue} method.\n     * This may result in an additional invocation of the\n     * {@code computeValue} method for the given class.\n     * <p>\n     * In order to explain the interaction between {@code get} and {@code remove} calls,\n     * we must model the state transitions of a class value to take into account\n     * the alternation between uninitialized and initialized states.\n     * To do this, number these states sequentially from zero, and note that\n     * uninitialized (or removed) states are numbered with even numbers,\n     * while initialized (or re-initialized) states have odd numbers.\n     * <p>\n     * When a thread {@code T} removes a class value in state {@code 2N},\n     * nothing happens, since the class value is already uninitialized.\n     * Otherwise, the state is advanced atomically to {@code 2N+1}.\n     * <p>\n     * When a thread {@code T} queries a class value in state {@code 2N},\n     * the thread first attempts to initialize the class value to state {@code 2N+1}\n     * by invoking {@code computeValue} and installing the resulting value.\n     * <p>\n     * When {@code T} attempts to install the newly computed value,\n     * if the state is still at {@code 2N}, the class value will be initialized\n     * with the computed value, advancing it to state {@code 2N+1}.\n     * <p>\n     * Otherwise, whether the new state is even or odd,\n     * {@code T} will discard the newly computed value\n     * and retry the {@code get} operation.\n     * <p>\n     * Discarding and retrying is an important proviso,\n     * since otherwise {@code T} could potentially install\n     * a disastrously stale value.  For example:\n     * <ul>\n     * <li>{@code T} calls {@code CV.get(C)} and sees state {@code 2N}\n     * <li>{@code T} quickly computes a time-dependent value {@code V0} and gets ready to install it\n     * <li>{@code T} is hit by an unlucky paging or scheduling event, and goes to sleep for a long time\n     * <li>...meanwhile, {@code T2} also calls {@code CV.get(C)} and sees state {@code 2N}\n     * <li>{@code T2} quickly computes a similar time-dependent value {@code V1} and installs it on {@code CV.get(C)}\n     * <li>{@code T2} (or a third thread) then calls {@code CV.remove(C)}, undoing {@code T2}'s work\n     * <li> the previous actions of {@code T2} are repeated several times\n     * <li> also, the relevant computed values change over time: {@code V1}, {@code V2}, ...\n     * <li>...meanwhile, {@code T} wakes up and attempts to install {@code V0}; <em>this must fail</em>\n     * </ul>\n     * We can assume in the above scenario that {@code CV.computeValue} uses locks to properly\n     * observe the time-dependent states as it computes {@code V1}, etc.\n     * This does not remove the threat of a stale value, since there is a window of time\n     * between the return of {@code computeValue} in {@code T} and the installation\n     * of the new value.  No user synchronization is possible during this time.\n     *\n     * @param type the type whose class value must be removed\n     * @throws NullPointerException if the argument is null\n     ",
+    "links" : [ "#computeValue" ]
+  }, {
+    "name" : " void put(Class<?> type, T value)",
+    "returnType" : "void",
+    "comment" : "public",
+    "links" : [ ]
+  }, {
+    "name" : "private static Entry<?>[] getCacheCarefully(Class<?> type)",
+    "returnType" : "Entry<?>[]",
+    "comment" : " Return the cache, if it exists, else a dummy empty cache. ",
+    "links" : [ ]
+  }, {
+    "name" : "private T getFromBackup(Entry<?>[] cache, Class<?> type)",
+    "returnType" : "T",
+    "comment" : "\n     * Slow tail of ClassValue.get to retry at nearby locations in the cache,\n     * or take a slow lock and check the hash table.\n     * Called only if the first probe was empty or a collision.\n     * This is a separate method, so compilers can process it independently.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " Entry<T> castEntry(Entry<?> e)",
+    "returnType" : "Entry<T>",
+    "comment" : " Hack to suppress warnings on the (T) cast, which is a no-op.",
+    "links" : [ ]
+  }, {
+    "name" : "private T getFromHashMap(Class<?> type)",
+    "returnType" : "T",
+    "comment" : " Called when the fast path of get fails, and cache reprobe also fails.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean match(Entry<?> e)",
+    "returnType" : "boolean",
+    "comment" : " Check that e is non-null, matches this ClassValue, and is live. ",
+    "links" : [ ]
+  }, {
+    "name" : " Version<T> version()",
+    "returnType" : "Version<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void bumpVersion()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static ClassValueMap getMap(Class<?> type)",
+    "returnType" : "ClassValueMap",
+    "comment" : " Return the backing map associated with this type. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ClassValueMap initializeMap(Class<?> type)",
+    "returnType" : "ClassValueMap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static Entry<T> makeEntry(Version<T> explicitVersion, T value)",
+    "returnType" : "Entry<T>",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected abstract T computeValue(Class<?> type)", "public T get(Class<?> type)", "public void remove(Class<?> type)", " void put(Class<?> type, T value)", "private static Entry<?>[] getCacheCarefully(Class<?> type)", "private T getFromBackup(Entry<?>[] cache, Class<?> type)", " Entry<T> castEntry(Entry<?> e)", "private T getFromHashMap(Class<?> type)", " boolean match(Entry<?> e)", " Version<T> version()", " void bumpVersion()", "private static ClassValueMap getMap(Class<?> type)", "private static ClassValueMap initializeMap(Class<?> type)", " static Entry<T> makeEntry(Version<T> explicitVersion, T value)" ],
+  "variableNames" : [ "EMPTY_CACHE", "hashCodeForCache", "nextHashCode", "HASH_INCREMENT", "HASH_MASK", "identity", "version", "CRITICAL_SECTION", "UNSAFE" ]
+}

@@ -1,0 +1,476 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/ActivityTransitionCoordinator.java",
+  "packageName" : "android.app",
+  "className" : "ActivityTransitionCoordinator",
+  "comment" : "\n * Base class for ExitTransitionCoordinator and EnterTransitionCoordinator, classes\n * that manage activity transitions and the communications coordinating them between\n * Activities. The ExitTransitionCoordinator is created in the\n * ActivityOptions#makeSceneTransitionAnimation. The EnterTransitionCoordinator\n * is created by ActivityOptions#createEnterActivityTransition by Activity when the window is\n * attached.\n *\n * Typical startActivity goes like this:\n * 1) ExitTransitionCoordinator created with ActivityOptions#makeSceneTransitionAnimation\n * 2) Activity#startActivity called and that calls startExit() through\n *    ActivityOptions#dispatchStartExit\n *    - Exit transition starts by setting transitioning Views to INVISIBLE\n * 3) Launched Activity starts, creating an EnterTransitionCoordinator.\n *    - The Window is made translucent\n *    - The Window background alpha is set to 0\n *    - The transitioning views are made INVISIBLE\n *    - MSG_SET_LISTENER is sent back to the ExitTransitionCoordinator.\n * 4) The shared element transition completes.\n *    - MSG_TAKE_SHARED_ELEMENTS is sent to the EnterTransitionCoordinator\n * 5) The MSG_TAKE_SHARED_ELEMENTS is received by the EnterTransitionCoordinator.\n *    - Shared elements are made VISIBLE\n *    - Shared elements positions and size are set to match the end state of the calling\n *      Activity.\n *    - The shared element transition is started\n *    - If the window allows overlapping transitions, the views transition is started by setting\n *      the entering Views to VISIBLE and the background alpha is animated to opaque.\n *    - MSG_HIDE_SHARED_ELEMENTS is sent to the ExitTransitionCoordinator\n * 6) MSG_HIDE_SHARED_ELEMENTS is received by the ExitTransitionCoordinator\n *    - The shared elements are made INVISIBLE\n * 7) The exit transition completes in the calling Activity.\n *    - MSG_EXIT_TRANSITION_COMPLETE is sent to the EnterTransitionCoordinator.\n * 8) The MSG_EXIT_TRANSITION_COMPLETE is received by the EnterTransitionCoordinator.\n *    - If the window doesn't allow overlapping enter transitions, the enter transition is started\n *      by setting entering views to VISIBLE and the background is animated to opaque.\n * 9) The background opacity animation completes.\n *    - The window is made opaque\n * 10) The calling Activity gets an onStop() call\n *    - onActivityStopped() is called and all exited Views are made VISIBLE.\n *\n * Typical finishAfterTransition goes like this:\n * 1) finishAfterTransition() creates an ExitTransitionCoordinator and calls startExit()\n *    - The Window start transitioning to Translucent with a new ActivityOptions.\n *    - If no background exists, a black background is substituted\n *    - The shared elements in the scene are matched against those shared elements\n *      that were sent by comparing the names.\n *    - The exit transition is started by setting Views to INVISIBLE.\n * 2) The ActivityOptions is received by the Activity and an EnterTransitionCoordinator is created.\n *    - All transitioning views are made VISIBLE to reverse what was done when onActivityStopped()\n *      was called\n * 3) The Window is made translucent and a callback is received\n *    - The background alpha is animated to 0\n * 4) The background alpha animation completes\n * 5) The shared element transition completes\n *    - After both 4 & 5 complete, MSG_TAKE_SHARED_ELEMENTS is sent to the\n *      EnterTransitionCoordinator\n * 6) MSG_TAKE_SHARED_ELEMENTS is received by EnterTransitionCoordinator\n *    - Shared elements are made VISIBLE\n *    - Shared elements positions and size are set to match the end state of the calling\n *      Activity.\n *    - The shared element transition is started\n *    - If the window allows overlapping transitions, the views transition is started by setting\n *      the entering Views to VISIBLE.\n *    - MSG_HIDE_SHARED_ELEMENTS is sent to the ExitTransitionCoordinator\n * 7) MSG_HIDE_SHARED_ELEMENTS is received by the ExitTransitionCoordinator\n *    - The shared elements are made INVISIBLE\n * 8) The exit transition completes in the finishing Activity.\n *    - MSG_EXIT_TRANSITION_COMPLETE is sent to the EnterTransitionCoordinator.\n *    - finish() is called on the exiting Activity\n * 9) The MSG_EXIT_TRANSITION_COMPLETE is received by the EnterTransitionCoordinator.\n *    - If the window doesn't allow overlapping enter transitions, the enter transition is started\n *      by setting entering views to VISIBLE.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_REMOTE_RECEIVER",
+    "type" : "String",
+    "comment" : "\n     * For Activity transitions, the called Activity's listener to receive calls\n     * when transitions complete.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SCREEN_LEFT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SCREEN_TOP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SCREEN_RIGHT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SCREEN_BOTTOM",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_TRANSLATION_Z",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SNAPSHOT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_SCALE_TYPE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_IMAGE_MATRIX",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_ELEVATION",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SCALE_TYPE_VALUES",
+    "type" : "ImageView.ScaleType[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SET_REMOTE_RECEIVER",
+    "type" : "int",
+    "comment" : "\n     * Sent by the exiting coordinator (either EnterTransitionCoordinator\n     * or ExitTransitionCoordinator) after the shared elements have\n     * become stationary (shared element transition completes). This tells\n     * the remote coordinator to take control of the shared elements and\n     * that animations may begin. The remote Activity won't start entering\n     * until this message is received, but may wait for\n     * MSG_EXIT_TRANSITION_COMPLETE if allowOverlappingTransitions() is true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_HIDE_SHARED_ELEMENTS",
+    "type" : "int",
+    "comment" : "\n     * Sent by the entering coordinator to tell the exiting coordinator\n     * to hide its shared elements after it has started its shared\n     * element transition. This is temporary until the\n     * interlock of shared elements is figured out.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_TAKE_SHARED_ELEMENTS",
+    "type" : "int",
+    "comment" : "\n     * Sent by the exiting coordinator (either EnterTransitionCoordinator\n     * or ExitTransitionCoordinator) after the shared elements have\n     * become stationary (shared element transition completes). This tells\n     * the remote coordinator to take control of the shared elements and\n     * that animations may begin. The remote Activity won't start entering\n     * until this message is received, but may wait for\n     * MSG_EXIT_TRANSITION_COMPLETE if allowOverlappingTransitions() is true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_EXIT_TRANSITION_COMPLETE",
+    "type" : "int",
+    "comment" : "\n     * Sent by the exiting coordinator (either\n     * EnterTransitionCoordinator or ExitTransitionCoordinator) after\n     * the exiting Views have finished leaving the scene. This will\n     * be ignored if allowOverlappingTransitions() is true on the\n     * remote coordinator. If it is false, it will trigger the enter\n     * transition to start.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_START_EXIT_TRANSITION",
+    "type" : "int",
+    "comment" : "\n     * Sent by Activity#startActivity to begin the exit transition.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CANCEL",
+    "type" : "int",
+    "comment" : "\n     * It took too long for a message from the entering Activity, so we canceled the transition.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SHARED_ELEMENT_DESTINATION",
+    "type" : "int",
+    "comment" : "\n     * When returning, this is the destination location for the shared element.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ALLOW_RETURN_TRANSITION",
+    "type" : "int",
+    "comment" : "\n     * Sent by Activity#startActivity to notify the entering activity that enter animation for\n     * back is allowed. If this message is not received, the default exit animation will run when\n     * backing out of an activity (instead of the 'reverse' shared element transition).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mWindow",
+    "type" : "Window",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAllSharedElementNames",
+    "type" : "ArrayList<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSharedElements",
+    "type" : "ArrayList<View>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSharedElementNames",
+    "type" : "ArrayList<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTransitioningViews",
+    "type" : "ArrayList<View>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListener",
+    "type" : "SharedElementCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mResultReceiver",
+    "type" : "ResultReceiver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEpicenterCallback",
+    "type" : "FixedEpicenterCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsReturning",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPendingTransition",
+    "type" : "Runnable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsStartingTransition",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mGhostViewListeners",
+    "type" : "ArrayList<GhostViewListeners>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mOriginalAlphas",
+    "type" : "ArrayMap<View, Float>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSharedElementParentMatrices",
+    "type" : "ArrayList<Matrix>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSharedElementTransitionComplete",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mViewsTransitionComplete",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBackgroundAnimatorComplete",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStrippedTransitioningViews",
+    "type" : "ArrayList<View>",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected void viewsReady(ArrayMap<String, View> sharedElements)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSharedElements(ArrayMap<String, View> sharedElements)",
+    "returnType" : "void",
+    "comment" : "\n     * Iterates over the shared elements and adds them to the members in order.\n     * Shared elements that are nested in other shared elements are placed after the\n     * elements that they are nested in. This means that layout ordering can be done\n     * from first to last.\n     *\n     * @param sharedElements The map of transition names to shared elements to set into\n     *                       the member fields.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isNested(View view, ArrayMap<String, View> sharedElements)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true when view is nested in any of the values of sharedElements.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void stripOffscreenViews()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected Window getWindow()",
+    "returnType" : "Window",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ViewGroup getDecor()",
+    "returnType" : "ViewGroup",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void setEpicenter()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the transition epicenter to the position of the first shared element.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setEpicenter(View view)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ArrayList<String> getAcceptedNames()",
+    "returnType" : "ArrayList<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ArrayList<String> getMappedNames()",
+    "returnType" : "ArrayList<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ArrayList<View> copyMappedViews()",
+    "returnType" : "ArrayList<View>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected Transition setTargets(Transition transition, boolean add)",
+    "returnType" : "Transition",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected Transition configureTransition(Transition transition, boolean includeTransitioningViews)",
+    "returnType" : "Transition",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected static void removeExcludedViews(Transition transition, ArrayList<View> views)",
+    "returnType" : "void",
+    "comment" : "\n     * Looks through the transition to see which Views have been included and which have been\n     * excluded. {@code views} will be modified to contain only those Views that are included\n     * in the transition. If {@code transition} is a TransitionSet, it will search through all\n     * contained Transitions to find targeted Views.\n     *\n     * @param transition The transition to look through for inclusion of Views\n     * @param views The list of Views that are to be checked for inclusion. Will be modified\n     *              to remove all excluded Views, possibly leaving an empty list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void findIncludedViews(Transition transition, ArrayList<View> views, ArraySet<View> included)",
+    "returnType" : "void",
+    "comment" : "\n     * Looks through the transition to see which Views have been included. Only {@code views}\n     * will be examined for inclusion. If {@code transition} is a TransitionSet, it will search\n     * through all contained Transitions to find targeted Views.\n     *\n     * @param transition The transition to look through for inclusion of Views\n     * @param views The list of Views that are to be checked for inclusion.\n     * @param included Modified to contain all Views in views that have at least one Transition\n     *                 that affects it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static Transition mergeTransitions(Transition transition1, Transition transition2)",
+    "returnType" : "Transition",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected ArrayMap<String, View> mapSharedElements(ArrayList<String> accepted, ArrayList<View> localViews)",
+    "returnType" : "ArrayMap<String, View>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void setResultReceiver(ResultReceiver resultReceiver)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract Transition getViewsTransition()",
+    "returnType" : "Transition",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSharedElementState(View view, String name, Bundle transitionArgs, Matrix tempMatrix, RectF tempRect, int[] decorLoc)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setSharedElementMatrices()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void getSharedElementParentMatrix(View view, Matrix matrix)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected ArrayList<SharedElementOriginalState> setSharedElementState(Bundle sharedElementState, final ArrayList<View> snapshots)",
+    "returnType" : "ArrayList<SharedElementOriginalState>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void notifySharedElementEnd(ArrayList<View> snapshots)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void scheduleSetSharedElementEnd(final ArrayList<View> snapshots)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static SharedElementOriginalState getOldSharedElementState(View view, String name, Bundle transitionArgs)",
+    "returnType" : "SharedElementOriginalState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected ArrayList<View> createSnapshots(Bundle state, Collection<String> names)",
+    "returnType" : "ArrayList<View>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected static void setOriginalSharedElementState(ArrayList<View> sharedElements, ArrayList<SharedElementOriginalState> originalState)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected Bundle captureSharedElementState()",
+    "returnType" : "Bundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void clearState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected long getFadeDuration()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void hideViews(ArrayList<View> views)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void showViews(ArrayList<View> views, boolean setTransitionAlpha)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void showView(View view, boolean setTransitionAlpha)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void captureSharedElementState(View view, String name, Bundle transitionArgs, Matrix tempMatrix, RectF tempBounds)",
+    "returnType" : "void",
+    "comment" : "\n     * Captures placement information for Views with a shared element name for\n     * Activity Transitions.\n     *\n     * @param view           The View to capture the placement information for.\n     * @param name           The shared element name in the target Activity to apply the placement\n     *                       information for.\n     * @param transitionArgs Bundle to store shared element placement information.\n     * @param tempBounds     A temporary Rect for capturing the current location of views.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void startTransition(Runnable runnable)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void transitionStarted()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean cancelPendingTransitions()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Cancels any pending transitions and returns true if there is a transition is in\n     * the middle of starting.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void moveSharedElementsToOverlay()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean moveSharedElementWithParent()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isInTransitionGroup(ViewParent viewParent, ViewGroup decor)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void moveSharedElementsFromOverlay()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void setGhostVisibility(int visibility)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void scheduleGhostVisibilityChange(final int visibility)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean isViewsTransitionComplete()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void viewsTransitionComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void backgroundAnimatorComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void sharedElementTransitionComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void startInputWhenTransitionsComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void pauseInput()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onTransitionsComplete()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int scaleTypeToInt(ImageView.ScaleType scaleType)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void setTransitioningViewsVisiblity(int visiblity, boolean invalidate)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void noLayoutSuppressionForVisibilityTransitions(Transition transition)",
+    "returnType" : "void",
+    "comment" : "\n     * Blocks suppressLayout from Visibility transitions. It is ok to suppress the layout,\n     * but we don't want to force the layout when suppressLayout becomes false. This leads\n     * to visual glitches.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isTransitionRunning()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected void viewsReady(ArrayMap<String, View> sharedElements)", "private void setSharedElements(ArrayMap<String, View> sharedElements)", "private static boolean isNested(View view, ArrayMap<String, View> sharedElements)", "protected void stripOffscreenViews()", "protected Window getWindow()", "public ViewGroup getDecor()", "protected void setEpicenter()", "private void setEpicenter(View view)", "public ArrayList<String> getAcceptedNames()", "public ArrayList<String> getMappedNames()", "public ArrayList<View> copyMappedViews()", "protected Transition setTargets(Transition transition, boolean add)", "protected Transition configureTransition(Transition transition, boolean includeTransitioningViews)", "protected static void removeExcludedViews(Transition transition, ArrayList<View> views)", "private static void findIncludedViews(Transition transition, ArrayList<View> views, ArraySet<View> included)", "protected static Transition mergeTransitions(Transition transition1, Transition transition2)", "protected ArrayMap<String, View> mapSharedElements(ArrayList<String> accepted, ArrayList<View> localViews)", "protected void setResultReceiver(ResultReceiver resultReceiver)", "protected abstract Transition getViewsTransition()", "private void setSharedElementState(View view, String name, Bundle transitionArgs, Matrix tempMatrix, RectF tempRect, int[] decorLoc)", "private void setSharedElementMatrices()", "private void getSharedElementParentMatrix(View view, Matrix matrix)", "protected ArrayList<SharedElementOriginalState> setSharedElementState(Bundle sharedElementState, final ArrayList<View> snapshots)", "protected void notifySharedElementEnd(ArrayList<View> snapshots)", "protected void scheduleSetSharedElementEnd(final ArrayList<View> snapshots)", "private static SharedElementOriginalState getOldSharedElementState(View view, String name, Bundle transitionArgs)", "protected ArrayList<View> createSnapshots(Bundle state, Collection<String> names)", "protected static void setOriginalSharedElementState(ArrayList<View> sharedElements, ArrayList<SharedElementOriginalState> originalState)", "protected Bundle captureSharedElementState()", "protected void clearState()", "protected long getFadeDuration()", "protected void hideViews(ArrayList<View> views)", "protected void showViews(ArrayList<View> views, boolean setTransitionAlpha)", "private void showView(View view, boolean setTransitionAlpha)", "protected void captureSharedElementState(View view, String name, Bundle transitionArgs, Matrix tempMatrix, RectF tempBounds)", "protected void startTransition(Runnable runnable)", "protected void transitionStarted()", "protected boolean cancelPendingTransitions()", "protected void moveSharedElementsToOverlay()", "protected boolean moveSharedElementWithParent()", "public static boolean isInTransitionGroup(ViewParent viewParent, ViewGroup decor)", "protected void moveSharedElementsFromOverlay()", "protected void setGhostVisibility(int visibility)", "protected void scheduleGhostVisibilityChange(final int visibility)", "protected boolean isViewsTransitionComplete()", "protected void viewsTransitionComplete()", "protected void backgroundAnimatorComplete()", "protected void sharedElementTransitionComplete()", "private void startInputWhenTransitionsComplete()", "protected void pauseInput()", "protected void onTransitionsComplete()", "private static int scaleTypeToInt(ImageView.ScaleType scaleType)", "protected void setTransitioningViewsVisiblity(int visiblity, boolean invalidate)", "private static void noLayoutSuppressionForVisibilityTransitions(Transition transition)", "public boolean isTransitionRunning()" ],
+  "variableNames" : [ "TAG", "KEY_REMOTE_RECEIVER", "KEY_SCREEN_LEFT", "KEY_SCREEN_TOP", "KEY_SCREEN_RIGHT", "KEY_SCREEN_BOTTOM", "KEY_TRANSLATION_Z", "KEY_SNAPSHOT", "KEY_SCALE_TYPE", "KEY_IMAGE_MATRIX", "KEY_ELEVATION", "SCALE_TYPE_VALUES", "MSG_SET_REMOTE_RECEIVER", "MSG_HIDE_SHARED_ELEMENTS", "MSG_TAKE_SHARED_ELEMENTS", "MSG_EXIT_TRANSITION_COMPLETE", "MSG_START_EXIT_TRANSITION", "MSG_CANCEL", "MSG_SHARED_ELEMENT_DESTINATION", "MSG_ALLOW_RETURN_TRANSITION", "mWindow", "mAllSharedElementNames", "mSharedElements", "mSharedElementNames", "mTransitioningViews", "mListener", "mResultReceiver", "mEpicenterCallback", "mIsReturning", "mPendingTransition", "mIsStartingTransition", "mGhostViewListeners", "mOriginalAlphas", "mSharedElementParentMatrices", "mSharedElementTransitionComplete", "mViewsTransitionComplete", "mBackgroundAnimatorComplete", "mStrippedTransitioningViews" ]
+}

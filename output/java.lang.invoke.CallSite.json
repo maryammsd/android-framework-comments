@@ -1,0 +1,81 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/lang/invoke/CallSite.java",
+  "packageName" : "java.lang.invoke",
+  "className" : "CallSite",
+  "comment" : "\n * A {@code CallSite} is a holder for a variable {@link MethodHandle},\n * which is called its {@code target}.\n * An {@code invokedynamic} instruction linked to a {@code CallSite} delegates\n * all calls to the site's current target.\n * A {@code CallSite} may be associated with several {@code invokedynamic}\n * instructions, or it may be \"free floating\", associated with none.\n * In any case, it may be invoked through an associated method handle\n * called its {@linkplain #dynamicInvoker dynamic invoker}.\n * <p>\n * {@code CallSite} is an abstract class which does not allow\n * direct subclassing by users.  It has three immediate,\n * concrete subclasses that may be either instantiated or subclassed.\n * <ul>\n * <li>If a mutable target is not required, an {@code invokedynamic} instruction\n * may be permanently bound by means of a {@linkplain ConstantCallSite constant call site}.\n * <li>If a mutable target is required which has volatile variable semantics,\n * because updates to the target must be immediately and reliably witnessed by other threads,\n * a {@linkplain VolatileCallSite volatile call site} may be used.\n * <li>Otherwise, if a mutable target is required,\n * a {@linkplain MutableCallSite mutable call site} may be used.\n * </ul>\n * <p>\n * A non-constant call site may be <em>relinked</em> by changing its target.\n * The new target must have the same {@linkplain MethodHandle#type() type}\n * as the previous target.\n * Thus, though a call site can be relinked to a series of\n * successive targets, it cannot change its type.\n * <p>\n * Here is a sample use of call sites and bootstrap methods which links every\n * dynamic call site to print its arguments:\n<blockquote><pre>{@code\nstatic void test() throws Throwable {\n    // THE FOLLOWING LINE IS PSEUDOCODE FOR A JVM INSTRUCTION\n    InvokeDynamic[#bootstrapDynamic].baz(\"baz arg\", 2, 3.14);\n}\nprivate static void printArgs(Object... args) {\n  System.out.println(java.util.Arrays.deepToString(args));\n}\nprivate static final MethodHandle printArgs;\nstatic {\n  MethodHandles.Lookup lookup = MethodHandles.lookup();\n  Class thisClass = lookup.lookupClass();  // (who am I?)\n  printArgs = lookup.findStatic(thisClass,\n      \"printArgs\", MethodType.methodType(void.class, Object[].class));\n}\nprivate static CallSite bootstrapDynamic(MethodHandles.Lookup caller, String name, MethodType type) {\n  // ignore caller and name, but match the type:\n  return new ConstantCallSite(printArgs.asType(type));\n}\n}</pre></blockquote>\n * @author John Rose, JSR 292 EG\n ",
+  "links" : [ "java.lang.invoke.MethodHandle" ],
+  "variables" : [ {
+    "name" : "target",
+    "type" : "MethodHandle",
+    "comment" : " Note: This field is known to the JVM.  Do not change.",
+    "links" : [ ]
+  }, {
+    "name" : "GET_TARGET",
+    "type" : "MethodHandle",
+    "comment" : " Android-changed: no longer final. GET_TARGET assigned in initializeGetTarget().",
+    "links" : [ ]
+  }, {
+    "name" : "TARGET_OFFSET",
+    "type" : "long",
+    "comment" : " unsafe stuff:",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public MethodType type()",
+    "returnType" : "MethodType",
+    "comment" : "\n     * Returns the type of this call site's target.\n     * Although targets may change, any call site's type is permanent, and can never change to an unequal type.\n     * The {@code setTarget} method enforces this invariant by refusing any new target that does\n     * not have the previous target's type.\n     * @return the type of the current target, which is also the type of any future target\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract MethodHandle getTarget()",
+    "returnType" : "MethodHandle",
+    "comment" : "\n     * Returns the target method of the call site, according to the\n     * behavior defined by this call site's specific class.\n     * The immediate subclasses of {@code CallSite} document the\n     * class-specific behaviors of this method.\n     *\n     * @return the current linkage state of the call site, its target method handle\n     * @see ConstantCallSite\n     * @see VolatileCallSite\n     * @see #setTarget\n     * @see ConstantCallSite#getTarget\n     * @see MutableCallSite#getTarget\n     * @see VolatileCallSite#getTarget\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void setTarget(MethodHandle newTarget)",
+    "returnType" : "void",
+    "comment" : "\n     * Updates the target method of this call site, according to the\n     * behavior defined by this call site's specific class.\n     * The immediate subclasses of {@code CallSite} document the\n     * class-specific behaviors of this method.\n     * <p>\n     * The type of the new target must be {@linkplain MethodType#equals equal to}\n     * the type of the old target.\n     *\n     * @param newTarget the new target\n     * @throws NullPointerException if the proposed new target is null\n     * @throws WrongMethodTypeException if the proposed new target\n     *         has a method type that differs from the previous target\n     * @see CallSite#getTarget\n     * @see ConstantCallSite#setTarget\n     * @see MutableCallSite#setTarget\n     * @see VolatileCallSite#setTarget\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void checkTargetChange(MethodHandle oldTarget, MethodHandle newTarget)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static WrongMethodTypeException wrongTargetType(MethodHandle target, MethodType type)",
+    "returnType" : "WrongMethodTypeException",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract MethodHandle dynamicInvoker()",
+    "returnType" : "MethodHandle",
+    "comment" : "\n     * Produces a method handle equivalent to an invokedynamic instruction\n     * which has been linked to this call site.\n     * <p>\n     * This method is equivalent to the following code:\n     * <blockquote><pre>{@code\n     * MethodHandle getTarget, invoker, result;\n     * getTarget = MethodHandles.publicLookup().bind(this, \"getTarget\", MethodType.methodType(MethodHandle.class));\n     * invoker = MethodHandles.exactInvoker(this.type());\n     * result = MethodHandles.foldArguments(invoker, getTarget)\n     * }</pre></blockquote>\n     *\n     * @return a method handle which always invokes this call site's current target\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " MethodHandle makeDynamicInvoker()",
+    "returnType" : "MethodHandle",
+    "comment" : "non-public",
+    "links" : [ ]
+  }, {
+    "name" : "private void initializeGetTarget()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void setTargetNormal(MethodHandle newTarget)",
+    "returnType" : "void",
+    "comment" : "package-private",
+    "links" : [ ]
+  }, {
+    "name" : " MethodHandle getTargetVolatile()",
+    "returnType" : "MethodHandle",
+    "comment" : "package-private",
+    "links" : [ ]
+  }, {
+    "name" : " void setTargetVolatile(MethodHandle newTarget)",
+    "returnType" : "void",
+    "comment" : "package-private",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public MethodType type()", "public abstract MethodHandle getTarget()", "public abstract void setTarget(MethodHandle newTarget)", " void checkTargetChange(MethodHandle oldTarget, MethodHandle newTarget)", "private static WrongMethodTypeException wrongTargetType(MethodHandle target, MethodType type)", "public abstract MethodHandle dynamicInvoker()", " MethodHandle makeDynamicInvoker()", "private void initializeGetTarget()", " void setTargetNormal(MethodHandle newTarget)", " MethodHandle getTargetVolatile()", " void setTargetVolatile(MethodHandle newTarget)" ],
+  "variableNames" : [ "target", "GET_TARGET", "TARGET_OFFSET" ]
+}

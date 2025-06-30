@@ -1,21 +1,17 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/SystemVibrator.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/SystemVibrator.java",
   "packageName" : "android.os",
   "className" : "SystemVibrator",
   "comment" : "\n * Vibrator implementation that controls the main system vibrator.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mService",
-    "type" : "IVibratorService",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mToken",
-    "type" : "Binder",
+    "name" : "mVibratorManager",
+    "type" : "VibratorManager",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -24,12 +20,32 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mDelegates",
-    "type" : "ArrayMap<OnVibratorStateChangedListener, OnVibratorStateChangedListenerDelegate>",
+    "name" : "mBrokenListeners",
+    "type" : "ArrayList<MultiVibratorStateListener>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRegisteredListeners",
+    "type" : "ArrayMap<OnVibratorStateChangedListener, MultiVibratorStateListener>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mVibratorInfo",
+    "type" : "VibratorInfo",
     "comment" : "",
     "links" : [ ]
   } ],
   "methods" : [ {
+    "name" : "public VibratorInfo getInfo()",
+    "returnType" : "VibratorInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "public boolean hasVibrator()",
     "returnType" : "boolean",
     "comment" : "",
@@ -37,22 +53,22 @@
   }, {
     "name" : "public boolean isVibrating()",
     "returnType" : "boolean",
-    "comment" : "\n     * Check whether the vibrator is vibrating.\n     *\n     * @return True if the hardware is vibrating, otherwise false.\n     ",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void addVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)",
+    "returnType" : "void",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public void addVibratorStateListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnVibratorStateChangedListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Adds a listener for vibrator state change. If the listener was previously added and not\n     * removed, this call will be ignored.\n     *\n     * @param listener Listener to be added.\n     * @param executor The {@link Executor} on which the listener's callbacks will be executed on.\n     ",
-    "links" : [ "android.annotation.CallbackExecutor" ]
-  }, {
-    "name" : "public void addVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)",
-    "returnType" : "void",
-    "comment" : "\n     * Adds a listener for vibrator state changes. Callbacks will be executed on the main thread.\n     * If the listener was previously added and not removed, this call will be ignored.\n     *\n     * @param listener listener to be added\n     ",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public void removeVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Removes the listener for vibrator state changes. If the listener was not previously\n     * registered, this call will do nothing.\n     *\n     * @param listener Listener to be removed.\n     ",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public boolean hasAmplitudeControl()",
@@ -60,23 +76,18 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean setAlwaysOnEffect(int uid, String opPkg, int alwaysOnId, VibrationEffect effect, AudioAttributes attributes)",
+    "name" : "public boolean setAlwaysOnEffect(int uid, String opPkg, int alwaysOnId, VibrationEffect effect, VibrationAttributes attrs)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public void vibrate(int uid, String opPkg, VibrationEffect effect, String reason, AudioAttributes attributes)",
+    "name" : "public void vibrate(int uid, String opPkg, @NonNull VibrationEffect effect, String reason, @NonNull VibrationAttributes attributes)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public int[] areEffectsSupported(@VibrationEffect.EffectType int... effectIds)",
-    "returnType" : "int[]",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "public boolean[] arePrimitivesSupported(@NonNull @VibrationEffect.Composition.Primitive int... primitiveIds)",
-    "returnType" : "boolean[]",
+    "name" : "public void performHapticFeedback(int constant, boolean always, String reason, boolean fromIme)",
+    "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -84,7 +95,17 @@
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "public void cancel(int usageFilter)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void tryUnregisterBrokenListeners()",
+    "returnType" : "void",
+    "comment" : "\n     * Tries to unregister individual {@link android.os.Vibrator.OnVibratorStateChangedListener}\n     * that were left registered to vibrators after failures to register them to all vibrators.\n     *\n     * <p>This might happen if {@link MultiVibratorStateListener} fails to register to any vibrator\n     * and also fails to unregister any previously registered single listeners to other vibrators.\n     *\n     * <p>This method never throws {@link RuntimeException} if it fails to unregister again, it will\n     * fail silently and attempt to unregister the same broken listener later.\n     ",
+    "links" : [ "RuntimeException", "android.os.Vibrator.OnVibratorStateChangedListener", "MultiVibratorStateListener" ]
   } ],
-  "variableNames" : [ "TAG", "mService", "mToken", "mContext", "mDelegates" ],
-  "methodNames" : [ "public boolean hasVibrator()", "public boolean isVibrating()", "public void addVibratorStateListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnVibratorStateChangedListener listener)", "public void addVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)", "public void removeVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)", "public boolean hasAmplitudeControl()", "public boolean setAlwaysOnEffect(int uid, String opPkg, int alwaysOnId, VibrationEffect effect, AudioAttributes attributes)", "public void vibrate(int uid, String opPkg, VibrationEffect effect, String reason, AudioAttributes attributes)", "public int[] areEffectsSupported(@VibrationEffect.EffectType int... effectIds)", "public boolean[] arePrimitivesSupported(@NonNull @VibrationEffect.Composition.Primitive int... primitiveIds)", "public void cancel()" ]
+  "methodNames" : [ "public VibratorInfo getInfo()", "public boolean hasVibrator()", "public boolean isVibrating()", "public void addVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)", "public void addVibratorStateListener(@NonNull @CallbackExecutor Executor executor, @NonNull OnVibratorStateChangedListener listener)", "public void removeVibratorStateListener(@NonNull OnVibratorStateChangedListener listener)", "public boolean hasAmplitudeControl()", "public boolean setAlwaysOnEffect(int uid, String opPkg, int alwaysOnId, VibrationEffect effect, VibrationAttributes attrs)", "public void vibrate(int uid, String opPkg, @NonNull VibrationEffect effect, String reason, @NonNull VibrationAttributes attributes)", "public void performHapticFeedback(int constant, boolean always, String reason, boolean fromIme)", "public void cancel()", "public void cancel(int usageFilter)", "private void tryUnregisterBrokenListeners()" ],
+  "variableNames" : [ "TAG", "mVibratorManager", "mContext", "mBrokenListeners", "mRegisteredListeners", "mLock", "mVibratorInfo" ]
 }

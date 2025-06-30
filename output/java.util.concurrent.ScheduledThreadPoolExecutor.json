@@ -1,0 +1,166 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ScheduledThreadPoolExecutor.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "ScheduledThreadPoolExecutor",
+  "comment" : "\n * A {@link ThreadPoolExecutor} that can additionally schedule\n * commands to run after a given delay, or to execute periodically.\n * This class is preferable to {@link java.util.Timer} when multiple\n * worker threads are needed, or when the additional flexibility or\n * capabilities of {@link ThreadPoolExecutor} (which this class\n * extends) are required.\n *\n * <p>Delayed tasks execute no sooner than they are enabled, but\n * without any real-time guarantees about when, after they are\n * enabled, they will commence. Tasks scheduled for exactly the same\n * execution time are enabled in first-in-first-out (FIFO) order of\n * submission.\n *\n * <p>When a submitted task is cancelled before it is run, execution\n * is suppressed.  By default, such a cancelled task is not\n * automatically removed from the work queue until its delay elapses.\n * While this enables further inspection and monitoring, it may also\n * cause unbounded retention of cancelled tasks.\n *\n * <p>Successive executions of a periodic task scheduled via\n * {@link #scheduleAtFixedRate scheduleAtFixedRate} or\n * {@link #scheduleWithFixedDelay scheduleWithFixedDelay}\n * do not overlap. While different executions may be performed by\n * different threads, the effects of prior executions\n * <a href=\"package-summary.html#MemoryVisibility\"><i>happen-before</i></a>\n * those of subsequent ones.\n *\n * <p>While this class inherits from {@link ThreadPoolExecutor}, a few\n * of the inherited tuning methods are not useful for it. In\n * particular, because it acts as a fixed-sized pool using\n * {@code corePoolSize} threads and an unbounded queue, adjustments\n * to {@code maximumPoolSize} have no useful effect. Additionally, it\n * is almost never a good idea to set {@code corePoolSize} to zero or\n * use {@code allowCoreThreadTimeOut} because this may leave the pool\n * without threads to handle tasks once they become eligible to run.\n *\n * <p>As with {@code ThreadPoolExecutor}, if not otherwise specified,\n * this class uses {@link Executors#defaultThreadFactory} as the\n * default thread factory, and {@link ThreadPoolExecutor.AbortPolicy}\n * as the default rejected execution handler.\n *\n * <p><b>Extension notes:</b> This class overrides the\n * {@link ThreadPoolExecutor#execute(Runnable) execute} and\n * {@link AbstractExecutorService#submit(Runnable) submit}\n * methods to generate internal {@link ScheduledFuture} objects to\n * control per-task delays and scheduling.  To preserve\n * functionality, any further overrides of these methods in\n * subclasses must invoke superclass versions, which effectively\n * disables additional task customization.  However, this class\n * provides alternative protected extension method\n * {@code decorateTask} (one version each for {@code Runnable} and\n * {@code Callable}) that can be used to customize the concrete task\n * types used to execute commands entered via {@code execute},\n * {@code submit}, {@code schedule}, {@code scheduleAtFixedRate},\n * and {@code scheduleWithFixedDelay}.  By default, a\n * {@code ScheduledThreadPoolExecutor} uses a task type extending\n * {@link FutureTask}. However, this may be modified or replaced using\n * subclasses of the form:\n *\n * <pre> {@code\n * public class CustomScheduledExecutor extends ScheduledThreadPoolExecutor {\n *\n *   static class CustomTask<V> implements RunnableScheduledFuture<V> { ... }\n *\n *   protected <V> RunnableScheduledFuture<V> decorateTask(\n *                Runnable r, RunnableScheduledFuture<V> task) {\n *       return new CustomTask<V>(r, task);\n *   }\n *\n *   protected <V> RunnableScheduledFuture<V> decorateTask(\n *                Callable<V> c, RunnableScheduledFuture<V> task) {\n *       return new CustomTask<V>(c, task);\n *   }\n *   // ... add constructors, etc.\n * }}</pre>\n *\n * @since 1.5\n * @author Doug Lea\n ",
+  "links" : [ "ThreadPoolExecutor.AbortPolicy", "java.util.concurrent.Executors#defaultThreadFactory", "java.util.concurrent.ScheduledFuture", "java.util.concurrent.ThreadPoolExecutor", "java.util.concurrent.AbstractExecutorService#submit(Runnable)", "java.util.concurrent.FutureTask", "java.util.Timer", "java.util.concurrent.ThreadPoolExecutor#execute(Runnable)", "#scheduleAtFixedRate", "#scheduleWithFixedDelay" ],
+  "variables" : [ {
+    "name" : "continueExistingPeriodicTasksAfterShutdown",
+    "type" : "boolean",
+    "comment" : "\n     * False if should cancel/suppress periodic tasks on shutdown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "executeExistingDelayedTasksAfterShutdown",
+    "type" : "boolean",
+    "comment" : "\n     * False if should cancel non-periodic tasks on shutdown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "removeOnCancel",
+    "type" : "boolean",
+    "comment" : "\n     * True if ScheduledFutureTask.cancel should remove from queue.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sequencer",
+    "type" : "AtomicLong",
+    "comment" : "\n     * Sequence number to break scheduling ties, and in turn to\n     * guarantee FIFO order among tied entries.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_KEEPALIVE_MILLIS",
+    "type" : "long",
+    "comment" : "\n     * The default keep-alive time for pool threads.\n     *\n     * Normally, this value is unused because all pool threads will be\n     * core threads, but if a user creates a pool with a corePoolSize\n     * of zero (against our advice), we keep a thread alive as long as\n     * there are queued tasks.  If the keep alive time is zero (the\n     * historic value), we end up hot-spinning in getTask, wasting a\n     * CPU.  But on the other hand, if we set the value too high, and\n     * users create a one-shot pool which they don't cleanly shutdown,\n     * the pool's non-daemon threads will prevent JVM termination.  A\n     * small but non-zero value (relative to a JVM's lifetime) seems\n     * best.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " boolean canRunInCurrentRunState(RunnableScheduledFuture<?> task)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if can run a task given current run state and\n     * run-after-shutdown parameters.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void delayedExecute(RunnableScheduledFuture<?> task)",
+    "returnType" : "void",
+    "comment" : "\n     * Main execution method for delayed or periodic tasks.  If pool\n     * is shut down, rejects the task. Otherwise adds task to queue\n     * and starts a thread, if necessary, to run it.  (We cannot\n     * prestart the thread to run the task because the task (probably)\n     * shouldn't be run yet.)  If the pool is shut down while the task\n     * is being added, cancel and remove it if required by state and\n     * run-after-shutdown parameters.\n     *\n     * @param task the task\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void reExecutePeriodic(RunnableScheduledFuture<?> task)",
+    "returnType" : "void",
+    "comment" : "\n     * Requeues a periodic task unless current run state precludes it.\n     * Same idea as delayedExecute except drops task rather than rejecting.\n     *\n     * @param task the task\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void onShutdown()",
+    "returnType" : "void",
+    "comment" : "\n     * Cancels and clears the queue of all tasks that should not be run\n     * due to shutdown policy.  Invoked within super.shutdown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task)",
+    "returnType" : "RunnableScheduledFuture<V>",
+    "comment" : "\n     * Modifies or replaces the task used to execute a runnable.\n     * This method can be used to override the concrete\n     * class used for managing internal tasks.\n     * The default implementation simply returns the given task.\n     *\n     * @param runnable the submitted Runnable\n     * @param task the task created to execute the runnable\n     * @param <V> the type of the task's result\n     * @return a task that can execute the runnable\n     * @since 1.6\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task)",
+    "returnType" : "RunnableScheduledFuture<V>",
+    "comment" : "\n     * Modifies or replaces the task used to execute a callable.\n     * This method can be used to override the concrete\n     * class used for managing internal tasks.\n     * The default implementation simply returns the given task.\n     *\n     * @param callable the submitted Callable\n     * @param task the task created to execute the callable\n     * @param <V> the type of the task's result\n     * @return a task that can execute the callable\n     * @since 1.6\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long triggerTime(long delay, TimeUnit unit)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the nanoTime-based trigger time of a delayed action.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " long triggerTime(long delay)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the nanoTime-based trigger time of a delayed action.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long overflowFree(long delay)",
+    "returnType" : "long",
+    "comment" : "\n     * Constrains the values of all delays in the queue to be within\n     * Long.MAX_VALUE of each other, to avoid overflow in compareTo.\n     * This may occur if a task is eligible to be dequeued, but has\n     * not yet been, while some other task is added with a delay of\n     * Long.MAX_VALUE.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)",
+    "returnType" : "ScheduledFuture<?>",
+    "comment" : "\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit)",
+    "returnType" : "ScheduledFuture<V>",
+    "comment" : "\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit)",
+    "returnType" : "ScheduledFuture<?>",
+    "comment" : "\n     * Submits a periodic action that becomes enabled first after the\n     * given initial delay, and subsequently with the given period;\n     * that is, executions will commence after\n     * {@code initialDelay}, then {@code initialDelay + period}, then\n     * {@code initialDelay + 2 * period}, and so on.\n     *\n     * <p>The sequence of task executions continues indefinitely until\n     * one of the following exceptional completions occur:\n     * <ul>\n     * <li>The task is {@linkplain Future#cancel explicitly cancelled}\n     * via the returned future.\n     * <li>Method {@link #shutdown} is called and the {@linkplain\n     * #getContinueExistingPeriodicTasksAfterShutdownPolicy policy on\n     * whether to continue after shutdown} is not set true, or method\n     * {@link #shutdownNow} is called; also resulting in task\n     * cancellation.\n     * <li>An execution of the task throws an exception.  In this case\n     * calling {@link Future#get() get} on the returned future will throw\n     * {@link ExecutionException}, holding the exception as its cause.\n     * </ul>\n     * Subsequent executions are suppressed.  Subsequent calls to\n     * {@link Future#isDone isDone()} on the returned future will\n     * return {@code true}.\n     *\n     * <p>If any execution of this task takes longer than its period, then\n     * subsequent executions may start late, but will not concurrently\n     * execute.\n     *\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     * @throws IllegalArgumentException   {@inheritDoc}\n     ",
+    "links" : [ "java.util.concurrent.ExecutionException", "java.util.concurrent.Future#isDone", "java.util.concurrent.Future#get()", "#shutdownNow", "#shutdown" ]
+  }, {
+    "name" : "public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit)",
+    "returnType" : "ScheduledFuture<?>",
+    "comment" : "\n     * Submits a periodic action that becomes enabled first after the\n     * given initial delay, and subsequently with the given delay\n     * between the termination of one execution and the commencement of\n     * the next.\n     *\n     * <p>The sequence of task executions continues indefinitely until\n     * one of the following exceptional completions occur:\n     * <ul>\n     * <li>The task is {@linkplain Future#cancel explicitly cancelled}\n     * via the returned future.\n     * <li>Method {@link #shutdown} is called and the {@linkplain\n     * #getContinueExistingPeriodicTasksAfterShutdownPolicy policy on\n     * whether to continue after shutdown} is not set true, or method\n     * {@link #shutdownNow} is called; also resulting in task\n     * cancellation.\n     * <li>An execution of the task throws an exception.  In this case\n     * calling {@link Future#get() get} on the returned future will throw\n     * {@link ExecutionException}, holding the exception as its cause.\n     * </ul>\n     * Subsequent executions are suppressed.  Subsequent calls to\n     * {@link Future#isDone isDone()} on the returned future will\n     * return {@code true}.\n     *\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     * @throws IllegalArgumentException   {@inheritDoc}\n     ",
+    "links" : [ "java.util.concurrent.ExecutionException", "java.util.concurrent.Future#isDone", "java.util.concurrent.Future#get()", "#shutdownNow", "#shutdown" ]
+  }, {
+    "name" : "public void execute(Runnable command)",
+    "returnType" : "void",
+    "comment" : "\n     * Executes {@code command} with zero required delay.\n     * This has effect equivalent to\n     * {@link #schedule(Runnable,long,TimeUnit) schedule(command, 0, anyUnit)}.\n     * Note that inspections of the queue and of the list returned by\n     * {@code shutdownNow} will access the zero-delayed\n     * {@link ScheduledFuture}, not the {@code command} itself.\n     *\n     * <p>A consequence of the use of {@code ScheduledFuture} objects is\n     * that {@link ThreadPoolExecutor#afterExecute afterExecute} is always\n     * called with a null second {@code Throwable} argument, even if the\n     * {@code command} terminated abruptly.  Instead, the {@code Throwable}\n     * thrown by such a task can be obtained via {@link Future#get}.\n     *\n     * @throws RejectedExecutionException at discretion of\n     *         {@code RejectedExecutionHandler}, if the task\n     *         cannot be accepted for execution because the\n     *         executor has been shut down\n     * @throws NullPointerException {@inheritDoc}\n     ",
+    "links" : [ "java.util.concurrent.ScheduledFuture", "#schedule(Runnable", "java.util.concurrent.ThreadPoolExecutor#afterExecute", "java.util.concurrent.Future#get" ]
+  }, {
+    "name" : "public Future<?> submit(Runnable task)",
+    "returnType" : "Future<?>",
+    "comment" : "\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Future<T> submit(Runnable task, T result)",
+    "returnType" : "Future<T>",
+    "comment" : "\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Future<T> submit(Callable<T> task)",
+    "returnType" : "Future<T>",
+    "comment" : "\n     * @throws RejectedExecutionException {@inheritDoc}\n     * @throws NullPointerException       {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContinueExistingPeriodicTasksAfterShutdownPolicy(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the policy on whether to continue executing existing\n     * periodic tasks even when this executor has been {@code shutdown}.\n     * In this case, executions will continue until {@code shutdownNow}\n     * or the policy is set to {@code false} when already shutdown.\n     * This value is by default {@code false}.\n     *\n     * @param value if {@code true}, continue after shutdown, else don't\n     * @see #getContinueExistingPeriodicTasksAfterShutdownPolicy\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getContinueExistingPeriodicTasksAfterShutdownPolicy()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Gets the policy on whether to continue executing existing\n     * periodic tasks even when this executor has been {@code shutdown}.\n     * In this case, executions will continue until {@code shutdownNow}\n     * or the policy is set to {@code false} when already shutdown.\n     * This value is by default {@code false}.\n     *\n     * @return {@code true} if will continue after shutdown\n     * @see #setContinueExistingPeriodicTasksAfterShutdownPolicy\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setExecuteExistingDelayedTasksAfterShutdownPolicy(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the policy on whether to execute existing delayed\n     * tasks even when this executor has been {@code shutdown}.\n     * In this case, these tasks will only terminate upon\n     * {@code shutdownNow}, or after setting the policy to\n     * {@code false} when already shutdown.\n     * This value is by default {@code true}.\n     *\n     * @param value if {@code true}, execute after shutdown, else don't\n     * @see #getExecuteExistingDelayedTasksAfterShutdownPolicy\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getExecuteExistingDelayedTasksAfterShutdownPolicy()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Gets the policy on whether to execute existing delayed\n     * tasks even when this executor has been {@code shutdown}.\n     * In this case, these tasks will only terminate upon\n     * {@code shutdownNow}, or after setting the policy to\n     * {@code false} when already shutdown.\n     * This value is by default {@code true}.\n     *\n     * @return {@code true} if will execute after shutdown\n     * @see #setExecuteExistingDelayedTasksAfterShutdownPolicy\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRemoveOnCancelPolicy(boolean value)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the policy on whether cancelled tasks should be immediately\n     * removed from the work queue at time of cancellation.  This value is\n     * by default {@code false}.\n     *\n     * @param value if {@code true}, remove on cancellation, else don't\n     * @see #getRemoveOnCancelPolicy\n     * @since 1.7\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getRemoveOnCancelPolicy()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Gets the policy on whether cancelled tasks should be immediately\n     * removed from the work queue at time of cancellation.  This value is\n     * by default {@code false}.\n     *\n     * @return {@code true} if cancelled tasks are immediately removed\n     *         from the queue\n     * @see #setRemoveOnCancelPolicy\n     * @since 1.7\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void shutdown()",
+    "returnType" : "void",
+    "comment" : " android-note: Removed \"throws SecurityException\" doc.",
+    "links" : [ ]
+  }, {
+    "name" : "public List<Runnable> shutdownNow()",
+    "returnType" : "List<Runnable>",
+    "comment" : " android-note: Removed \"throws SecurityException\" doc.",
+    "links" : [ ]
+  }, {
+    "name" : "public BlockingQueue<Runnable> getQueue()",
+    "returnType" : "BlockingQueue<Runnable>",
+    "comment" : "\n     * Returns the task queue used by this executor.  Access to the\n     * task queue is intended primarily for debugging and monitoring.\n     * This queue may be in active use.  Retrieving the task queue\n     * does not prevent queued tasks from executing.\n     *\n     * <p>Each element of this queue is a {@link ScheduledFuture}.\n     * For tasks submitted via one of the {@code schedule} methods, the\n     * element will be identical to the returned {@code ScheduledFuture}.\n     * For tasks submitted using {@link #execute execute}, the element\n     * will be a zero-delay {@code ScheduledFuture}.\n     *\n     * <p>Iteration over this queue is <em>not</em> guaranteed to traverse\n     * tasks in the order in which they will execute.\n     *\n     * @return the task queue\n     ",
+    "links" : [ "#execute", "java.util.concurrent.ScheduledFuture" ]
+  } ],
+  "methodNames" : [ " boolean canRunInCurrentRunState(RunnableScheduledFuture<?> task)", "private void delayedExecute(RunnableScheduledFuture<?> task)", " void reExecutePeriodic(RunnableScheduledFuture<?> task)", " void onShutdown()", "protected RunnableScheduledFuture<V> decorateTask(Runnable runnable, RunnableScheduledFuture<V> task)", "protected RunnableScheduledFuture<V> decorateTask(Callable<V> callable, RunnableScheduledFuture<V> task)", "private long triggerTime(long delay, TimeUnit unit)", " long triggerTime(long delay)", "private long overflowFree(long delay)", "public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit)", "public ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit)", "public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit)", "public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit)", "public void execute(Runnable command)", "public Future<?> submit(Runnable task)", "public Future<T> submit(Runnable task, T result)", "public Future<T> submit(Callable<T> task)", "public void setContinueExistingPeriodicTasksAfterShutdownPolicy(boolean value)", "public boolean getContinueExistingPeriodicTasksAfterShutdownPolicy()", "public void setExecuteExistingDelayedTasksAfterShutdownPolicy(boolean value)", "public boolean getExecuteExistingDelayedTasksAfterShutdownPolicy()", "public void setRemoveOnCancelPolicy(boolean value)", "public boolean getRemoveOnCancelPolicy()", "public void shutdown()", "public List<Runnable> shutdownNow()", "public BlockingQueue<Runnable> getQueue()" ],
+  "variableNames" : [ "continueExistingPeriodicTasksAfterShutdown", "executeExistingDelayedTasksAfterShutdown", "removeOnCancel", "sequencer", "DEFAULT_KEEPALIVE_MILLIS" ]
+}

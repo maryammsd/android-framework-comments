@@ -1,0 +1,121 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/stream/AbstractTask.java",
+  "packageName" : "java.util.stream",
+  "className" : "AbstractTask",
+  "comment" : "\n * Abstract base class for most fork-join tasks used to implement stream ops.\n * Manages splitting logic, tracking of child tasks, and intermediate results.\n * Each task is associated with a {@link Spliterator} that describes the portion\n * of the input associated with the subtree rooted at this task.\n * Tasks may be leaf nodes (which will traverse the elements of\n * the {@code Spliterator}) or internal nodes (which split the\n * {@code Spliterator} into multiple child tasks).\n *\n * @implNote\n * <p>This class is based on {@link CountedCompleter}, a form of fork-join task\n * where each task has a semaphore-like count of uncompleted children, and the\n * task is implicitly completed and notified when its last child completes.\n * Internal node tasks will likely override the {@code onCompletion} method from\n * {@code CountedCompleter} to merge the results from child tasks into the\n * current task's result.\n *\n * <p>Splitting and setting up the child task links is done by {@code compute()}\n * for internal nodes.  At {@code compute()} time for leaf nodes, it is\n * guaranteed that the parent's child-related fields (including sibling links\n * for the parent's children) will be set up for all children.\n *\n * <p>For example, a task that performs a reduce would override {@code doLeaf()}\n * to perform a reduction on that leaf node's chunk using the\n * {@code Spliterator}, and override {@code onCompletion()} to merge the results\n * of the child tasks for internal nodes:\n *\n * <pre>{@code\n *     protected S doLeaf() {\n *         spliterator.forEach(...);\n *         return localReductionResult;\n *     }\n *\n *     public void onCompletion(CountedCompleter caller) {\n *         if (!isLeaf()) {\n *             ReduceTask<P_IN, P_OUT, T, R> child = children;\n *             R result = child.getLocalResult();\n *             child = child.nextSibling;\n *             for (; child != null; child = child.nextSibling)\n *                 result = combine(result, child.getLocalResult());\n *             setLocalResult(result);\n *         }\n *     }\n * }</pre>\n *\n * <p>Serialization is not supported as there is no intention to serialize\n * tasks managed by stream ops.\n *\n * @param <P_IN> Type of elements input to the pipeline\n * @param <P_OUT> Type of elements output from the pipeline\n * @param <R> Type of intermediate result, which may be different from operation\n *        result type\n * @param <K> Type of parent, child and sibling tasks\n * @since 1.8\n ",
+  "links" : [ "java.util.concurrent.CountedCompleter", "java.util.Spliterator" ],
+  "variables" : [ {
+    "name" : "LEAF_TARGET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "helper",
+    "type" : "PipelineHelper<P_OUT>",
+    "comment" : " The pipeline helper, common to all tasks in a computation ",
+    "links" : [ ]
+  }, {
+    "name" : "spliterator",
+    "type" : "Spliterator<P_IN>",
+    "comment" : "\n     * The spliterator for the portion of the input associated with the subtree\n     * rooted at this task\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "targetSize",
+    "type" : "long",
+    "comment" : " may be lazily initialized",
+    "links" : [ ]
+  }, {
+    "name" : "leftChild",
+    "type" : "K",
+    "comment" : "\n     * The left child.\n     * null if no children\n     * if non-null rightChild is non-null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "rightChild",
+    "type" : "K",
+    "comment" : "\n     * The right child.\n     * null if no children\n     * if non-null leftChild is non-null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "localResult",
+    "type" : "R",
+    "comment" : " The result of this node, if completed ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static int getLeafTarget()",
+    "returnType" : "int",
+    "comment" : "\n     * Default target of leaf tasks for parallel decomposition.\n     * To allow load balancing, we over-partition, currently to approximately\n     * four tasks per processor, which enables others to help out\n     * if leaf tasks are uneven or some processors are otherwise busy.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract K makeChild(Spliterator<P_IN> spliterator)",
+    "returnType" : "K",
+    "comment" : "\n     * Constructs a new node of type T whose parent is the receiver; must call\n     * the AbstractTask(T, Spliterator) constructor with the receiver and the\n     * provided Spliterator.\n     *\n     * @param spliterator {@code Spliterator} describing the subtree rooted at\n     *        this node, obtained by splitting the parent {@code Spliterator}\n     * @return newly constructed child node\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract R doLeaf()",
+    "returnType" : "R",
+    "comment" : "\n     * Computes the result associated with a leaf node.  Will be called by\n     * {@code compute()} and the result passed to @{code setLocalResult()}\n     *\n     * @return the computed result of a leaf node\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long suggestTargetSize(long sizeEstimate)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns a suggested target leaf size based on the initial size estimate.\n     *\n     * @return suggested target leaf size\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final long getTargetSize(long sizeEstimate)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the targetSize, initializing it via the supplied\n     * size estimate if not already initialized.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public R getRawResult()",
+    "returnType" : "R",
+    "comment" : "\n     * Returns the local result, if any. Subclasses should use\n     * {@link #setLocalResult(Object)} and {@link #getLocalResult()} to manage\n     * results.  This returns the local result so that calls from within the\n     * fork-join framework will return the correct result.\n     *\n     * @return local result for this node previously stored with\n     * {@link #setLocalResult}\n     ",
+    "links" : [ "#setLocalResult", "#setLocalResult(Object)", "#getLocalResult()" ]
+  }, {
+    "name" : "protected void setRawResult(R result)",
+    "returnType" : "void",
+    "comment" : "\n     * Does nothing; instead, subclasses should use\n     * {@link #setLocalResult(Object)}} to manage results.\n     *\n     * @param result must be null, or an exception is thrown (this is a safety\n     *        tripwire to detect when {@code setRawResult()} is being used\n     *        instead of {@code setLocalResult()}\n     ",
+    "links" : [ "#setLocalResult(Object)" ]
+  }, {
+    "name" : "protected R getLocalResult()",
+    "returnType" : "R",
+    "comment" : "\n     * Retrieves a result previously stored with {@link #setLocalResult}\n     *\n     * @return local result for this node previously stored with\n     * {@link #setLocalResult}\n     ",
+    "links" : [ "#setLocalResult" ]
+  }, {
+    "name" : "protected void setLocalResult(R localResult)",
+    "returnType" : "void",
+    "comment" : "\n     * Associates the result with the task, can be retrieved with\n     * {@link #getLocalResult}\n     *\n     * @param localResult local result for this node\n     ",
+    "links" : [ "#getLocalResult" ]
+  }, {
+    "name" : "protected boolean isLeaf()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Indicates whether this task is a leaf node.  (Only valid after\n     * {@link #compute} has been called on this node).  If the node is not a\n     * leaf node, then children will be non-null and numChildren will be\n     * positive.\n     *\n     * @return {@code true} if this task is a leaf node\n     ",
+    "links" : [ "#compute" ]
+  }, {
+    "name" : "protected boolean isRoot()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Indicates whether this task is the root node\n     *\n     * @return {@code true} if this task is the root node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected K getParent()",
+    "returnType" : "K",
+    "comment" : "\n     * Returns the parent of this task, or null if this task is the root\n     *\n     * @return the parent of this task, or null if this task is the root\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void compute()",
+    "returnType" : "void",
+    "comment" : "\n     * Decides whether or not to split a task further or compute it\n     * directly. If computing directly, calls {@code doLeaf} and pass\n     * the result to {@code setRawResult}. Otherwise splits off\n     * subtasks, forking one and continuing as the other.\n     *\n     * <p> The method is structured to conserve resources across a\n     * range of uses.  The loop continues with one of the child tasks\n     * when split, to avoid deep recursion. To cope with spliterators\n     * that may be systematically biased toward left-heavy or\n     * right-heavy splits, we alternate which child is forked versus\n     * continued in the loop.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onCompletion(CountedCompleter<?> caller)",
+    "returnType" : "void",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @implNote\n     * Clears spliterator and children fields.  Overriders MUST call\n     * {@code super.onCompletion} as the last thing they do if they want these\n     * cleared.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean isLeftmostNode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether this node is a \"leftmost\" node -- whether the path from\n     * the root to this node involves only traversing leftmost child links.  For\n     * a leaf node, this means it is the first leaf node in the encounter order.\n     *\n     * @return {@code true} if this node is a \"leftmost\" node\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static int getLeafTarget()", "protected abstract K makeChild(Spliterator<P_IN> spliterator)", "protected abstract R doLeaf()", "public static long suggestTargetSize(long sizeEstimate)", "protected final long getTargetSize(long sizeEstimate)", "public R getRawResult()", "protected void setRawResult(R result)", "protected R getLocalResult()", "protected void setLocalResult(R localResult)", "protected boolean isLeaf()", "protected boolean isRoot()", "protected K getParent()", "public void compute()", "public void onCompletion(CountedCompleter<?> caller)", "protected boolean isLeftmostNode()" ],
+  "variableNames" : [ "LEAF_TARGET", "helper", "spliterator", "targetSize", "leftChild", "rightChild", "localResult" ]
+}

@@ -1,0 +1,41 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/chromium/base/CallbackController.java",
+  "packageName" : "org.chromium.base",
+  "className" : "CallbackController",
+  "comment" : "\n * Class allowing to wrap lambdas, such as {@link Callback} or {@link Runnable} with a cancelable\n * version of the same, and cancel them in bulk when {@link #destroy()} is called. Use an instance\n * of this class to wrap lambdas passed to other objects, and later use {@link #destroy()} to\n * prevent future invocations of these lambdas.\n *\n * <p>Besides helping with lifecycle management, this also prevents holding onto object references\n * after callbacks have been canceled.\n *\n * <p>Example usage:\n *\n * <pre>{@code\n * public class Foo {\n *    private CallbackController mCallbackController = new CallbackController();\n *    private SomeDestructibleClass mDestructible = new SomeDestructibleClass();\n *\n *    // Classic destroy, with clean up of cancelables.\n *    public void destroy() {\n *        // This call makes sure all tracked lambdas are destroyed.\n *        // It is recommended to be done at the top of the destroy methods, to ensure calls from\n *        // other threads don't use already destroyed resources.\n *        if (mCallbackController != null) {\n *            mCallbackController.destroy();\n *            mCallbackController = null;\n *        }\n *\n *        if (mDestructible != null) {\n *            mDestructible.destroy();\n *            mDestructible = null;\n *        }\n *    }\n *\n *    // Sets up Bar instance by providing it with a set of dangerous callbacks all of which could\n *    // cause a NullPointerException if invoked after destroy().\n *    public void setUpBar(Bar bar) {\n *        // Notice all callbacks below would fail post destroy, if they were not canceled.\n *        bar.setDangerousLambda(mCallbackController.makeCancelable(() -> mDestructible.method()));\n *        bar.setDangerousRunnable(mCallbackController.makeCancelable(this::dangerousRunnable));\n *        bar.setDangerousOtherCallback(\n *                mCallbackController.makeCancelable(baz -> mDestructible.setBaz(baz)));\n *        bar.setDangerousCallback(mCallbackController.makeCancelable(this::setBaz));\n *    }\n *\n *    private void dangerousRunnable() {\n *        mDestructible.method();\n *    }\n *\n *    private void setBaz(Baz baz) {\n *        mDestructible.setBaz(baz);\n *    }\n * }\n * }</pre>\n *\n * <p>It does not matter if the lambda is intended to be invoked once or more times, as it is only\n * weakly referred from this class. When the lambda is no longer needed, it can be safely garbage\n * collected. All invocations after {@link #destroy()} will be ignored.\n *\n * <p>Each instance of this class in only meant for a single {@link #destroy()} call. After it is\n * destroyed, the owning class should create a new instance instead:\n *\n * <pre>{@code\n * // Somewhere inside Foo.\n * mCallbackController.destroy();  // Invalidates all current callbacks.\n * mCallbackController = new CallbackController();  // Allows to start handing out new callbacks.\n * }</pre>\n ",
+  "links" : [ "Runnable", "org.chromium.base.Callback", "#destroy()" ],
+  "variables" : [ {
+    "name" : "mCancelables",
+    "type" : "ArrayList<WeakReference<Cancelable>>",
+    "comment" : " A list of cancelables created and cancelable by this object. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public synchronized Callback<T> makeCancelable(@NonNull Callback<T> callback)",
+    "returnType" : "Callback<T>",
+    "comment" : "\n     * Wraps a provided {@link Callback} with a cancelable object that is tracked by this {@link\n     * CallbackController}. To cancel a resulting wrapped instance destroy the host.\n     *\n     * <p>This method must not be called after {@link #destroy()}.\n     *\n     * @param <T> The type of the callback result.\n     * @param callback A callback that will be made cancelable.\n     * @return A cancelable instance of the callback.\n     ",
+    "links" : [ "org.chromium.base.Callback", "org.chromium.base.CallbackController", "#destroy()" ]
+  }, {
+    "name" : "public synchronized Runnable makeCancelable(@NonNull Runnable runnable)",
+    "returnType" : "Runnable",
+    "comment" : "\n     * Wraps a provided {@link Runnable} with a cancelable object that is tracked by this {@link\n     * CallbackController}. To cancel a resulting wrapped instance destroy the host.\n     *\n     * <p>This method must not be called after {@link #destroy()}.\n     *\n     * @param runnable A runnable that will be made cancelable.\n     * @return A cancelable instance of the runnable.\n     ",
+    "links" : [ "Runnable", "org.chromium.base.CallbackController", "#destroy()" ]
+  }, {
+    "name" : "private void addInternal(Cancelable cancelable)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void destroy()",
+    "returnType" : "void",
+    "comment" : "\n     * Cancels all of the cancelables that have not been garbage collected yet.\n     *\n     * <p>This method must only be called once and makes the instance unusable afterwards.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkNotCanceled()",
+    "returnType" : "void",
+    "comment" : " If the cancelation already happened, throws an {@link IllegalStateException}. ",
+    "links" : [ "IllegalStateException" ]
+  } ],
+  "methodNames" : [ "public synchronized Callback<T> makeCancelable(@NonNull Callback<T> callback)", "public synchronized Runnable makeCancelable(@NonNull Runnable runnable)", "private void addInternal(Cancelable cancelable)", "public synchronized void destroy()", "private void checkNotCanceled()" ],
+  "variableNames" : [ "mCancelables" ]
+}

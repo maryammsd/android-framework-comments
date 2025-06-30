@@ -1,0 +1,196 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ConcurrentLinkedQueue.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "ConcurrentLinkedQueue",
+  "comment" : "\n * An unbounded thread-safe {@linkplain Queue queue} based on linked nodes.\n * This queue orders elements FIFO (first-in-first-out).\n * The <em>head</em> of the queue is that element that has been on the\n * queue the longest time.\n * The <em>tail</em> of the queue is that element that has been on the\n * queue the shortest time. New elements\n * are inserted at the tail of the queue, and the queue retrieval\n * operations obtain elements at the head of the queue.\n * A {@code ConcurrentLinkedQueue} is an appropriate choice when\n * many threads will share access to a common collection.\n * Like most other concurrent collection implementations, this class\n * does not permit the use of {@code null} elements.\n *\n * <p>This implementation employs an efficient <em>non-blocking</em>\n * algorithm based on one described in\n * <a href=\"http://www.cs.rochester.edu/~scott/papers/1996_PODC_queues.pdf\">\n * Simple, Fast, and Practical Non-Blocking and Blocking Concurrent Queue\n * Algorithms</a> by Maged M. Michael and Michael L. Scott.\n *\n * <p>Iterators are <i>weakly consistent</i>, returning elements\n * reflecting the state of the queue at some point at or since the\n * creation of the iterator.  They do <em>not</em> throw {@link\n * java.util.ConcurrentModificationException}, and may proceed concurrently\n * with other operations.  Elements contained in the queue since the creation\n * of the iterator will be returned exactly once.\n *\n * <p>Beware that, unlike in most collections, the {@code size} method\n * is <em>NOT</em> a constant-time operation. Because of the\n * asynchronous nature of these queues, determining the current number\n * of elements requires a traversal of the elements, and so may report\n * inaccurate results if this collection is modified during traversal.\n *\n * <p>Bulk operations that add, remove, or examine multiple elements,\n * such as {@link #addAll}, {@link #removeIf} or {@link #forEach},\n * are <em>not</em> guaranteed to be performed atomically.\n * For example, a {@code forEach} traversal concurrent with an {@code\n * addAll} operation might observe only some of the added elements.\n *\n * <p>This class and its iterator implement all of the <em>optional</em>\n * methods of the {@link Queue} and {@link Iterator} interfaces.\n *\n * <p>Memory consistency effects: As with other concurrent\n * collections, actions in a thread prior to placing an object into a\n * {@code ConcurrentLinkedQueue}\n * <a href=\"package-summary.html#MemoryVisibility\"><i>happen-before</i></a>\n * actions subsequent to the access or removal of that element from\n * the {@code ConcurrentLinkedQueue} in another thread.\n *\n * <p>This class is a member of the\n * <a href=\"{@docRoot}/java.base/java/util/package-summary.html#CollectionsFramework\">\n * Java Collections Framework</a>.\n *\n * @since 1.5\n * @author Doug Lea\n * @param <E> the type of elements held in this queue\n ",
+  "links" : [ "#forEach", "java.util.Iterator", "java.util.AbstractQueue", "#addAll", "java.util.ConcurrentModificationException", "#removeIf" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "head",
+    "type" : "Node<E>",
+    "comment" : "\n     * A node from which the first live (non-deleted) node (if any)\n     * can be reached in O(1) time.\n     * Invariants:\n     * - all live nodes are reachable from head via succ()\n     * - head != null\n     * - (tmp = head).next != tmp || tmp != head\n     * Non-invariants:\n     * - head.item may or may not be null.\n     * - it is permitted for tail to lag behind head, that is, for tail\n     *   to not be reachable from head!\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "tail",
+    "type" : "Node<E>",
+    "comment" : "\n     * A node from which the last node on list (that is, the unique\n     * node with node.next == null) can be reached in O(1) time.\n     * Invariants:\n     * - the last node is always reachable from tail via succ()\n     * - tail != null\n     * Non-invariants:\n     * - tail.item may or may not be null.\n     * - it is permitted for tail to lag behind head, that is, for tail\n     *   to not be reachable from head!\n     * - tail.next may or may not be self-linked.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_HOPS",
+    "type" : "int",
+    "comment" : "\n     * Tolerate this many consecutive dead nodes before CAS-collapsing.\n     * Amortized cost of clear() is (1 + 1/MAX_HOPS) CASes per element.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HEAD",
+    "type" : "VarHandle",
+    "comment" : " VarHandle mechanics",
+    "links" : [ ]
+  }, {
+    "name" : "TAIL",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ITEM",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NEXT",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean add(E e)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Inserts the specified element at the tail of this queue.\n     * As the queue is unbounded, this method will never throw\n     * {@link IllegalStateException} or return {@code false}.\n     *\n     * @return {@code true} (as specified by {@link Collection#add})\n     * @throws NullPointerException if the specified element is null\n     ",
+    "links" : [ "IllegalStateException", "java.util.Collection#add" ]
+  }, {
+    "name" : " final void updateHead(Node<E> h, Node<E> p)",
+    "returnType" : "void",
+    "comment" : "\n     * Tries to CAS head to p. If successful, repoint old head to itself\n     * as sentinel for succ(), below.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<E> succ(Node<E> p)",
+    "returnType" : "Node<E>",
+    "comment" : "\n     * Returns the successor of p, or the head node if p.next has been\n     * linked to self, which will only be true if traversing with a\n     * stale pointer that is now off the list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean tryCasSuccessor(Node<E> pred, Node<E> c, Node<E> p)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tries to CAS pred.next (or head, if pred is null) from c to p.\n     * Caller must ensure that we're not unlinking the trailing node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Node<E> skipDeadNodes(Node<E> pred, Node<E> c, Node<E> p, Node<E> q)",
+    "returnType" : "Node<E>",
+    "comment" : "\n     * Collapse dead nodes between pred and q.\n     * @param pred the last known live node, or null if none\n     * @param c the first dead node\n     * @param p the last dead node\n     * @param q p.next: the next live node, or null if at end\n     * @return either old pred or p if pred dead or CAS failed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean offer(E e)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Inserts the specified element at the tail of this queue.\n     * As the queue is unbounded, this method will never return {@code false}.\n     *\n     * @return {@code true} (as specified by {@link Queue#offer})\n     * @throws NullPointerException if the specified element is null\n     ",
+    "links" : [ "java.util.AbstractQueue#offer" ]
+  }, {
+    "name" : "public E poll()",
+    "returnType" : "E",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public E peek()",
+    "returnType" : "E",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " Node<E> first()",
+    "returnType" : "Node<E>",
+    "comment" : "\n     * Returns the first live (non-deleted) node on list, or null if none.\n     * This is yet another variant of poll/peek; here returning the\n     * first node, not element.  We could make peek() a wrapper around\n     * first(), but that would cost an extra volatile read of item,\n     * and the need to add a retry loop to deal with the possibility\n     * of losing a race to a concurrent poll().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this queue contains no elements.\n     *\n     * @return {@code true} if this queue contains no elements\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of elements in this queue.  If this queue\n     * contains more than {@code Integer.MAX_VALUE} elements, returns\n     * {@code Integer.MAX_VALUE}.\n     *\n     * <p>Beware that, unlike in most collections, this method is\n     * <em>NOT</em> a constant-time operation. Because of the\n     * asynchronous nature of these queues, determining the current\n     * number of elements requires an O(n) traversal.\n     * Additionally, if elements are added or removed during execution\n     * of this method, the returned result may be inaccurate.  Thus,\n     * this method is typically not very useful in concurrent\n     * applications.\n     *\n     * @return the number of elements in this queue\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean contains(Object o)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this queue contains the specified element.\n     * More formally, returns {@code true} if and only if this queue contains\n     * at least one element {@code e} such that {@code o.equals(e)}.\n     *\n     * @param o object to be checked for containment in this queue\n     * @return {@code true} if this queue contains the specified element\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean remove(Object o)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Removes a single instance of the specified element from this queue,\n     * if it is present.  More formally, removes an element {@code e} such\n     * that {@code o.equals(e)}, if this queue contains one or more such\n     * elements.\n     * Returns {@code true} if this queue contained the specified element\n     * (or equivalently, if this queue changed as a result of the call).\n     *\n     * @param o element to be removed from this queue, if present\n     * @return {@code true} if this queue changed as a result of the call\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean addAll(Collection<? extends E> c)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Appends all of the elements in the specified collection to the end of\n     * this queue, in the order that they are returned by the specified\n     * collection's iterator.  Attempts to {@code addAll} of a queue to\n     * itself result in {@code IllegalArgumentException}.\n     *\n     * @param c the elements to be inserted into this queue\n     * @return {@code true} if this queue changed as a result of the call\n     * @throws NullPointerException if the specified collection or any\n     *         of its elements are null\n     * @throws IllegalArgumentException if the collection is this queue\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Object[] toArrayInternal(Object[] a)",
+    "returnType" : "Object[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Object[] toArray()",
+    "returnType" : "Object[]",
+    "comment" : "\n     * Returns an array containing all of the elements in this queue, in\n     * proper sequence.\n     *\n     * <p>The returned array will be \"safe\" in that no references to it are\n     * maintained by this queue.  (In other words, this method must allocate\n     * a new array).  The caller is thus free to modify the returned array.\n     *\n     * <p>This method acts as bridge between array-based and collection-based\n     * APIs.\n     *\n     * @return an array containing all of the elements in this queue\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public T[] toArray(T[] a)",
+    "returnType" : "T[]",
+    "comment" : "\n     * Returns an array containing all of the elements in this queue, in\n     * proper sequence; the runtime type of the returned array is that of\n     * the specified array.  If the queue fits in the specified array, it\n     * is returned therein.  Otherwise, a new array is allocated with the\n     * runtime type of the specified array and the size of this queue.\n     *\n     * <p>If this queue fits in the specified array with room to spare\n     * (i.e., the array has more elements than this queue), the element in\n     * the array immediately following the end of the queue is set to\n     * {@code null}.\n     *\n     * <p>Like the {@link #toArray()} method, this method acts as bridge between\n     * array-based and collection-based APIs.  Further, this method allows\n     * precise control over the runtime type of the output array, and may,\n     * under certain circumstances, be used to save allocation costs.\n     *\n     * <p>Suppose {@code x} is a queue known to contain only strings.\n     * The following code can be used to dump the queue into a newly\n     * allocated array of {@code String}:\n     *\n     * <pre> {@code String[] y = x.toArray(new String[0]);}</pre>\n     *\n     * Note that {@code toArray(new Object[0])} is identical in function to\n     * {@code toArray()}.\n     *\n     * @param a the array into which the elements of the queue are to\n     *          be stored, if it is big enough; otherwise, a new array of the\n     *          same runtime type is allocated for this purpose\n     * @return an array containing all of the elements in this queue\n     * @throws ArrayStoreException if the runtime type of the specified array\n     *         is not a supertype of the runtime type of every element in\n     *         this queue\n     * @throws NullPointerException if the specified array is null\n     ",
+    "links" : [ "#toArray()" ]
+  }, {
+    "name" : "public Iterator<E> iterator()",
+    "returnType" : "Iterator<E>",
+    "comment" : "\n     * Returns an iterator over the elements in this queue in proper sequence.\n     * The elements will be returned in order from first (head) to last (tail).\n     *\n     * <p>The returned iterator is\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * @return an iterator over the elements in this queue in proper sequence\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Saves this queue to a stream (that is, serializes it).\n     *\n     * @param s the stream\n     * @throws java.io.IOException if an I/O error occurs\n     * @serialData All of the elements (each an {@code E}) in\n     * the proper order, followed by a null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reconstitutes this queue from a stream (that is, deserializes it).\n     * @param s the stream\n     * @throws ClassNotFoundException if the class of a serialized object\n     *         could not be found\n     * @throws java.io.IOException if an I/O error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Spliterator<E> spliterator()",
+    "returnType" : "Spliterator<E>",
+    "comment" : "\n     * Returns a {@link Spliterator} over the elements in this queue.\n     *\n     * <p>The returned spliterator is\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * <p>The {@code Spliterator} reports {@link Spliterator#CONCURRENT},\n     * {@link Spliterator#ORDERED}, and {@link Spliterator#NONNULL}.\n     *\n     * @implNote\n     * The {@code Spliterator} implements {@code trySplit} to permit limited\n     * parallelism.\n     *\n     * @return a {@code Spliterator} over the elements in this queue\n     * @since 1.8\n     ",
+    "links" : [ "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT", "java.util.Spliterator", "java.util.Spliterator#ORDERED" ]
+  }, {
+    "name" : "public boolean removeIf(Predicate<? super E> filter)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @throws NullPointerException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean removeAll(Collection<?> c)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @throws NullPointerException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean retainAll(Collection<?> c)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @throws NullPointerException {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clear()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean bulkRemove(Predicate<? super E> filter)",
+    "returnType" : "boolean",
+    "comment" : " Implementation of bulk remove methods. ",
+    "links" : [ ]
+  }, {
+    "name" : " void forEachFrom(Consumer<? super E> action, Node<E> p)",
+    "returnType" : "void",
+    "comment" : "\n     * Runs action on each element found during a traversal starting at p.\n     * If p is null, the action is not run.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEach(Consumer<? super E> action)",
+    "returnType" : "void",
+    "comment" : "\n     * @throws NullPointerException {@inheritDoc}\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public boolean add(E e)", " final void updateHead(Node<E> h, Node<E> p)", " final Node<E> succ(Node<E> p)", "private boolean tryCasSuccessor(Node<E> pred, Node<E> c, Node<E> p)", "private Node<E> skipDeadNodes(Node<E> pred, Node<E> c, Node<E> p, Node<E> q)", "public boolean offer(E e)", "public E poll()", "public E peek()", " Node<E> first()", "public boolean isEmpty()", "public int size()", "public boolean contains(Object o)", "public boolean remove(Object o)", "public boolean addAll(Collection<? extends E> c)", "public String toString()", "private Object[] toArrayInternal(Object[] a)", "public Object[] toArray()", "public T[] toArray(T[] a)", "public Iterator<E> iterator()", "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException", "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException", "public Spliterator<E> spliterator()", "public boolean removeIf(Predicate<? super E> filter)", "public boolean removeAll(Collection<?> c)", "public boolean retainAll(Collection<?> c)", "public void clear()", "private boolean bulkRemove(Predicate<? super E> filter)", " void forEachFrom(Consumer<? super E> action, Node<E> p)", "public void forEach(Consumer<? super E> action)" ],
+  "variableNames" : [ "serialVersionUID", "head", "tail", "MAX_HOPS", "HEAD", "TAIL", "ITEM", "NEXT" ]
+}

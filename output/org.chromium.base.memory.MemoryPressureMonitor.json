@@ -1,0 +1,126 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/chromium/base/memory/MemoryPressureMonitor.java",
+  "packageName" : "org.chromium.base.memory",
+  "className" : "MemoryPressureMonitor",
+  "comment" : "\n * This class monitors memory pressure and reports it to the native side.\n * Even though there can be other callbacks besides MemoryPressureListener (which reports\n * pressure to the native side, and is added implicitly), the class is designed to suite\n * needs of native MemoryPressureListeners.\n *\n * There are two groups of MemoryPressureListeners:\n *\n * 1. Stateless, i.e. ones that simply free memory (caches, etc.) in response to memory\n *    pressure. These listeners need to be called periodically (to have effect), but not\n *    too frequently (to avoid regressing performance too much).\n *\n * 2. Stateful, i.e. ones that change their behavior based on the last received memory\n *    pressure (in addition to freeing memory). These listeners need to know when the\n *    pressure subsides, i.e. they need to be notified about CRITICAL->MODERATE changes.\n *\n * Android notifies about memory pressure through onTrimMemory() / onLowMemory() callbacks\n * from ComponentCallbacks2, but these are unreliable (e.g. called too early, called just\n * once, not called when memory pressure subsides, etc., see https://crbug.com/813909 for\n * more examples).\n *\n * There is also ActivityManager.getMyMemoryState() API which returns current pressure for\n * the calling process. It has its caveats, for example it can't be called from isolated\n * processes (renderers). Plus we don't want to poll getMyMemoryState() unnecessarily, for\n * example there is no reason to poll it when Chrome is in the background.\n *\n * This class implements the following principles:\n *\n * 1. Throttle pressure signals sent to callbacks.\n *    Callbacks are called at most once during throttling interval. If same pressure is\n *    reported several times during the interval, all reports except the first one are\n *    ignored.\n *\n * 2. Always report changes in pressure.\n *    If pressure changes during the interval, the change is not ignored, but delayed\n *    until the end of the interval.\n *\n * 3. Poll on CRITICAL memory pressure.\n *    Once CRITICAL pressure is reported, getMyMemoryState API is used to periodically\n *    query pressure until it subsides (becomes non-CRITICAL).\n *\n * Zooming out, the class is used as follows:\n *\n * 1. Only the browser process / WebView process poll, and it only polls when it makes\n *    sense to do so (when Chrome is in the foreground / there are WebView instances\n *    around).\n *\n * 2. Services (GPU, renderers) don't poll, instead they get additional pressure signals\n *    from the main process.\n *\n * NOTE: This class should only be used on UiThread as defined by ThreadUtils (which is\n *       Android main thread for Chrome, but can be some other thread for WebView).\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "DEFAULT_THROTTLING_INTERVAL_MS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mThrottlingIntervalMs",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastReportedPressure",
+    "type" : "int",
+    "comment" : " Pressure reported to callbacks in the current throttling interval.",
+    "links" : [ ]
+  }, {
+    "name" : "mThrottledPressure",
+    "type" : "Integer",
+    "comment" : " or null if no pressure was received.",
+    "links" : [ ]
+  }, {
+    "name" : "mIsInsideThrottlingInterval",
+    "type" : "boolean",
+    "comment" : " Whether we need to throttle pressure signals.",
+    "links" : [ ]
+  }, {
+    "name" : "mPollingEnabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentPressureSupplierForTesting",
+    "type" : "Supplier<Integer>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReportingCallbackForTesting",
+    "type" : "MemoryPressureCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mThrottlingIntervalTask",
+    "type" : "Runnable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "INSTANCE",
+    "type" : "MemoryPressureMonitor",
+    "comment" : " The only instance.",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void registerComponentCallbacks()",
+    "returnType" : "void",
+    "comment" : " Starts listening to ComponentCallbacks2. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void enablePolling()",
+    "returnType" : "void",
+    "comment" : "\n     * Enables memory pressure polling.\n     * See class comment for specifics. This method also does a single pressure check to get\n     * the current pressure.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disablePolling()",
+    "returnType" : "void",
+    "comment" : " Disables memory pressure polling. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyPressure(@MemoryPressureLevel int pressure)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies the class about change in memory pressure.\n     * Note that |pressure| might get throttled or delayed, i.e. calling this method doesn't\n     * necessarily call the callbacks. See the class comment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getLastReportedPressure()",
+    "returnType" : "int",
+    "comment" : "\n     * Last pressure that was reported to MemoryPressureListener.\n     * Returns MemoryPressureLevel.NONE if nothing was reported yet.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void reportPressure(@MemoryPressureLevel int pressure)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onThrottlingIntervalFinished()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void reportCurrentPressure()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void startThrottlingInterval()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCurrentPressureSupplierForTesting(Supplier<Integer> supplier)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setReportingCallbackForTesting(MemoryPressureCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static Integer getCurrentMemoryPressure()",
+    "returnType" : "Integer",
+    "comment" : "\n     * Queries current memory pressure.\n     * Returns null if the pressure couldn't be determined.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Integer memoryPressureFromTrimLevel(int level)",
+    "returnType" : "Integer",
+    "comment" : "\n     * Maps ComponentCallbacks2.TRIM_* value to MemoryPressureLevel.\n     * Returns null if |level| couldn't be mapped and should be ignored.\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void registerComponentCallbacks()", "public void enablePolling()", "public void disablePolling()", "public void notifyPressure(@MemoryPressureLevel int pressure)", "public int getLastReportedPressure()", "private void reportPressure(@MemoryPressureLevel int pressure)", "private void onThrottlingIntervalFinished()", "private void reportCurrentPressure()", "private void startThrottlingInterval()", "public void setCurrentPressureSupplierForTesting(Supplier<Integer> supplier)", "public void setReportingCallbackForTesting(MemoryPressureCallback callback)", "private static Integer getCurrentMemoryPressure()", "public static Integer memoryPressureFromTrimLevel(int level)" ],
+  "variableNames" : [ "DEFAULT_THROTTLING_INTERVAL_MS", "mThrottlingIntervalMs", "mLastReportedPressure", "mThrottledPressure", "mIsInsideThrottlingInterval", "mPollingEnabled", "mCurrentPressureSupplierForTesting", "mReportingCallbackForTesting", "mThrottlingIntervalTask", "INSTANCE" ]
+}

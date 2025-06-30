@@ -1,12 +1,23 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/animation/AnimationHandler.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/animation/AnimationHandler.java",
   "packageName" : "android.animation",
   "className" : "AnimationHandler",
   "comment" : "\n * This custom, static handler handles the timing pulse that is shared by all active\n * ValueAnimators. This approach ensures that the setting of animation values will happen on the\n * same thread that animations start on, and that all animations will share the same times for\n * calculating their values, which makes synchronizing animations possible.\n *\n * The handler uses the Choreographer by default for doing periodic callbacks. A custom\n * AnimationFrameCallbackProvider can be set on the handler to provide timing pulse that\n * may be independent of UI frame update. This could be useful in testing.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LOCAL_LOGV",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mDelayedCallbackStartTime",
     "type" : "ArrayMap<AnimationFrameCallback, Long>",
-    "comment" : "\n     * Internal per-thread collections used to avoid set collisions as animations start and end\n     * while being processed.\n     * @hide\n     ",
+    "comment" : "\n     * Internal per-thread collections used to avoid set collisions as animations start and end\n     * while being processed.\n     ",
     "links" : [ ]
   }, {
     "name" : "mAnimationCallbacks",
@@ -24,6 +35,26 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "sAnimatorPausingEnabled",
+    "type" : "boolean",
+    "comment" : " Static flag which allows the pausing behavior to be globally disabled/enabled.",
+    "links" : [ ]
+  }, {
+    "name" : "sOverrideAnimatorPausingSystemProperty",
+    "type" : "boolean",
+    "comment" : " Static flag which prevents the system property from overriding sAnimatorPausingEnabled field.",
+    "links" : [ ]
+  }, {
+    "name" : "mPausedAnimators",
+    "type" : "ArrayList<Animator>",
+    "comment" : "\n     * This paused list is used to store animators forcibly paused when the activity\n     * went into the background (to avoid unnecessary background processing work).\n     * These animators should be resume()'d when the activity returns to the foreground.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mAnimatorRequestors",
+    "type" : "ArrayList<WeakReference<Object>>",
+    "comment" : "\n     * This structure is used to store the currently active objects (ViewRootImpls or\n     * WallpaperService.Engines) in the process. Each of these objects sends a request to\n     * AnimationHandler when it goes into the background (request to pause) or foreground\n     * (request to resume). Because all animators are managed by AnimationHandler on the same\n     * thread, it should only ever pause animators when *all* requestors are in the background.\n     * This list tracks the background/foreground state of all requestors and only ever\n     * pauses animators when all items are in the background (false). To simplify, we only ever\n     * store visible (foreground) requestors; if the set size reaches zero, there are no\n     * objects in the foreground and it is time to pause animators.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "mFrameCallback",
     "type" : "Choreographer.FrameCallback",
     "comment" : "",
@@ -34,14 +65,64 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "sTestHandler",
+    "type" : "AnimationHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mListDirty",
     "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPauser",
+    "type" : "Choreographer.FrameCallback",
     "comment" : "",
     "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public static AnimationHandler getInstance()",
     "returnType" : "AnimationHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static AnimationHandler setTestHandler(@Nullable AnimationHandler handler)",
+    "returnType" : "AnimationHandler",
+    "comment" : "\n     * Sets an instance that will be returned by {@link #getInstance()} on every thread.\n     * @return  the previously active test handler, if any.\n     * @hide\n     ",
+    "links" : [ "#getInstance()" ]
+  }, {
+    "name" : "private static boolean isPauseBgAnimationsEnabledInSystemProperties()",
+    "returnType" : "boolean",
+    "comment" : "\n     * System property that controls the behavior of pausing infinite animators when an app\n     * is moved to the background.\n     *\n     * @return the value of 'framework.pause_bg_animations.enabled' system property\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setAnimatorPausingEnabled(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable the default behavior of pausing infinite animators when\n     * apps go into the background.\n     *\n     * @param enable Enable (default behavior) or disable background pausing behavior.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setOverrideAnimatorPausingSystemProperty(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * Prevents the setAnimatorPausingEnabled behavior from being overridden\n     * by the 'framework.pause_bg_animations.enabled' system property value.\n     *\n     * This is for testing purposes only.\n     *\n     * @param enable Enable or disable (default behavior) overriding the system\n     *               property.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void removeRequestor(Object requestor)",
+    "returnType" : "void",
+    "comment" : "\n     * This is called when a window goes away. We should remove\n     * it from the requestors list to ensure that we are counting requests correctly and not\n     * tracking obsolete+enabled requestors.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void requestAnimatorsEnabled(boolean enable, Object requestor)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called from ViewRootImpl or WallpaperService when either a window is no\n     * longer visible (enable == false) or when a window becomes visible (enable == true).\n     * If animators are not properly disabled when activities are backgrounded, it can lead to\n     * unnecessary processing, particularly for infinite animators, as the system will continue\n     * to pulse timing events even though the results are not visible. As a workaround, we\n     * pause all un-paused infinite animators, and resume them when any window in the process\n     * becomes visible.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void requestAnimatorsEnabledImpl(boolean enable, Object requestor)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void resumeAnimators()",
+    "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -115,6 +196,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "mDelayedCallbackStartTime", "mAnimationCallbacks", "mCommitCallbacks", "mProvider", "mFrameCallback", "sAnimatorHandler", "mListDirty" ],
-  "methodNames" : [ "public static AnimationHandler getInstance()", "public void setProvider(AnimationFrameCallbackProvider provider)", "private AnimationFrameCallbackProvider getProvider()", "public void addAnimationFrameCallback(final AnimationFrameCallback callback, long delay)", "public void addOneShotCommitCallback(final AnimationFrameCallback callback)", "public void removeCallback(AnimationFrameCallback callback)", "private void doAnimationFrame(long frameTime)", "private void commitAnimationFrame(AnimationFrameCallback callback, long frameTime)", "private boolean isCallbackDue(AnimationFrameCallback callback, long currentTime)", "public static int getAnimationCount()", "public static void setFrameDelay(long delay)", "public static long getFrameDelay()", " void autoCancelBasedOn(ObjectAnimator objectAnimator)", "private void cleanUpList()", "private int getCallbackSize()" ]
+  "methodNames" : [ "public static AnimationHandler getInstance()", "public static AnimationHandler setTestHandler(@Nullable AnimationHandler handler)", "private static boolean isPauseBgAnimationsEnabledInSystemProperties()", "public static void setAnimatorPausingEnabled(boolean enable)", "public static void setOverrideAnimatorPausingSystemProperty(boolean enable)", "public static void removeRequestor(Object requestor)", "public static void requestAnimatorsEnabled(boolean enable, Object requestor)", "private void requestAnimatorsEnabledImpl(boolean enable, Object requestor)", "private void resumeAnimators()", "public void setProvider(AnimationFrameCallbackProvider provider)", "private AnimationFrameCallbackProvider getProvider()", "public void addAnimationFrameCallback(final AnimationFrameCallback callback, long delay)", "public void addOneShotCommitCallback(final AnimationFrameCallback callback)", "public void removeCallback(AnimationFrameCallback callback)", "private void doAnimationFrame(long frameTime)", "private void commitAnimationFrame(AnimationFrameCallback callback, long frameTime)", "private boolean isCallbackDue(AnimationFrameCallback callback, long currentTime)", "public static int getAnimationCount()", "public static void setFrameDelay(long delay)", "public static long getFrameDelay()", " void autoCancelBasedOn(ObjectAnimator objectAnimator)", "private void cleanUpList()", "private int getCallbackSize()" ],
+  "variableNames" : [ "TAG", "LOCAL_LOGV", "mDelayedCallbackStartTime", "mAnimationCallbacks", "mCommitCallbacks", "mProvider", "sAnimatorPausingEnabled", "sOverrideAnimatorPausingSystemProperty", "mPausedAnimators", "mAnimatorRequestors", "mFrameCallback", "sAnimatorHandler", "sTestHandler", "mListDirty", "mPauser" ]
 }

@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/service/trust/TrustAgentService.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/service/trust/TrustAgentService.java",
   "packageName" : "android.service.trust",
   "className" : "TrustAgentService",
   "comment" : "\n * A service that notifies the system about whether it believes the environment of the device\n * to be trusted.\n *\n * <p>Trust agents may only be provided by the platform. It is expected that there is only\n * one trust agent installed on the platform. In the event there is more than one,\n * either trust agent can enable trust.\n * </p>\n *\n * <p>To extend this class, you must declare the service in your manifest file with\n * the {@link android.Manifest.permission#BIND_TRUST_AGENT} permission\n * and include an intent filter with the {@link #SERVICE_INTERFACE} action. For example:</p>\n * <pre>\n * &lt;service android:name=\".TrustAgent\"\n *          android:label=\"&#64;string/service_name\"\n *          android:permission=\"android.permission.BIND_TRUST_AGENT\">\n *     &lt;intent-filter>\n *         &lt;action android:name=\"android.service.trust.TrustAgentService\" />\n *     &lt;/intent-filter>\n *     &lt;meta-data android:name=\"android.service.trust.trustagent\"\n *          android:value=\"&#64;xml/trust_agent\" />\n * &lt;/service></pre>\n *\n * <p>The associated meta-data file can specify an activity that is accessible through Settings\n * and should allow configuring the trust agent, as defined in\n * {@link android.R.styleable#TrustAgent}. For example:</p>\n *\n * <pre>\n * &lt;trust-agent xmlns:android=\"http://schemas.android.com/apk/res/android\"\n *          android:settingsActivity=\".TrustAgentSettings\" /></pre>\n *\n * @hide\n ",
+  "links" : [ "android.R.styleable#TrustAgent", "#SERVICE_INTERFACE", "android.Manifest.permission#BIND_TRUST_AGENT" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -32,6 +33,16 @@
     "name" : "FLAG_GRANT_TRUST_DISMISS_KEYGUARD",
     "type" : "int",
     "comment" : "\n     * Flag for {@link #grantTrust(CharSequence, long, int)} indicating that the agent would like\n     * to dismiss the keyguard. When using this flag, the {@code TrustAgentService} must ensure\n     * it is only set in response to a direct user action with the expectation of dismissing the\n     * keyguard.\n     ",
+    "links" : [ "#grantTrust(CharSequence" ]
+  }, {
+    "name" : "FLAG_GRANT_TRUST_TEMPORARY_AND_RENEWABLE",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #grantTrust(CharSequence, long, int)} indicating the platform should\n     * automatically remove trust after some conditions are met (detailed below) with the option for\n     * the agent to renew the trust again later.\n     *\n     * <p>After this is called, the agent will grant trust until the platform thinks an active\n     * user is no longer using that trust. This can happen for any reason as determined by the\n     * platform. For example, if the user dismisses keyguard, the platform will remove trust;\n     * since this does not automatically lock the device, this results in the device locking the\n     * next time the screen turns off.\n     *\n     * <p>When the platform internally removes the agent's trust in this manner, an agent can\n     * re-grant it (via a call to grantTrust) without the user having to unlock the device through\n     * another method (e.g. PIN). This renewable state only persists for a limited time.\n     ",
+    "links" : [ "#grantTrust(CharSequence" ]
+  }, {
+    "name" : "FLAG_GRANT_TRUST_DISPLAY_MESSAGE",
+    "type" : "int",
+    "comment" : "\n     * Flag for {@link #grantTrust(CharSequence, long, int)} indicating that the message should\n     * be displayed to the user.\n     *\n     * Without this flag, the message passed to {@code grantTrust} is only used for debugging\n     * purposes. With the flag, it may be displayed to the user as the reason why the device is\n     * unlocked. If this flag isn't set OR the message is set to null, the device will display\n     * its own default message for trust granted. If the TrustAgent intentionally doesn't want to\n     * show any message, then it can set this flag AND set the message to an empty string.\n     ",
     "links" : [ "#grantTrust(CharSequence" ]
   }, {
     "name" : "TOKEN_STATE_ACTIVE",
@@ -85,6 +96,16 @@
     "links" : [ ]
   }, {
     "name" : "MSG_ESCROW_TOKEN_REMOVED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_USER_REQUESTED_UNLOCK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_USER_MAY_REQUEST_UNLOCK",
     "type" : "int",
     "comment" : "",
     "links" : [ ]
@@ -150,6 +171,16 @@
     "comment" : "\n     * Called after the user attempts to authenticate in keyguard with their device credentials,\n     * such as pin, pattern or password.\n     *\n     * @param successful true if the user successfully completed the challenge.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public void onUserMayRequestUnlock()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the user has interacted with the locked device such that they are likely to want\n     * it to be unlocked soon. This approximates the timing when, for example, the platform would\n     * check for face authentication to unlock the device.\n     *\n     * This signal can be used for the agent to make preparations to quickly unlock the device\n     * with {@link #onUserRequestedUnlock}. Agents should not unlock the device based solely on this\n     * signal. There is no guarantee that this method will be called before\n     * {@link #onUserRequestedUnlock(boolean)}.\n     ",
+    "links" : [ "#onUserRequestedUnlock", "#onUserRequestedUnlock(boolean)" ]
+  }, {
+    "name" : "public void onUserRequestedUnlock(boolean dismissKeyguard)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the user has interacted with the locked device such that they likely want it\n     * to be unlocked.\n     *\n     * When this is called, there is a high probability that the user wants to unlock the device and\n     * that a biometric method is either not available or not the optimal method at this time. For\n     * example, this may be called after some kinds of biometric authentication failure.\n     *\n     * A call to this method may be preceded by a call to {@link #onUserMayRequestUnlock} which\n     * the agent can use as a signal to prepare for a subsequent call to this method.\n     *\n     * To attempt to unlock the device, the agent needs to call\n     * {@link #grantTrust(CharSequence, long, int)}.\n     *\n     * @param dismissKeyguard true when the user wants keyguard dismissed\n     *\n     * @see #FLAG_GRANT_TRUST_TEMPORARY_AND_RENEWABLE\n     ",
+    "links" : [ "#grantTrust(CharSequence", "#onUserMayRequestUnlock" ]
+  }, {
     "name" : "public void onTrustTimeout()",
     "returnType" : "void",
     "comment" : "\n     * Called when the timeout provided by the agent expires.  Note that this may be called earlier\n     * than requested by the agent if the trust timeout is adjusted by the system or\n     * {@link DevicePolicyManager}.  The agent is expected to re-evaluate the trust state and only\n     * call {@link #grantTrust(CharSequence, long, boolean)} if the trust state should be\n     * continued.\n     ",
@@ -197,13 +228,18 @@
   }, {
     "name" : "public final void grantTrust(final CharSequence message, final long durationMs, final boolean initiatedByUser)",
     "returnType" : "void",
-    "comment" : "\n     * Call to grant trust on the device.\n     *\n     * @param message describes why the device is trusted, e.g. \"Trusted by location\".\n     * @param durationMs amount of time in milliseconds to keep the device in a trusted state.\n     *    Trust for this agent will automatically be revoked when the timeout expires unless\n     *    extended by a subsequent call to this function. The timeout is measured from the\n     *    invocation of this function as dictated by {@link SystemClock#elapsedRealtime())}.\n     *    For security reasons, the value should be no larger than necessary.\n     *    The value may be adjusted by the system as necessary to comply with a policy controlled\n     *    by the system or {@link DevicePolicyManager} restrictions. See {@link #onTrustTimeout()}\n     *    for determining when trust expires.\n     * @param initiatedByUser this is a hint to the system that trust is being granted as the\n     *    direct result of user action - such as solving a security challenge. The hint is used\n     *    by the system to optimize the experience. Behavior may vary by device and release, so\n     *    one should only set this parameter if it meets the above criteria rather than relying on\n     *    the behavior of any particular device or release. Corresponds to\n     *    {@link #FLAG_GRANT_TRUST_INITIATED_BY_USER}.\n     * @throws IllegalStateException if the agent is not currently managing trust.\n     *\n     * @deprecated use {@link #grantTrust(CharSequence, long, int)} instead.\n     ",
-    "links" : [ "#elapsedRealtime())", "#grantTrust(CharSequence", "android.app.admin.DevicePolicyManager", "#FLAG_GRANT_TRUST_INITIATED_BY_USER", "#onTrustTimeout()" ]
+    "comment" : "\n     * Attempts to grant trust on the device.\n     *\n     * @param initiatedByUser see {@link #FLAG_GRANT_TRUST_INITIATED_BY_USER}\n     * @deprecated use {@link #grantTrust(CharSequence, long, int, Consumer)} instead.\n     ",
+    "links" : [ "#grantTrust(CharSequence", "#FLAG_GRANT_TRUST_INITIATED_BY_USER" ]
   }, {
     "name" : "public final void grantTrust(final CharSequence message, final long durationMs, @GrantTrustFlags final int flags)",
     "returnType" : "void",
-    "comment" : "\n     * Call to grant trust on the device.\n     *\n     * @param message describes why the device is trusted, e.g. \"Trusted by location\".\n     * @param durationMs amount of time in milliseconds to keep the device in a trusted state.\n     *    Trust for this agent will automatically be revoked when the timeout expires unless\n     *    extended by a subsequent call to this function. The timeout is measured from the\n     *    invocation of this function as dictated by {@link SystemClock#elapsedRealtime())}.\n     *    For security reasons, the value should be no larger than necessary.\n     *    The value may be adjusted by the system as necessary to comply with a policy controlled\n     *    by the system or {@link DevicePolicyManager} restrictions. See {@link #onTrustTimeout()}\n     *    for determining when trust expires.\n     * @param flags TBDocumented\n     * @throws IllegalStateException if the agent is not currently managing trust.\n     ",
-    "links" : [ "#elapsedRealtime())", "android.app.admin.DevicePolicyManager", "#onTrustTimeout()" ]
+    "comment" : "\n     * Attempts to grant trust on the device.\n     * @deprecated use {@link #grantTrust(CharSequence, long, int, Consumer)} instead.\n     ",
+    "links" : [ "#grantTrust(CharSequence" ]
+  }, {
+    "name" : "public final void grantTrust(@NonNull final CharSequence message, final long durationMs, @GrantTrustFlags final int flags, @Nullable final Consumer<GrantTrustResult> resultCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Attempts to grant trust on the device.\n     *\n     * @param message describes why the device is trusted, e.g. \"Trusted by location\".\n     * @param durationMs amount of time in milliseconds to keep the device in a trusted state.\n     *    Trust for this agent will automatically be revoked when the timeout expires unless\n     *    extended by a subsequent call to this function. The timeout is measured from the\n     *    invocation of this function as dictated by {@link SystemClock#elapsedRealtime())}.\n     *    For security reasons, the value should be no larger than necessary.\n     *    The value may be adjusted by the system as necessary to comply with a policy controlled\n     *    by the system or {@link DevicePolicyManager} restrictions. See {@link #onTrustTimeout()}\n     *    for determining when trust expires.\n     * @param flags flags to control call: see constants prefixed by {@code FLAG_GRANT_TRUST_}.\n     * @param resultCallback may be called with the results of the grant\n     * @throws IllegalStateException if the agent is not currently managing trust.\n     *\n     * See {@link GrantTrustResult} for the cases where {@code resultCallback} will be called.\n     ",
+    "links" : [ "#elapsedRealtime())", "android.app.admin.DevicePolicyManager", "#onTrustTimeout()", "android.service.trust.GrantTrustResult" ]
   }, {
     "name" : "public final void revokeTrust()",
     "returnType" : "void",
@@ -235,6 +271,11 @@
     "comment" : "\n     * Call to unlock user's FBE.\n     *\n     * @param handle the handle of escrow tokent to the internal synthetic password.\n     * @param token the escrow token\n     * @param user the user about to be unlocked.\n     *\n     ",
     "links" : [ ]
   }, {
+    "name" : "public final void lockUser()",
+    "returnType" : "void",
+    "comment" : "\n     * Locks the user.\n     *\n     * This revokes any trust granted by this agent and shows keyguard for the user if it is not\n     * currently shown for them. Other users are not affected. Note that this is in contrast to\n     * {@link #revokeTrust()} which does not show keyguard if it is not already shown.\n     *\n     * If the user has no auth method specified, then keyguard will still be shown but can be\n     * dismissed normally.\n     ",
+    "links" : [ "#revokeTrust()" ]
+  }, {
     "name" : "public final void showKeyguardErrorMessage(@NonNull CharSequence message)",
     "returnType" : "void",
     "comment" : "\n     * Request showing a transient error message on the keyguard.\n     * The message will be visible on the lock screen or always on display if possible but can be\n     * overridden by other keyguard events of higher priority - eg. fingerprint auth error.\n     * Other trust agents may override your message if posted simultaneously.\n     *\n     * @param message Message to show.\n     ",
@@ -245,6 +286,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "SERVICE_INTERFACE", "TRUST_AGENT_META_DATA", "FLAG_GRANT_TRUST_INITIATED_BY_USER", "FLAG_GRANT_TRUST_DISMISS_KEYGUARD", "TOKEN_STATE_ACTIVE", "TOKEN_STATE_INACTIVE", "MSG_UNLOCK_ATTEMPT", "MSG_CONFIGURE", "MSG_TRUST_TIMEOUT", "MSG_DEVICE_LOCKED", "MSG_DEVICE_UNLOCKED", "MSG_UNLOCK_LOCKOUT", "MSG_ESCROW_TOKEN_ADDED", "MSG_ESCROW_TOKEN_STATE_RECEIVED", "MSG_ESCROW_TOKEN_REMOVED", "EXTRA_TOKEN", "EXTRA_TOKEN_HANDLE", "EXTRA_USER_HANDLE", "EXTRA_TOKEN_STATE", "EXTRA_TOKEN_REMOVED_RESULT", "mCallback", "mPendingGrantTrustTask", "mManagingTrust", "mLock", "mHandler" ],
-  "methodNames" : [ "public void onCreate()", "public void onUnlockAttempt(boolean successful)", "public void onTrustTimeout()", "public void onDeviceLocked()", "public void onDeviceUnlocked()", "public void onDeviceUnlockLockout(long timeoutMs)", "public void onEscrowTokenAdded(byte[] token, long handle, UserHandle user)", "public void onEscrowTokenStateReceived(long handle, @TokenState int tokenState)", "public void onEscrowTokenRemoved(long handle, boolean successful)", "private void onError(String msg)", "public boolean onConfigure(List<PersistableBundle> options)", "public final void grantTrust(final CharSequence message, final long durationMs, final boolean initiatedByUser)", "public final void grantTrust(final CharSequence message, final long durationMs, @GrantTrustFlags final int flags)", "public final void revokeTrust()", "public final void setManagingTrust(boolean managingTrust)", "public final void addEscrowToken(byte[] token, UserHandle user)", "public final void isEscrowTokenActive(long handle, UserHandle user)", "public final void removeEscrowToken(long handle, UserHandle user)", "public final void unlockUserWithToken(long handle, byte[] token, UserHandle user)", "public final void showKeyguardErrorMessage(@NonNull CharSequence message)", "public final IBinder onBind(Intent intent)" ]
+  "methodNames" : [ "public void onCreate()", "public void onUnlockAttempt(boolean successful)", "public void onUserMayRequestUnlock()", "public void onUserRequestedUnlock(boolean dismissKeyguard)", "public void onTrustTimeout()", "public void onDeviceLocked()", "public void onDeviceUnlocked()", "public void onDeviceUnlockLockout(long timeoutMs)", "public void onEscrowTokenAdded(byte[] token, long handle, UserHandle user)", "public void onEscrowTokenStateReceived(long handle, @TokenState int tokenState)", "public void onEscrowTokenRemoved(long handle, boolean successful)", "private void onError(String msg)", "public boolean onConfigure(List<PersistableBundle> options)", "public final void grantTrust(final CharSequence message, final long durationMs, final boolean initiatedByUser)", "public final void grantTrust(final CharSequence message, final long durationMs, @GrantTrustFlags final int flags)", "public final void grantTrust(@NonNull final CharSequence message, final long durationMs, @GrantTrustFlags final int flags, @Nullable final Consumer<GrantTrustResult> resultCallback)", "public final void revokeTrust()", "public final void setManagingTrust(boolean managingTrust)", "public final void addEscrowToken(byte[] token, UserHandle user)", "public final void isEscrowTokenActive(long handle, UserHandle user)", "public final void removeEscrowToken(long handle, UserHandle user)", "public final void unlockUserWithToken(long handle, byte[] token, UserHandle user)", "public final void lockUser()", "public final void showKeyguardErrorMessage(@NonNull CharSequence message)", "public final IBinder onBind(Intent intent)" ],
+  "variableNames" : [ "TAG", "DEBUG", "SERVICE_INTERFACE", "TRUST_AGENT_META_DATA", "FLAG_GRANT_TRUST_INITIATED_BY_USER", "FLAG_GRANT_TRUST_DISMISS_KEYGUARD", "FLAG_GRANT_TRUST_TEMPORARY_AND_RENEWABLE", "FLAG_GRANT_TRUST_DISPLAY_MESSAGE", "TOKEN_STATE_ACTIVE", "TOKEN_STATE_INACTIVE", "MSG_UNLOCK_ATTEMPT", "MSG_CONFIGURE", "MSG_TRUST_TIMEOUT", "MSG_DEVICE_LOCKED", "MSG_DEVICE_UNLOCKED", "MSG_UNLOCK_LOCKOUT", "MSG_ESCROW_TOKEN_ADDED", "MSG_ESCROW_TOKEN_STATE_RECEIVED", "MSG_ESCROW_TOKEN_REMOVED", "MSG_USER_REQUESTED_UNLOCK", "MSG_USER_MAY_REQUEST_UNLOCK", "EXTRA_TOKEN", "EXTRA_TOKEN_HANDLE", "EXTRA_USER_HANDLE", "EXTRA_TOKEN_STATE", "EXTRA_TOKEN_REMOVED_RESULT", "mCallback", "mPendingGrantTrustTask", "mManagingTrust", "mLock", "mHandler" ]
 }

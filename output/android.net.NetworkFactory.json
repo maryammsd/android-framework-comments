@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/NetworkFactory.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/net/NetworkFactory.java",
   "packageName" : "android.net",
   "className" : "NetworkFactory",
-  "comment" : "\n * A NetworkFactory is an entity that creates NetworkAgent objects.\n * The bearers register with ConnectivityService using {@link #register} and\n * their factory will start receiving scored NetworkRequests.  NetworkRequests\n * can be filtered 3 ways: by NetworkCapabilities, by score and more complexly by\n * overridden function.  All of these can be dynamic - changing NetworkCapabilities\n * or score forces re-evaluation of all current requests.\n *\n * If any requests pass the filter some overrideable functions will be called.\n * If the bearer only cares about very simple start/stopNetwork callbacks, those\n * functions can be overridden.  If the bearer needs more interaction, it can\n * override addNetworkRequest and removeNetworkRequest which will give it each\n * request that passes their current filters.\n * @hide\n *",
+  "comment" : "\n * A NetworkFactory is an entity that creates NetworkAgent objects.\n * The bearers register with ConnectivityService using {@link #register} and\n * their factory will start receiving scored NetworkRequests.  NetworkRequests\n * can be filtered 3 ways: by NetworkCapabilities, by score and more complexly by\n * overridden function.  All of these can be dynamic - changing NetworkCapabilities\n * or score forces re-evaluation of all current requests.\n *\n * If any requests pass the filter some overrideable functions will be called.\n * If the bearer only cares about very simple start/stopNetwork callbacks, those\n * functions can be overridden.  If the bearer needs more interaction, it can\n * override addNetworkRequest and removeNetworkRequest which will give it each\n * request that passes their current filters.\n *\n * This class is mostly a shim which delegates to one of two implementations depending\n * on the SDK level of the device it's running on.\n *\n * @hide\n *",
+  "links" : [ "#register" ],
   "variables" : [ {
     "name" : "DBG",
     "type" : "boolean",
@@ -14,28 +15,8 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "CMD_REQUEST_NETWORK",
-    "type" : "int",
-    "comment" : "\n     * Pass a network request to the bearer.  If the bearer believes it can\n     * satisfy the request it should connect to the network and create a\n     * NetworkAgent.  Once the NetworkAgent is fully functional it will\n     * register itself with ConnectivityService using registerNetworkAgent.\n     * If the bearer cannot immediately satisfy the request (no network,\n     * user disabled the radio, lower-scored network) it should remember\n     * any NetworkRequests it may be able to satisfy in the future.  It may\n     * disregard any that it will never be able to service, for example\n     * those requiring a different bearer.\n     * msg.obj = NetworkRequest\n     * msg.arg1 = score - the score of the network currently satisfying this\n     *            request.  If this bearer knows in advance it cannot\n     *            exceed this score it should not try to connect, holding the request\n     *            for the future.\n     *            Note that subsequent events may give a different (lower\n     *            or higher) score for this request, transmitted to each\n     *            NetworkFactory through additional CMD_REQUEST_NETWORK msgs\n     *            with the same NetworkRequest but an updated score.\n     *            Also, network conditions may change for this bearer\n     *            allowing for a better score in the future.\n     * msg.arg2 = the ID of the NetworkProvider currently responsible for the\n     *            NetworkAgent handling this request, or NetworkProvider.ID_NONE if none.\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "CMD_CANCEL_REQUEST",
-    "type" : "int",
-    "comment" : "\n     * Cancel a network request\n     * msg.obj = NetworkRequest\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "CMD_SET_SCORE",
-    "type" : "int",
-    "comment" : "\n     * Internally used to set our best-guess score.\n     * msg.arg1 = new score\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "CMD_SET_FILTER",
-    "type" : "int",
-    "comment" : "\n     * Internally used to set our current filter for coarse bandwidth changes with\n     * technology changes.\n     * msg.obj = new filter\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "mContext",
-    "type" : "Context",
+    "name" : "mImpl",
+    "type" : "NetworkFactoryShim",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -44,35 +25,40 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mNetworkRequests",
-    "type" : "Map<NetworkRequest, NetworkRequestInfo>",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mScore",
+    "name" : "CMD_REQUEST_NETWORK",
     "type" : "int",
-    "comment" : "",
+    "comment" : " the tests and remove them and the associated code.",
     "links" : [ ]
   }, {
-    "name" : "mCapabilityFilter",
-    "type" : "NetworkCapabilities",
+    "name" : "CMD_CANCEL_REQUEST",
+    "type" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
     "name" : "mRefCount",
     "type" : "int",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mProvider",
-    "type" : "NetworkProvider",
-    "comment" : "",
+    "comment" : " Refcount for simple mode requests",
     "links" : [ ]
   } ],
   "methods" : [ {
+    "name" : "public Message obtainMessage(final int what, final int arg1, final int arg2, @Nullable final Object obj)",
+    "returnType" : "Message",
+    "comment" : " Like Handler#obtainMessage ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Looper getLooper()",
+    "returnType" : "Looper",
+    "comment" : " Called by BluetoothNetworkFactory",
+    "links" : [ ]
+  }, {
     "name" : "public void register()",
     "returnType" : "void",
     "comment" : " Registers this NetworkFactory with the system. May only be called once per factory. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerIgnoringScore()",
+    "returnType" : "void",
+    "comment" : "\n     * Registers this NetworkFactory with the system ignoring the score filter. This will let\n     * the factory always see all network requests matching its capabilities filter.\n     * May only be called once per factory.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void terminate()",
@@ -80,60 +66,15 @@
     "comment" : " Unregisters this NetworkFactory. After this call, the object can no longer be used. ",
     "links" : [ ]
   }, {
-    "name" : "public void handleMessage(Message msg)",
+    "name" : "protected final void reevaluateAllRequests()",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "protected void handleAddRequest(NetworkRequest request, int score, int servingProviderId)",
-    "returnType" : "void",
-    "comment" : "\n     * Add a NetworkRequest that the bearer may want to attempt to satisfy.\n     * @see #CMD_REQUEST_NETWORK\n     *\n     * @param request the request to handle.\n     * @param score the score of the NetworkAgent currently satisfying this request.\n     * @param servingProviderId the ID of the NetworkProvider that created the NetworkAgent\n     *        currently satisfying this request.\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "protected void handleRemoveRequest(NetworkRequest request)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void handleSetScore(int score)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void handleSetFilter(NetworkCapabilities netCap)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "public boolean acceptRequest(NetworkRequest request, int score)",
+    "name" : "public boolean acceptRequest(@NonNull final NetworkRequest request)",
     "returnType" : "boolean",
     "comment" : "\n     * Overridable function to provide complex filtering.\n     * Called for every request every time a new NetworkRequest is seen\n     * and whenever the filterScore or filterNetworkCapabilities change.\n     *\n     * acceptRequest can be overridden to provide complex filter behavior\n     * for the incoming requests\n     *\n     * For output, this class will call {@link #needNetworkFor} and\n     * {@link #releaseNetworkFor} for every request that passes the filters.\n     * If you don't need to see every request, you can leave the base\n     * implementations of those two functions and instead override\n     * {@link #startNetwork} and {@link #stopNetwork}.\n     *\n     * If you want to see every score fluctuation on every request, set\n     * your score filter to a very high number and watch {@link #needNetworkFor}.\n     *\n     * @return {@code true} to accept the request.\n     ",
     "links" : [ "#startNetwork", "#releaseNetworkFor", "#needNetworkFor", "#stopNetwork" ]
-  }, {
-    "name" : "private void evalRequest(NetworkRequestInfo n)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private boolean shouldNeedNetworkFor(NetworkRequestInfo n)",
-    "returnType" : "boolean",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private boolean shouldReleaseNetworkFor(NetworkRequestInfo n)",
-    "returnType" : "boolean",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void evalRequests()",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "protected void reevaluateAllRequests()",
-    "returnType" : "void",
-    "comment" : "\n     * Post a command, on this NetworkFactory Handler, to re-evaluate all\n     * outstanding requests. Can be called from a factory implementation.\n     ",
-    "links" : [ ]
   }, {
     "name" : "protected void releaseRequestAsUnfulfillableByAnyFactory(NetworkRequest r)",
     "returnType" : "void",
@@ -150,19 +91,24 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "protected void needNetworkFor(NetworkRequest networkRequest, int score)",
+    "name" : "protected void needNetworkFor(@NonNull final NetworkRequest networkRequest)",
     "returnType" : "void",
     "comment" : " override to do fancier stuff",
     "links" : [ ]
   }, {
-    "name" : "protected void releaseNetworkFor(NetworkRequest networkRequest)",
+    "name" : "protected void releaseNetworkFor(@NonNull final NetworkRequest networkRequest)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public void setScoreFilter(int score)",
+    "name" : "public void setScoreFilter(final int score)",
     "returnType" : "void",
-    "comment" : "",
+    "comment" : "\n     * @deprecated this method was never part of the API (system or public) and is only added\n     *   for migration of existing clients.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setScoreFilter(@NonNull final NetworkScore score)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a score filter for this factory.\n     *\n     * This should include the transports the factory knows its networks will have, and\n     * an optimistic view of the attributes it may have. This does not commit the factory\n     * to being able to bring up such a network ; it only lets it avoid hearing about\n     * requests that it has no chance of fulfilling.\n     *\n     * @param score the filter\n     ",
     "links" : [ ]
   }, {
     "name" : "public void setCapabilityFilter(NetworkCapabilities netCap)",
@@ -177,7 +123,7 @@
   }, {
     "name" : "public int getSerialNumber()",
     "returnType" : "int",
-    "comment" : " TODO: delete when all callers have migrated to NetworkProvider IDs. ",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public NetworkProvider getProvider()",
@@ -200,6 +146,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "DBG", "VDBG", "CMD_REQUEST_NETWORK", "CMD_CANCEL_REQUEST", "CMD_SET_SCORE", "CMD_SET_FILTER", "mContext", "LOG_TAG", "mNetworkRequests", "mScore", "mCapabilityFilter", "mRefCount", "mProvider" ],
-  "methodNames" : [ "public void register()", "public void terminate()", "public void handleMessage(Message msg)", "protected void handleAddRequest(NetworkRequest request, int score, int servingProviderId)", "protected void handleRemoveRequest(NetworkRequest request)", "private void handleSetScore(int score)", "private void handleSetFilter(NetworkCapabilities netCap)", "public boolean acceptRequest(NetworkRequest request, int score)", "private void evalRequest(NetworkRequestInfo n)", "private boolean shouldNeedNetworkFor(NetworkRequestInfo n)", "private boolean shouldReleaseNetworkFor(NetworkRequestInfo n)", "private void evalRequests()", "protected void reevaluateAllRequests()", "protected void releaseRequestAsUnfulfillableByAnyFactory(NetworkRequest r)", "protected void startNetwork()", "protected void stopNetwork()", "protected void needNetworkFor(NetworkRequest networkRequest, int score)", "protected void releaseNetworkFor(NetworkRequest networkRequest)", "public void setScoreFilter(int score)", "public void setCapabilityFilter(NetworkCapabilities netCap)", "protected int getRequestCount()", "public int getSerialNumber()", "public NetworkProvider getProvider()", "protected void log(String s)", "public void dump(FileDescriptor fd, PrintWriter writer, String[] args)", "public String toString()" ]
+  "methodNames" : [ "public Message obtainMessage(final int what, final int arg1, final int arg2, @Nullable final Object obj)", "public final Looper getLooper()", "public void register()", "public void registerIgnoringScore()", "public void terminate()", "protected final void reevaluateAllRequests()", "public boolean acceptRequest(@NonNull final NetworkRequest request)", "protected void releaseRequestAsUnfulfillableByAnyFactory(NetworkRequest r)", "protected void startNetwork()", "protected void stopNetwork()", "protected void needNetworkFor(@NonNull final NetworkRequest networkRequest)", "protected void releaseNetworkFor(@NonNull final NetworkRequest networkRequest)", "public void setScoreFilter(final int score)", "public void setScoreFilter(@NonNull final NetworkScore score)", "public void setCapabilityFilter(NetworkCapabilities netCap)", "protected int getRequestCount()", "public int getSerialNumber()", "public NetworkProvider getProvider()", "protected void log(String s)", "public void dump(FileDescriptor fd, PrintWriter writer, String[] args)", "public String toString()" ],
+  "variableNames" : [ "DBG", "VDBG", "mImpl", "LOG_TAG", "CMD_REQUEST_NETWORK", "CMD_CANCEL_REQUEST", "mRefCount" ]
 }

@@ -1,0 +1,1401 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/telecom/Connection.java",
+  "packageName" : "android.telecom",
+  "className" : "Connection",
+  "comment" : "\n * Represents a phone call or connection to a remote endpoint that carries voice and/or video\n * traffic.\n * <p>\n * Implementations create a custom subclass of {@code Connection} and return it to the framework\n * as the return value of\n * {@link ConnectionService#onCreateIncomingConnection(PhoneAccountHandle, ConnectionRequest)}\n * or\n * {@link ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n * Implementations are then responsible for updating the state of the {@code Connection}, and\n * must call {@link #destroy()} to signal to the framework that the {@code Connection} is no\n * longer used and associated resources may be recovered.\n * <p>\n * Subclasses of {@code Connection} override the {@code on*} methods to provide the\n * {@link ConnectionService}'s implementation of calling functionality.  The {@code on*} methods are\n * called by Telecom to inform an instance of a {@code Connection} of actions specific to that\n * {@code Connection} instance.\n * <p>\n * Basic call support requires overriding the following methods: {@link #onAnswer()},\n * {@link #onDisconnect()}, {@link #onReject()}, {@link #onAbort()}\n * <p>\n * Where a {@code Connection} has {@link #CAPABILITY_SUPPORT_HOLD}, the {@link #onHold()} and\n * {@link #onUnhold()} methods should be overridden to provide hold support for the\n * {@code Connection}.\n * <p>\n * Where a {@code Connection} supports a variation of video calling (e.g. the\n * {@code CAPABILITY_SUPPORTS_VT_*} capability bits), {@link #onAnswer(int)} should be overridden\n * to support answering a call as a video call.\n * <p>\n * Where a {@code Connection} has {@link #PROPERTY_IS_EXTERNAL_CALL} and\n * {@link #CAPABILITY_CAN_PULL_CALL}, {@link #onPullExternalCall()} should be overridden to provide\n * support for pulling the external call.\n * <p>\n * Where a {@code Connection} supports conference calling {@link #onSeparate()} should be\n * overridden.\n * <p>\n * There are a number of other {@code on*} methods which a {@code Connection} can choose to\n * implement, depending on whether it is concerned with the associated calls from Telecom.  If,\n * for example, call events from a {@link InCallService} are handled,\n * {@link #onCallEvent(String, Bundle)} should be overridden.  Another example is\n * {@link #onExtrasChanged(Bundle)}, which should be overridden if the {@code Connection} wishes to\n * make use of extra information provided via the {@link Call#putExtras(Bundle)} and\n * {@link Call#removeExtras(String...)} methods.\n ",
+  "links" : [ "#onCallEvent(String", "#onAnswer(int)", "#onUnhold()", "#onPullExternalCall()", "#PROPERTY_IS_EXTERNAL_CALL", "android.telecom.Call#removeExtras(String...)", "#destroy()", "#CAPABILITY_SUPPORT_HOLD", "android.telecom.Call#putExtras(Bundle)", "android.telecom.InCallService", "#onExtrasChanged(Bundle)", "#onDisconnect()", "#onHold()", "#onAnswer()", "#onAbort()", "#CAPABILITY_CAN_PULL_CALL", "android.telecom.ConnectionService#onCreateIncomingConnection(PhoneAccountHandle", "#onReject()", "android.telecom.ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle", "#onSeparate()", "android.telecom.ConnectionService" ],
+  "variables" : [ {
+    "name" : "STATE_INITIALIZING",
+    "type" : "int",
+    "comment" : "\n     * The connection is initializing. This is generally the first state for a {@code Connection}\n     * returned by a {@link ConnectionService}.\n     ",
+    "links" : [ "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "STATE_NEW",
+    "type" : "int",
+    "comment" : "\n     * The connection is new and not connected.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_RINGING",
+    "type" : "int",
+    "comment" : "\n     * An incoming connection is in the ringing state. During this state, the user's ringer or\n     * vibration feature will be activated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_DIALING",
+    "type" : "int",
+    "comment" : "\n     * An outgoing connection is in the dialing state. In this state the other party has not yet\n     * answered the call and the user traditionally hears a ringback tone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * A connection is active. Both parties are connected to the call and can actively communicate.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_HOLDING",
+    "type" : "int",
+    "comment" : "\n     * A connection is on hold.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_DISCONNECTED",
+    "type" : "int",
+    "comment" : "\n     * A connection has been disconnected. This is the final state once the user has been\n     * disconnected from a call either locally, remotely or by an error in the service.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_PULLING_CALL",
+    "type" : "int",
+    "comment" : "\n     * The state of an external connection which is in the process of being pulled from a remote\n     * device to the local device.\n     * <p>\n     * A connection can only be in this state if the {@link #PROPERTY_IS_EXTERNAL_CALL} property and\n     * {@link #CAPABILITY_CAN_PULL_CALL} capability bits are set on the connection.\n     ",
+    "links" : [ "#CAPABILITY_CAN_PULL_CALL", "#PROPERTY_IS_EXTERNAL_CALL" ]
+  }, {
+    "name" : "VERIFICATION_STATUS_NOT_VERIFIED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the network could not perform verification.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VERIFICATION_STATUS_PASSED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that verification by the network passed.  This indicates there is a high likelihood\n     * that the call originated from a valid source.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VERIFICATION_STATUS_FAILED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that verification by the network failed.  This indicates there is a high likelihood\n     * that the call did not originate from a valid source.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_HOLD",
+    "type" : "int",
+    "comment" : "\n     * Connection can currently be put on hold or unheld. This is distinct from\n     * {@link #CAPABILITY_SUPPORT_HOLD} in that although a connection may support 'hold' most times,\n     * it does not at the moment support the function. This can be true while the call is in the\n     * state {@link #STATE_DIALING}, for example. During this condition, an in-call UI may\n     * display a disabled 'hold' button.\n     ",
+    "links" : [ "#STATE_DIALING", "#CAPABILITY_SUPPORT_HOLD" ]
+  }, {
+    "name" : "CAPABILITY_SUPPORT_HOLD",
+    "type" : "int",
+    "comment" : " Connection supports the hold feature. ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_MERGE_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Connections within a conference can be merged. A {@link ConnectionService} has the option to\n     * add a {@link Conference} before the child {@link Connection}s are merged. This is how\n     * CDMA-based {@link Connection}s are implemented. For these unmerged {@link Conference}s, this\n     * capability allows a merge button to be shown while the conference is in the foreground\n     * of the in-call UI.\n     * <p>\n     * This is only intended for use by a {@link Conference}.\n     ",
+    "links" : [ "android.telecom.Conference", "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "CAPABILITY_SWAP_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Connections within a conference can be swapped between foreground and background.\n     * See {@link #CAPABILITY_MERGE_CONFERENCE} for additional information.\n     * <p>\n     * This is only intended for use by a {@link Conference}.\n     ",
+    "links" : [ "android.telecom.Conference", "#CAPABILITY_MERGE_CONFERENCE" ]
+  }, {
+    "name" : "CAPABILITY_UNUSED",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_RESPOND_VIA_TEXT",
+    "type" : "int",
+    "comment" : " Connection supports responding via text option. ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_MUTE",
+    "type" : "int",
+    "comment" : " Connection can be muted. ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_MANAGE_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Connection supports conference management. This capability only applies to\n     * {@link Conference}s which can have {@link Connection}s as children.\n     ",
+    "links" : [ "android.telecom.Conference", "android.telecom.Connection" ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_LOCAL_RX",
+    "type" : "int",
+    "comment" : "\n     * Local device supports receiving video.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_LOCAL_TX",
+    "type" : "int",
+    "comment" : "\n     * Local device supports transmitting video.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL",
+    "type" : "int",
+    "comment" : "\n     * Local device supports bidirectional video calling.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_REMOTE_RX",
+    "type" : "int",
+    "comment" : "\n     * Remote device supports receiving video.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_REMOTE_TX",
+    "type" : "int",
+    "comment" : "\n     * Remote device supports transmitting video.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL",
+    "type" : "int",
+    "comment" : "\n     * Remote device supports bidirectional video calling.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SEPARATE_FROM_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Connection is able to be separated from its parent {@code Conference}, if any.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_DISCONNECT_FROM_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Connection is able to be individually disconnected when in a {@code Conference}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_UNUSED_2",
+    "type" : "int",
+    "comment" : "\n     * Un-used.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_UNUSED_3",
+    "type" : "int",
+    "comment" : "\n     * Un-used.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_UNUSED_4",
+    "type" : "int",
+    "comment" : "\n     * Un-used.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_UNUSED_5",
+    "type" : "int",
+    "comment" : "\n     * Un-used.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_SPEED_UP_MT_AUDIO",
+    "type" : "int",
+    "comment" : "\n     * Speed up audio setup for MT call.\n     * <p>\n     * Used for IMS calls to indicate that mobile-terminated (incoming) call audio setup should take\n     * place as soon as the device answers the call, but prior to it being connected.  This is an\n     * optimization some IMS stacks depend on to ensure prompt setup of call audio.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_CAN_UPGRADE_TO_VIDEO",
+    "type" : "int",
+    "comment" : "\n     * Call can be upgraded to a video call.\n     * @deprecated Use {@link #CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL} and\n     * {@link #CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL} to indicate for a call whether or not\n     * video calling is supported.\n     ",
+    "links" : [ "#CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL", "#CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL" ]
+  }, {
+    "name" : "CAPABILITY_CAN_PAUSE_VIDEO",
+    "type" : "int",
+    "comment" : "\n     * For video calls, indicates whether the outgoing video for the call can be paused using\n     * the {@link android.telecom.VideoProfile#STATE_PAUSED} VideoState.\n     ",
+    "links" : [ "android.telecom.VideoProfile#STATE_PAUSED" ]
+  }, {
+    "name" : "CAPABILITY_CONFERENCE_HAS_NO_CHILDREN",
+    "type" : "int",
+    "comment" : "\n     * For a conference, indicates the conference will not have child connections.\n     * <p>\n     * An example of a conference with child connections is a GSM conference call, where the radio\n     * retains connections to the individual participants of the conference.  Another example is an\n     * IMS conference call where conference event package functionality is supported; in this case\n     * the conference server ensures the radio is aware of the participants in the conference, which\n     * are represented by child connections.\n     * <p>\n     * An example of a conference with no child connections is an IMS conference call with no\n     * conference event package support.  Such a conference is represented by the radio as a single\n     * connection to the IMS conference server.\n     * <p>\n     * Indicating whether a conference has children or not is important to help user interfaces\n     * visually represent a conference.  A conference with no children, for example, will have the\n     * conference connection shown in the list of calls on a Bluetooth device, where if the\n     * conference has children, only the children will be shown in the list of calls on a Bluetooth\n     * device.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_CAN_SEND_RESPONSE_VIA_CONNECTION",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the connection itself wants to handle any sort of reply response, rather than\n     * relying on SMS.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO",
+    "type" : "int",
+    "comment" : "\n     * When set, prevents a video call from being downgraded to an audio-only call.\n     * <p>\n     * Should be set when the VideoState has the {@link VideoProfile#STATE_TX_ENABLED} or\n     * {@link VideoProfile#STATE_RX_ENABLED} bits set to indicate that the connection cannot be\n     * downgraded from a video call back to a VideoState of\n     * {@link VideoProfile#STATE_AUDIO_ONLY}.\n     * <p>\n     * Intuitively, a call which can be downgraded to audio should also have local and remote\n     * video\n     * capabilities (see {@link #CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL} and\n     * {@link #CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL}).\n     ",
+    "links" : [ "#CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL", "android.telecom.VideoProfile#STATE_RX_ENABLED", "android.telecom.VideoProfile#STATE_AUDIO_ONLY", "android.telecom.VideoProfile#STATE_TX_ENABLED", "#CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL" ]
+  }, {
+    "name" : "CAPABILITY_CAN_PULL_CALL",
+    "type" : "int",
+    "comment" : "\n     * When set for an external connection, indicates that this {@code Connection} can be pulled\n     * from a remote device to the current device.\n     * <p>\n     * Should only be set on a {@code Connection} where {@link #PROPERTY_IS_EXTERNAL_CALL}\n     * is set.\n     ",
+    "links" : [ "#PROPERTY_IS_EXTERNAL_CALL" ]
+  }, {
+    "name" : "CAPABILITY_SUPPORT_DEFLECT",
+    "type" : "int",
+    "comment" : " Call supports the deflect feature. ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_ADD_PARTICIPANT",
+    "type" : "int",
+    "comment" : "\n     * When set, indicates that this {@link Connection} supports initiation of a conference call\n     * by directly adding participants using {@link #onAddConferenceParticipants(List)}. When\n     * participants are added to a {@link Connection}, it will be replaced by a {@link Conference}\n     * instance with {@link #PROPERTY_IS_ADHOC_CONFERENCE} set to indicate that it is an adhoc\n     * conference call.\n     ",
+    "links" : [ "android.telecom.Conference", "android.telecom.Connection", "#PROPERTY_IS_ADHOC_CONFERENCE", "#onAddConferenceParticipants(List)" ]
+  }, {
+    "name" : "CAPABILITY_TRANSFER",
+    "type" : "int",
+    "comment" : "\n     * Indicates that this {@code Connection} can be transferred to another\n     * number.\n     * Connection supports the confirmed and unconfirmed call transfer feature.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_TRANSFER_CONSULTATIVE",
+    "type" : "int",
+    "comment" : "\n     * Indicates that this {@code Connection} can be transferred to another\n     * ongoing {@code Connection}.\n     * Connection supports the consultative call transfer feature.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CAPABILITY_REMOTE_PARTY_SUPPORTS_RTT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_EMERGENCY_CALLBACK_MODE",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the current device callback number should be shown.\n     * <p>\n     * Supports Telephony calls where CDMA emergency callback mode is active.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_GENERIC_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Whether the call is a generic conference, where we do not know the precise state of\n     * participants in the conference (eg. on CDMA).\n     * <p>\n     * Supports legacy telephony CDMA calls.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_HIGH_DEF_AUDIO",
+    "type" : "int",
+    "comment" : "\n     * Connection is using high definition audio.\n     * <p>\n     * Indicates that the {@link Connection} is using a \"high definition\" audio codec.  This usually\n     * implies something like AMR wideband, but the interpretation of when a call is considered high\n     * definition is left to the {@link ConnectionService} to decide.\n     * <p>\n     * Translates to {@link android.telecom.Call.Details#PROPERTY_HIGH_DEF_AUDIO}.\n     ",
+    "links" : [ "android.telecom.Call.Details#PROPERTY_HIGH_DEF_AUDIO", "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "PROPERTY_WIFI",
+    "type" : "int",
+    "comment" : "\n     * Connection is using WIFI.\n     * <p>\n     * Used to indicate that a call is taking place over WIFI versus a carrier network.\n     * <p>\n     * Translates to {@link android.telecom.Call.Details#PROPERTY_WIFI}.\n     ",
+    "links" : [ "android.telecom.Call.Details#PROPERTY_WIFI" ]
+  }, {
+    "name" : "PROPERTY_IS_EXTERNAL_CALL",
+    "type" : "int",
+    "comment" : "\n     * When set, indicates that the {@code Connection} does not actually exist locally for the\n     * {@link ConnectionService}.\n     * <p>\n     * Consider, for example, a scenario where a user has two devices with the same phone number.\n     * When a user places a call on one devices, the telephony stack can represent that call on the\n     * other device by adding is to the {@link ConnectionService} with the\n     * {@link #PROPERTY_IS_EXTERNAL_CALL} capability set.\n     * <p>\n     * An {@link ConnectionService} should not assume that all {@link InCallService}s will handle\n     * external connections.  Only those {@link InCallService}s which have the\n     * {@link TelecomManager#METADATA_INCLUDE_EXTERNAL_CALLS} metadata set to {@code true} in its\n     * manifest will see external connections.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.TelecomManager#METADATA_INCLUDE_EXTERNAL_CALLS", "#PROPERTY_IS_EXTERNAL_CALL", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "PROPERTY_HAS_CDMA_VOICE_PRIVACY",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the connection has CDMA Enhanced Voice Privacy enabled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_IS_DOWNGRADED_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the connection represents a downgraded IMS conference.\n     * <p>\n     * This property is set when an IMS conference undergoes SRVCC and is re-added to Telecom as a\n     * new entity to indicate that the new connection was a conference.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_SELF_MANAGED",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that the {@link Connection} originated from a self-managed\n     * {@link ConnectionService}.\n     * <p>\n     * See {@link PhoneAccount#CAPABILITY_SELF_MANAGED}.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "PROPERTY_IS_RTT",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that a connection has an active RTT session associated with\n     * it.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_ASSISTED_DIALING",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that a connection is using assisted dialing.\n     * <p>\n     * This is used for outgoing calls.\n     *\n     * @see TelecomManager#EXTRA_USE_ASSISTED_DIALING\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_NETWORK_IDENTIFIED_EMERGENCY_CALL",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that the network has identified a Connection as an emergency\n     * call.\n     * <p>\n     * This is used for incoming (mobile-terminated) calls to indicate the call is from emergency\n     * services.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_REMOTELY_HOSTED",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that a Conference or Connection is hosted by a device other\n     * than the current one.  Used in scenarios where the conference originator is the remote device\n     * and the current device is a participant of that conference.\n     * <p>\n     * This property is specific to IMS conference calls originating in Telephony.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_IS_ADHOC_CONFERENCE",
+    "type" : "int",
+    "comment" : "\n     * Set by the framework to indicate that a call is an adhoc conference call.\n     * <p>\n     * This is used for outgoing and incoming conference calls.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PROPERTY_CROSS_SIM",
+    "type" : "int",
+    "comment" : "\n     * Connection is using cross sim technology.\n     * <p>\n     * Indicates that the {@link Connection} is using a cross sim technology which would\n     * register IMS over internet APN of default data subscription.\n     * <p>\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "AUDIO_CODEC_NONE",
+    "type" : "int",
+    "comment" : " 0",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_AMR",
+    "type" : "int",
+    "comment" : " 1",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_AMR_WB",
+    "type" : "int",
+    "comment" : " 2",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_QCELP13K",
+    "type" : "int",
+    "comment" : "3",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVRC",
+    "type" : "int",
+    "comment" : " 4",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVRC_B",
+    "type" : "int",
+    "comment" : " 5",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVRC_WB",
+    "type" : "int",
+    "comment" : " 6",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVRC_NW",
+    "type" : "int",
+    "comment" : " 7",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_GSM_EFR",
+    "type" : "int",
+    "comment" : " 8",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_GSM_FR",
+    "type" : "int",
+    "comment" : " 9",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_GSM_HR",
+    "type" : "int",
+    "comment" : " 10",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G711U",
+    "type" : "int",
+    "comment" : " 11",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G723",
+    "type" : "int",
+    "comment" : " 12",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G711A",
+    "type" : "int",
+    "comment" : " 13",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G722",
+    "type" : "int",
+    "comment" : " 14",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G711AB",
+    "type" : "int",
+    "comment" : " 15",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_G729",
+    "type" : "int",
+    "comment" : " 16",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVS_NB",
+    "type" : "int",
+    "comment" : " 17",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVS_WB",
+    "type" : "int",
+    "comment" : " 18",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVS_SWB",
+    "type" : "int",
+    "comment" : " 19",
+    "links" : [ ]
+  }, {
+    "name" : "AUDIO_CODEC_EVS_FB",
+    "type" : "int",
+    "comment" : " 20",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_CALLER_NUMBER_VERIFICATION_STATUS",
+    "type" : "String",
+    "comment" : "\n     * Contains the same value as {@link #getCallerNumberVerificationStatus()}, except will be\n     * present in the {@link #getExtras()} using this key.\n     * @hide\n     ",
+    "links" : [ "#getCallerNumberVerificationStatus()", "#getExtras()" ]
+  }, {
+    "name" : "EXTRA_LAST_FORWARDED_NUMBER",
+    "type" : "String",
+    "comment" : "\n     * Connection extra key used to store the last forwarded number associated with the current\n     * connection.  Used to communicate to the user interface that the connection was forwarded via\n     * the specified number.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_CHILD_ADDRESS",
+    "type" : "String",
+    "comment" : "\n     * Connection extra key used to store a child number associated with the current connection.\n     * Used to communicate to the user interface that the connection was received via\n     * a child address (i.e. phone number) associated with the {@link PhoneAccount}'s primary\n     * address.\n     ",
+    "links" : [ "android.telecom.PhoneAccount" ]
+  }, {
+    "name" : "EXTRA_CALL_SUBJECT",
+    "type" : "String",
+    "comment" : "\n     * Connection extra key used to store the subject for an incoming call.  The user interface can\n     * query this extra and display its contents for incoming calls.  Will only be used if the\n     * {@link PhoneAccount} supports the capability {@link PhoneAccount#CAPABILITY_CALL_SUBJECT}.\n     ",
+    "links" : [ "android.telecom.PhoneAccount", "android.telecom.PhoneAccount#CAPABILITY_CALL_SUBJECT" ]
+  }, {
+    "name" : "EXTRA_ANSWERING_DROPS_FG_CALL",
+    "type" : "String",
+    "comment" : "\n     * Boolean connection extra key set on a {@link Connection} in\n     * {@link Connection#STATE_RINGING} state to indicate that answering the call will cause the\n     * current active foreground call to be dropped.\n     ",
+    "links" : [ "android.telecom.Connection#STATE_RINGING", "android.telecom.Connection" ]
+  }, {
+    "name" : "EXTRA_ANSWERING_DROPS_FG_CALL_APP_NAME",
+    "type" : "String",
+    "comment" : "\n     * String connection extra key set on a {@link Connection} in {@link Connection#STATE_RINGING}\n     * state to indicate the name of the third-party app which is responsible for the current\n     * foreground call.\n     * <p>\n     * Used when {@link #EXTRA_ANSWERING_DROPS_FG_CALL} is true to ensure that the default Phone app\n     * is able to inform the user that answering the new incoming call will cause a call owned by\n     * another app to be dropped when the incoming call is answered.\n     ",
+    "links" : [ "#EXTRA_ANSWERING_DROPS_FG_CALL", "android.telecom.Connection#STATE_RINGING", "android.telecom.Connection" ]
+  }, {
+    "name" : "EXTRA_DISABLE_ADD_CALL",
+    "type" : "String",
+    "comment" : "\n     * Boolean connection extra key on a {@link Connection} which indicates that adding an\n     * additional call is disallowed.\n     * <p>\n     * Used for mobile-network calls to identify scenarios where carrier requirements preclude\n     * adding another call at the current time.\n     * @hide\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "EXTRA_ORIGINAL_CONNECTION_ID",
+    "type" : "String",
+    "comment" : "\n     * String connection extra key on a {@link Connection} or {@link Conference} which contains the\n     * original Connection ID associated with the connection.  Used in\n     * {@link RemoteConnectionService} to track the Connection ID which was originally assigned to a\n     * connection/conference added via\n     * {@link ConnectionService#addExistingConnection(PhoneAccountHandle, Connection)} and\n     * {@link ConnectionService#addConference(Conference)} APIs.  This is important to pass to\n     * Telecom for when it deals with RemoteConnections.  When the ConnectionManager wraps the\n     * {@link RemoteConnection} and {@link RemoteConference} and adds it to Telecom, there needs to\n     * be a way to ensure that we don't add the connection again as a duplicate.\n     * <p>\n     * For example, the TelephonyCS calls addExistingConnection for a Connection with ID\n     * {@code TelephonyCS@1}.  The ConnectionManager learns of this via\n     * {@link ConnectionService#onRemoteExistingConnectionAdded(RemoteConnection)}, and wraps this\n     * in a new {@link Connection} which it adds to Telecom via\n     * {@link ConnectionService#addExistingConnection(PhoneAccountHandle, Connection)}.  As part of\n     * this process, the wrapped RemoteConnection gets assigned a new ID (e.g. {@code ConnMan@1}).\n     * The TelephonyCS will ALSO try to add the existing connection to Telecom, except with the\n     * ID it originally referred to the connection as.  Thus Telecom needs to know that the\n     * Connection with ID {@code ConnMan@1} is really the same as {@code TelephonyCS@1}.\n     * <p>\n     * This is an internal Telecom framework concept and is not exposed outside of the Telecom\n     * framework.\n     * @hide\n     ",
+    "links" : [ "android.telecom.ConnectionService#addConference(Conference)", "android.telecom.Conference", "android.telecom.RemoteConference", "android.telecom.ConnectionService#onRemoteExistingConnectionAdded(RemoteConnection)", "android.telecom.ConnectionService#addExistingConnection(PhoneAccountHandle", "android.telecom.Connection", "android.telecom.RemoteConnectionService", "android.telecom.RemoteConnection" ]
+  }, {
+    "name" : "EXTRA_REMOTE_PHONE_ACCOUNT_HANDLE",
+    "type" : "String",
+    "comment" : "\n     * Extra key set on a {@link Connection} when it was created via a remote connection service.\n     * For example, if a connection manager requests a remote connection service to create a call\n     * using one of the remote connection service's phone account handle, this extra will be set so\n     * that Telecom knows that the wrapped remote connection originated in a remote connection\n     * service.  We stash this in the extras since connection managers will typically copy the\n     * extras from a {@link RemoteConnection} to a {@link Connection} (there is ultimately not\n     * other way to relate a {@link RemoteConnection} to a {@link Connection}.\n     * @hide\n     ",
+    "links" : [ "android.telecom.Connection", "android.telecom.RemoteConnection" ]
+  }, {
+    "name" : "EXTRA_ADD_TO_CONFERENCE_ID",
+    "type" : "String",
+    "comment" : "\n     * The Telecom call ID of the conference an existing connection should be added to.  This is\n     * required when {@link com.android.services.telephony.TelephonyConnectionService} adds a\n     * {@link Conference} to Telecom using the\n     * {@link ConnectionService#addExistingConnection(PhoneAccountHandle, Connection, Conference)}\n     * API.  That API specifies a parent conference associated with the new existing connection\n     * being added, and there is no equivalent as part of the {@link RemoteConnectionService} API.\n     * This extra key is used to stack the ID of the conference to which the existing connection\n     * will be added so that Telecom can link it up correctly when the {@link RemoteConference}\n     * is added to Telecom by the connection manager.\n     * @hide\n     ",
+    "links" : [ "com.android.services.telephony.TelephonyConnectionService", "android.telecom.Conference", "android.telecom.RemoteConference", "android.telecom.ConnectionService#addExistingConnection(PhoneAccountHandle", "android.telecom.RemoteConnectionService" ]
+  }, {
+    "name" : "EXTRA_REMOTE_CONNECTION_ORIGINATING_PACKAGE_NAME",
+    "type" : "String",
+    "comment" : "\n     * Extra key set from a {@link ConnectionService} when using the remote connection APIs\n     * (e.g. {@link RemoteConnectionService#createRemoteConnection(PhoneAccountHandle,\n     * ConnectionRequest, boolean)}) to create a remote connection.  Provides the receiving\n     * {@link ConnectionService} with a means to know the package name of the requesting\n     * {@link ConnectionService} so that {@link #EXTRA_REMOTE_PHONE_ACCOUNT_HANDLE} can be set for\n     * better visibility in Telecom of where a connection ultimately originated.\n     * @hide\n     ",
+    "links" : [ "#EXTRA_REMOTE_PHONE_ACCOUNT_HANDLE", "android.telecom.ConnectionService", "android.telecom.RemoteConnectionService#createRemoteConnection(PhoneAccountHandle" ]
+  }, {
+    "name" : "EXTRA_IS_RTT_AUDIO_PRESENT",
+    "type" : "String",
+    "comment" : "\n     * Boolean connection extra key set on the extras passed to\n     * {@link Connection#sendConnectionEvent} which indicates that audio is present\n     * on the RTT call when the extra value is true.\n     ",
+    "links" : [ "android.telecom.Connection#sendConnectionEvent" ]
+  }, {
+    "name" : "EXTRA_AUDIO_CODEC",
+    "type" : "String",
+    "comment" : "\n     * The audio codec in use for the current {@link Connection}, if known.  Examples of valid\n     * values include {@link #AUDIO_CODEC_AMR_WB} and {@link #AUDIO_CODEC_EVS_WB}.\n     ",
+    "links" : [ "#AUDIO_CODEC_AMR_WB", "android.telecom.Connection", "#AUDIO_CODEC_EVS_WB" ]
+  }, {
+    "name" : "EXTRA_AUDIO_CODEC_BITRATE_KBPS",
+    "type" : "String",
+    "comment" : "\n     * Float connection extra key used to store the audio codec bitrate in kbps for the current\n     * {@link Connection}.\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "EXTRA_AUDIO_CODEC_BANDWIDTH_KHZ",
+    "type" : "String",
+    "comment" : "\n     * Float connection extra key used to store the audio codec bandwidth in khz for the current\n     * {@link Connection}.\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "EXTRA_LAST_KNOWN_CELL_IDENTITY",
+    "type" : "String",
+    "comment" : "\n     * Last known cell identity key {@link CellIdentity} to be used to fill geo location header\n     * in case of an emergency  call. This entry will not be filled if call is not identified as\n     * an emergency call. Only provided to the {@link ConnectionService}  for the purpose of\n     * placing an emergency call; will not be present in the  {@link InCallService} layer.\n     * The {@link ConnectionService}'s implementation will be logged for fine location access\n     * when an outgoing call is placed in this case.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telephony.CellIdentity", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "EXTRA_IS_DEVICE_TO_DEVICE_COMMUNICATION_AVAILABLE",
+    "type" : "String",
+    "comment" : "\n     * Boolean connection extra key used to indicate whether device to device communication is\n     * available for the current call.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_ON_HOLD_TONE_START",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform Telecom that it should play the on hold tone.  This is used\n     * to play a tone when the peer puts the current call on hold.  Sent to Telecom via\n     * {@link #sendConnectionEvent(String, Bundle)}.\n     ",
+    "links" : [ "#sendConnectionEvent(String" ]
+  }, {
+    "name" : "EVENT_ON_HOLD_TONE_END",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform Telecom that it should stop the on hold tone.  This is used\n     * to stop a tone when the peer puts the current call on hold.  Sent to Telecom via\n     * {@link #sendConnectionEvent(String, Bundle)}.\n     ",
+    "links" : [ "#sendConnectionEvent(String" ]
+  }, {
+    "name" : "EVENT_CALL_PULL_FAILED",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when pulling of an external call has\n     * failed.  The user interface should inform the user of the error.\n     * <p>\n     * Expected to be used by the {@link ConnectionService} when the {@link Call#pullExternalCall()}\n     * API is called on a {@link Call} with the properties\n     * {@link Call.Details#PROPERTY_IS_EXTERNAL_CALL} and\n     * {@link Call.Details#CAPABILITY_CAN_PULL_CALL}, but the {@link ConnectionService} could not\n     * pull the external call due to an error condition.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "Call.Details#CAPABILITY_CAN_PULL_CALL", "#sendConnectionEvent(String", "android.telecom.InCallService", "android.os.Bundle", "Call.Details#PROPERTY_IS_EXTERNAL_CALL", "android.telecom.Call#pullExternalCall()", "android.telecom.ConnectionService", "android.telecom.Call" ]
+  }, {
+    "name" : "EVENT_CALL_MERGE_FAILED",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when the merging of two calls has\n     * failed. The User Interface should use this message to inform the user of the error.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "#sendConnectionEvent(String", "android.telecom.InCallService", "android.os.Bundle" ]
+  }, {
+    "name" : "EVENT_CALL_HOLD_FAILED",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform Telecom when a hold operation on a call has failed.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "#sendConnectionEvent(String", "android.os.Bundle" ]
+  }, {
+    "name" : "EVENT_CALL_SWITCH_FAILED",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform Telecom when a switch operation on a call has failed.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "#sendConnectionEvent(String", "android.os.Bundle" ]
+  }, {
+    "name" : "EVENT_MERGE_START",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when the process of merging a\n     * Connection into a conference has begun.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "#sendConnectionEvent(String", "android.telecom.InCallService", "android.os.Bundle" ]
+  }, {
+    "name" : "EVENT_MERGE_COMPLETE",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when the process of merging a\n     * Connection into a conference has completed.\n     * <p>\n     * Sent via {@link #sendConnectionEvent(String, Bundle)}.  The {@link Bundle} parameter is\n     * expected to be null when this connection event is used.\n     ",
+    "links" : [ "#sendConnectionEvent(String", "android.telecom.InCallService", "android.os.Bundle" ]
+  }, {
+    "name" : "EVENT_CALL_REMOTELY_HELD",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when a call has been put on hold by\n     * the remote party.\n     * <p>\n     * This is different than the {@link Connection#STATE_HOLDING} state which indicates that the\n     * call is being held locally on the device.  When a capable {@link ConnectionService} receives\n     * signalling to indicate that the remote party has put the call on hold, it can send this\n     * connection event.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.Connection#STATE_HOLDING", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "EVENT_CALL_REMOTELY_UNHELD",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform {@link InCallService}s when a call which was remotely held\n     * (see {@link #EVENT_CALL_REMOTELY_HELD}) has been un-held by the remote party.\n     * <p>\n     * This is different than the {@link Connection#STATE_HOLDING} state which indicates that the\n     * call is being held locally on the device.  When a capable {@link ConnectionService} receives\n     * signalling to indicate that the remote party has taken the call off hold, it can send this\n     * connection event.\n     ",
+    "links" : [ "android.telecom.InCallService", "#EVENT_CALL_REMOTELY_HELD", "android.telecom.Connection#STATE_HOLDING", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "EXTRA_SIP_INVITE",
+    "type" : "String",
+    "comment" : "\n     * String Connection extra key used to store SIP invite fields for an incoming call for IMS call\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_RTT_AUDIO_INDICATION_CHANGED",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to inform an {@link InCallService} that the RTT audio indication\n     * has changed.\n     ",
+    "links" : [ "android.telecom.InCallService" ]
+  }, {
+    "name" : "EVENT_DEVICE_TO_DEVICE_MESSAGE",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to signal between the telephony {@link ConnectionService} and Telecom\n     * when device to device messages are sent/received.\n     * <p>\n     * Device to device messages originating from the network are sent by telephony using\n     * {@link Connection#sendConnectionEvent(String, Bundle)} and are routed up to any active\n     * {@link CallDiagnosticService} implementation which is active.\n     * <p>\n     * Likewise, if a {@link CallDiagnosticService} sends a message using\n     * {@link CallDiagnostics#sendDeviceToDeviceMessage(int, int)}, it will be routed to telephony\n     * via {@link Connection#onCallEvent(String, Bundle)}.  The telephony stack will relay the\n     * message to the other device.\n     * @hide\n     ",
+    "links" : [ "android.telecom.CallDiagnosticService", "android.telecom.Connection#onCallEvent(String", "android.telecom.Connection#sendConnectionEvent(String", "android.telecom.CallDiagnostics#sendDeviceToDeviceMessage(int", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "EXTRA_DEVICE_TO_DEVICE_MESSAGE_TYPE",
+    "type" : "String",
+    "comment" : "\n     * Sent along with {@link #EVENT_DEVICE_TO_DEVICE_MESSAGE} to indicate the device to device\n     * message type.\n     *\n     * See {@link CallDiagnostics} for more information.\n     * @hide\n     ",
+    "links" : [ "#EVENT_DEVICE_TO_DEVICE_MESSAGE", "android.telecom.CallDiagnostics" ]
+  }, {
+    "name" : "EXTRA_DEVICE_TO_DEVICE_MESSAGE_VALUE",
+    "type" : "String",
+    "comment" : "\n     * Sent along with {@link #EVENT_DEVICE_TO_DEVICE_MESSAGE} to indicate the device to device\n     * message value.\n     * <p>\n     * See {@link CallDiagnostics} for more information.\n     * @hide\n     ",
+    "links" : [ "#EVENT_DEVICE_TO_DEVICE_MESSAGE", "android.telecom.CallDiagnostics" ]
+  }, {
+    "name" : "EVENT_CALL_QUALITY_REPORT",
+    "type" : "String",
+    "comment" : "\n     * Connection event used to communicate a {@link android.telephony.CallQuality} report from\n     * telephony to Telecom for relaying to\n     * {@link CallDiagnostics#onCallQualityReceived(CallQuality)}.\n     * @hide\n     ",
+    "links" : [ "android.telephony.CallQuality", "android.telecom.CallDiagnostics#onCallQualityReceived(CallQuality)" ]
+  }, {
+    "name" : "EXTRA_CALL_QUALITY_REPORT",
+    "type" : "String",
+    "comment" : "\n     * Extra sent with {@link #EVENT_CALL_QUALITY_REPORT} containing the\n     * {@link android.telephony.CallQuality} data.\n     * @hide\n     ",
+    "links" : [ "android.telephony.CallQuality", "#EVENT_CALL_QUALITY_REPORT" ]
+  }, {
+    "name" : "EXTRA_KEY_QUERY_LOCATION",
+    "type" : "String",
+    "comment" : "\n     * Key to obtain location as a result of ({@code queryLocationForEmergency} from Bundle\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PII_DEBUG",
+    "type" : "boolean",
+    "comment" : " Flag controlling whether PII is emitted into the logs",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionDeathListener",
+    "type" : "Listener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConferenceDeathListener",
+    "type" : "Conference.Listener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mListeners",
+    "type" : "Set<Listener>",
+    "comment" : "\n     * ConcurrentHashMap constructor params: 8 is initial table size, 0.9f is\n     * load factor before resizing, 1 means we only expect a single thread to\n     * access the map so make only a single shard\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mConferenceables",
+    "type" : "List<Conferenceable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUnmodifiableConferenceables",
+    "type" : "List<Conferenceable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTelecomCallId",
+    "type" : "String",
+    "comment" : " The internal telecom call ID associated with this connection.",
+    "links" : [ ]
+  }, {
+    "name" : "mPhoneAccountHandle",
+    "type" : "PhoneAccountHandle",
+    "comment" : " The PhoneAccountHandle associated with this connection.",
+    "links" : [ ]
+  }, {
+    "name" : "mState",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallAudioState",
+    "type" : "CallAudioState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallEndpoint",
+    "type" : "CallEndpoint",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAddress",
+    "type" : "Uri",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAddressPresentation",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallerDisplayName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallerDisplayNamePresentation",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRingbackRequested",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionCapabilities",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionProperties",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSupportedAudioRoutes",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mVideoProvider",
+    "type" : "VideoProvider",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAudioModeIsVoip",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectTimeMillis",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectElapsedTimeMillis",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStatusHints",
+    "type" : "StatusHints",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mVideoState",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDisconnectCause",
+    "type" : "DisconnectCause",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConference",
+    "type" : "Conference",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionService",
+    "type" : "ConnectionService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtras",
+    "type" : "Bundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mExtrasLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallDirection",
+    "type" : "int",
+    "comment" : "\n     * The direction of the connection; used where an existing connection is created and we need to\n     * communicate to Telecom whether its incoming or outgoing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPreviousExtraKeys",
+    "type" : "Set<String>",
+    "comment" : "\n     * Tracks the key set for the extras bundle provided on the last invocation of\n     * {@link #setExtras(Bundle)}.  Used so that on subsequent invocations we can remove any extras\n     * keys which were set previously but are no longer present in the replacement Bundle.\n     ",
+    "links" : [ "#setExtras(Bundle)" ]
+  }, {
+    "name" : "mCallerNumberVerificationStatus",
+    "type" : "int",
+    "comment" : "\n     * The verification status for an incoming call's phone number.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static String capabilitiesToString(int capabilities)",
+    "returnType" : "String",
+    "comment" : "\n     * Renders a set of capability bits ({@code CAPABILITY_*}) as a human readable string.\n     *\n     * @param capabilities A capability bit field.\n     * @return A human readable string representation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String capabilitiesToStringShort(int capabilities)",
+    "returnType" : "String",
+    "comment" : "\n     * Renders a set of capability bits ({@code CAPABILITY_*}) as a *short* human readable\n     * string.\n     *\n     * @param capabilities A capability bit field.\n     * @return A human readable string representation.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String capabilitiesToStringInternal(int capabilities, boolean isLong)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static String propertiesToString(int properties)",
+    "returnType" : "String",
+    "comment" : "\n     * Renders a set of property bits ({@code PROPERTY_*}) as a human readable string.\n     *\n     * @param properties A property bit field.\n     * @return A human readable string representation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String propertiesToStringShort(int properties)",
+    "returnType" : "String",
+    "comment" : "\n     * Renders a set of property bits ({@code PROPERTY_*}) as a *short* human readable string.\n     *\n     * @param properties A property bit field.\n     * @return A human readable string representation.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String propertiesToStringInternal(int properties, boolean isLong)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getTelecomCallId()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the Telecom internal call ID associated with this connection.  Should only be used\n     * for debugging and tracing purposes.\n     * <p>\n     * Note: Access to the Telecom internal call ID is used for logging purposes only; this API is\n     * provided to facilitate debugging of the Telephony stack only.\n     *\n     * @return The Telecom call ID, or {@code null} if it was not set.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Uri getAddress()",
+    "returnType" : "Uri",
+    "comment" : "\n     * @return The address (e.g., phone number) to which this Connection is currently communicating.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getAddressPresentation()",
+    "returnType" : "int",
+    "comment" : "\n     * @return The presentation requirements for the address.\n     *         See {@link TelecomManager} for valid values.\n     ",
+    "links" : [ "android.telecom.TelecomManager" ]
+  }, {
+    "name" : "public final String getCallerDisplayName()",
+    "returnType" : "String",
+    "comment" : "\n     * @return The caller display name (CNAP).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getCallerDisplayNamePresentation()",
+    "returnType" : "int",
+    "comment" : "\n     * @return The presentation requirements for the handle.\n     *         See {@link TelecomManager} for valid values.\n     ",
+    "links" : [ "android.telecom.TelecomManager" ]
+  }, {
+    "name" : "public final int getState()",
+    "returnType" : "int",
+    "comment" : "\n     * @return The state of this Connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getVideoState()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the video state of the connection.\n     * Valid values: {@link VideoProfile#STATE_AUDIO_ONLY},\n     * {@link VideoProfile#STATE_BIDIRECTIONAL},\n     * {@link VideoProfile#STATE_TX_ENABLED},\n     * {@link VideoProfile#STATE_RX_ENABLED}.\n     *\n     * @return The video state of the connection.\n     ",
+    "links" : [ "android.telecom.VideoProfile#STATE_BIDIRECTIONAL", "android.telecom.VideoProfile#STATE_RX_ENABLED", "android.telecom.VideoProfile#STATE_AUDIO_ONLY", "android.telecom.VideoProfile#STATE_TX_ENABLED" ]
+  }, {
+    "name" : "public final AudioState getAudioState()",
+    "returnType" : "AudioState",
+    "comment" : "\n     * @return The audio state of the connection, describing how its audio is currently\n     *         being routed by the system. This is {@code null} if this Connection\n     *         does not directly know about its audio state.\n     * @deprecated Use {@link #getCallAudioState()} instead.\n     * @hide\n     ",
+    "links" : [ "#getCallAudioState()" ]
+  }, {
+    "name" : "public final CallAudioState getCallAudioState()",
+    "returnType" : "CallAudioState",
+    "comment" : "\n     * @return The audio state of the connection, describing how its audio is currently\n     *         being routed by the system. This is {@code null} if this Connection\n     *         does not directly know about its audio state.\n     * @deprecated Use {@link #getCurrentCallEndpoint()},\n     * {@link #onAvailableCallEndpointsChanged(List)} and\n     * {@link #onMuteStateChanged(boolean)} instead.\n     ",
+    "links" : [ "#getCurrentCallEndpoint()", "#onMuteStateChanged(boolean)", "#onAvailableCallEndpointsChanged(List)" ]
+  }, {
+    "name" : "public final Conference getConference()",
+    "returnType" : "Conference",
+    "comment" : "\n     * @return The conference that this connection is a part of.  Null if it is not part of any\n     *         conference.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isRingbackRequested()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether this connection is requesting that the system play a ringback tone\n     * on its behalf.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean getAudioModeIsVoip()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return True if the connection's audio mode is VOIP.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final long getConnectTimeMillis()",
+    "returnType" : "long",
+    "comment" : "\n     * Retrieves the connection start time of the {@code Connnection}, if specified.  A value of\n     * {@link Conference#CONNECT_TIME_NOT_SPECIFIED} indicates that Telecom should determine the\n     * start time of the conference.\n     * <p>\n     * Note: This is an implementation detail specific to IMS conference calls over a mobile\n     * network.\n     *\n     * @return The time at which the {@code Connnection} was connected. Will be a value as retrieved\n     * from {@link System#currentTimeMillis()}.\n     *\n     * @hide\n     ",
+    "links" : [ "#currentTimeMillis()", "android.telecom.Conference#CONNECT_TIME_NOT_SPECIFIED" ]
+  }, {
+    "name" : "public final long getConnectionStartElapsedRealtimeMillis()",
+    "returnType" : "long",
+    "comment" : "\n     * Retrieves the connection start time of the {@link Connection}, if specified.  A value of\n     * {@link Conference#CONNECT_TIME_NOT_SPECIFIED} indicates that Telecom should determine the\n     * start time of the connection.\n     * <p>\n     * Based on the value of {@link SystemClock#elapsedRealtime()}, which ensures that wall-clock\n     * changes do not impact the call duration.\n     * <p>\n     * Used internally in Telephony when migrating conference participant data for IMS conferences.\n     * <p>\n     * The value returned is the same one set using\n     * {@link #setConnectionStartElapsedRealtimeMillis(long)}.  This value is never updated from\n     * the Telecom framework, so no permission enforcement occurs when retrieving the value with\n     * this method.\n     *\n     * @return The time at which the {@link Connection} was connected.\n     *\n     * @hide\n     ",
+    "links" : [ "android.telecom.Conference#CONNECT_TIME_NOT_SPECIFIED", "#setConnectionStartElapsedRealtimeMillis(long)", "android.os.SystemClock#elapsedRealtime()", "android.telecom.Connection" ]
+  }, {
+    "name" : "public final StatusHints getStatusHints()",
+    "returnType" : "StatusHints",
+    "comment" : "\n     * @return The status hints for this connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Bundle getExtras()",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Returns the extras associated with this connection.\n     * <p>\n     * Extras should be updated using {@link #putExtras(Bundle)}.\n     * <p>\n     * Telecom or an {@link InCallService} can also update the extras via\n     * {@link android.telecom.Call#putExtras(Bundle)}, and\n     * {@link Call#removeExtras(List)}.\n     * <p>\n     * The connection is notified of changes to the extras made by Telecom or an\n     * {@link InCallService} by {@link #onExtrasChanged(Bundle)}.\n     *\n     * @return The extras associated with this connection.\n     ",
+    "links" : [ "android.telecom.InCallService", "#onExtrasChanged(Bundle)", "#putExtras(Bundle)", "android.telecom.Call#removeExtras(List)", "android.telecom.Call#putExtras(Bundle)" ]
+  }, {
+    "name" : " final Connection addConnectionListener(Listener l)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Assign a listener to be notified of state changes.\n     *\n     * @param l A listener.\n     * @return This Connection.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Connection removeConnectionListener(Listener l)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Remove a previously assigned listener that was being notified of state changes.\n     *\n     * @param l A Listener.\n     * @return This Connection.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final DisconnectCause getDisconnectCause()",
+    "returnType" : "DisconnectCause",
+    "comment" : "\n     * @return The {@link DisconnectCause} for this connection.\n     ",
+    "links" : [ "android.telecom.DisconnectCause" ]
+  }, {
+    "name" : "public void setTelecomCallId(@NonNull String callId)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the telecom call ID associated with this Connection.  The Telecom Call ID should be used\n     * ONLY for debugging purposes.\n     * <p>\n     * Note: Access to the Telecom internal call ID is used for logging purposes only; this API is\n     * provided to facilitate debugging of the Telephony stack only.  Changing the ID via this\n     * method does NOT change any functionality in Telephony or Telecom and impacts only logging.\n     *\n     * @param callId The telecom call ID.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void setCallAudioState(CallAudioState state)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Connection that the state of its audio output has been changed externally.\n     *\n     * @param state The new audio state.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void setCallEndpoint(CallEndpoint endpoint)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Connection that the audio endpoint has been changed.\n     *\n     * @param endpoint The new call endpoint.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void setAvailableCallEndpoints(List<CallEndpoint> availableEndpoints)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Connection that the available call endpoints have been changed.\n     *\n     * @param availableEndpoints The available call endpoints.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void setMuteState(boolean isMuted)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Connection that its audio mute state has been changed.\n     *\n     * @param isMuted The new mute state.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String stateToString(int state)",
+    "returnType" : "String",
+    "comment" : "\n     * @param state An integer value of a {@code STATE_*} constant.\n     * @return A string representation of the value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getConnectionCapabilities()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the connection's capabilities, as a bit mask of the {@code CAPABILITY_*} constants.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getConnectionProperties()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the connection's properties, as a bit mask of the {@code PROPERTY_*} constants.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getSupportedAudioRoutes()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the connection's supported audio routes.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setAddress(Uri address, int presentation)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the value of the {@link #getAddress()} property.\n     *\n     * @param address The new address.\n     * @param presentation The presentation requirements for the address.\n     *        See {@link TelecomManager} for valid values.\n     ",
+    "links" : [ "#getAddress()", "android.telecom.TelecomManager" ]
+  }, {
+    "name" : "public final void setCallerDisplayName(String callerDisplayName, int presentation)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the caller display name (CNAP).\n     *\n     * @param callerDisplayName The new display name.\n     * @param presentation The presentation requirements for the handle.\n     *        See {@link TelecomManager} for valid values.\n     ",
+    "links" : [ "android.telecom.TelecomManager" ]
+  }, {
+    "name" : "public final void setVideoState(int videoState)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the video state for the connection.\n     * Valid values: {@link VideoProfile#STATE_AUDIO_ONLY},\n     * {@link VideoProfile#STATE_BIDIRECTIONAL},\n     * {@link VideoProfile#STATE_TX_ENABLED},\n     * {@link VideoProfile#STATE_RX_ENABLED}.\n     *\n     * @param videoState The new video state.\n     ",
+    "links" : [ "android.telecom.VideoProfile#STATE_BIDIRECTIONAL", "android.telecom.VideoProfile#STATE_RX_ENABLED", "android.telecom.VideoProfile#STATE_AUDIO_ONLY", "android.telecom.VideoProfile#STATE_TX_ENABLED" ]
+  }, {
+    "name" : "public final void setActive()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to active (e.g., an ongoing connection where two or more parties can actively\n     * communicate).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setRinging()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to ringing (e.g., an inbound ringing connection).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setInitializing()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to initializing (this Connection is not yet ready to be used).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setInitialized()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to initialized (the Connection has been set up and is now ready to be used).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setDialing()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to dialing (e.g., dialing an outbound connection).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setPulling()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to pulling (e.g. the connection is being pulled to the local device from another\n     * device).  Only applicable for {@link Connection}s with\n     * {@link Connection#PROPERTY_IS_EXTERNAL_CALL} and {@link Connection#CAPABILITY_CAN_PULL_CALL}.\n     ",
+    "links" : [ "android.telecom.Connection#PROPERTY_IS_EXTERNAL_CALL", "android.telecom.Connection#CAPABILITY_CAN_PULL_CALL", "android.telecom.Connection" ]
+  }, {
+    "name" : "public final void setOnHold()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to be on hold.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setVideoProvider(VideoProvider videoProvider)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the video connection provider.\n     * @param videoProvider The video provider.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final VideoProvider getVideoProvider()",
+    "returnType" : "VideoProvider",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setDisconnected(DisconnectCause disconnectCause)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets state to disconnected.\n     *\n     * @param disconnectCause The reason for the disconnection, as specified by\n     *         {@link DisconnectCause}.\n     ",
+    "links" : [ "android.telecom.DisconnectCause" ]
+  }, {
+    "name" : "public final void setPostDialWait(String remaining)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that this {@code Connection} is in a post-dial wait state. This is done\n     * when (a) the {@code Connection} is issuing a DTMF sequence; (b) it has encountered a \"wait\"\n     * character; and (c) it wishes to inform the In-Call app that it is waiting for the end-user\n     * to send an {@link #onPostDialContinue(boolean)} signal.\n     *\n     * @param remaining The DTMF character sequence remaining to be emitted once the\n     *         {@link #onPostDialContinue(boolean)} is received, including any \"wait\" characters\n     *         that remaining sequence may contain.\n     ",
+    "links" : [ "#onPostDialContinue(boolean)" ]
+  }, {
+    "name" : "public final void setNextPostDialChar(char nextChar)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that this {@code Connection} has processed a character in the post-dial\n     * started state. This is done when (a) the {@code Connection} is issuing a DTMF sequence;\n     * and (b) it wishes to signal Telecom to play the corresponding DTMF tone locally.\n     *\n     * @param nextChar The DTMF character that was just processed by the {@code Connection}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setRingbackRequested(boolean ringback)",
+    "returnType" : "void",
+    "comment" : "\n     * Requests that the framework play a ringback tone. This is to be invoked by implementations\n     * that do not play a ringback tone themselves in the connection's audio stream.\n     *\n     * @param ringback Whether the ringback tone is to be played.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConnectionCapabilities(int connectionCapabilities)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the connection's capabilities as a bit mask of the {@code CAPABILITY_*} constants.\n     *\n     * @param connectionCapabilities The new connection capabilities.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConnectionProperties(int connectionProperties)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the connection's properties as a bit mask of the {@code PROPERTY_*} constants.\n     *\n     * @param connectionProperties The new connection properties.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setSupportedAudioRoutes(int supportedAudioRoutes)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the supported audio routes.\n     *\n     * @param supportedAudioRoutes the supported audio routes as a bitmask.\n     *                             See {@link CallAudioState}\n     * @hide\n     ",
+    "links" : [ "android.telecom.CallAudioState" ]
+  }, {
+    "name" : "public final void destroy()",
+    "returnType" : "void",
+    "comment" : "\n     * Tears down the Connection object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setAudioModeIsVoip(boolean isVoip)",
+    "returnType" : "void",
+    "comment" : "\n     * Requests that the framework use VOIP audio mode for this connection.\n     *\n     * @param isVoip True if the audio mode is VOIP.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConnectTimeMillis(@IntRange(from = 0) long connectTimeMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the time at which a call became active on this Connection. This is set only\n     * when a conference call becomes active on this connection.\n     * <p>\n     * This time corresponds to the date/time of connection and is stored in the call log in\n     * {@link android.provider.CallLog.Calls#DATE}.\n     * <p>\n     * Used by telephony to maintain calls associated with an IMS Conference.\n     *\n     * @param connectTimeMillis The connection time, in milliseconds.  Should be set using a value\n     *                          obtained from {@link System#currentTimeMillis()}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.provider.CallLog.Calls#DATE", "#currentTimeMillis()" ]
+  }, {
+    "name" : "public final void setConnectionStartElapsedRealtimeMillis(@ElapsedRealtimeLong long connectElapsedTimeMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the time at which a call became active on this Connection. This is set only\n     * when a conference call becomes active on this connection.\n     * <p>\n     * This time is used to establish the duration of a call.  It uses\n     * {@link SystemClock#elapsedRealtime()} to ensure that the call duration is not impacted by\n     * time zone changes during a call.  The difference between the current\n     * {@link SystemClock#elapsedRealtime()} and the value set at the connection start time is used\n     * to populate {@link android.provider.CallLog.Calls#DURATION} in the call log.\n     * <p>\n     * Used by telephony to maintain calls associated with an IMS Conference.\n     *\n     * @param connectElapsedTimeMillis The connection time, in milliseconds.  Stored in the format\n     *                              {@link SystemClock#elapsedRealtime()}.\n     * @hide\n     ",
+    "links" : [ "android.provider.CallLog.Calls#DURATION", "android.os.SystemClock#elapsedRealtime()" ]
+  }, {
+    "name" : "public final void setStatusHints(StatusHints statusHints)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the label and icon status to display in the in-call UI.\n     *\n     * @param statusHints The status label and icon to set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConferenceableConnections(List<Connection> conferenceableConnections)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the connections with which this connection can be conferenced.\n     *\n     * @param conferenceableConnections The set of connections this connection can conference with.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConferenceables(List<Conferenceable> conferenceables)",
+    "returnType" : "void",
+    "comment" : "\n     * Similar to {@link #setConferenceableConnections(java.util.List)}, sets a list of connections\n     * or conferences with which this connection can be conferenced.\n     *\n     * @param conferenceables The conferenceables.\n     ",
+    "links" : [ "#setConferenceableConnections(java.util.List)" ]
+  }, {
+    "name" : "public final void resetConnectionTime()",
+    "returnType" : "void",
+    "comment" : "\n     * Resets the CDMA connection time.\n     * <p>\n     * This is an implementation detail specific to legacy CDMA calls on mobile networks.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final List<Conferenceable> getConferenceables()",
+    "returnType" : "List<Conferenceable>",
+    "comment" : "\n     * Returns the connections or conferences with which this connection can be conferenced.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setConnectionService(ConnectionService connectionService)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void unsetConnectionService(ConnectionService connectionService)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean setConference(Conference conference)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the conference that this connection is a part of. This will fail if the connection is\n     * already part of a conference. {@link #resetConference} to un-set the conference first.\n     *\n     * @param conference The conference.\n     * @return {@code true} if the conference was successfully set.\n     * @hide\n     ",
+    "links" : [ "#resetConference" ]
+  }, {
+    "name" : "public final void resetConference()",
+    "returnType" : "void",
+    "comment" : "\n     * Resets the conference that this connection is a part of.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setExtras(@Nullable Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Set some extras that can be associated with this {@code Connection}.\n     * <p>\n     * New or existing keys are replaced in the {@code Connection} extras.  Keys which are no longer\n     * in the new extras, but were present the last time {@code setExtras} was called are removed.\n     * <p>\n     * Alternatively you may use the {@link #putExtras(Bundle)}, and\n     * {@link #removeExtras(String...)} methods to modify the extras.\n     * <p>\n     * No assumptions should be made as to how an In-Call UI or service will handle these extras.\n     * Keys should be fully qualified (e.g., com.example.MY_EXTRA) to avoid conflicts.\n     *\n     * @param extras The extras associated with this {@code Connection}.\n     ",
+    "links" : [ "#putExtras(Bundle)", "#removeExtras(String...)" ]
+  }, {
+    "name" : "public final void putExtras(@NonNull Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds some extras to this {@code Connection}.  Existing keys are replaced and new ones are\n     * added.\n     * <p>\n     * No assumptions should be made as to how an In-Call UI or service will handle these extras.\n     * Keys should be fully qualified (e.g., com.example.MY_EXTRA) to avoid conflicts.\n     *\n     * @param extras The extras to add.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void removeExtras(List<String> keys)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes extras from this {@code Connection}.\n     *\n     * @param keys The keys of the extras to remove.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void removeExtras(String... keys)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes extras from this {@code Connection}.\n     *\n     * @param keys The keys of the extras to remove.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setAudioRoute(int route)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the audio route (speaker, bluetooth, etc...).  When this request is honored, there will\n     * be change to the {@link #getCallAudioState()}.\n     * <p>\n     * Used by self-managed {@link ConnectionService}s which wish to change the audio route for a\n     * self-managed {@link Connection} (see {@link PhoneAccount#CAPABILITY_SELF_MANAGED}.)\n     * <p>\n     * See also {@link InCallService#setAudioRoute(int)}.\n     *\n     * @param route The audio route to use (one of {@link CallAudioState#ROUTE_BLUETOOTH},\n     *              {@link CallAudioState#ROUTE_EARPIECE}, {@link CallAudioState#ROUTE_SPEAKER}, or\n     *              {@link CallAudioState#ROUTE_WIRED_HEADSET}).\n     * @deprecated Use {@link #requestCallEndpointChange(CallEndpoint, Executor, OutcomeReceiver)}\n     * instead.\n     ",
+    "links" : [ "android.telecom.InCallService#setAudioRoute(int)", "android.telecom.CallAudioState#ROUTE_WIRED_HEADSET", "android.telecom.CallAudioState#ROUTE_EARPIECE", "#requestCallEndpointChange(CallEndpoint", "#getCallAudioState()", "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.CallAudioState#ROUTE_BLUETOOTH", "android.telecom.Connection", "android.telecom.ConnectionService", "android.telecom.CallAudioState#ROUTE_SPEAKER" ]
+  }, {
+    "name" : "public void requestBluetoothAudio(@NonNull BluetoothDevice bluetoothDevice)",
+    "returnType" : "void",
+    "comment" : "\n     * Request audio routing to a specific bluetooth device. Calling this method may result in\n     * the device routing audio to a different bluetooth device than the one specified if the\n     * bluetooth stack is unable to route audio to the requested device.\n     * A list of available devices can be obtained via\n     * {@link CallAudioState#getSupportedBluetoothDevices()}\n     *\n     * <p>\n     * Used by self-managed {@link ConnectionService}s which wish to use bluetooth audio for a\n     * self-managed {@link Connection} (see {@link PhoneAccount#CAPABILITY_SELF_MANAGED}.)\n     * <p>\n     * See also {@link InCallService#requestBluetoothAudio(BluetoothDevice)}\n     * @param bluetoothDevice The bluetooth device to connect to.\n     * @deprecated Use {@link #requestCallEndpointChange(CallEndpoint, Executor, OutcomeReceiver)}\n     * instead.\n     ",
+    "links" : [ "android.telecom.CallAudioState#getSupportedBluetoothDevices()", "#requestCallEndpointChange(CallEndpoint", "android.telecom.InCallService#requestBluetoothAudio(BluetoothDevice)", "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public final void requestCallEndpointChange(@NonNull CallEndpoint endpoint, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Void, CallEndpointException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Request audio routing to a specific CallEndpoint. Clients should not define their own\n     * CallEndpoint when requesting a change. Instead, the new endpoint should be one of the valid\n     * endpoints provided by {@link #onAvailableCallEndpointsChanged(List)}.\n     * When this request is honored, there will be change to the {@link #getCurrentCallEndpoint()}.\n     * <p>\n     * Used by self-managed {@link ConnectionService}s which wish to change the CallEndpoint for a\n     * self-managed {@link Connection} (see {@link PhoneAccount#CAPABILITY_SELF_MANAGED}.)\n     * <p>\n     * See also\n     * {@link InCallService#requestCallEndpointChange(CallEndpoint, Executor, OutcomeReceiver)}.\n     *\n     * @param endpoint The call endpoint to use.\n     * @param executor The executor of where the callback will execute.\n     * @param callback The callback to notify the result of the endpoint change.\n     ",
+    "links" : [ "#getCurrentCallEndpoint()", "android.telecom.InCallService#requestCallEndpointChange(CallEndpoint", "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.Connection", "#onAvailableCallEndpointsChanged(List)", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public final CallEndpoint getCurrentCallEndpoint()",
+    "returnType" : "CallEndpoint",
+    "comment" : "\n     * Obtains the current CallEndpoint.\n     *\n     * @return An object encapsulating the CallEndpoint.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void sendRttInitiationSuccess()",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that a previously requested RTT session via\n     * {@link ConnectionRequest#isRequestingRtt()} or\n     * {@link #onStartRtt(RttTextStream)} has succeeded.\n     ",
+    "links" : [ "#onStartRtt(RttTextStream)", "android.telecom.ConnectionRequest#isRequestingRtt()" ]
+  }, {
+    "name" : "public final void sendRttInitiationFailure(int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that a previously requested RTT session via\n     * {@link ConnectionRequest#isRequestingRtt()} or {@link #onStartRtt(RttTextStream)}\n     * has failed.\n     * @param reason One of the reason codes defined in {@link RttModifyStatus}, with the\n     *               exception of {@link RttModifyStatus#SESSION_MODIFY_REQUEST_SUCCESS}.\n     ",
+    "links" : [ "RttModifyStatus", "#onStartRtt(RttTextStream)", "android.telecom.ConnectionRequest#isRequestingRtt()", "#SESSION_MODIFY_REQUEST_SUCCESS" ]
+  }, {
+    "name" : "public final void sendRttSessionRemotelyTerminated()",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that a currently active RTT session has been terminated by the remote\n     * side of the coll.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void sendRemoteRttRequest()",
+    "returnType" : "void",
+    "comment" : "\n     * Informs listeners that the remote side of the call has requested an upgrade to include an\n     * RTT session in the call.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void queryLocationForEmergency(@IntRange(from = 100, to = 5000) long timeoutMillis, @NonNull String provider, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Location, QueryLocationException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Query the device's location in order to place an Emergency Call.\n     * Only SIM call managers can call this method for Connections representing Emergency calls.\n     * If a previous location query request is not completed, the new location query request will\n     * be rejected and return a QueryLocationException with\n     * {@code QueryLocationException#ERROR_PREVIOUS_REQUEST_EXISTS}\n     *\n     * @param timeoutMillis long: Timeout in millis waiting for query response (MAX:5000, MIN:100).\n     * @param provider String: the location provider name, This value cannot be null.\n     *                 It is the caller's responsibility to select an enabled provider. The caller\n     *                 can use {@link android.location.LocationManager#getProviders(boolean)}\n     *                 to choose one of the enabled providers and pass it in.\n     * @param executor The executor of where the callback will execute.\n     * @param callback The callback to notify the result of queryLocation.\n     ",
+    "links" : [ "android.location.LocationManager#getProviders(boolean)" ]
+  }, {
+    "name" : "public void onAudioStateChanged(AudioState state)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection that the {@link #getAudioState()} property has a new value.\n     *\n     * @param state The new connection audio state.\n     * @deprecated Use {@link #onCallAudioStateChanged(CallAudioState)} instead.\n     * @hide\n     ",
+    "links" : [ "#onCallAudioStateChanged(CallAudioState)", "#getAudioState()" ]
+  }, {
+    "name" : "public void onCallAudioStateChanged(CallAudioState state)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection that the {@link #getCallAudioState()} property has a new value.\n     *\n     * @param state The new connection audio state.\n     * @deprecated Use {@link #onCallEndpointChanged(CallEndpoint)},\n     * {@link #onAvailableCallEndpointsChanged(List)} and\n     * {@link #onMuteStateChanged(boolean)} instead.\n     ",
+    "links" : [ "#onCallEndpointChanged(CallEndpoint)", "#onMuteStateChanged(boolean)", "#getCallAudioState()", "#onAvailableCallEndpointsChanged(List)" ]
+  }, {
+    "name" : "public void onCallEndpointChanged(@NonNull CallEndpoint callEndpoint)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection that the audio endpoint has been changed.\n     *\n     * @param callEndpoint The current CallEndpoint.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAvailableCallEndpointsChanged(@NonNull List<CallEndpoint> availableEndpoints)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection that the available call endpoints have been changed.\n     *\n     * @param availableEndpoints The set of available CallEndpoint.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onMuteStateChanged(boolean isMuted)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection that its audio mute state has been changed.\n     *\n     * @param isMuted The current mute state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onUsingAlternativeUi(boolean isUsingAlternativeUi)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Connection when it will or will not be tracked by an {@link InCallService} which\n     * can provide an InCall UI.\n     * This is primarily intended for use by Connections reported by self-managed\n     * {@link ConnectionService} which typically maintain their own UI.\n     *\n     * @param isUsingAlternativeUi Indicates whether an InCallService that can provide InCall UI is\n     *                             currently tracking the self-managed call.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void onTrackedByNonUiService(boolean isTracked)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform this Conenection when it will or will not be tracked by an non-UI\n     * {@link InCallService}.\n     *\n     * @param isTracked Indicates whether an non-UI InCallService is currently tracking the\n     *                 self-managed call.\n     ",
+    "links" : [ "android.telecom.InCallService" ]
+  }, {
+    "name" : "public void onStateChanged(int state)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of an internal state change. This method is called after the\n     * state is changed.\n     *\n     * @param state The new state, one of the {@code STATE_*} constants.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onPlayDtmfTone(char c)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to play a DTMF tone.\n     *\n     * @param c A DTMF character.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onStopDtmfTone()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to stop any currently playing DTMF tones.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDisconnect()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to disconnect.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onSeparate()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to separate from its parent conference.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAddConferenceParticipants(@NonNull List<Uri> participants)",
+    "returnType" : "void",
+    "comment" : "\n     * Supports initiation of a conference call by directly adding participants to an ongoing call.\n     *\n     * @param participants with which conference call will be formed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAbort()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to abort.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onHold()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to hold. {@link Connection#setOnHold} should be within\n     * the onHold() body in order to transition the call state to {@link Connection#STATE_HOLDING}.\n     * <p>\n     * Note: If the Connection does not transition to  {@link Connection#STATE_HOLDING} within 2\n     * seconds, the call will be disconnected.\n     ",
+    "links" : [ "android.telecom.Connection#setOnHold", "android.telecom.Connection#STATE_HOLDING" ]
+  }, {
+    "name" : "public void onUnhold()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to exit a hold state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onAnswer(int videoState)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of\n     * a request to accept.\n     * <p>\n     * For managed {@link ConnectionService}s, this will be called when the user answers a call via\n     * the default dialer's {@link InCallService}.\n     * <p>\n     * Although a self-managed {@link ConnectionService} provides its own incoming call UI, the\n     * Telecom framework may request that the call is answered in the following circumstances:\n     * <ul>\n     *     <li>The user chooses to answer an incoming call via a Bluetooth device.</li>\n     *     <li>A car mode {@link InCallService} is in use which has declared\n     *     {@link TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS} in its manifest.  Such an\n     *     {@link InCallService} will be able to see calls from self-managed\n     *     {@link ConnectionService}s, and will be able to display an incoming call UI on their\n     *     behalf.</li>\n     * </ul>\n     * @param videoState The video state in which to answer the connection.\n     ",
+    "links" : [ "#STATE_RINGING", "android.telecom.InCallService", "android.telecom.ConnectionService", "android.telecom.TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS" ]
+  }, {
+    "name" : "public void onAnswer()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of\n     * a request to accept.\n     * <p>\n     * For managed {@link ConnectionService}s, this will be called when the user answers a call via\n     * the default dialer's {@link InCallService}.\n     * <p>\n     * Although a self-managed {@link ConnectionService} provides its own incoming call UI, the\n     * Telecom framework may request that the call is answered in the following circumstances:\n     * <ul>\n     *     <li>The user chooses to answer an incoming call via a Bluetooth device.</li>\n     *     <li>A car mode {@link InCallService} is in use which has declared\n     *     {@link TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS} in its manifest.  Such an\n     *     {@link InCallService} will be able to see calls from self-managed\n     *     {@link ConnectionService}s, and will be able to display an incoming call UI on their\n     *     behalf.</li>\n     * </ul>\n     ",
+    "links" : [ "#STATE_RINGING", "android.telecom.InCallService", "android.telecom.ConnectionService", "android.telecom.TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS" ]
+  }, {
+    "name" : "public void onDeflect(Uri address)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of\n     * a request to deflect.\n     ",
+    "links" : [ "#STATE_RINGING" ]
+  }, {
+    "name" : "public void onReject()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of\n     * a request to reject.\n     * <p>\n     * For managed {@link ConnectionService}s, this will be called when the user rejects a call via\n     * the default dialer's {@link InCallService}.\n     * <p>\n     * Although a self-managed {@link ConnectionService} provides its own incoming call UI, the\n     * Telecom framework may request that the call is rejected in the following circumstances:\n     * <ul>\n     *     <li>The user chooses to reject an incoming call via a Bluetooth device.</li>\n     *     <li>A car mode {@link InCallService} is in use which has declared\n     *     {@link TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS} in its manifest.  Such an\n     *     {@link InCallService} will be able to see calls from self-managed\n     *     {@link ConnectionService}s, and will be able to display an incoming call UI on their\n     *     behalf.</li>\n     * </ul>\n     ",
+    "links" : [ "#STATE_RINGING", "android.telecom.InCallService", "android.telecom.ConnectionService", "android.telecom.TelecomManager#METADATA_INCLUDE_SELF_MANAGED_CALLS" ]
+  }, {
+    "name" : "public void onReject(@android.telecom.Call.RejectReason int rejectReason)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of a request to reject.\n     * <p>\n     * For managed {@link ConnectionService}s, this will be called when the user rejects a call via\n     * the default dialer's {@link InCallService} using {@link Call#reject(int)}.\n     * @param rejectReason the reason the user provided for rejecting the call.\n     ",
+    "links" : [ "#STATE_RINGING", "android.telecom.InCallService", "android.telecom.Call#reject(int)", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void onReject(String replyMessage)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, which is in {@link #STATE_RINGING}, of\n     * a request to reject with a message.\n     ",
+    "links" : [ "#STATE_RINGING" ]
+  }, {
+    "name" : "public void onTransfer(@NonNull Uri number, boolean isConfirmationRequired)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, a request to transfer to a target number.\n     * @param number the number to transfer this {@link Connection} to.\n     * @param isConfirmationRequired when {@code true}, the {@link ConnectionService}\n     * should wait until the transfer has successfully completed before disconnecting\n     * the current {@link Connection}.\n     * When {@code false}, the {@link ConnectionService} should signal the network to\n     * perform the transfer, but should immediately disconnect the call regardless of\n     * the outcome of the transfer.\n     * @hide\n     ",
+    "links" : [ "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void onTransfer(@NonNull Connection otherConnection)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection, a request to transfer to another Connection.\n     * @param otherConnection the {@link Connection} to transfer this call to.\n     * @hide\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "public void onSilence()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to silence the ringer.\n     * <p>\n     * The ringer may be silenced by any of the following methods:\n     * <ul>\n     *     <li>{@link TelecomManager#silenceRinger()}</li>\n     *     <li>The user presses the volume-down button while a call is ringing.</li>\n     * </ul>\n     * <p>\n     * Self-managed {@link ConnectionService} implementations should override this method in their\n     * {@link Connection} implementation and implement logic to silence their app's ringtone.  If\n     * your app set the ringtone as part of the incoming call {@link Notification} (see\n     * {@link #onShowIncomingCallUi()}), it should re-post the notification now, except call\n     * {@link android.app.Notification.Builder#setOnlyAlertOnce(boolean)} with {@code true}.  This\n     * will ensure the ringtone sound associated with your {@link android.app.NotificationChannel}\n     * stops playing.\n     ",
+    "links" : [ "android.telecom.TelecomManager#silenceRinger()", "android.app.NotificationChannel", "android.app.Notification", "#onShowIncomingCallUi()", "android.telecom.Connection", "android.telecom.ConnectionService", "android.app.Notification.Builder#setOnlyAlertOnce(boolean)" ]
+  }, {
+    "name" : "public void onPostDialContinue(boolean proceed)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection whether the user wishes to proceed with the post-dial DTMF codes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onPullExternalCall()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a request to pull an external call to the local device.\n     * <p>\n     * The {@link InCallService} issues a request to pull an external call to the local device via\n     * {@link Call#pullExternalCall()}.\n     * <p>\n     * For a Connection to be pulled, both the {@link Connection#CAPABILITY_CAN_PULL_CALL}\n     * capability and {@link Connection#PROPERTY_IS_EXTERNAL_CALL} property bits must be set.\n     * <p>\n     * For more information on external calls, see {@link Connection#PROPERTY_IS_EXTERNAL_CALL}.\n     ",
+    "links" : [ "android.telecom.Connection#PROPERTY_IS_EXTERNAL_CALL", "android.telecom.InCallService", "android.telecom.Connection#CAPABILITY_CAN_PULL_CALL", "android.telecom.Call#pullExternalCall()" ]
+  }, {
+    "name" : "public void onCallEvent(String event, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this Connection of a {@link Call} event initiated from an {@link InCallService}.\n     * <p>\n     * The {@link InCallService} issues a Call event via {@link Call#sendCallEvent(String, Bundle)}.\n     * <p>\n     * Where possible, the Connection should make an attempt to handle {@link Call} events which\n     * are part of the {@code android.telecom.*} namespace.  The Connection should ignore any events\n     * it does not wish to handle.  Unexpected events should be handled gracefully, as it is\n     * possible that a {@link InCallService} has defined its own Call events which a Connection is\n     * not aware of.\n     * <p>\n     * See also {@link Call#sendCallEvent(String, Bundle)}.\n     *\n     * @param event The call event.\n     * @param extras Extras associated with the call event.\n     ",
+    "links" : [ "android.telecom.Call#sendCallEvent(String", "android.telecom.InCallService", "android.telecom.Call" ]
+  }, {
+    "name" : "public void onHandoverComplete()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this {@link Connection} that a handover has completed.\n     * <p>\n     * A handover is initiated with {@link android.telecom.Call#handoverTo(PhoneAccountHandle, int,\n     * Bundle)} on the initiating side of the handover, and\n     * {@link TelecomManager#acceptHandover(Uri, int, PhoneAccountHandle)}.\n     ",
+    "links" : [ "android.telecom.TelecomManager#acceptHandover(Uri", "android.telecom.Connection", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+  }, {
+    "name" : "public void onExtrasChanged(Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this {@link Connection} of a change to the extras made outside the\n     * {@link ConnectionService}.\n     * <p>\n     * These extras changes can originate from Telecom itself, or from an {@link InCallService} via\n     * the {@link android.telecom.Call#putExtras(Bundle)} and\n     * {@link Call#removeExtras(List)}.\n     *\n     * @param extras The new extras bundle.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.Connection", "android.telecom.ConnectionService", "android.telecom.Call#removeExtras(List)", "android.telecom.Call#putExtras(Bundle)" ]
+  }, {
+    "name" : "public void onShowIncomingCallUi()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this {@link Connection} that its {@link ConnectionService} is responsible for\n     * displaying its incoming call user interface for the {@link Connection}.\n     * <p>\n     * Will only be called for incoming calls added via a self-managed {@link ConnectionService}\n     * (see {@link PhoneAccount#CAPABILITY_SELF_MANAGED}), where the {@link ConnectionService}\n     * should show its own incoming call user interface.\n     * <p>\n     * Where there are ongoing calls in other self-managed {@link ConnectionService}s, or in a\n     * regular {@link ConnectionService}, and it is not possible to hold these other calls, the\n     * Telecom framework will display its own incoming call user interface to allow the user to\n     * choose whether to answer the new incoming call and disconnect other ongoing calls, or to\n     * reject the new incoming call.\n     * <p>\n     * You should trigger the display of the incoming call user interface for your application by\n     * showing a {@link Notification} with a full-screen {@link Intent} specified.\n     *\n     * In your application code, you should create a {@link android.app.NotificationChannel} for\n     * incoming call notifications from your app:\n     * <pre><code>\n     * NotificationChannel channel = new NotificationChannel(YOUR_CHANNEL_ID, \"Incoming Calls\",\n     *          NotificationManager.IMPORTANCE_MAX);\n     * // other channel setup stuff goes here.\n     *\n     * // We'll use the default system ringtone for our incoming call notification channel.  You can\n     * // use your own audio resource here.\n     * Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);\n     * channel.setSound(ringtoneUri, new AudioAttributes.Builder()\n     *          // Setting the AudioAttributes is important as it identifies the purpose of your\n     *          // notification sound.\n     *          .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)\n     *          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)\n     *      .build());\n     *\n     * NotificationManager mgr = getSystemService(NotificationManager.class);\n     * mgr.createNotificationChannel(channel);\n     * </code></pre>\n     * When it comes time to post a notification for your incoming call, ensure it uses your\n     * incoming call {@link android.app.NotificationChannel}.\n     * <pre><code>\n     *     // Create an intent which triggers your fullscreen incoming call user interface.\n     *     Intent intent = new Intent(Intent.ACTION_MAIN, null);\n     *     intent.setFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION | Intent.FLAG_ACTIVITY_NEW_TASK);\n     *     intent.setClass(context, YourIncomingCallActivity.class);\n     *     PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_MUTABLE_UNAUDITED);\n     *\n     *     // Build the notification as an ongoing high priority item; this ensures it will show as\n     *     // a heads up notification which slides down over top of the current content.\n     *     final Notification.Builder builder = new Notification.Builder(context);\n     *     builder.setOngoing(true);\n     *     builder.setPriority(Notification.PRIORITY_HIGH);\n     *\n     *     // Set notification content intent to take user to fullscreen UI if user taps on the\n     *     // notification body.\n     *     builder.setContentIntent(pendingIntent);\n     *     // Set full screen intent to trigger display of the fullscreen UI when the notification\n     *     // manager deems it appropriate.\n     *     builder.setFullScreenIntent(pendingIntent, true);\n     *\n     *     // Setup notification content.\n     *     builder.setSmallIcon( yourIconResourceId );\n     *     builder.setContentTitle(\"Your notification title\");\n     *     builder.setContentText(\"Your notification content.\");\n     *\n     *     // Set notification as insistent to cause your ringtone to loop.\n     *     Notification notification = builder.build();\n     *     notification.flags |= Notification.FLAG_INSISTENT;\n     *\n     *     // Use builder.addAction(..) to add buttons to answer or reject the call.\n     *     NotificationManager notificationManager = mContext.getSystemService(\n     *         NotificationManager.class);\n     *     notificationManager.notify(YOUR_CHANNEL_ID, YOUR_TAG, YOUR_ID, notification);\n     * </code></pre>\n     ",
+    "links" : [ "android.app.NotificationChannel", "android.app.Notification", "android.content.Intent", "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.Connection", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void onStartRtt(@NonNull RttTextStream rttTextStream)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this {@link Connection} that the user has requested an RTT session.\n     * The connection service should call {@link #sendRttInitiationSuccess} or\n     * {@link #sendRttInitiationFailure} to inform Telecom of the success or failure of the\n     * request, respectively.\n     * @param rttTextStream The object that should be used to send text to or receive text from\n     *                      the in-call app.\n     ",
+    "links" : [ "#sendRttInitiationFailure", "android.telecom.Connection", "#sendRttInitiationSuccess" ]
+  }, {
+    "name" : "public void onStopRtt()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this {@link Connection} that it should terminate any existing RTT communication\n     * channel. No response to Telecom is needed for this method.\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "public void handleRttUpgradeResponse(@Nullable RttTextStream rttTextStream)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies this connection of a response to a previous remotely-initiated RTT upgrade\n     * request sent via {@link #sendRemoteRttRequest}. Acceptance of the request is\n     * indicated by the supplied {@link RttTextStream} being non-null, and rejection is\n     * indicated by {@code rttTextStream} being {@code null}\n     * @param rttTextStream The object that should be used to send text to or receive text from\n     *                      the in-call app.\n     ",
+    "links" : [ "RttTextStream", "#sendRemoteRttRequest" ]
+  }, {
+    "name" : "public void onCallFilteringCompleted(@NonNull CallFilteringCompletionInfo callFilteringCompletionInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Indicates that call filtering in Telecom is complete\n     *\n     * This method is called for a connection created via\n     * {@link ConnectionService#onCreateIncomingConnection} when call filtering completes in\n     * Telecom, including checking the blocked number db, per-contact settings, and custom call\n     * filtering apps.\n     *\n     * @param callFilteringCompletionInfo Info provided by Telecom on the results of call filtering.\n     * @hide\n     ",
+    "links" : [ "android.telecom.ConnectionService#onCreateIncomingConnection" ]
+  }, {
+    "name" : " static String toLogSafePhoneNumber(String number)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setState(int state)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static Connection createFailedConnection(DisconnectCause disconnectCause)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Return a {@code Connection} which represents a failed connection attempt. The returned\n     * {@code Connection} will have a {@link android.telecom.DisconnectCause} and as specified,\n     * and a {@link #getState()} of {@link #STATE_DISCONNECTED}.\n     * <p>\n     * The returned {@code Connection} can be assumed to {@link #destroy()} itself when appropriate,\n     * so users of this method need not maintain a reference to its return value to destroy it.\n     *\n     * @param disconnectCause The disconnect cause, ({@see android.telecomm.DisconnectCause}).\n     * @return A {@code Connection} which indicates failure.\n     ",
+    "links" : [ "#STATE_DISCONNECTED", "#getState()", "android.telecom.DisconnectCause", "#destroy()" ]
+  }, {
+    "name" : "public void checkImmutable()",
+    "returnType" : "void",
+    "comment" : "\n     * Override to throw an {@link UnsupportedOperationException} if this {@code Connection} is\n     * not intended to be mutated, e.g., if it is a marker for failure. Only for framework use;\n     * this should never be un-@hide-den.\n     *\n     * @hide\n     ",
+    "links" : [ "UnsupportedOperationException" ]
+  }, {
+    "name" : "public static Connection createCanceledConnection()",
+    "returnType" : "Connection",
+    "comment" : "\n     * Return a {@code Connection} which represents a canceled connection attempt. The returned\n     * {@code Connection} will have state {@link #STATE_DISCONNECTED}, and cannot be moved out of\n     * that state. This connection should not be used for anything, and no other\n     * {@code Connection}s should be attempted.\n     * <p>\n     * so users of this method need not maintain a reference to its return value to destroy it.\n     *\n     * @return A {@code Connection} which indicates that the underlying connection should\n     * be canceled.\n     ",
+    "links" : [ "#STATE_DISCONNECTED" ]
+  }, {
+    "name" : "private final void fireOnConferenceableConnectionsChanged()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void fireConferenceChanged()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void clearConferenceableList()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void handleExtrasChanged(Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Handles a change to extras received from Telecom.\n     *\n     * @param extras The new extras.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void notifyConferenceMergeFailed()",
+    "returnType" : "void",
+    "comment" : "\n     * Called by a {@link ConnectionService} to notify Telecom that a {@link Conference#onMerge()}\n     * request failed.\n     ",
+    "links" : [ "android.telecom.Conference#onMerge()", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void notifyPhoneAccountChanged(PhoneAccountHandle pHandle)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies listeners when phone account is changed. For example, when the PhoneAccount is\n     * changed due to an emergency call being redialed.\n     * @param pHandle The new PhoneAccountHandle for this connection.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPhoneAccountHandle(@NonNull PhoneAccountHandle phoneAccountHandle)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the {@link PhoneAccountHandle} associated with this connection.\n     * <p>\n     * Used by the Telephony {@link ConnectionService} to handle changes to the {@link PhoneAccount}\n     * which take place after call initiation (important for emergency calling scenarios).\n     *\n     * @param phoneAccountHandle the phone account handle to set.\n     * @hide\n     ",
+    "links" : [ "android.telecom.PhoneAccountHandle", "android.telecom.PhoneAccount", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public PhoneAccountHandle getPhoneAccountHandle()",
+    "returnType" : "PhoneAccountHandle",
+    "comment" : "\n     * Returns the {@link PhoneAccountHandle} associated with this connection.\n     * <p>\n     * Used by the Telephony {@link ConnectionService} to handle changes to the {@link PhoneAccount}\n     * which take place after call initiation (important for emergency calling scenarios).\n     *\n     * @return the phone account handle specified via\n     * {@link #setPhoneAccountHandle(PhoneAccountHandle)}, or {@code null} if none was set.\n     * @hide\n     ",
+    "links" : [ "android.telecom.PhoneAccountHandle", "android.telecom.PhoneAccount", "#setPhoneAccountHandle(PhoneAccountHandle)", "android.telecom.ConnectionService" ]
+  }, {
+    "name" : "public void sendConnectionEvent(String event, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Sends an event associated with this {@code Connection} with associated event extras to the\n     * {@link InCallService}.\n     * <p>\n     * Connection events are used to communicate point in time information from a\n     * {@link ConnectionService} to a {@link InCallService} implementations.  An example of a\n     * custom connection event includes notifying the UI when a WIFI call has been handed over to\n     * LTE, which the InCall UI might use to inform the user that billing charges may apply.  The\n     * Android Telephony framework will send the {@link #EVENT_CALL_MERGE_FAILED} connection event\n     * when a call to {@link Call#mergeConference()} has failed to complete successfully.  A\n     * connection event could also be used to trigger UI in the {@link InCallService} which prompts\n     * the user to make a choice (e.g. whether they want to incur roaming costs for making a call),\n     * which is communicated back via {@link Call#sendCallEvent(String, Bundle)}.\n     * <p>\n     * Events are exposed to {@link InCallService} implementations via\n     * {@link Call.Callback#onConnectionEvent(Call, String, Bundle)}.\n     * <p>\n     * No assumptions should be made as to how an In-Call UI or service will handle these events.\n     * The {@link ConnectionService} must assume that the In-Call UI could even chose to ignore\n     * some events altogether.\n     * <p>\n     * Events should be fully qualified (e.g. {@code com.example.event.MY_EVENT}) to avoid\n     * conflicts between {@link ConnectionService} implementations.  Further, custom\n     * {@link ConnectionService} implementations shall not re-purpose events in the\n     * {@code android.*} namespace, nor shall they define new event types in this namespace.  When\n     * defining a custom event type, ensure the contents of the extras {@link Bundle} is clearly\n     * defined.  Extra keys for this bundle should be named similar to the event type (e.g.\n     * {@code com.example.extra.MY_EXTRA}).\n     * <p>\n     *  When defining events and the associated extras, it is important to keep their behavior\n     * consistent when the associated {@link ConnectionService} is updated.  Support for deprecated\n     * events/extras should me maintained to ensure backwards compatibility with older\n     * {@link InCallService} implementations which were built to support the older behavior.\n     *\n     * @param event The connection event.\n     * @param extras Optional bundle containing extra information associated with the event.\n     ",
+    "links" : [ "#EVENT_CALL_MERGE_FAILED", "android.telecom.Call#sendCallEvent(String", "android.telecom.InCallService", "android.os.Bundle", "android.telecom.Call#mergeConference()", "android.telecom.ConnectionService", "Call.Callback#onConnectionEvent(Call" ]
+  }, {
+    "name" : "public final int getCallDirection()",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieves the direction of this connection.\n     * @return The direction of the call.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCallDirection(@Call.Details.CallDirection int callDirection)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the direction of this connection.\n     * <p>\n     * Used when calling {@link ConnectionService#addExistingConnection} to specify the existing\n     * call direction.\n     *\n     * @param callDirection The direction of this connection.\n     * @hide\n     ",
+    "links" : [ "android.telecom.ConnectionService#addExistingConnection" ]
+  }, {
+    "name" : "public final int getCallerNumberVerificationStatus()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the verification status for the phone number of an incoming call as identified in\n     * ATIS-1000082.\n     * @return the verification status.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setCallerNumberVerificationStatus(@VerificationStatus int callerNumberVerificationStatus)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the verification status for the phone number of an incoming call as identified in\n     * ATIS-1000082.\n     * <p>\n     * This property can only be set at the time of creation of a {@link Connection} being returned\n     * by\n     * {@link ConnectionService#onCreateIncomingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     ",
+    "links" : [ "android.telecom.ConnectionService#onCreateIncomingConnection(PhoneAccountHandle", "android.telecom.Connection" ]
+  } ],
+  "methodNames" : [ "public static String capabilitiesToString(int capabilities)", "public static String capabilitiesToStringShort(int capabilities)", "private static String capabilitiesToStringInternal(int capabilities, boolean isLong)", "public static String propertiesToString(int properties)", "public static String propertiesToStringShort(int properties)", "private static String propertiesToStringInternal(int properties, boolean isLong)", "public final String getTelecomCallId()", "public final Uri getAddress()", "public final int getAddressPresentation()", "public final String getCallerDisplayName()", "public final int getCallerDisplayNamePresentation()", "public final int getState()", "public final int getVideoState()", "public final AudioState getAudioState()", "public final CallAudioState getCallAudioState()", "public final Conference getConference()", "public final boolean isRingbackRequested()", "public final boolean getAudioModeIsVoip()", "public final long getConnectTimeMillis()", "public final long getConnectionStartElapsedRealtimeMillis()", "public final StatusHints getStatusHints()", "public final Bundle getExtras()", " final Connection addConnectionListener(Listener l)", " final Connection removeConnectionListener(Listener l)", "public final DisconnectCause getDisconnectCause()", "public void setTelecomCallId(@NonNull String callId)", " final void setCallAudioState(CallAudioState state)", " final void setCallEndpoint(CallEndpoint endpoint)", " final void setAvailableCallEndpoints(List<CallEndpoint> availableEndpoints)", " final void setMuteState(boolean isMuted)", "public static String stateToString(int state)", "public final int getConnectionCapabilities()", "public final int getConnectionProperties()", "public final int getSupportedAudioRoutes()", "public final void setAddress(Uri address, int presentation)", "public final void setCallerDisplayName(String callerDisplayName, int presentation)", "public final void setVideoState(int videoState)", "public final void setActive()", "public final void setRinging()", "public final void setInitializing()", "public final void setInitialized()", "public final void setDialing()", "public final void setPulling()", "public final void setOnHold()", "public final void setVideoProvider(VideoProvider videoProvider)", "public final VideoProvider getVideoProvider()", "public final void setDisconnected(DisconnectCause disconnectCause)", "public final void setPostDialWait(String remaining)", "public final void setNextPostDialChar(char nextChar)", "public final void setRingbackRequested(boolean ringback)", "public final void setConnectionCapabilities(int connectionCapabilities)", "public final void setConnectionProperties(int connectionProperties)", "public final void setSupportedAudioRoutes(int supportedAudioRoutes)", "public final void destroy()", "public final void setAudioModeIsVoip(boolean isVoip)", "public final void setConnectTimeMillis(@IntRange(from = 0) long connectTimeMillis)", "public final void setConnectionStartElapsedRealtimeMillis(@ElapsedRealtimeLong long connectElapsedTimeMillis)", "public final void setStatusHints(StatusHints statusHints)", "public final void setConferenceableConnections(List<Connection> conferenceableConnections)", "public final void setConferenceables(List<Conferenceable> conferenceables)", "public final void resetConnectionTime()", "public final List<Conferenceable> getConferenceables()", "public final void setConnectionService(ConnectionService connectionService)", "public final void unsetConnectionService(ConnectionService connectionService)", "public final boolean setConference(Conference conference)", "public final void resetConference()", "public final void setExtras(@Nullable Bundle extras)", "public final void putExtras(@NonNull Bundle extras)", "public final void removeExtras(List<String> keys)", "public final void removeExtras(String... keys)", "public final void setAudioRoute(int route)", "public void requestBluetoothAudio(@NonNull BluetoothDevice bluetoothDevice)", "public final void requestCallEndpointChange(@NonNull CallEndpoint endpoint, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Void, CallEndpointException> callback)", "public final CallEndpoint getCurrentCallEndpoint()", "public final void sendRttInitiationSuccess()", "public final void sendRttInitiationFailure(int reason)", "public final void sendRttSessionRemotelyTerminated()", "public final void sendRemoteRttRequest()", "public final void queryLocationForEmergency(@IntRange(from = 100, to = 5000) long timeoutMillis, @NonNull String provider, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Location, QueryLocationException> callback)", "public void onAudioStateChanged(AudioState state)", "public void onCallAudioStateChanged(CallAudioState state)", "public void onCallEndpointChanged(@NonNull CallEndpoint callEndpoint)", "public void onAvailableCallEndpointsChanged(@NonNull List<CallEndpoint> availableEndpoints)", "public void onMuteStateChanged(boolean isMuted)", "public void onUsingAlternativeUi(boolean isUsingAlternativeUi)", "public void onTrackedByNonUiService(boolean isTracked)", "public void onStateChanged(int state)", "public void onPlayDtmfTone(char c)", "public void onStopDtmfTone()", "public void onDisconnect()", "public void onSeparate()", "public void onAddConferenceParticipants(@NonNull List<Uri> participants)", "public void onAbort()", "public void onHold()", "public void onUnhold()", "public void onAnswer(int videoState)", "public void onAnswer()", "public void onDeflect(Uri address)", "public void onReject()", "public void onReject(@android.telecom.Call.RejectReason int rejectReason)", "public void onReject(String replyMessage)", "public void onTransfer(@NonNull Uri number, boolean isConfirmationRequired)", "public void onTransfer(@NonNull Connection otherConnection)", "public void onSilence()", "public void onPostDialContinue(boolean proceed)", "public void onPullExternalCall()", "public void onCallEvent(String event, Bundle extras)", "public void onHandoverComplete()", "public void onExtrasChanged(Bundle extras)", "public void onShowIncomingCallUi()", "public void onStartRtt(@NonNull RttTextStream rttTextStream)", "public void onStopRtt()", "public void handleRttUpgradeResponse(@Nullable RttTextStream rttTextStream)", "public void onCallFilteringCompleted(@NonNull CallFilteringCompletionInfo callFilteringCompletionInfo)", " static String toLogSafePhoneNumber(String number)", "private void setState(int state)", "public static Connection createFailedConnection(DisconnectCause disconnectCause)", "public void checkImmutable()", "public static Connection createCanceledConnection()", "private final void fireOnConferenceableConnectionsChanged()", "private final void fireConferenceChanged()", "private final void clearConferenceableList()", " final void handleExtrasChanged(Bundle extras)", "public final void notifyConferenceMergeFailed()", "public void notifyPhoneAccountChanged(PhoneAccountHandle pHandle)", "public void setPhoneAccountHandle(@NonNull PhoneAccountHandle phoneAccountHandle)", "public PhoneAccountHandle getPhoneAccountHandle()", "public void sendConnectionEvent(String event, Bundle extras)", "public final int getCallDirection()", "public void setCallDirection(@Call.Details.CallDirection int callDirection)", "public final int getCallerNumberVerificationStatus()", "public final void setCallerNumberVerificationStatus(@VerificationStatus int callerNumberVerificationStatus)" ],
+  "variableNames" : [ "STATE_INITIALIZING", "STATE_NEW", "STATE_RINGING", "STATE_DIALING", "STATE_ACTIVE", "STATE_HOLDING", "STATE_DISCONNECTED", "STATE_PULLING_CALL", "VERIFICATION_STATUS_NOT_VERIFIED", "VERIFICATION_STATUS_PASSED", "VERIFICATION_STATUS_FAILED", "CAPABILITY_HOLD", "CAPABILITY_SUPPORT_HOLD", "CAPABILITY_MERGE_CONFERENCE", "CAPABILITY_SWAP_CONFERENCE", "CAPABILITY_UNUSED", "CAPABILITY_RESPOND_VIA_TEXT", "CAPABILITY_MUTE", "CAPABILITY_MANAGE_CONFERENCE", "CAPABILITY_SUPPORTS_VT_LOCAL_RX", "CAPABILITY_SUPPORTS_VT_LOCAL_TX", "CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL", "CAPABILITY_SUPPORTS_VT_REMOTE_RX", "CAPABILITY_SUPPORTS_VT_REMOTE_TX", "CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL", "CAPABILITY_SEPARATE_FROM_CONFERENCE", "CAPABILITY_DISCONNECT_FROM_CONFERENCE", "CAPABILITY_UNUSED_2", "CAPABILITY_UNUSED_3", "CAPABILITY_UNUSED_4", "CAPABILITY_UNUSED_5", "CAPABILITY_SPEED_UP_MT_AUDIO", "CAPABILITY_CAN_UPGRADE_TO_VIDEO", "CAPABILITY_CAN_PAUSE_VIDEO", "CAPABILITY_CONFERENCE_HAS_NO_CHILDREN", "CAPABILITY_CAN_SEND_RESPONSE_VIA_CONNECTION", "CAPABILITY_CANNOT_DOWNGRADE_VIDEO_TO_AUDIO", "CAPABILITY_CAN_PULL_CALL", "CAPABILITY_SUPPORT_DEFLECT", "CAPABILITY_ADD_PARTICIPANT", "CAPABILITY_TRANSFER", "CAPABILITY_TRANSFER_CONSULTATIVE", "CAPABILITY_REMOTE_PARTY_SUPPORTS_RTT", "PROPERTY_EMERGENCY_CALLBACK_MODE", "PROPERTY_GENERIC_CONFERENCE", "PROPERTY_HIGH_DEF_AUDIO", "PROPERTY_WIFI", "PROPERTY_IS_EXTERNAL_CALL", "PROPERTY_HAS_CDMA_VOICE_PRIVACY", "PROPERTY_IS_DOWNGRADED_CONFERENCE", "PROPERTY_SELF_MANAGED", "PROPERTY_IS_RTT", "PROPERTY_ASSISTED_DIALING", "PROPERTY_NETWORK_IDENTIFIED_EMERGENCY_CALL", "PROPERTY_REMOTELY_HOSTED", "PROPERTY_IS_ADHOC_CONFERENCE", "PROPERTY_CROSS_SIM", "AUDIO_CODEC_NONE", "AUDIO_CODEC_AMR", "AUDIO_CODEC_AMR_WB", "AUDIO_CODEC_QCELP13K", "AUDIO_CODEC_EVRC", "AUDIO_CODEC_EVRC_B", "AUDIO_CODEC_EVRC_WB", "AUDIO_CODEC_EVRC_NW", "AUDIO_CODEC_GSM_EFR", "AUDIO_CODEC_GSM_FR", "AUDIO_CODEC_GSM_HR", "AUDIO_CODEC_G711U", "AUDIO_CODEC_G723", "AUDIO_CODEC_G711A", "AUDIO_CODEC_G722", "AUDIO_CODEC_G711AB", "AUDIO_CODEC_G729", "AUDIO_CODEC_EVS_NB", "AUDIO_CODEC_EVS_WB", "AUDIO_CODEC_EVS_SWB", "AUDIO_CODEC_EVS_FB", "EXTRA_CALLER_NUMBER_VERIFICATION_STATUS", "EXTRA_LAST_FORWARDED_NUMBER", "EXTRA_CHILD_ADDRESS", "EXTRA_CALL_SUBJECT", "EXTRA_ANSWERING_DROPS_FG_CALL", "EXTRA_ANSWERING_DROPS_FG_CALL_APP_NAME", "EXTRA_DISABLE_ADD_CALL", "EXTRA_ORIGINAL_CONNECTION_ID", "EXTRA_REMOTE_PHONE_ACCOUNT_HANDLE", "EXTRA_ADD_TO_CONFERENCE_ID", "EXTRA_REMOTE_CONNECTION_ORIGINATING_PACKAGE_NAME", "EXTRA_IS_RTT_AUDIO_PRESENT", "EXTRA_AUDIO_CODEC", "EXTRA_AUDIO_CODEC_BITRATE_KBPS", "EXTRA_AUDIO_CODEC_BANDWIDTH_KHZ", "EXTRA_LAST_KNOWN_CELL_IDENTITY", "EXTRA_IS_DEVICE_TO_DEVICE_COMMUNICATION_AVAILABLE", "EVENT_ON_HOLD_TONE_START", "EVENT_ON_HOLD_TONE_END", "EVENT_CALL_PULL_FAILED", "EVENT_CALL_MERGE_FAILED", "EVENT_CALL_HOLD_FAILED", "EVENT_CALL_SWITCH_FAILED", "EVENT_MERGE_START", "EVENT_MERGE_COMPLETE", "EVENT_CALL_REMOTELY_HELD", "EVENT_CALL_REMOTELY_UNHELD", "EXTRA_SIP_INVITE", "EVENT_RTT_AUDIO_INDICATION_CHANGED", "EVENT_DEVICE_TO_DEVICE_MESSAGE", "EXTRA_DEVICE_TO_DEVICE_MESSAGE_TYPE", "EXTRA_DEVICE_TO_DEVICE_MESSAGE_VALUE", "EVENT_CALL_QUALITY_REPORT", "EXTRA_CALL_QUALITY_REPORT", "EXTRA_KEY_QUERY_LOCATION", "PII_DEBUG", "mConnectionDeathListener", "mConferenceDeathListener", "mListeners", "mConferenceables", "mUnmodifiableConferenceables", "mTelecomCallId", "mPhoneAccountHandle", "mState", "mCallAudioState", "mCallEndpoint", "mAddress", "mAddressPresentation", "mCallerDisplayName", "mCallerDisplayNamePresentation", "mRingbackRequested", "mConnectionCapabilities", "mConnectionProperties", "mSupportedAudioRoutes", "mVideoProvider", "mAudioModeIsVoip", "mConnectTimeMillis", "mConnectElapsedTimeMillis", "mStatusHints", "mVideoState", "mDisconnectCause", "mConference", "mConnectionService", "mExtras", "mExtrasLock", "mCallDirection", "mPreviousExtraKeys", "mCallerNumberVerificationStatus" ]
+}

@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/UiAutomation.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/UiAutomation.java",
   "packageName" : "android.app",
   "className" : "UiAutomation",
   "comment" : "\n * Class for interacting with the device's UI by simulation user actions and\n * introspection of the screen content. It relies on the platform accessibility\n * APIs to introspect the screen and to perform some actions on the remote view\n * tree. It also allows injecting of arbitrary raw input events simulating user\n * interaction with keyboards and touch devices. One can think of a UiAutomation\n * as a special type of {@link android.accessibilityservice.AccessibilityService}\n * which does not provide hooks for the service life cycle and exposes other\n * APIs that are useful for UI test automation.\n * <p>\n * The APIs exposed by this class are low-level to maximize flexibility when\n * developing UI test automation tools and libraries. Generally, a UiAutomation\n * client should be using a higher-level library or implement high-level functions.\n * For example, performing a tap on the screen requires construction and injecting\n * of a touch down and up events which have to be delivered to the system by a\n * call to {@link #injectInputEvent(InputEvent, boolean)}.\n * </p>\n * <p>\n * The APIs exposed by this class operate across applications enabling a client\n * to write tests that cover use cases spanning over multiple applications. For\n * example, going to the settings application to change a setting and then\n * interacting with another application whose behavior depends on that setting.\n * </p>\n ",
+  "links" : [ "android.accessibilityservice.AccessibilityService", "#injectInputEvent(InputEvent" ],
   "variables" : [ {
     "name" : "LOG_TAG",
     "type" : "String",
@@ -10,6 +11,11 @@
     "links" : [ ]
   }, {
     "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VERBOSE",
     "type" : "boolean",
     "comment" : "",
     "links" : [ ]
@@ -56,8 +62,23 @@
   }, {
     "name" : "FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES",
     "type" : "int",
-    "comment" : "\n     * UiAutomation supresses accessibility services by default. This flag specifies that\n     * existing accessibility services should continue to run, and that new ones may start.\n     * This flag is set when obtaining the UiAutomation from\n     * {@link Instrumentation#getUiAutomation(int)}.\n     ",
+    "comment" : "\n     * UiAutomation suppresses accessibility services by default. This flag specifies that\n     * existing accessibility services should continue to run, and that new ones may start.\n     * This flag is set when obtaining the UiAutomation from\n     * {@link Instrumentation#getUiAutomation(int)}.\n     ",
     "links" : [ "android.app.Instrumentation#getUiAutomation(int)" ]
+  }, {
+    "name" : "FLAG_DONT_USE_ACCESSIBILITY",
+    "type" : "int",
+    "comment" : "\n     * UiAutomation uses the accessibility subsystem by default. This flag provides an option to\n     * eliminate the overhead of engaging the accessibility subsystem for tests that do not need to\n     * interact with the user interface. Setting this flag disables methods that rely on\n     * accessibility. This flag is set when obtaining the UiAutomation from\n     * {@link Instrumentation#getUiAutomation(int)}.\n     ",
+    "links" : [ "android.app.Instrumentation#getUiAutomation(int)" ]
+  }, {
+    "name" : "FLAG_NOT_ACCESSIBILITY_TOOL",
+    "type" : "int",
+    "comment" : "\n     * UiAutomation sets {@link AccessibilityServiceInfo#isAccessibilityTool()} true by default.\n     * This flag provides the option to set this field false for tests exercising that property.\n     *\n     * @hide\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#isAccessibilityTool()" ]
+  }, {
+    "name" : "ALL_PERMISSIONS",
+    "type" : "Set<String>",
+    "comment" : "\n     * Returned by {@link #getAdoptedShellPermissions} to indicate that all permissions have been\n     * adopted using {@link #adoptShellPermissionIdentity}.\n     *\n     * @hide\n     ",
+    "links" : [ "#adoptShellPermissionIdentity", "#getAdoptedShellPermissions" ]
   }, {
     "name" : "mLock",
     "type" : "Object",
@@ -76,6 +97,11 @@
   }, {
     "name" : "mUiAutomationConnection",
     "type" : "IUiAutomationConnection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDisplayId",
+    "type" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -109,8 +135,8 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mIsConnecting",
-    "type" : "boolean",
+    "name" : "mConnectionState",
+    "type" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -123,17 +149,27 @@
     "type" : "int",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "mGenerationId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public void connect()",
     "returnType" : "void",
-    "comment" : "\n     * Connects this UiAutomation to the accessibility introspection APIs with default flags.\n     *\n     * @hide\n     ",
+    "comment" : "\n     * Connects this UiAutomation to the accessibility introspection APIs with default flags\n     * and default timeout.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void connect(int flags)",
     "returnType" : "void",
-    "comment" : "\n     * Connects this UiAutomation to the accessibility introspection APIs.\n     *\n     * @param flags Any flags to apply to the automation as it gets connected\n     *\n     * @hide\n     ",
+    "comment" : "\n     * Connects this UiAutomation to the accessibility introspection APIs with default timeout.\n     *\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public void connectWithTimeout(int flags, long timeoutMillis) throws TimeoutException",
+    "returnType" : "void",
+    "comment" : "\n     * Connects this UiAutomation to the accessibility introspection APIs.\n     *\n     * @param flags Any flags to apply to the automation as it gets connected while\n     *              {@link UiAutomation#FLAG_DONT_USE_ACCESSIBILITY} would keep the\n     *              connection disconnected and not to register UiAutomation service.\n     * @param timeoutMillis The wait timeout in milliseconds\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is already\n     *            established.\n     * @throws TimeoutException If not connected within the timeout\n     * @hide\n     ",
+    "links" : [ "android.app.UiAutomation#FLAG_DONT_USE_ACCESSIBILITY" ]
   }, {
     "name" : "public int getFlags()",
     "returnType" : "int",
@@ -157,7 +193,7 @@
   }, {
     "name" : "public void setOnAccessibilityEventListener(OnAccessibilityEventListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Sets a callback for observing the stream of {@link AccessibilityEvent}s.\n     * The callbacks are delivered on the main application thread.\n     *\n     * @param listener The callback.\n     ",
+    "comment" : "\n     * Sets a callback for observing the stream of {@link AccessibilityEvent}s.\n     * The callbacks are delivered on the main application thread.\n     *\n     * @param listener The callback.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
     "links" : [ "android.view.accessibility.AccessibilityEvent" ]
   }, {
     "name" : "public void destroy()",
@@ -165,14 +201,29 @@
     "comment" : "\n     * Destroy this UiAutomation. After calling this method, attempting to use the object will\n     * result in errors.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public boolean clearCache()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Clears the accessibility cache.\n     *\n     * @return {@code true} if the cache was cleared\n     * @see AccessibilityService#clearCache()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isNodeInCache(@NonNull AccessibilityNodeInfo node)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if {@code node} is in the accessibility cache.\n     *\n     * @param node the node to check.\n     * @return {@code true} if {@code node} is in the cache.\n     * @hide\n     * @see AccessibilityService#isNodeInCache(AccessibilityNodeInfo)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AccessibilityCache getCache()",
+    "returnType" : "AccessibilityCache",
+    "comment" : "\n     * Provides reference to the cache through a locked connection.\n     *\n     * @return the accessibility cache.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void adoptShellPermissionIdentity()",
     "returnType" : "void",
-    "comment" : "\n     * Adopt the permission identity of the shell UID for all permissions. This allows\n     * you to call APIs protected permissions which normal apps cannot hold but are\n     * granted to the shell UID. If you already adopted all shell permissions by calling\n     * this method or {@link #adoptShellPermissionIdentity(String...)} a subsequent call\n     * would be a no-op. Note that your permission state becomes that of the shell UID\n     * and it is not a combination of your and the shell UID permissions.\n     * <p>\n     * <strong>Note:<strong/> Calling this method adopts all shell permissions and overrides\n     * any subset of adopted permissions via {@link #adoptShellPermissionIdentity(String...)}.\n     *\n     * @see #adoptShellPermissionIdentity(String...)\n     * @see #dropShellPermissionIdentity()\n     ",
+    "comment" : "\n     * Adopt the permission identity of the shell UID for all permissions. This allows\n     * you to call APIs protected permissions which normal apps cannot hold but are\n     * granted to the shell UID. If you already adopted all shell permissions by calling\n     * this method or {@link #adoptShellPermissionIdentity(String...)} a subsequent call will\n     * replace any previous adoption. Note that your permission state becomes that of the shell UID\n     * and it is not a combination of your and the shell UID permissions.\n     * <p>\n     * <strong>Note:<strong/> Calling this method adopts all shell permissions and overrides\n     * any subset of adopted permissions via {@link #adoptShellPermissionIdentity(String...)}.\n     *\n     * @see #adoptShellPermissionIdentity(String...)\n     * @see #dropShellPermissionIdentity()\n     ",
     "links" : [ "#adoptShellPermissionIdentity(String...)" ]
   }, {
     "name" : "public void adoptShellPermissionIdentity(@Nullable String... permissions)",
     "returnType" : "void",
-    "comment" : "\n     * Adopt the permission identity of the shell UID only for the provided permissions.\n     * This allows you to call APIs protected permissions which normal apps cannot hold\n     * but are granted to the shell UID. If you already adopted the specified shell\n     * permissions by calling this method or {@link #adoptShellPermissionIdentity()} a\n     * subsequent call would be a no-op. Note that your permission state becomes that of the\n     * shell UID and it is not a combination of your and the shell UID permissions.\n     * <p>\n     * <strong>Note:<strong/> Calling this method adopts only the specified shell permissions\n     * and overrides all adopted permissions via {@link #adoptShellPermissionIdentity()}.\n     *\n     * @param permissions The permissions to adopt or <code>null</code> to adopt all.\n     *\n     * @see #adoptShellPermissionIdentity()\n     * @see #dropShellPermissionIdentity()\n     ",
+    "comment" : "\n     * Adopt the permission identity of the shell UID only for the provided permissions.\n     * This allows you to call APIs protected permissions which normal apps cannot hold\n     * but are granted to the shell UID. If you already adopted shell permissions by calling\n     * this method, or {@link #adoptShellPermissionIdentity()} a subsequent call will replace any\n     * previous adoption.\n     * <p>\n     * <strong>Note:<strong/> This method behave differently from\n     * {@link #adoptShellPermissionIdentity()}. Only the listed permissions will use the shell\n     * identity and other permissions will still check against the original UID\n     *\n     * @param permissions The permissions to adopt or <code>null</code> to adopt all.\n     *\n     * @see #adoptShellPermissionIdentity()\n     * @see #dropShellPermissionIdentity()\n     ",
     "links" : [ "#adoptShellPermissionIdentity()" ]
   }, {
     "name" : "public void dropShellPermissionIdentity()",
@@ -180,49 +231,99 @@
     "comment" : "\n     * Drop the shell permission identity adopted by a previous call to\n     * {@link #adoptShellPermissionIdentity()}. If you did not adopt the shell permission\n     * identity this method would be a no-op.\n     *\n     * @see #adoptShellPermissionIdentity()\n     ",
     "links" : [ "#adoptShellPermissionIdentity()" ]
   }, {
+    "name" : "public Set<String> getAdoptedShellPermissions()",
+    "returnType" : "Set<String>",
+    "comment" : "\n     * Returns a list of adopted shell permissions using {@link #adoptShellPermissionIdentity},\n     * returns and empty set if no permissions are adopted and {@link #ALL_PERMISSIONS} if all\n     * permissions are adopted.\n     *\n     * @hide\n     ",
+    "links" : [ "#adoptShellPermissionIdentity", "#ALL_PERMISSIONS" ]
+  }, {
+    "name" : "public void addOverridePermissionState(int uid, @NonNull String permission, @PackageManager.PermissionResult int result)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds permission to be overridden to the given state. UiAutomation must be connected to\n     * root user.\n     *\n     * @param uid The UID of the app whose permission will be overridden\n     * @param permission The permission whose state will be overridden\n     * @param result The state to override the permission to\n     *\n     * @see PackageManager#PERMISSION_GRANTED\n     * @see PackageManager#PERMISSION_DENIED\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeOverridePermissionState(int uid, @NonNull String permission)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes overridden permission. UiAutomation must be connected to root user.\n     *\n     * @param uid The UID of the app whose permission is overridden\n     * @param permission The permission whose state will no longer be overridden\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOverridePermissionStates(int uid)",
+    "returnType" : "void",
+    "comment" : "\n     * Clears all overridden permissions for the given UID. UiAutomation must be connected to\n     * root user.\n     *\n     * @param uid The UID of the app whose permissions will no longer be overridden\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearAllOverridePermissionStates()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears all overridden permissions on the device. UiAutomation must be connected to root user.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public final boolean performGlobalAction(int action)",
     "returnType" : "boolean",
-    "comment" : "\n     * Performs a global action. Such an action can be performed at any moment\n     * regardless of the current application or user location in that application.\n     * For example going back, going home, opening recents, etc.\n     *\n     * @param action The action to perform.\n     * @return Whether the action was successfully performed.\n     *\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_BACK\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_HOME\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_NOTIFICATIONS\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_RECENTS\n     ",
+    "comment" : "\n     * Performs a global action. Such an action can be performed at any moment\n     * regardless of the current application or user location in that application.\n     * For example going back, going home, opening recents, etc.\n     *\n     * @param action The action to perform.\n     * @return Whether the action was successfully performed.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_BACK\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_HOME\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_NOTIFICATIONS\n     * @see android.accessibilityservice.AccessibilityService#GLOBAL_ACTION_RECENTS\n     ",
     "links" : [ ]
   }, {
     "name" : "public AccessibilityNodeInfo findFocus(int focus)",
     "returnType" : "AccessibilityNodeInfo",
-    "comment" : "\n     * Find the view that has the specified focus type. The search is performed\n     * across all windows.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     * Otherwise, the search will be performed only in the active window.\n     * </p>\n     *\n     * @param focus The focus to find. One of {@link AccessibilityNodeInfo#FOCUS_INPUT} or\n     *         {@link AccessibilityNodeInfo#FOCUS_ACCESSIBILITY}.\n     * @return The node info of the focused view or null.\n     *\n     * @see AccessibilityNodeInfo#FOCUS_INPUT\n     * @see AccessibilityNodeInfo#FOCUS_ACCESSIBILITY\n     ",
+    "comment" : "\n     * Find the view that has the specified focus type. The search is performed\n     * across all windows.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     * Otherwise, the search will be performed only in the active window.\n     * </p>\n     *\n     * @param focus The focus to find. One of {@link AccessibilityNodeInfo#FOCUS_INPUT} or\n     *              {@link AccessibilityNodeInfo#FOCUS_ACCESSIBILITY}.\n     * @return The node info of the focused view or null.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see AccessibilityNodeInfo#FOCUS_INPUT\n     * @see AccessibilityNodeInfo#FOCUS_ACCESSIBILITY\n     ",
     "links" : [ "android.view.accessibility.AccessibilityNodeInfo#FOCUS_INPUT", "android.view.accessibility.AccessibilityNodeInfo#FOCUS_ACCESSIBILITY", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
   }, {
     "name" : "public final AccessibilityServiceInfo getServiceInfo()",
     "returnType" : "AccessibilityServiceInfo",
-    "comment" : "\n     * Gets the an {@link AccessibilityServiceInfo} describing this UiAutomation.\n     * This method is useful if one wants to change some of the dynamically\n     * configurable properties at runtime.\n     *\n     * @return The accessibility service info.\n     *\n     * @see AccessibilityServiceInfo\n     ",
+    "comment" : "\n     * Gets the an {@link AccessibilityServiceInfo} describing this UiAutomation.\n     * This method is useful if one wants to change some of the dynamically\n     * configurable properties at runtime.\n     *\n     * @return The accessibility service info.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see AccessibilityServiceInfo\n     ",
     "links" : [ "android.accessibilityservice.AccessibilityServiceInfo" ]
   }, {
     "name" : "public final void setServiceInfo(AccessibilityServiceInfo info)",
     "returnType" : "void",
-    "comment" : "\n     * Sets the {@link AccessibilityServiceInfo} that describes how this\n     * UiAutomation will be handled by the platform accessibility layer.\n     *\n     * @param info The info.\n     *\n     * @see AccessibilityServiceInfo\n     ",
+    "comment" : "\n     * Sets the {@link AccessibilityServiceInfo} that describes how this\n     * UiAutomation will be handled by the platform accessibility layer.\n     *\n     * @param info The info.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see AccessibilityServiceInfo\n     ",
     "links" : [ "android.accessibilityservice.AccessibilityServiceInfo" ]
   }, {
     "name" : "public List<AccessibilityWindowInfo> getWindows()",
     "returnType" : "List<AccessibilityWindowInfo>",
-    "comment" : "\n     * Gets the windows on the screen of the default display. This method returns only the windows\n     * that a sighted user can interact with, as opposed to all windows.\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are higher in the Z-order are reported first.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     * </p>\n     *\n     * @return The windows if there are windows such, otherwise an empty list.\n     ",
-    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
+    "comment" : "\n     * Gets the windows on the screen associated with the {@link UiAutomation} context (usually the\n     * {@link android.view.Display#DEFAULT_DISPLAY default display).\n     *\n     * <p>\n     * This method returns only the windows that a sighted user can interact with, as opposed to\n     * all windows.\n\n     * <p>\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are higher in the Z-order are reported first.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     *\n     * @return The windows if there are windows such, otherwise an empty list.\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
+    "links" : [ "android.app.UiAutomation", "android.view.Display#DEFAULT_DISPLAY", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
   }, {
     "name" : "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()",
     "returnType" : "SparseArray<List<AccessibilityWindowInfo>>",
-    "comment" : "\n     * Gets the windows on the screen of all displays. This method returns only the windows\n     * that a sighted user can interact with, as opposed to all windows.\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are higher in the Z-order are reported first.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     * </p>\n     *\n     * @return The windows of all displays if there are windows and the service is can retrieve\n     *         them, otherwise an empty list. The key of SparseArray is display ID.\n     ",
+    "comment" : "\n     * Gets the windows on the screen of all displays. This method returns only the windows\n     * that a sighted user can interact with, as opposed to all windows.\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are higher in the Z-order are reported first.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows you have to opt-in\n     * to retrieve the interactive windows by setting the\n     * {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS} flag.\n     * </p>\n     *\n     * @return The windows of all displays if there are windows and the service is can retrieve\n     *         them, otherwise an empty list. The key of SparseArray is display ID.\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
     "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
   }, {
     "name" : "public AccessibilityNodeInfo getRootInActiveWindow()",
     "returnType" : "AccessibilityNodeInfo",
-    "comment" : "\n     * Gets the root {@link AccessibilityNodeInfo} in the active window.\n     *\n     * @return The root info.\n     ",
+    "comment" : "\n     * Gets the root {@link AccessibilityNodeInfo} in the active window.\n     *\n     * @return The root info.\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
+    "links" : [ "android.view.accessibility.AccessibilityNodeInfo" ]
+  }, {
+    "name" : "public AccessibilityNodeInfo getRootInActiveWindow(@AccessibilityNodeInfo.PrefetchingStrategy int prefetchingStrategy)",
+    "returnType" : "AccessibilityNodeInfo",
+    "comment" : "\n     * Gets the root {@link AccessibilityNodeInfo} in the active window.\n     *\n     * @param prefetchingStrategy the prefetching strategy.\n     * @return The root info.\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     * established.\n     *\n     * @hide\n     ",
     "links" : [ "android.view.accessibility.AccessibilityNodeInfo" ]
   }, {
     "name" : "public boolean injectInputEvent(InputEvent event, boolean sync)",
     "returnType" : "boolean",
-    "comment" : "\n     * A method for injecting an arbitrary input event.\n     * <p>\n     * <strong>Note:</strong> It is caller's responsibility to recycle the event.\n     * </p>\n     * @param event The event to inject.\n     * @param sync Whether to inject the event synchronously.\n     * @return Whether event injection succeeded.\n     ",
+    "comment" : "\n     * A method for injecting an arbitrary input event.\n     *\n     * This method waits for all window container animations and surface operations to complete.\n     *\n     * <p>\n     * <strong>Note:</strong> It is caller's responsibility to recycle the event.\n     * </p>\n     *\n     * @param event The event to inject.\n     * @param sync Whether to inject the event synchronously.\n     * @return Whether event injection succeeded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean injectInputEvent(@NonNull InputEvent event, boolean sync, boolean waitForAnimations)",
+    "returnType" : "boolean",
+    "comment" : "\n     * A method for injecting an arbitrary input event, optionally waiting for window animations to\n     * complete.\n     * <p>\n     * <strong>Note:</strong> It is caller's responsibility to recycle the event.\n     * </p>\n     *\n     * @param event The event to inject.\n     * @param sync  Whether to inject the event synchronously.\n     * @param waitForAnimations Whether to wait for all window container animations and surface\n     *   operations to complete.\n     * @return Whether event injection succeeded.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void injectInputEventToInputFilter(@NonNull InputEvent event)",
+    "returnType" : "void",
+    "comment" : "\n     * Injects an arbitrary {@link InputEvent} to the accessibility input filter, for use in testing\n     * the accessibility input filter.\n     *\n     * Events injected to the input subsystem using the standard {@link #injectInputEvent} method\n     * skip the accessibility input filter to avoid feedback loops.\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.InputEvent", "#injectInputEvent" ]
+  }, {
+    "name" : "public void setAnimationScale(float scale)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the system settings values that control the scaling factor for animations. The scale\n     * controls the animation playback speed for animations that respect these settings. Animations\n     * that do not respect the settings values will not be affected by this function. A lower scale\n     * value results in a faster speed. A value of <code>0</code> disables animations entirely. When\n     * animations are disabled services receive window change events more quickly which can reduce\n     * the potential by confusion by reducing the time during which windows are in transition.\n     *\n     * @see AccessibilityEvent#TYPE_WINDOWS_CHANGED\n     * @see AccessibilityEvent#TYPE_WINDOW_STATE_CHANGED\n     * @see android.provider.Settings.Global#WINDOW_ANIMATION_SCALE\n     * @see android.provider.Settings.Global#TRANSITION_ANIMATION_SCALE\n     * @see android.provider.Settings.Global#ANIMATOR_DURATION_SCALE\n     * @param scale The scaling factor for all animations.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void syncInputTransactions()",
     "returnType" : "void",
     "comment" : "\n     * A request for WindowManagerService to wait until all animations have completed and input\n     * information has been sent from WindowManager to native InputManager.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void syncInputTransactions(boolean waitForAnimations)",
+    "returnType" : "void",
+    "comment" : "\n     * A request for WindowManagerService to wait until all input information has been sent from\n     * WindowManager to native InputManager and optionally wait for animations to complete.\n     *\n     * @param waitForAnimations Whether to wait for all window container animations and surface\n     *   operations to complete.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean setRotation(int rotation)",
@@ -232,17 +333,22 @@
   }, {
     "name" : "public AccessibilityEvent executeAndWaitForEvent(Runnable command, AccessibilityEventFilter filter, long timeoutMillis) throws TimeoutException",
     "returnType" : "AccessibilityEvent",
-    "comment" : "\n     * Executes a command and waits for a specific accessibility event up to a\n     * given wait timeout. To detect a sequence of events one can implement a\n     * filter that keeps track of seen events of the expected sequence and\n     * returns true after the last event of that sequence is received.\n     * <p>\n     * <strong>Note:</strong> It is caller's responsibility to recycle the returned event.\n     * </p>\n     * @param command The command to execute.\n     * @param filter Filter that recognizes the expected event.\n     * @param timeoutMillis The wait timeout in milliseconds.\n     *\n     * @throws TimeoutException If the expected event is not received within the timeout.\n     ",
+    "comment" : "\n     * Executes a command and waits for a specific accessibility event up to a\n     * given wait timeout. To detect a sequence of events one can implement a\n     * filter that keeps track of seen events of the expected sequence and\n     * returns true after the last event of that sequence is received.\n     * <p>\n     * <strong>Note:</strong> It is caller's responsibility to recycle the returned event.\n     * </p>\n     *\n     * @param command The command to execute.\n     * @param filter Filter that recognizes the expected event.\n     * @param timeoutMillis The wait timeout in milliseconds.\n     *\n     * @throws TimeoutException If the expected event is not received within the timeout.\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void waitForIdle(long idleTimeoutMillis, long globalTimeoutMillis) throws TimeoutException",
     "returnType" : "void",
-    "comment" : "\n     * Waits for the accessibility event stream to become idle, which is not to\n     * have received an accessibility event within <code>idleTimeoutMillis</code>.\n     * The total time spent to wait for an idle accessibility event stream is bounded\n     * by the <code>globalTimeoutMillis</code>.\n     *\n     * @param idleTimeoutMillis The timeout in milliseconds between two events\n     *            to consider the device idle.\n     * @param globalTimeoutMillis The maximal global timeout in milliseconds in\n     *            which to wait for an idle state.\n     *\n     * @throws TimeoutException If no idle state was detected within\n     *            <code>globalTimeoutMillis.</code>\n     ",
+    "comment" : "\n     * Waits for the accessibility event stream to become idle, which is not to\n     * have received an accessibility event within <code>idleTimeoutMillis</code>.\n     * The total time spent to wait for an idle accessibility event stream is bounded\n     * by the <code>globalTimeoutMillis</code>.\n     *\n     * @param idleTimeoutMillis The timeout in milliseconds between two events\n     *            to consider the device idle.\n     * @param globalTimeoutMillis The maximal global timeout in milliseconds in\n     *            which to wait for an idle state.\n     *\n     * @throws TimeoutException If no idle state was detected within\n     *            <code>globalTimeoutMillis.</code>\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     ",
     "links" : [ ]
   }, {
     "name" : "public Bitmap takeScreenshot()",
     "returnType" : "Bitmap",
     "comment" : "\n     * Takes a screenshot.\n     *\n     * @return The screenshot bitmap on success, null otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Bitmap takeScreenshot(@NonNull Window window)",
+    "returnType" : "Bitmap",
+    "comment" : "\n     * Used to capture a screenshot of a Window. This can return null in the following cases:\n     * 1. Window content hasn't been layed out.\n     * 2. Window doesn't have a valid SurfaceControl\n     * 3. An error occurred in SurfaceFlinger when trying to take the screenshot.\n     *\n     * @param window Window to take a screenshot of\n     *\n     * @return The screenshot bitmap on success, null otherwise.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void setRunAsMonkey(boolean enable)",
@@ -252,27 +358,27 @@
   }, {
     "name" : "public boolean clearWindowContentFrameStats(int windowId)",
     "returnType" : "boolean",
-    "comment" : "\n     * Clears the frame statistics for the content of a given window. These\n     * statistics contain information about the most recently rendered content\n     * frames.\n     *\n     * @param windowId The window id.\n     * @return Whether the window is present and its frame statistics\n     *         were cleared.\n     *\n     * @see android.view.WindowContentFrameStats\n     * @see #getWindowContentFrameStats(int)\n     * @see #getWindows()\n     * @see AccessibilityWindowInfo#getId() AccessibilityWindowInfo.getId()\n     ",
+    "comment" : "\n     * Clears the frame statistics for the content of a given window. These\n     * statistics contain information about the most recently rendered content\n     * frames.\n     *\n     * @param windowId The window id.\n     * @return Whether the window is present and its frame statistics\n     *         were cleared.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see android.view.WindowContentFrameStats\n     * @see #getWindowContentFrameStats(int)\n     * @see #getWindows()\n     * @see AccessibilityWindowInfo#getId() AccessibilityWindowInfo.getId()\n     ",
     "links" : [ ]
   }, {
     "name" : "public WindowContentFrameStats getWindowContentFrameStats(int windowId)",
     "returnType" : "WindowContentFrameStats",
-    "comment" : "\n     * Gets the frame statistics for a given window. These statistics contain\n     * information about the most recently rendered content frames.\n     * <p>\n     * A typical usage requires clearing the window frame statistics via {@link\n     * #clearWindowContentFrameStats(int)} followed by an interaction with the UI and\n     * finally getting the window frame statistics via calling this method.\n     * </p>\n     * <pre>\n     * // Assume we have at least one window.\n     * final int windowId = getWindows().get(0).getId();\n     *\n     * // Start with a clean slate.\n     * uiAutimation.clearWindowContentFrameStats(windowId);\n     *\n     * // Do stuff with the UI.\n     *\n     * // Get the frame statistics.\n     * WindowContentFrameStats stats = uiAutomation.getWindowContentFrameStats(windowId);\n     * </pre>\n     *\n     * @param windowId The window id.\n     * @return The window frame statistics, or null if the window is not present.\n     *\n     * @see android.view.WindowContentFrameStats\n     * @see #clearWindowContentFrameStats(int)\n     * @see #getWindows()\n     * @see AccessibilityWindowInfo#getId() AccessibilityWindowInfo.getId()\n     ",
+    "comment" : "\n     * Gets the frame statistics for a given window. These statistics contain\n     * information about the most recently rendered content frames.\n     * <p>\n     * A typical usage requires clearing the window frame statistics via {@link\n     * #clearWindowContentFrameStats(int)} followed by an interaction with the UI and\n     * finally getting the window frame statistics via calling this method.\n     * </p>\n     * <pre>\n     * // Assume we have at least one window.\n     * final int windowId = getWindows().get(0).getId();\n     *\n     * // Start with a clean slate.\n     * uiAutimation.clearWindowContentFrameStats(windowId);\n     *\n     * // Do stuff with the UI.\n     *\n     * // Get the frame statistics.\n     * WindowContentFrameStats stats = uiAutomation.getWindowContentFrameStats(windowId);\n     * </pre>\n     *\n     * @param windowId The window id.\n     * @return The window frame statistics, or null if the window is not present.\n     *\n     * @throws IllegalStateException If the connection to the accessibility subsystem is not\n     *            established.\n     * @see android.view.WindowContentFrameStats\n     * @see #clearWindowContentFrameStats(int)\n     * @see #getWindows()\n     * @see AccessibilityWindowInfo#getId() AccessibilityWindowInfo.getId()\n     ",
     "links" : [ "#clearWindowContentFrameStats(int)" ]
   }, {
     "name" : "public void clearWindowAnimationFrameStats()",
     "returnType" : "void",
-    "comment" : "\n     * Clears the window animation rendering statistics. These statistics contain\n     * information about the most recently rendered window animation frames, i.e.\n     * for window transition animations.\n     *\n     * @see android.view.WindowAnimationFrameStats\n     * @see #getWindowAnimationFrameStats()\n     * @see android.R.styleable#WindowAnimation\n     ",
+    "comment" : "\n     * Clears the window animation rendering statistics. These statistics contain\n     * information about the most recently rendered window animation frames, i.e.\n     * for window transition animations.\n     *\n     * @see android.view.WindowAnimationFrameStats\n     * @see #getWindowAnimationFrameStats()\n     * @see android.R.styleable#WindowAnimation\n     * @deprecated animation-frames are no-longer used. Use Shared\n     *         <a href=\"https://perfetto.dev/docs/data-sources/frametimeline\">FrameTimeline</a>\n     *         jank metrics instead.\n     ",
     "links" : [ ]
   }, {
     "name" : "public WindowAnimationFrameStats getWindowAnimationFrameStats()",
     "returnType" : "WindowAnimationFrameStats",
-    "comment" : "\n     * Gets the window animation frame statistics. These statistics contain\n     * information about the most recently rendered window animation frames, i.e.\n     * for window transition animations.\n     *\n     * <p>\n     * A typical usage requires clearing the window animation frame statistics via\n     * {@link #clearWindowAnimationFrameStats()} followed by an interaction that causes\n     * a window transition which uses a window animation and finally getting the window\n     * animation frame statistics by calling this method.\n     * </p>\n     * <pre>\n     * // Start with a clean slate.\n     * uiAutimation.clearWindowAnimationFrameStats();\n     *\n     * // Do stuff to trigger a window transition.\n     *\n     * // Get the frame statistics.\n     * WindowAnimationFrameStats stats = uiAutomation.getWindowAnimationFrameStats();\n     * </pre>\n     *\n     * @return The window animation frame statistics.\n     *\n     * @see android.view.WindowAnimationFrameStats\n     * @see #clearWindowAnimationFrameStats()\n     * @see android.R.styleable#WindowAnimation\n     ",
+    "comment" : "\n     * Gets the window animation frame statistics. These statistics contain\n     * information about the most recently rendered window animation frames, i.e.\n     * for window transition animations.\n     *\n     * <p>\n     * A typical usage requires clearing the window animation frame statistics via\n     * {@link #clearWindowAnimationFrameStats()} followed by an interaction that causes\n     * a window transition which uses a window animation and finally getting the window\n     * animation frame statistics by calling this method.\n     * </p>\n     * <pre>\n     * // Start with a clean slate.\n     * uiAutimation.clearWindowAnimationFrameStats();\n     *\n     * // Do stuff to trigger a window transition.\n     *\n     * // Get the frame statistics.\n     * WindowAnimationFrameStats stats = uiAutomation.getWindowAnimationFrameStats();\n     * </pre>\n     *\n     * @return The window animation frame statistics.\n     *\n     * @see android.view.WindowAnimationFrameStats\n     * @see #clearWindowAnimationFrameStats()\n     * @see android.R.styleable#WindowAnimation\n     * @deprecated animation-frames are no-longer used.\n     ",
     "links" : [ "#clearWindowAnimationFrameStats()" ]
   }, {
     "name" : "public void grantRuntimePermission(String packageName, String permission)",
     "returnType" : "void",
-    "comment" : "\n     * Grants a runtime permission to a package.\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to grant the permission.\n     ",
+    "comment" : "\n     * Grants a runtime permission to a package.\n     *\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to grant the permission.\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean grantRuntimePermission(String packageName, String permission, UserHandle userHandle)",
@@ -282,12 +388,12 @@
   }, {
     "name" : "public void grantRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)",
     "returnType" : "void",
-    "comment" : "\n     * Grants a runtime permission to a package for a user.\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to grant the permission.\n     ",
+    "comment" : "\n     * Grants a runtime permission to a package for a user.\n     *\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to grant the permission.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void revokeRuntimePermission(String packageName, String permission)",
     "returnType" : "void",
-    "comment" : "\n     * Revokes a runtime permission from a package.\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to revoke the permission.\n     ",
+    "comment" : "\n     * Revokes a runtime permission from a package.\n     *\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to revoke the permission.\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean revokeRuntimePermission(String packageName, String permission, UserHandle userHandle)",
@@ -297,7 +403,7 @@
   }, {
     "name" : "public void revokeRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)",
     "returnType" : "void",
-    "comment" : "\n     * Revokes a runtime permission from a package.\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to revoke the permission.\n     ",
+    "comment" : "\n     * Revokes a runtime permission from a package.\n     *\n     * @param packageName The package to which to grant.\n     * @param permission The permission to grant.\n     * @throws SecurityException if unable to revoke the permission.\n     ",
     "links" : [ ]
   }, {
     "name" : "public ParcelFileDescriptor executeShellCommand(String command)",
@@ -305,18 +411,28 @@
     "comment" : "\n     * Executes a shell command. This method returns a file descriptor that points\n     * to the standard output stream. The command execution is similar to running\n     * \"adb shell <command>\" from a host connected to the device.\n     * <p>\n     * <strong>Note:</strong> It is your responsibility to close the returned file\n     * descriptor once you are done reading.\n     * </p>\n     *\n     * @param command The command to execute.\n     * @return A file descriptor to the standard output stream.\n     *\n     * @see #adoptShellPermissionIdentity()\n     ",
     "links" : [ ]
   }, {
-    "name" : "public ParcelFileDescriptor[] executeShellCommandRw(String command)",
+    "name" : "public ParcelFileDescriptor[] executeShellCommandRw(@NonNull String command)",
     "returnType" : "ParcelFileDescriptor[]",
-    "comment" : "\n     * Executes a shell command. This method returns two file descriptors,\n     * one that points to the standard output stream (element at index 0), and one that points\n     * to the standard input stream (element at index 1). The command execution is similar\n     * to running \"adb shell <command>\" from a host connected to the device.\n     * <p>\n     * <strong>Note:</strong> It is your responsibility to close the returned file\n     * descriptors once you are done reading/writing.\n     * </p>\n     *\n     * @param command The command to execute.\n     * @return File descriptors (out, in) to the standard output/input streams.\n     *\n     * @hide\n     ",
+    "comment" : "\n     * Executes a shell command. This method returns two file descriptors,\n     * one that points to the standard output stream (element at index 0), and one that points\n     * to the standard input stream (element at index 1). The command execution is similar\n     * to running \"adb shell <command>\" from a host connected to the device.\n     * <p>\n     * <strong>Note:</strong> It is your responsibility to close the returned file\n     * descriptors once you are done reading/writing.\n     * </p>\n     *\n     * @param command The command to execute.\n     * @return File descriptors (out, in) to the standard output/input streams.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ParcelFileDescriptor[] executeShellCommandRwe(@NonNull String command)",
+    "returnType" : "ParcelFileDescriptor[]",
+    "comment" : "\n     * Executes a shell command. This method returns three file descriptors,\n     * one that points to the standard output stream (element at index 0), one that points\n     * to the standard input stream (element at index 1), and one points to\n     * standard error stream (element at index 2). The command execution is similar\n     * to running \"adb shell <command>\" from a host connected to the device.\n     * <p>\n     * <strong>Note:</strong> It is your responsibility to close the returned file\n     * descriptors once you are done reading/writing.\n     * </p>\n     *\n     * @param command The command to execute.\n     * @return File descriptors (out, in, err) to the standard output/input/error streams.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getDisplayId()",
+    "returnType" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private ParcelFileDescriptor[] executeShellCommandInternal(String command, boolean includeStderr)",
+    "returnType" : "ParcelFileDescriptor[]",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public String toString()",
     "returnType" : "String",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private boolean isConnectedLocked()",
-    "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -334,7 +450,22 @@
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "private boolean useAccessibility()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getDisplayId(Context context)",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the display id associated with the UiAutomation context.\n     *\n     * <p><b>NOTE: </b> must be a static method because it's called from a constructor to call\n     * another one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getMainDisplayIdAssignedToUser(Context context, UserManager userManager)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "LOG_TAG", "DEBUG", "CONNECTION_ID_UNDEFINED", "CONNECT_TIMEOUT_MILLIS", "ROTATION_UNFREEZE", "ROTATION_FREEZE_CURRENT", "ROTATION_FREEZE_0", "ROTATION_FREEZE_90", "ROTATION_FREEZE_180", "ROTATION_FREEZE_270", "FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES", "mLock", "mEventQueue", "mLocalCallbackHandler", "mUiAutomationConnection", "mRemoteCallbackThread", "mClient", "mConnectionId", "mOnAccessibilityEventListener", "mWaitingForEventDelivery", "mLastEventTimeMillis", "mIsConnecting", "mIsDestroyed", "mFlags" ],
-  "methodNames" : [ "public void connect()", "public void connect(int flags)", "public int getFlags()", "public void disconnect()", "public int getConnectionId()", "public boolean isDestroyed()", "public void setOnAccessibilityEventListener(OnAccessibilityEventListener listener)", "public void destroy()", "public void adoptShellPermissionIdentity()", "public void adoptShellPermissionIdentity(@Nullable String... permissions)", "public void dropShellPermissionIdentity()", "public final boolean performGlobalAction(int action)", "public AccessibilityNodeInfo findFocus(int focus)", "public final AccessibilityServiceInfo getServiceInfo()", "public final void setServiceInfo(AccessibilityServiceInfo info)", "public List<AccessibilityWindowInfo> getWindows()", "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()", "public AccessibilityNodeInfo getRootInActiveWindow()", "public boolean injectInputEvent(InputEvent event, boolean sync)", "public void syncInputTransactions()", "public boolean setRotation(int rotation)", "public AccessibilityEvent executeAndWaitForEvent(Runnable command, AccessibilityEventFilter filter, long timeoutMillis) throws TimeoutException", "public void waitForIdle(long idleTimeoutMillis, long globalTimeoutMillis) throws TimeoutException", "public Bitmap takeScreenshot()", "public void setRunAsMonkey(boolean enable)", "public boolean clearWindowContentFrameStats(int windowId)", "public WindowContentFrameStats getWindowContentFrameStats(int windowId)", "public void clearWindowAnimationFrameStats()", "public WindowAnimationFrameStats getWindowAnimationFrameStats()", "public void grantRuntimePermission(String packageName, String permission)", "public boolean grantRuntimePermission(String packageName, String permission, UserHandle userHandle)", "public void grantRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)", "public void revokeRuntimePermission(String packageName, String permission)", "public boolean revokeRuntimePermission(String packageName, String permission, UserHandle userHandle)", "public void revokeRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)", "public ParcelFileDescriptor executeShellCommand(String command)", "public ParcelFileDescriptor[] executeShellCommandRw(String command)", "public String toString()", "private boolean isConnectedLocked()", "private void throwIfConnectedLocked()", "private void throwIfNotConnectedLocked()", "private void warnIfBetterCommand(String cmd)" ]
+  "methodNames" : [ "public void connect()", "public void connect(int flags)", "public void connectWithTimeout(int flags, long timeoutMillis) throws TimeoutException", "public int getFlags()", "public void disconnect()", "public int getConnectionId()", "public boolean isDestroyed()", "public void setOnAccessibilityEventListener(OnAccessibilityEventListener listener)", "public void destroy()", "public boolean clearCache()", "public boolean isNodeInCache(@NonNull AccessibilityNodeInfo node)", "public AccessibilityCache getCache()", "public void adoptShellPermissionIdentity()", "public void adoptShellPermissionIdentity(@Nullable String... permissions)", "public void dropShellPermissionIdentity()", "public Set<String> getAdoptedShellPermissions()", "public void addOverridePermissionState(int uid, @NonNull String permission, @PackageManager.PermissionResult int result)", "public void removeOverridePermissionState(int uid, @NonNull String permission)", "public void clearOverridePermissionStates(int uid)", "public void clearAllOverridePermissionStates()", "public final boolean performGlobalAction(int action)", "public AccessibilityNodeInfo findFocus(int focus)", "public final AccessibilityServiceInfo getServiceInfo()", "public final void setServiceInfo(AccessibilityServiceInfo info)", "public List<AccessibilityWindowInfo> getWindows()", "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()", "public AccessibilityNodeInfo getRootInActiveWindow()", "public AccessibilityNodeInfo getRootInActiveWindow(@AccessibilityNodeInfo.PrefetchingStrategy int prefetchingStrategy)", "public boolean injectInputEvent(InputEvent event, boolean sync)", "public boolean injectInputEvent(@NonNull InputEvent event, boolean sync, boolean waitForAnimations)", "public void injectInputEventToInputFilter(@NonNull InputEvent event)", "public void setAnimationScale(float scale)", "public void syncInputTransactions()", "public void syncInputTransactions(boolean waitForAnimations)", "public boolean setRotation(int rotation)", "public AccessibilityEvent executeAndWaitForEvent(Runnable command, AccessibilityEventFilter filter, long timeoutMillis) throws TimeoutException", "public void waitForIdle(long idleTimeoutMillis, long globalTimeoutMillis) throws TimeoutException", "public Bitmap takeScreenshot()", "public Bitmap takeScreenshot(@NonNull Window window)", "public void setRunAsMonkey(boolean enable)", "public boolean clearWindowContentFrameStats(int windowId)", "public WindowContentFrameStats getWindowContentFrameStats(int windowId)", "public void clearWindowAnimationFrameStats()", "public WindowAnimationFrameStats getWindowAnimationFrameStats()", "public void grantRuntimePermission(String packageName, String permission)", "public boolean grantRuntimePermission(String packageName, String permission, UserHandle userHandle)", "public void grantRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)", "public void revokeRuntimePermission(String packageName, String permission)", "public boolean revokeRuntimePermission(String packageName, String permission, UserHandle userHandle)", "public void revokeRuntimePermissionAsUser(String packageName, String permission, UserHandle userHandle)", "public ParcelFileDescriptor executeShellCommand(String command)", "public ParcelFileDescriptor[] executeShellCommandRw(@NonNull String command)", "public ParcelFileDescriptor[] executeShellCommandRwe(@NonNull String command)", "public int getDisplayId()", "private ParcelFileDescriptor[] executeShellCommandInternal(String command, boolean includeStderr)", "public String toString()", "private void throwIfConnectedLocked()", "private void throwIfNotConnectedLocked()", "private void warnIfBetterCommand(String cmd)", "private boolean useAccessibility()", "private static int getDisplayId(Context context)", "private static int getMainDisplayIdAssignedToUser(Context context, UserManager userManager)" ],
+  "variableNames" : [ "LOG_TAG", "DEBUG", "VERBOSE", "CONNECTION_ID_UNDEFINED", "CONNECT_TIMEOUT_MILLIS", "ROTATION_UNFREEZE", "ROTATION_FREEZE_CURRENT", "ROTATION_FREEZE_0", "ROTATION_FREEZE_90", "ROTATION_FREEZE_180", "ROTATION_FREEZE_270", "FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES", "FLAG_DONT_USE_ACCESSIBILITY", "FLAG_NOT_ACCESSIBILITY_TOOL", "ALL_PERMISSIONS", "mLock", "mEventQueue", "mLocalCallbackHandler", "mUiAutomationConnection", "mDisplayId", "mRemoteCallbackThread", "mClient", "mConnectionId", "mOnAccessibilityEventListener", "mWaitingForEventDelivery", "mLastEventTimeMillis", "mConnectionState", "mIsDestroyed", "mFlags", "mGenerationId" ]
 }

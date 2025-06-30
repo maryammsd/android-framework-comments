@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/incremental/IncrementalManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/incremental/IncrementalManager.java",
   "packageName" : "android.os.incremental",
   "className" : "IncrementalManager",
   "comment" : "\n * Provides operations to open or create an IncrementalStorage, using IIncrementalService\n * service. Example Usage:\n *\n * <blockquote><pre>\n * IncrementalManager manager = (IncrementalManager) getSystemService(Context.INCREMENTAL_SERVICE);\n * IncrementalStorage storage = manager.openStorage(\"/path/to/incremental/dir\");\n * </pre></blockquote>\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -11,6 +12,11 @@
   }, {
     "name" : "ALLOWED_PROPERTY",
     "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_VERSION_TO_SUPPORT_FSVERITY",
+    "type" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -39,20 +45,15 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mStorages",
-    "type" : "SparseArray<IncrementalStorage>",
+    "name" : "mLoadingProgressCallbacks",
+    "type" : "LoadingProgressCallbacks",
     "comment" : "",
     "links" : [ ]
   } ],
   "methods" : [ {
-    "name" : "public IncrementalStorage getStorage(int storageId)",
+    "name" : "public IncrementalStorage createStorage(@NonNull String path, @NonNull DataLoaderParams params, @CreateMode int createMode)",
     "returnType" : "IncrementalStorage",
-    "comment" : " TODO(b/136132412): remove this",
-    "links" : [ ]
-  }, {
-    "name" : "public IncrementalStorage createStorage(@NonNull String path, @NonNull DataLoaderParams params, @CreateMode int createMode, boolean autoStartDataLoader, @Nullable IDataLoaderStatusListener statusListener, @Nullable StorageHealthCheckParams healthCheckParams, @Nullable IStorageHealthListener healthListener)",
-    "returnType" : "IncrementalStorage",
-    "comment" : "\n     * Opens or create an Incremental File System mounted directory and returns an\n     * IncrementalStorage object.\n     *\n     * @param path                Absolute path to mount Incremental File System on.\n     * @param params              IncrementalDataLoaderParams object to configure data loading.\n     * @param createMode          Mode for opening an old Incremental File System mount or creating\n     *                            a new mount.\n     * @param autoStartDataLoader Set true to immediately start data loader after creating storage.\n     * @return IncrementalStorage object corresponding to the mounted directory.\n     ",
+    "comment" : "\n     * Opens or create an Incremental File System mounted directory and returns an\n     * IncrementalStorage object.\n     *\n     * @param path                Absolute path to mount Incremental File System on.\n     * @param params              IncrementalDataLoaderParams object to configure data loading.\n     * @param createMode          Mode for opening an old Incremental File System mount or creating\n     *                            a new mount.\n     * @return IncrementalStorage object corresponding to the mounted directory.\n     ",
     "links" : [ ]
   }, {
     "name" : "public IncrementalStorage openStorage(@NonNull String path)",
@@ -65,9 +66,9 @@
     "comment" : "\n     * Opens or creates an IncrementalStorage that is linked to another IncrementalStorage.\n     *\n     * @return IncrementalStorage object corresponding to the linked storage.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void renameCodePath(File beforeCodeFile, File afterCodeFile) throws IllegalArgumentException, IOException",
+    "name" : "public void linkCodePath(File beforeCodeFile, File afterCodeFile) throws IllegalArgumentException, IOException",
     "returnType" : "void",
-    "comment" : "\n     * Set up an app's code path. The expected outcome of this method is:\n     * 1) The actual apk directory under /data/incremental is bind-mounted to the parent directory\n     * of {@code afterCodeFile}.\n     * 2) All the files under {@code beforeCodeFile} will show up under {@code afterCodeFile}.\n     *\n     * @param beforeCodeFile Path that is currently bind-mounted and have APKs under it.\n     *                       Should no longer have any APKs after this method is called.\n     *                       Example: /data/app/vmdl*tmp\n     * @param afterCodeFile Path that should will have APKs after this method is called. Its parent\n     *                      directory should be bind-mounted to a directory under /data/incremental.\n     *                      Example: /data/app/~~[randomStringA]/[packageName]-[randomStringB]\n     * @throws IllegalArgumentException\n     * @throws IOException\n     * TODO(b/147371381): add unit tests\n     ",
+    "comment" : "\n     * Link an app's files from the stage dir to the final installation location.\n     * The expected outcome of this method is:\n     * 1) The actual apk directory under /data/incremental is bind-mounted to the parent directory\n     * of {@code afterCodeFile}.\n     * 2) All the files under {@code beforeCodeFile} will show up under {@code afterCodeFile}.\n     *\n     * @param beforeCodeFile Path that is currently bind-mounted and have APKs under it.\n     *                       Example: /data/app/vmdl*tmp\n     * @param afterCodeFile Path that should will have APKs after this method is called. Its parent\n     *                      directory should be bind-mounted to a directory under /data/incremental.\n     *                      Example: /data/app/~~[randomStringA]/[packageName]-[randomStringB]\n     * @throws IllegalArgumentException\n     * @throws IOException\n     ",
     "links" : [ ]
   }, {
     "name" : "private void linkFiles(IncrementalStorage sourceStorage, File sourceAbsolutePath, String sourceRelativePath, IncrementalStorage targetStorage, String targetRelativePath) throws IOException",
@@ -75,14 +76,14 @@
     "comment" : "\n     * Recursively set up directories and link all the files from source storage to target storage.\n     *\n     * @param sourceStorage The storage that has all the files and directories underneath.\n     * @param sourceAbsolutePath The absolute path of the directory that holds all files and dirs.\n     * @param sourceRelativePath The relative path on the source directory, e.g., \"\" or \"lib\".\n     * @param targetStorage The target storage that will have the same files and directories.\n     * @param targetRelativePath The relative path to the directory on the target storage that\n     *                           should have all the files and dirs underneath,\n     *                           e.g., \"packageName-random\".\n     * @throws IOException When makeDirectory or makeLink fails on the Incremental File System.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void closeStorage(@NonNull String path)",
-    "returnType" : "void",
-    "comment" : "\n     * Closes a storage specified by the absolute path. If the path is not Incremental, do nothing.\n     * Unbinds the target dir and deletes the corresponding storage instance.\n     ",
-    "links" : [ ]
-  }, {
     "name" : "public static boolean isFeatureEnabled()",
     "returnType" : "boolean",
     "comment" : "\n     * Checks if Incremental feature is enabled on this device.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getVersion()",
+    "returnType" : "int",
+    "comment" : "\n     * 0 - IncFs is disabled.\n     * 1 - IncFs v1, core features, no PerUid support. Optional in R.\n     * 2 - IncFs v2, PerUid support, fs-verity support. Required in S.\n     ",
     "links" : [ ]
   }, {
     "name" : "public static boolean isAllowed()",
@@ -95,9 +96,34 @@
     "comment" : "\n     * Checks if path is mounted on Incremental File System.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public static boolean isIncrementalFileFd(@NonNull FileDescriptor fd)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if an fd corresponds to a file on a mounted Incremental File System.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public static byte[] unsafeGetFileSignature(@NonNull String path)",
     "returnType" : "byte[]",
     "comment" : "\n     * Returns raw signature for file if it's on Incremental File System.\n     * Unsafe, use only if you are sure what you are doing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void rmPackageDir(@NonNull File codeFile)",
+    "returnType" : "void",
+    "comment" : "\n     * Closes a storage specified by the absolute path. If the path is not Incremental, do nothing.\n     * Unbinds the target dir and deletes the corresponding storage instance.\n     * Deletes the package name and associated storage id from maps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean registerLoadingProgressCallback(@NonNull String codePath, @NonNull IPackageLoadingProgressCallback callback)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called when a new callback wants to listen to the loading progress of an installed package.\n     * Increment the count of callbacks associated to the corresponding storage.\n     * Only register storage listener if there hasn't been any existing callback on the storage yet.\n     * @param codePath Path of the installed package. This path is on an Incremental Storage.\n     * @param callback To report loading progress to.\n     * @return True if the package name and associated storage id are valid. False otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unregisterLoadingProgressCallbacks(@NonNull String codePath)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to stop all listeners from listening to loading progress of an installed package.\n     * @param codePath Path of the installed package\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public IncrementalMetrics getMetrics(@NonNull String codePath)",
+    "returnType" : "IncrementalMetrics",
+    "comment" : "\n     * Returns the metrics of an Incremental Storage.\n     ",
     "links" : [ ]
   }, {
     "name" : "private static native boolean nativeIsEnabled()",
@@ -105,7 +131,17 @@
     "comment" : " Native methods ",
     "links" : [ ]
   }, {
+    "name" : "private static native boolean nativeIsV2Available()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private static native boolean nativeIsIncrementalPath(@NonNull String path)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native boolean nativeIsIncrementalFd(@NonNull int fd)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
@@ -115,6 +151,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "ALLOWED_PROPERTY", "CREATE_MODE_TEMPORARY_BIND", "CREATE_MODE_PERMANENT_BIND", "CREATE_MODE_CREATE", "CREATE_MODE_OPEN_EXISTING", "mService", "mStorages" ],
-  "methodNames" : [ "public IncrementalStorage getStorage(int storageId)", "public IncrementalStorage createStorage(@NonNull String path, @NonNull DataLoaderParams params, @CreateMode int createMode, boolean autoStartDataLoader, @Nullable IDataLoaderStatusListener statusListener, @Nullable StorageHealthCheckParams healthCheckParams, @Nullable IStorageHealthListener healthListener)", "public IncrementalStorage openStorage(@NonNull String path)", "public IncrementalStorage createStorage(@NonNull String path, @NonNull IncrementalStorage linkedStorage, @CreateMode int createMode)", "public void renameCodePath(File beforeCodeFile, File afterCodeFile) throws IllegalArgumentException, IOException", "private void linkFiles(IncrementalStorage sourceStorage, File sourceAbsolutePath, String sourceRelativePath, IncrementalStorage targetStorage, String targetRelativePath) throws IOException", "public void closeStorage(@NonNull String path)", "public static boolean isFeatureEnabled()", "public static boolean isAllowed()", "public static boolean isIncrementalPath(@NonNull String path)", "public static byte[] unsafeGetFileSignature(@NonNull String path)", "private static native boolean nativeIsEnabled()", "private static native boolean nativeIsIncrementalPath(@NonNull String path)", "private static native byte[] nativeUnsafeGetFileSignature(@NonNull String path)" ]
+  "methodNames" : [ "public IncrementalStorage createStorage(@NonNull String path, @NonNull DataLoaderParams params, @CreateMode int createMode)", "public IncrementalStorage openStorage(@NonNull String path)", "public IncrementalStorage createStorage(@NonNull String path, @NonNull IncrementalStorage linkedStorage, @CreateMode int createMode)", "public void linkCodePath(File beforeCodeFile, File afterCodeFile) throws IllegalArgumentException, IOException", "private void linkFiles(IncrementalStorage sourceStorage, File sourceAbsolutePath, String sourceRelativePath, IncrementalStorage targetStorage, String targetRelativePath) throws IOException", "public static boolean isFeatureEnabled()", "public static int getVersion()", "public static boolean isAllowed()", "public static boolean isIncrementalPath(@NonNull String path)", "public static boolean isIncrementalFileFd(@NonNull FileDescriptor fd)", "public static byte[] unsafeGetFileSignature(@NonNull String path)", "public void rmPackageDir(@NonNull File codeFile)", "public boolean registerLoadingProgressCallback(@NonNull String codePath, @NonNull IPackageLoadingProgressCallback callback)", "public void unregisterLoadingProgressCallbacks(@NonNull String codePath)", "public IncrementalMetrics getMetrics(@NonNull String codePath)", "private static native boolean nativeIsEnabled()", "private static native boolean nativeIsV2Available()", "private static native boolean nativeIsIncrementalPath(@NonNull String path)", "private static native boolean nativeIsIncrementalFd(@NonNull int fd)", "private static native byte[] nativeUnsafeGetFileSignature(@NonNull String path)" ],
+  "variableNames" : [ "TAG", "ALLOWED_PROPERTY", "MIN_VERSION_TO_SUPPORT_FSVERITY", "CREATE_MODE_TEMPORARY_BIND", "CREATE_MODE_PERMANENT_BIND", "CREATE_MODE_CREATE", "CREATE_MODE_OPEN_EXISTING", "mService", "mLoadingProgressCallbacks" ]
 }

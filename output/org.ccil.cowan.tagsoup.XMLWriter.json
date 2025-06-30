@@ -1,0 +1,381 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/ccil/cowan/tagsoup/XMLWriter.java",
+  "packageName" : "org.ccil.cowan.tagsoup",
+  "className" : "XMLWriter",
+  "comment" : "\n * Filter to write an XML document from a SAX event stream.\n *\n * <p>This class can be used by itself or as part of a SAX event\n * stream: it takes as input a series of SAX2 ContentHandler\n * events and uses the information in those events to write\n * an XML document.  Since this class is a filter, it can also\n * pass the events on down a filter chain for further processing\n * (you can use the XMLWriter to take a snapshot of the current\n * state at any point in a filter chain), and it can be\n * used directly as a ContentHandler for a SAX2 XMLReader.</p>\n *\n * <p>The client creates a document by invoking the methods for \n * standard SAX2 events, always beginning with the\n * {@link #startDocument startDocument} method and ending with\n * the {@link #endDocument endDocument} method.  There are convenience\n * methods provided so that clients to not have to create empty\n * attribute lists or provide empty strings as parameters; for\n * example, the method invocation</p>\n *\n * <pre>\n * w.startElement(\"foo\");\n * </pre>\n *\n * <p>is equivalent to the regular SAX2 ContentHandler method</p>\n *\n * <pre>\n * w.startElement(\"\", \"foo\", \"\", new AttributesImpl());\n * </pre>\n *\n * <p>Except that it is more efficient because it does not allocate\n * a new empty attribute list each time.  The following code will send \n * a simple XML document to standard output:</p>\n *\n * <pre>\n * XMLWriter w = new XMLWriter();\n *\n * w.startDocument();\n * w.startElement(\"greeting\");\n * w.characters(\"Hello, world!\");\n * w.endElement(\"greeting\");\n * w.endDocument();\n * </pre>\n *\n * <p>The resulting document will look like this:</p>\n *\n * <pre>\n * &lt;?xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;greeting>Hello, world!&lt;/greeting>\n * </pre>\n *\n * <p>In fact, there is an even simpler convenience method,\n * <var>dataElement</var>, designed for writing elements that\n * contain only character data, so the code to generate the\n * document could be shortened to</p>\n *\n * <pre>\n * XMLWriter w = new XMLWriter();\n *\n * w.startDocument();\n * w.dataElement(\"greeting\", \"Hello, world!\");\n * w.endDocument();\n * </pre>\n *\n * <h2>Whitespace</h2>\n *\n * <p>According to the XML Recommendation, <em>all</em> whitespace\n * in an XML document is potentially significant to an application,\n * so this class never adds newlines or indentation.  If you\n * insert three elements in a row, as in</p>\n *\n * <pre>\n * w.dataElement(\"item\", \"1\");\n * w.dataElement(\"item\", \"2\");\n * w.dataElement(\"item\", \"3\");\n * </pre>\n *\n * <p>you will end up with</p>\n *\n * <pre>\n * &lt;item>1&lt;/item>&lt;item>3&lt;/item>&lt;item>3&lt;/item>\n * </pre>\n *\n * <p>You need to invoke one of the <var>characters</var> methods\n * explicitly to add newlines or indentation.  Alternatively, you\n * can use {@link com.megginson.sax.DataWriter DataWriter}, which\n * is derived from this class -- it is optimized for writing\n * purely data-oriented (or field-oriented) XML, and does automatic \n * linebreaks and indentation (but does not support mixed content \n * properly).</p>\n *\n *\n * <h2>Namespace Support</h2>\n *\n * <p>The writer contains extensive support for XML Namespaces, so that\n * a client application does not have to keep track of prefixes and\n * supply <var>xmlns</var> attributes.  By default, the XML writer will \n * generate Namespace declarations in the form _NS1, _NS2, etc., wherever \n * they are needed, as in the following example:</p>\n *\n * <pre>\n * w.startDocument();\n * w.emptyElement(\"http://www.foo.com/ns/\", \"foo\");\n * w.endDocument();\n * </pre>\n *\n * <p>The resulting document will look like this:</p>\n *\n * <pre>\n * &lt;?xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;_NS1:foo xmlns:_NS1=\"http://www.foo.com/ns/\"/>\n * </pre>\n *\n * <p>In many cases, document authors will prefer to choose their\n * own prefixes rather than using the (ugly) default names.  The\n * XML writer allows two methods for selecting prefixes:</p>\n *\n * <ol>\n * <li>the qualified name</li>\n * <li>the {@link #setPrefix setPrefix} method.</li>\n * </ol>\n *\n * <p>Whenever the XML writer finds a new Namespace URI, it checks\n * to see if a qualified (prefixed) name is also available; if so\n * it attempts to use the name's prefix (as long as the prefix is\n * not already in use for another Namespace URI).</p>\n *\n * <p>Before writing a document, the client can also pre-map a prefix\n * to a Namespace URI with the setPrefix method:</p>\n *\n * <pre>\n * w.setPrefix(\"http://www.foo.com/ns/\", \"foo\");\n * w.startDocument();\n * w.emptyElement(\"http://www.foo.com/ns/\", \"foo\");\n * w.endDocument();\n * </pre>\n *\n * <p>The resulting document will look like this:</p>\n *\n * <pre>\n * &lt;?xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;foo:foo xmlns:foo=\"http://www.foo.com/ns/\"/>\n * </pre>\n *\n * <p>The default Namespace simply uses an empty string as the prefix:</p>\n *\n * <pre>\n * w.setPrefix(\"http://www.foo.com/ns/\", \"\");\n * w.startDocument();\n * w.emptyElement(\"http://www.foo.com/ns/\", \"foo\");\n * w.endDocument();\n * </pre>\n *\n * <p>The resulting document will look like this:</p>\n *\n * <pre>\n * &lt;?xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;foo xmlns=\"http://www.foo.com/ns/\"/>\n * </pre>\n *\n * <p>By default, the XML writer will not declare a Namespace until\n * it is actually used.  Sometimes, this approach will create\n * a large number of Namespace declarations, as in the following\n * example:</p>\n *\n * <pre>\n * &lt;xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n *  &lt;rdf:Description about=\"http://www.foo.com/ids/books/12345\">\n *   &lt;dc:title xmlns:dc=\"http://www.purl.org/dc/\">A Dark Night&lt;/dc:title>\n *   &lt;dc:creator xmlns:dc=\"http://www.purl.org/dc/\">Jane Smith&lt;/dc:title>\n *   &lt;dc:date xmlns:dc=\"http://www.purl.org/dc/\">2000-09-09&lt;/dc:title>\n *  &lt;/rdf:Description>\n * &lt;/rdf:RDF>\n * </pre>\n *\n * <p>The \"rdf\" prefix is declared only once, because the RDF Namespace\n * is used by the root element and can be inherited by all of its\n * descendants; the \"dc\" prefix, on the other hand, is declared three\n * times, because no higher element uses the Namespace.  To solve this\n * problem, you can instruct the XML writer to predeclare Namespaces\n * on the root element even if they are not used there:</p>\n *\n * <pre>\n * w.forceNSDecl(\"http://www.purl.org/dc/\");\n * </pre>\n *\n * <p>Now, the \"dc\" prefix will be declared on the root element even\n * though it's not needed there, and can be inherited by its\n * descendants:</p>\n *\n * <pre>\n * &lt;xml version=\"1.0\" standalone=\"yes\"?>\n *\n * &lt;rdf:RDF xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n *             xmlns:dc=\"http://www.purl.org/dc/\">\n *  &lt;rdf:Description about=\"http://www.foo.com/ids/books/12345\">\n *   &lt;dc:title>A Dark Night&lt;/dc:title>\n *   &lt;dc:creator>Jane Smith&lt;/dc:title>\n *   &lt;dc:date>2000-09-09&lt;/dc:title>\n *  &lt;/rdf:Description>\n * &lt;/rdf:RDF>\n * </pre>\n *\n * <p>This approach is also useful for declaring Namespace prefixes\n * that be used by qualified names appearing in attribute values or \n * character data.</p>\n *\n * @author David Megginson, david@megginson.com\n * @version 0.2\n * @see org.xml.sax.XMLFilter\n * @see org.xml.sax.ContentHandler\n ",
+  "links" : [ "#endDocument", "#startDocument", "com.megginson.sax.DataWriter", "#setPrefix" ],
+  "variables" : [ {
+    "name" : "booleans",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY_ATTS",
+    "type" : "Attributes",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CDATA_SECTION_ELEMENTS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DOCTYPE_PUBLIC",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DOCTYPE_SYSTEM",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "INDENT",
+    "type" : "String",
+    "comment" : " currently ignored",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIA_TYPE",
+    "type" : "String",
+    "comment" : " currently ignored",
+    "links" : [ ]
+  }, {
+    "name" : "METHOD",
+    "type" : "String",
+    "comment" : " currently html or xml",
+    "links" : [ ]
+  }, {
+    "name" : "OMIT_XML_DECLARATION",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STANDALONE",
+    "type" : "String",
+    "comment" : " currently ignored",
+    "links" : [ ]
+  }, {
+    "name" : "VERSION",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "prefixTable",
+    "type" : "Hashtable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "forcedDeclTable",
+    "type" : "Hashtable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "doneDeclTable",
+    "type" : "Hashtable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "elementLevel",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "output",
+    "type" : "Writer",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "nsSupport",
+    "type" : "NamespaceSupport",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "prefixCounter",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "outputProperties",
+    "type" : "Properties",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "unicodeMode",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "outputEncoding",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "htmlMode",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "forceDTD",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hasOutputDTD",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "overridePublic",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "overrideSystem",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "version",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "standalone",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "cdataElement",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void init(Writer writer)",
+    "returnType" : "void",
+    "comment" : "\n     * Internal initialization method.\n     *\n     * <p>All of the public constructors invoke this method.\n     *\n     * @param writer The output destination, or null to use\n     *        standard output.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : "\n     * Reset the writer.\n     *\n     * <p>This method is especially useful if the writer throws an\n     * exception before it is finished, and you want to reuse the\n     * writer for a new document.  It is usually a good idea to\n     * invoke {@link #flush flush} before resetting the writer,\n     * to make sure that no output is lost.</p>\n     *\n     * <p>This method is invoked automatically by the\n     * {@link #startDocument startDocument} method before writing\n     * a new document.</p>\n     *\n     * <p><strong>Note:</strong> this method will <em>not</em>\n     * clear the prefix or URI information in the writer or\n     * the selected output writer.</p>\n     *\n     * @see #flush\n     ",
+    "links" : [ "#flush", "#startDocument" ]
+  }, {
+    "name" : "public void flush() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Flush the output.\n     *\n     * <p>This method flushes the output stream.  It is especially useful\n     * when you need to make certain that the entire document has\n     * been written to output but do not want to close the output\n     * stream.</p>\n     *\n     * <p>This method is invoked automatically by the\n     * {@link #endDocument endDocument} method after writing a\n     * document.</p>\n     *\n     * @see #reset\n     ",
+    "links" : [ "#endDocument" ]
+  }, {
+    "name" : "public void setOutput(Writer writer)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a new output destination for the document.\n     *\n     * @param writer The output destination, or null to use\n     *        standard output.\n     * @return The current output writer.\n     * @see #flush\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPrefix(String uri, String prefix)",
+    "returnType" : "void",
+    "comment" : "\n     * Specify a preferred prefix for a Namespace URI.\n     *\n     * <p>Note that this method does not actually force the Namespace\n     * to be declared; to do that, use the {@link \n     * #forceNSDecl(java.lang.String) forceNSDecl} method as well.</p>\n     *\n     * @param uri The Namespace URI.\n     * @param prefix The preferred prefix, or \"\" to select\n     *        the default Namespace.\n     * @see #getPrefix\n     * @see #forceNSDecl(java.lang.String)\n     * @see #forceNSDecl(java.lang.String,java.lang.String)\n     ",
+    "links" : [ "#forceNSDecl(java.lang.String)" ]
+  }, {
+    "name" : "public String getPrefix(String uri)",
+    "returnType" : "String",
+    "comment" : "\n     * Get the current or preferred prefix for a Namespace URI.\n     *\n     * @param uri The Namespace URI.\n     * @return The preferred prefix, or \"\" for the default Namespace.\n     * @see #setPrefix\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forceNSDecl(String uri)",
+    "returnType" : "void",
+    "comment" : "\n     * Force a Namespace to be declared on the root element.\n     *\n     * <p>By default, the XMLWriter will declare only the Namespaces\n     * needed for an element; as a result, a Namespace may be\n     * declared many places in a document if it is not used on the\n     * root element.</p>\n     *\n     * <p>This method forces a Namespace to be declared on the root\n     * element even if it is not used there, and reduces the number\n     * of xmlns attributes in the document.</p>\n     *\n     * @param uri The Namespace URI to declare.\n     * @see #forceNSDecl(java.lang.String,java.lang.String)\n     * @see #setPrefix\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forceNSDecl(String uri, String prefix)",
+    "returnType" : "void",
+    "comment" : "\n     * Force a Namespace declaration with a preferred prefix.\n     *\n     * <p>This is a convenience method that invokes {@link\n     * #setPrefix setPrefix} then {@link #forceNSDecl(java.lang.String)\n     * forceNSDecl}.</p>\n     *\n     * @param uri The Namespace URI to declare on the root element.\n     * @param prefix The preferred prefix for the Namespace, or \"\"\n     *        for the default Namespace.\n     * @see #setPrefix\n     * @see #forceNSDecl(java.lang.String)\n     ",
+    "links" : [ "#setPrefix", "#forceNSDecl(java.lang.String)" ]
+  }, {
+    "name" : "public void startDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write the XML declaration at the beginning of the document.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the XML declaration, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#startDocument\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a newline at the end of the document.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the newline, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#endDocument\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a start tag.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @param uri The Namespace URI, or the empty string if none\n     *        is available.\n     * @param localName The element's local (unprefixed) name (required).\n     * @param qName The element's qualified (prefixed) name, or the\n     *        empty string is none is available.  This method will\n     *        use the qName as a template for generating a prefix\n     *        if necessary, but it is not guaranteed to use the\n     *        same qName.\n     * @param atts The element's attribute list (must not be null).\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the start tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#startElement\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endElement(String uri, String localName, String qName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an end tag.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @param uri The Namespace URI, or the empty string if none\n     *        is available.\n     * @param localName The element's local (unprefixed) name (required).\n     * @param qName The element's qualified (prefixed) name, or the\n     *        empty string is none is available.  This method will\n     *        use the qName as a template for generating a prefix\n     *        if necessary, but it is not guaranteed to use the\n     *        same qName.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the end tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#endElement\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void characters(char[] ch, int start, int len) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write character data.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @param ch The array of characters to write.\n     * @param start The starting position in the array.\n     * @param length The number of characters to write.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the characters, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#characters\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write ignorable whitespace.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @param ch The array of characters to write.\n     * @param start The starting position in the array.\n     * @param length The number of characters to write.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the whitespace, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#ignorableWhitespace\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void processingInstruction(String target, String data) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a processing instruction.\n     *\n     * Pass the event on down the filter chain for further processing.\n     *\n     * @param target The PI target.\n     * @param data The PI data.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the PI, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see org.xml.sax.ContentHandler#processingInstruction\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void emptyElement(String uri, String localName, String qName, Attributes atts) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an empty element.\n     *\n     * This method writes an empty element tag rather than a start tag\n     * followed by an end tag.  Both a {@link #startElement\n     * startElement} and an {@link #endElement endElement} event will\n     * be passed on down the filter chain.\n     *\n     * @param uri The element's Namespace URI, or the empty string\n     *        if the element has no Namespace or if Namespace\n     *        processing is not being performed.\n     * @param localName The element's local name (without prefix).  This\n     *        parameter must be provided.\n     * @param qName The element's qualified name (with prefix), or\n     *        the empty string if none is available.  This parameter\n     *        is strictly advisory: the writer may or may not use\n     *        the prefix attached.\n     * @param atts The element's attribute list.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement\n     * @see #endElement \n     ",
+    "links" : [ "#endElement", "#startElementstartElement" ]
+  }, {
+    "name" : "public void startElement(String uri, String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Start a new element without a qname or attributes.\n     *\n     * <p>This method will provide a default empty attribute\n     * list and an empty string for the qualified name.  \n     * It invokes {@link \n     * #startElement(String, String, String, Attributes)}\n     * directly.</p>\n     *\n     * @param uri The element's Namespace URI.\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the start tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement(String, String, String, Attributes)\n     ",
+    "links" : [ "#startElement(String" ]
+  }, {
+    "name" : "public void startElement(String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Start a new element without a qname, attributes or a Namespace URI.\n     *\n     * <p>This method will provide an empty string for the\n     * Namespace URI, and empty string for the qualified name,\n     * and a default empty attribute list. It invokes\n     * #startElement(String, String, String, Attributes)}\n     * directly.</p>\n     *\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the start tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement(String, String, String, Attributes)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endElement(String uri, String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * End an element without a qname.\n     *\n     * <p>This method will supply an empty string for the qName.\n     * It invokes {@link #endElement(String, String, String)}\n     * directly.</p>\n     *\n     * @param uri The element's Namespace URI.\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the end tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #endElement(String, String, String)\n     ",
+    "links" : [ "#endElement(String" ]
+  }, {
+    "name" : "public void endElement(String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * End an element without a Namespace URI or qname.\n     *\n     * <p>This method will supply an empty string for the qName\n     * and an empty string for the Namespace URI.\n     * It invokes {@link #endElement(String, String, String)}\n     * directly.</p>\n     *\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the end tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #endElement(String, String, String)\n     ",
+    "links" : [ "#endElement(String" ]
+  }, {
+    "name" : "public void emptyElement(String uri, String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Add an empty element without a qname or attributes.\n     *\n     * <p>This method will supply an empty string for the qname\n     * and an empty attribute list.  It invokes\n     * {@link #emptyElement(String, String, String, Attributes)} \n     * directly.</p>\n     *\n     * @param uri The element's Namespace URI.\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #emptyElement(String, String, String, Attributes)\n     ",
+    "links" : [ "#emptyElement(String" ]
+  }, {
+    "name" : "public void emptyElement(String localName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Add an empty element without a Namespace URI, qname or attributes.\n     *\n     * <p>This method will supply an empty string for the qname,\n     * and empty string for the Namespace URI, and an empty\n     * attribute list.  It invokes\n     * {@link #emptyElement(String, String, String, Attributes)} \n     * directly.</p>\n     *\n     * @param localName The element's local name.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #emptyElement(String, String, String, Attributes)\n     ",
+    "links" : [ "#emptyElement(String" ]
+  }, {
+    "name" : "public void dataElement(String uri, String localName, String qName, Attributes atts, String content) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an element with character data content.\n     *\n     * <p>This is a convenience method to write a complete element\n     * with character data content, including the start tag\n     * and end tag.</p>\n     *\n     * <p>This method invokes\n     * {@link #startElement(String, String, String, Attributes)},\n     * followed by\n     * {@link #characters(String)}, followed by\n     * {@link #endElement(String, String, String)}.</p>\n     *\n     * @param uri The element's Namespace URI.\n     * @param localName The element's local name.\n     * @param qName The element's default qualified name.\n     * @param atts The element's attributes.\n     * @param content The character data content.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement(String, String, String, Attributes)\n     * @see #characters(String)\n     * @see #endElement(String, String, String)\n     ",
+    "links" : [ "#startElement(String", "#characters(String)", "#endElement(String" ]
+  }, {
+    "name" : "public void dataElement(String uri, String localName, String content) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an element with character data content but no attributes.\n     *\n     * <p>This is a convenience method to write a complete element\n     * with character data content, including the start tag\n     * and end tag.  This method provides an empty string\n     * for the qname and an empty attribute list.</p>\n     *\n     * <p>This method invokes\n     * {@link #startElement(String, String, String, Attributes)},\n     * followed by\n     * {@link #characters(String)}, followed by\n     * {@link #endElement(String, String, String)}.</p>\n     *\n     * @param uri The element's Namespace URI.\n     * @param localName The element's local name.\n     * @param content The character data content.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement(String, String, String, Attributes)\n     * @see #characters(String)\n     * @see #endElement(String, String, String)\n     ",
+    "links" : [ "#startElement(String", "#characters(String)", "#endElement(String" ]
+  }, {
+    "name" : "public void dataElement(String localName, String content) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an element with character data content but no attributes or Namespace URI.\n     *\n     * <p>This is a convenience method to write a complete element\n     * with character data content, including the start tag\n     * and end tag.  The method provides an empty string for the\n     * Namespace URI, and empty string for the qualified name,\n     * and an empty attribute list.</p>\n     *\n     * <p>This method invokes\n     * {@link #startElement(String, String, String, Attributes)},\n     * followed by\n     * {@link #characters(String)}, followed by\n     * {@link #endElement(String, String, String)}.</p>\n     *\n     * @param localName The element's local name.\n     * @param content The character data content.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the empty tag, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #startElement(String, String, String, Attributes)\n     * @see #characters(String)\n     * @see #endElement(String, String, String)\n     ",
+    "links" : [ "#startElement(String", "#characters(String)", "#endElement(String" ]
+  }, {
+    "name" : "public void characters(String data) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a string of character data, with XML escaping.\n     *\n     * <p>This is a convenience method that takes an XML\n     * String, converts it to a character array, then invokes\n     * {@link #characters(char[], int, int)}.</p>\n     *\n     * @param data The character data.\n     * @exception org.xml.sax.SAXException If there is an error\n     *            writing the string, or if a handler further down\n     *            the filter chain raises an exception.\n     * @see #characters(char[], int, int)\n     ",
+    "links" : [ "#characters(char" ]
+  }, {
+    "name" : "private void forceNSDecls()",
+    "returnType" : "void",
+    "comment" : "\n     * Force all Namespaces to be declared.\n     *\n     * This method is used on the root element to ensure that\n     * the predeclared Namespaces all appear.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String doPrefix(String uri, String qName, boolean isElement)",
+    "returnType" : "String",
+    "comment" : "\n     * Determine the prefix for an element or attribute name.\n     *\n     * TODO: this method probably needs some cleanup.\n     *\n     * @param uri The Namespace URI.\n     * @param qName The qualified name (optional); this will be used\n     *        to indicate the preferred prefix if none is currently\n     *        bound.\n     * @param isElement true if this is an element name, false\n     *        if it is an attribute name (which cannot use the\n     *        default Namespace).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void write(char c) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a raw character.\n     *\n     * @param c The character to write.\n     * @exception org.xml.sax.SAXException If there is an error writing\n     *            the character, this method will throw an IOException\n     *            wrapped in a SAXException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void write(String s) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write a raw string.\n     *\n     * @param s\n     * @exception org.xml.sax.SAXException If there is an error writing\n     *            the string, this method will throw an IOException\n     *            wrapped in a SAXException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeAttributes(Attributes atts) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write out an attribute list, escaping values.\n     *\n     * The names will have prefixes added to them.\n     *\n     * @param atts The attribute list to write.\n     * @exception org.xml.SAXException If there is an error writing\n     *            the attribute list, this method will throw an\n     *            IOException wrapped in a SAXException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean booleanAttribute(String localName, String qName, String value)",
+    "returnType" : "boolean",
+    "comment" : " Return true if the attribute is an HTML boolean from the above list.",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeEsc(char[] ch, int start, int length, boolean isAttVal) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an array of data characters with escaping.\n     *\n     * @param ch The array of characters.\n     * @param start The starting position.\n     * @param length The number of characters to use.\n     * @param isAttVal true if this is an attribute value literal.\n     * @exception org.xml.SAXException If there is an error writing\n     *            the characters, this method will throw an\n     *            IOException wrapped in a SAXException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeNSDecls() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write out the list of Namespace declarations.\n     *\n     * @exception org.xml.sax.SAXException This method will throw\n     *            an IOException wrapped in a SAXException if\n     *            there is an error writing the Namespace\n     *            declarations.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeName(String uri, String localName, String qName, boolean isElement) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n     * Write an element or attribute name.\n     *\n     * @param uri The Namespace URI.\n     * @param localName The local name.\n     * @param qName The prefixed name, if available, or the empty string.\n     * @param isElement true if this is an element name, false if it\n     *        is an attribute name.\n     * @exception org.xml.sax.SAXException This method will throw an\n     *            IOException wrapped in a SAXException if there is\n     *            an error writing the name.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void comment(char[] ch, int start, int length) throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void endCDATA() throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void endDTD() throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void endEntity(String name) throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void startCDATA() throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void startDTD(String name, String publicid, String systemid) throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void startEntity(String name) throws SAXException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String getOutputProperty(String key)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOutputProperty(String key, String value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void init(Writer writer)", "public void reset()", "public void flush() throws IOException", "public void setOutput(Writer writer)", "public void setPrefix(String uri, String prefix)", "public String getPrefix(String uri)", "public void forceNSDecl(String uri)", "public void forceNSDecl(String uri, String prefix)", "public void startDocument() throws SAXException", "public void endDocument() throws SAXException", "public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException", "public void endElement(String uri, String localName, String qName) throws SAXException", "public void characters(char[] ch, int start, int len) throws SAXException", "public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException", "public void processingInstruction(String target, String data) throws SAXException", "public void emptyElement(String uri, String localName, String qName, Attributes atts) throws SAXException", "public void startElement(String uri, String localName) throws SAXException", "public void startElement(String localName) throws SAXException", "public void endElement(String uri, String localName) throws SAXException", "public void endElement(String localName) throws SAXException", "public void emptyElement(String uri, String localName) throws SAXException", "public void emptyElement(String localName) throws SAXException", "public void dataElement(String uri, String localName, String qName, Attributes atts, String content) throws SAXException", "public void dataElement(String uri, String localName, String content) throws SAXException", "public void dataElement(String localName, String content) throws SAXException", "public void characters(String data) throws SAXException", "private void forceNSDecls()", "private String doPrefix(String uri, String qName, boolean isElement)", "private void write(char c) throws SAXException", "private void write(String s) throws SAXException", "private void writeAttributes(Attributes atts) throws SAXException", "private boolean booleanAttribute(String localName, String qName, String value)", "private void writeEsc(char[] ch, int start, int length, boolean isAttVal) throws SAXException", "private void writeNSDecls() throws SAXException", "private void writeName(String uri, String localName, String qName, boolean isElement) throws SAXException", "public void comment(char[] ch, int start, int length) throws SAXException", "public void endCDATA() throws SAXException", "public void endDTD() throws SAXException", "public void endEntity(String name) throws SAXException", "public void startCDATA() throws SAXException", "public void startDTD(String name, String publicid, String systemid) throws SAXException", "public void startEntity(String name) throws SAXException", "public String getOutputProperty(String key)", "public void setOutputProperty(String key, String value)" ],
+  "variableNames" : [ "booleans", "EMPTY_ATTS", "CDATA_SECTION_ELEMENTS", "DOCTYPE_PUBLIC", "DOCTYPE_SYSTEM", "ENCODING", "INDENT", "MEDIA_TYPE", "METHOD", "OMIT_XML_DECLARATION", "STANDALONE", "VERSION", "prefixTable", "forcedDeclTable", "doneDeclTable", "elementLevel", "output", "nsSupport", "prefixCounter", "outputProperties", "unicodeMode", "outputEncoding", "htmlMode", "forceDTD", "hasOutputDTD", "overridePublic", "overrideSystem", "version", "standalone", "cdataElement" ]
+}

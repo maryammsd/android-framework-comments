@@ -1,13 +1,19 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/hardware/location/ContextHubManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/hardware/location/ContextHubManager.java",
   "packageName" : "android.hardware.location",
   "className" : "ContextHubManager",
-  "comment" : "\n * A class that exposes the Context hubs on a device to applications.\n *\n * Please note that this class is not expected to be used by unbundled applications. Also, calling\n * applications are expected to have LOCATION_HARDWARE or ACCESS_CONTEXT_HUB permissions to use this\n * class. Use of LOCATION_HARDWARE to enable access to these APIs is deprecated and may be removed\n * in the future - all applications are recommended to move to the ACCESS_CONTEXT_HUB permission.\n *\n * @hide\n ",
+  "comment" : "\n * A class that exposes the Context hubs on a device to applications.\n *\n * Please note that this class is not expected to be used by unbundled applications. Also, calling\n * applications are expected to have the ACCESS_CONTEXT_HUB permission to use this class.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "EXTRA_CLIENT_AUTHORIZATION_STATE",
+    "type" : "String",
+    "comment" : "\n     * An extra containing one of the {@code AUTHORIZATION_*} constants such as\n     * {@link #AUTHORIZATION_GRANTED} describing the client's authorization state.\n     ",
+    "links" : [ "#AUTHORIZATION_GRANTED" ]
   }, {
     "name" : "EXTRA_CONTEXT_HUB_INFO",
     "type" : "String",
@@ -33,6 +39,21 @@
     "type" : "String",
     "comment" : "\n     * An extra of type {@link NanoAppMessage} describing contents of a message from a nanoapp.\n     ",
     "links" : [ "android.hardware.location.NanoAppMessage" ]
+  }, {
+    "name" : "AUTHORIZATION_DENIED",
+    "type" : "int",
+    "comment" : "\n     * Indicates that the {@link ContextHubClient} can no longer communicate with a nanoapp. If the\n     * {@link ContextHubClient} attempts to send messages to the nanoapp, it will continue to\n     * receive this authorization state if the connection is still closed.\n     ",
+    "links" : [ "android.hardware.location.ContextHubClient" ]
+  }, {
+    "name" : "AUTHORIZATION_DENIED_GRACE_PERIOD",
+    "type" : "int",
+    "comment" : "\n     * Indicates the {@link ContextHubClient} will soon lose its authorization to communicate with a\n     * nanoapp. After receiving this state event, the {@link ContextHubClient} has one minute to\n     * perform any cleanup with the nanoapp such that the nanoapp is no longer performing work on\n     * behalf of the {@link ContextHubClient}.\n     ",
+    "links" : [ "android.hardware.location.ContextHubClient" ]
+  }, {
+    "name" : "AUTHORIZATION_GRANTED",
+    "type" : "int",
+    "comment" : "\n     * The {@link ContextHubClient} is authorized to communicate with the nanoapp.\n     ",
+    "links" : [ "android.hardware.location.ContextHubClient" ]
   }, {
     "name" : "EVENT_NANOAPP_LOADED",
     "type" : "int",
@@ -68,6 +89,11 @@
     "type" : "int",
     "comment" : "\n     * An event describing that the Context Hub has reset.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "EVENT_CLIENT_AUTHORIZATION",
+    "type" : "int",
+    "comment" : "\n     * An event describing a client authorization state change. See\n     * {@link ContextHubClientCallback#onClientAuthorizationChanged} for more details on when this\n     * event will be sent. Contains the EXTRA_NANOAPP_ID and EXTRA_CLIENT_AUTHORIZATION_STATE\n     * extras.\n     ",
+    "links" : [ "android.hardware.location.ContextHubClientCallback#onClientAuthorizationChanged" ]
   }, {
     "name" : "mMainLooper",
     "type" : "Looper",
@@ -140,11 +166,6 @@
     "comment" : "\n     * Returns the list of ContextHubInfo objects describing the available Context Hubs.\n     *\n     * @return the list of ContextHubInfo objects\n     *\n     * @see ContextHubInfo\n     ",
     "links" : [ ]
   }, {
-    "name" : "private IContextHubTransactionCallback createTransactionCallback(ContextHubTransaction<Void> transaction)",
-    "returnType" : "IContextHubTransactionCallback",
-    "comment" : "\n     * Helper function to generate a stub for a non-query transaction callback.\n     *\n     * @param transaction the transaction to unblock when complete\n     *\n     * @return the callback\n     *\n     * @hide\n     ",
-    "links" : [ ]
-  }, {
     "name" : "private IContextHubTransactionCallback createQueryCallback(ContextHubTransaction<List<NanoAppState>> transaction)",
     "returnType" : "IContextHubTransactionCallback",
     "comment" : "\n    * Helper function to generate a stub for a query transaction callback.\n    *\n    * @param transaction the transaction to unblock when complete\n    *\n    * @return the callback\n    *\n    * @hide\n    ",
@@ -195,20 +216,45 @@
     "comment" : "\n     * Creates an interface to the ContextHubClient to send down to the service.\n     *\n     * @param client the ContextHubClient object associated with this callback\n     * @param callback the callback to invoke at the client process\n     * @param executor the executor to invoke callbacks for this client\n     *\n     * @return the callback interface\n     ",
     "links" : [ ]
   }, {
+    "name" : "public ContextHubClient createClient(@Nullable Context context, @NonNull ContextHubInfo hubInfo, @NonNull @CallbackExecutor Executor executor, @NonNull ContextHubClientCallback callback)",
+    "returnType" : "ContextHubClient",
+    "comment" : "\n     * Creates and registers a client and its callback with the Context Hub Service.\n     *\n     * A client is registered with the Context Hub Service for a specified Context Hub. When the\n     * registration succeeds, the client can send messages to nanoapps through the returned\n     * {@link ContextHubClient} object, and receive notifications through the provided callback.\n     *\n     * @param context  the context of the application\n     * @param hubInfo  the hub to attach this client to\n     * @param executor the executor to invoke the callback\n     * @param callback the notification callback to register\n     * @return the registered client object\n     *\n     * @throws IllegalArgumentException if hubInfo does not represent a valid hub\n     * @throws IllegalStateException    if there were too many registered clients at the service\n     * @throws NullPointerException     if callback, hubInfo, or executor is null\n     *\n     * @see ContextHubClientCallback\n     ",
+    "links" : [ "android.hardware.location.ContextHubClient" ]
+  }, {
     "name" : "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback, @NonNull @CallbackExecutor Executor executor)",
     "returnType" : "ContextHubClient",
-    "comment" : "\n     * Creates and registers a client and its callback with the Context Hub Service.\n     *\n     * A client is registered with the Context Hub Service for a specified Context Hub. When the\n     * registration succeeds, the client can send messages to nanoapps through the returned\n     * {@link ContextHubClient} object, and receive notifications through the provided callback.\n     *\n     * @param hubInfo  the hub to attach this client to\n     * @param callback the notification callback to register\n     * @param executor the executor to invoke the callback\n     * @return the registered client object\n     *\n     * @throws IllegalArgumentException if hubInfo does not represent a valid hub\n     * @throws IllegalStateException    if there were too many registered clients at the service\n     * @throws NullPointerException     if callback, hubInfo, or executor is null\n     *\n     * @see ContextHubClientCallback\n     ",
-    "links" : [ "android.hardware.location.ContextHubClient" ]
+    "comment" : "\n     * Equivalent to\n     * {@link  #createClient(Context, ContextHubInfo, Executor, ContextHubClientCallback)}\n     * with the {@link Context} being set to null.\n     ",
+    "links" : [ "android.content.Context", "#createClient(Context" ]
   }, {
     "name" : "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback)",
     "returnType" : "ContextHubClient",
-    "comment" : "\n     * Equivalent to {@link #createClient(ContextHubInfo, ContextHubClientCallback, Executor)}\n     * with the executor using the main thread's Looper.\n     *\n     * @param hubInfo  the hub to attach this client to\n     * @param callback the notification callback to register\n     * @return the registered client object\n     *\n     * @throws IllegalArgumentException if hubInfo does not represent a valid hub\n     * @throws IllegalStateException    if there were too many registered clients at the service\n     * @throws NullPointerException     if callback or hubInfo is null\n     *\n     * @see ContextHubClientCallback\n     ",
+    "comment" : "\n     * Equivalent to {@link #createClient(ContextHubInfo, ContextHubClientCallback, Executor)}\n     * with the executor using the main thread's Looper.\n     ",
     "links" : [ "#createClient(ContextHubInfo" ]
+  }, {
+    "name" : "public ContextHubClient createClient(@Nullable Context context, @NonNull ContextHubInfo hubInfo, @NonNull PendingIntent pendingIntent, long nanoAppId)",
+    "returnType" : "ContextHubClient",
+    "comment" : "\n     * Creates a ContextHubClient that will receive notifications based on Intent events.\n     *\n     * This method should be used instead of {@link #createClient(ContextHubInfo,\n     * ContextHubClientCallback)} or {@link #createClient(ContextHubInfo, ContextHubClientCallback,\n     * Executor)} if the caller wants to preserve the messaging endpoint of a ContextHubClient, even\n     * after a process exits. If the PendingIntent with the provided nanoapp has already been\n     * registered at the service, then the same ContextHubClient will be regenerated without\n     * creating a new client connection at the service. Note that the PendingIntent, nanoapp, and\n     * Context Hub must all match in identifying a previously registered ContextHubClient.\n     * If a client is regenerated, the host endpoint identifier attached to messages sent to the\n     * nanoapp remains consistent, even if the original process has exited.\n     *\n     * To avoid unintentionally spreading data from the Context Hub to external applications, it is\n     * strongly recommended that the PendingIntent supplied to this API is an explicit intent.\n     *\n     * If registered successfully, intents will be delivered regarding events or messages from the\n     * specified nanoapp from the attached Context Hub. The intent will have an extra\n     * {@link ContextHubManager.EXTRA_CONTEXT_HUB_INFO} of type {@link ContextHubInfo}, which\n     * describes the Context Hub the intent event was for. The intent will also have an extra\n     * {@link ContextHubManager.EXTRA_EVENT_TYPE} of type {@link ContextHubManager.Event}, which\n     * will contain the type of the event. See {@link ContextHubManager.Event} for description of\n     * each event type, along with event-specific extra fields. The client can also use\n     * {@link ContextHubIntentEvent.fromIntent(Intent)} to parse the Intent generated by the event.\n     *\n     * Intent events will be delivered until {@link ContextHubClient.close()} is called. Note that\n     * the registration of this ContextHubClient at the Context Hub Service will be maintained until\n     * {@link ContextHubClient.close()} is called. If {@link PendingIntent.cancel()} is called\n     * on the provided PendingIntent, then the client will be automatically unregistered by the\n     * service.\n     *\n     * Note that the {@link PendingIntent} supplied to this API must be mutable for Intent\n     * notifications to work.\n     *\n     * @param context       the context of the application. If a PendingIntent client is recreated,\n     * the latest state in the context will be used and old state will be discarded\n     * @param hubInfo       the hub to attach this client to\n     * @param pendingIntent the PendingIntent to register to the client\n     * @param nanoAppId     the ID of the nanoapp that Intent events will be generated for\n     * @return the registered client object\n     *\n     * @throws IllegalArgumentException if hubInfo does not represent a valid hub, or an immutable\n     *                                  PendingIntent was supplied\n     * @throws IllegalStateException    if there were too many registered clients at the service\n     * @throws NullPointerException     if pendingIntent or hubInfo is null\n     ",
+    "links" : [ "ContextHubManager.EXTRA_EVENT_TYPE", "ContextHubManager.Event", "PendingIntent.cancel()", "ContextHubIntentEvent.fromIntent(Intent)", "#createClient(ContextHubInfo", "ContextHubClient.close()", "android.app.PendingIntent", "android.hardware.location.ContextHubInfo", "ContextHubManager.EXTRA_CONTEXT_HUB_INFO" ]
   }, {
     "name" : "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull PendingIntent pendingIntent, long nanoAppId)",
     "returnType" : "ContextHubClient",
-    "comment" : "\n     * Creates a ContextHubClient that will receive notifications based on Intent events.\n     *\n     * This method should be used instead of {@link #createClient(ContextHubInfo,\n     * ContextHubClientCallback)} or {@link #createClient(ContextHubInfo, ContextHubClientCallback,\n     * Executor)} if the caller wants to preserve the messaging endpoint of a ContextHubClient, even\n     * after a process exits. If the PendingIntent with the provided nanoapp has already been\n     * registered at the service, then the same ContextHubClient will be regenerated without\n     * creating a new client connection at the service. Note that the PendingIntent, nanoapp, and\n     * Context Hub must all match in identifying a previously registered ContextHubClient.\n     * If a client is regenerated, the host endpoint identifier attached to messages sent to the\n     * nanoapp remains consistent, even if the original process has exited.\n     *\n     * To avoid unintentionally spreading data from the Context Hub to external applications, it is\n     * strongly recommended that the PendingIntent supplied to this API is an explicit intent.\n     *\n     * If registered successfully, intents will be delivered regarding events or messages from the\n     * specified nanoapp from the attached Context Hub. The intent will have an extra\n     * {@link ContextHubManager.EXTRA_CONTEXT_HUB_INFO} of type {@link ContextHubInfo}, which\n     * describes the Context Hub the intent event was for. The intent will also have an extra\n     * {@link ContextHubManager.EXTRA_EVENT_TYPE} of type {@link ContextHubManager.Event}, which\n     * will contain the type of the event. See {@link ContextHubManager.Event} for description of\n     * each event type, along with event-specific extra fields. The client can also use\n     * {@link ContextHubIntentEvent.fromIntent(Intent)} to parse the Intent generated by the event.\n     *\n     * Intent events will be delivered until {@link ContextHubClient.close()} is called. Note that\n     * the registration of this ContextHubClient at the Context Hub Service will be maintained until\n     * {@link ContextHubClient.close()} is called. If {@link PendingIntent.cancel()} is called\n     * on the provided PendingIntent, then the client will be automatically unregistered by the\n     * service.\n     *\n     * @param hubInfo       the hub to attach this client to\n     * @param pendingIntent the PendingIntent to register to the client\n     * @param nanoAppId     the ID of the nanoapp that Intent events will be generated for\n     * @return the registered client object\n     *\n     * @throws IllegalArgumentException if hubInfo does not represent a valid hub\n     * @throws IllegalStateException    if there were too many registered clients at the service\n     * @throws NullPointerException     if pendingIntent or hubInfo is null\n     ",
-    "links" : [ "ContextHubManager.EXTRA_EVENT_TYPE", "ContextHubManager.Event", "PendingIntent.cancel()", "ContextHubIntentEvent.fromIntent(Intent)", "#createClient(ContextHubInfo", "ContextHubClient.close()", "android.hardware.location.ContextHubInfo", "ContextHubManager.EXTRA_CONTEXT_HUB_INFO" ]
+    "comment" : "\n     * Equivalent to {@link #createClient(ContextHubInfo, PendingIntent, long, String)}\n     * with {@link Context} being set to null.\n     ",
+    "links" : [ "android.content.Context", "#createClient(ContextHubInfo" ]
+  }, {
+    "name" : "public long[] getPreloadedNanoAppIds(@NonNull ContextHubInfo hubInfo)",
+    "returnType" : "long[]",
+    "comment" : "\n     * Queries for the list of preloaded nanoapp IDs on the system.\n     *\n     * @param hubInfo The Context Hub to query a list of nanoapp IDs from.\n     *\n     * @return The list of 64-bit IDs of the preloaded nanoapps.\n     *\n     * @throws NullPointerException if hubInfo is null\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean enableTestMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Puts the Context Hub in test mode.\n     *\n     * The purpose of this API is to make testing CHRE/Context Hub more\n     * predictable and robust. This temporarily unloads all\n     * nanoapps.\n     *\n     * Note that this API must not cause CHRE/Context Hub to behave differently\n     * in test compared to production.\n     *\n     * @return true if the enable test mode operation succeeded.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean disableTestMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Puts the Context Hub out of test mode.\n     *\n     * This API will undo any previously made enableTestMode() calls.\n     * After this API is called, it should restore the state of the system\n     * to the normal/production mode before any enableTestMode() call was\n     * made. If the enableTestMode() call unloaded any nanoapps\n     * to enter test mode, it should reload those nanoapps in this API call.\n     *\n     * @return true if the disable operation succeeded.\n     * @hide\n     ",
+    "links" : [ ]
   }, {
     "name" : "public int unregisterCallback(@NonNull Callback callback)",
     "returnType" : "int",
@@ -225,6 +271,6 @@
     "comment" : "\n     * Invokes the ContextHubManager.Callback callback registered with the ContextHubManager.\n     *\n     * @param hubId The ID of the Context Hub the message came from\n     * @param nanoAppId The instance ID of the nanoapp the message came from\n     * @param message The message to provide the callback\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "EXTRA_CONTEXT_HUB_INFO", "EXTRA_EVENT_TYPE", "EXTRA_NANOAPP_ID", "EXTRA_NANOAPP_ABORT_CODE", "EXTRA_MESSAGE", "EVENT_NANOAPP_LOADED", "EVENT_NANOAPP_UNLOADED", "EVENT_NANOAPP_ENABLED", "EVENT_NANOAPP_DISABLED", "EVENT_NANOAPP_ABORTED", "EVENT_NANOAPP_MESSAGE", "EVENT_HUB_RESET", "mMainLooper", "mService", "mCallback", "mCallbackHandler", "mLocalCallback", "mClientCallback" ],
-  "methodNames" : [ "public int[] getContextHubHandles()", "public ContextHubInfo getContextHubInfo(int hubHandle)", "public int loadNanoApp(int hubHandle, @NonNull NanoApp app)", "public int unloadNanoApp(int nanoAppHandle)", "public NanoAppInstanceInfo getNanoAppInstanceInfo(int nanoAppHandle)", "public int[] findNanoAppOnHub(int hubHandle, @NonNull NanoAppFilter filter)", "public int sendMessage(int hubHandle, int nanoAppHandle, @NonNull ContextHubMessage message)", "public List<ContextHubInfo> getContextHubs()", "private IContextHubTransactionCallback createTransactionCallback(ContextHubTransaction<Void> transaction)", "private IContextHubTransactionCallback createQueryCallback(ContextHubTransaction<List<NanoAppState>> transaction)", "public ContextHubTransaction<Void> loadNanoApp(@NonNull ContextHubInfo hubInfo, @NonNull NanoAppBinary appBinary)", "public ContextHubTransaction<Void> unloadNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<Void> enableNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<Void> disableNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<List<NanoAppState>> queryNanoApps(@NonNull ContextHubInfo hubInfo)", "public int registerCallback(@NonNull Callback callback)", "public int registerCallback(ICallback callback)", "public int registerCallback(Callback callback, Handler handler)", "private IContextHubClientCallback createClientCallback(ContextHubClient client, ContextHubClientCallback callback, Executor executor)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback, @NonNull @CallbackExecutor Executor executor)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull PendingIntent pendingIntent, long nanoAppId)", "public int unregisterCallback(@NonNull Callback callback)", "public synchronized int unregisterCallback(ICallback callback)", "private synchronized void invokeOnMessageReceiptCallback(int hubId, int nanoAppId, ContextHubMessage message)" ]
+  "methodNames" : [ "public int[] getContextHubHandles()", "public ContextHubInfo getContextHubInfo(int hubHandle)", "public int loadNanoApp(int hubHandle, @NonNull NanoApp app)", "public int unloadNanoApp(int nanoAppHandle)", "public NanoAppInstanceInfo getNanoAppInstanceInfo(int nanoAppHandle)", "public int[] findNanoAppOnHub(int hubHandle, @NonNull NanoAppFilter filter)", "public int sendMessage(int hubHandle, int nanoAppHandle, @NonNull ContextHubMessage message)", "public List<ContextHubInfo> getContextHubs()", "private IContextHubTransactionCallback createQueryCallback(ContextHubTransaction<List<NanoAppState>> transaction)", "public ContextHubTransaction<Void> loadNanoApp(@NonNull ContextHubInfo hubInfo, @NonNull NanoAppBinary appBinary)", "public ContextHubTransaction<Void> unloadNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<Void> enableNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<Void> disableNanoApp(@NonNull ContextHubInfo hubInfo, long nanoAppId)", "public ContextHubTransaction<List<NanoAppState>> queryNanoApps(@NonNull ContextHubInfo hubInfo)", "public int registerCallback(@NonNull Callback callback)", "public int registerCallback(ICallback callback)", "public int registerCallback(Callback callback, Handler handler)", "private IContextHubClientCallback createClientCallback(ContextHubClient client, ContextHubClientCallback callback, Executor executor)", "public ContextHubClient createClient(@Nullable Context context, @NonNull ContextHubInfo hubInfo, @NonNull @CallbackExecutor Executor executor, @NonNull ContextHubClientCallback callback)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback, @NonNull @CallbackExecutor Executor executor)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull ContextHubClientCallback callback)", "public ContextHubClient createClient(@Nullable Context context, @NonNull ContextHubInfo hubInfo, @NonNull PendingIntent pendingIntent, long nanoAppId)", "public ContextHubClient createClient(@NonNull ContextHubInfo hubInfo, @NonNull PendingIntent pendingIntent, long nanoAppId)", "public long[] getPreloadedNanoAppIds(@NonNull ContextHubInfo hubInfo)", "public boolean enableTestMode()", "public boolean disableTestMode()", "public int unregisterCallback(@NonNull Callback callback)", "public synchronized int unregisterCallback(ICallback callback)", "private synchronized void invokeOnMessageReceiptCallback(int hubId, int nanoAppId, ContextHubMessage message)" ],
+  "variableNames" : [ "TAG", "EXTRA_CLIENT_AUTHORIZATION_STATE", "EXTRA_CONTEXT_HUB_INFO", "EXTRA_EVENT_TYPE", "EXTRA_NANOAPP_ID", "EXTRA_NANOAPP_ABORT_CODE", "EXTRA_MESSAGE", "AUTHORIZATION_DENIED", "AUTHORIZATION_DENIED_GRACE_PERIOD", "AUTHORIZATION_GRANTED", "EVENT_NANOAPP_LOADED", "EVENT_NANOAPP_UNLOADED", "EVENT_NANOAPP_ENABLED", "EVENT_NANOAPP_DISABLED", "EVENT_NANOAPP_ABORTED", "EVENT_NANOAPP_MESSAGE", "EVENT_HUB_RESET", "EVENT_CLIENT_AUTHORIZATION", "mMainLooper", "mService", "mCallback", "mCallbackHandler", "mLocalCallback", "mClientCallback" ]
 }

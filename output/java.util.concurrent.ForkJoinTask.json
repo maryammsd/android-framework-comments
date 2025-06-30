@@ -1,0 +1,386 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ForkJoinTask.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "ForkJoinTask",
+  "comment" : "\n * Abstract base class for tasks that run within a {@link ForkJoinPool}.\n * A {@code ForkJoinTask} is a thread-like entity that is much\n * lighter weight than a normal thread.  Huge numbers of tasks and\n * subtasks may be hosted by a small number of actual threads in a\n * ForkJoinPool, at the price of some usage limitations.\n *\n * <p>A \"main\" {@code ForkJoinTask} begins execution when it is\n * explicitly submitted to a {@link ForkJoinPool}, or, if not already\n * engaged in a ForkJoin computation, commenced in the {@link\n * ForkJoinPool#commonPool()} via {@link #fork}, {@link #invoke}, or\n * related methods.  Once started, it will usually in turn start other\n * subtasks.  As indicated by the name of this class, many programs\n * using {@code ForkJoinTask} employ only methods {@link #fork} and\n * {@link #join}, or derivatives such as {@link\n * #invokeAll(ForkJoinTask...) invokeAll}.  However, this class also\n * provides a number of other methods that can come into play in\n * advanced usages, as well as extension mechanics that allow support\n * of new forms of fork/join processing.\n *\n * <p>A {@code ForkJoinTask} is a lightweight form of {@link Future}.\n * The efficiency of {@code ForkJoinTask}s stems from a set of\n * restrictions (that are only partially statically enforceable)\n * reflecting their main use as computational tasks calculating pure\n * functions or operating on purely isolated objects.  The primary\n * coordination mechanisms are {@link #fork}, that arranges\n * asynchronous execution, and {@link #join}, that doesn't proceed\n * until the task's result has been computed.  Computations should\n * ideally avoid {@code synchronized} methods or blocks, and should\n * minimize other blocking synchronization apart from joining other\n * tasks or using synchronizers such as Phasers that are advertised to\n * cooperate with fork/join scheduling. Subdividable tasks should also\n * not perform blocking I/O, and should ideally access variables that\n * are completely independent of those accessed by other running\n * tasks. These guidelines are loosely enforced by not permitting\n * checked exceptions such as {@code IOExceptions} to be\n * thrown. However, computations may still encounter unchecked\n * exceptions, that are rethrown to callers attempting to join\n * them. These exceptions may additionally include {@link\n * RejectedExecutionException} stemming from internal resource\n * exhaustion, such as failure to allocate internal task\n * queues. Rethrown exceptions behave in the same way as regular\n * exceptions, but, when possible, contain stack traces (as displayed\n * for example using {@code ex.printStackTrace()}) of both the thread\n * that initiated the computation as well as the thread actually\n * encountering the exception; minimally only the latter.\n *\n * <p>It is possible to define and use ForkJoinTasks that may block,\n * but doing so requires three further considerations: (1) Completion\n * of few if any <em>other</em> tasks should be dependent on a task\n * that blocks on external synchronization or I/O. Event-style async\n * tasks that are never joined (for example, those subclassing {@link\n * CountedCompleter}) often fall into this category.  (2) To minimize\n * resource impact, tasks should be small; ideally performing only the\n * (possibly) blocking action. (3) Unless the {@link\n * ForkJoinPool.ManagedBlocker} API is used, or the number of possibly\n * blocked tasks is known to be less than the pool's {@link\n * ForkJoinPool#getParallelism} level, the pool cannot guarantee that\n * enough threads will be available to ensure progress or good\n * performance.\n *\n * <p>The primary method for awaiting completion and extracting\n * results of a task is {@link #join}, but there are several variants:\n * The {@link Future#get} methods support interruptible and/or timed\n * waits for completion and report results using {@code Future}\n * conventions. Method {@link #invoke} is semantically\n * equivalent to {@code fork(); join()} but always attempts to begin\n * execution in the current thread. The \"<em>quiet</em>\" forms of\n * these methods do not extract results or report exceptions. These\n * may be useful when a set of tasks are being executed, and you need\n * to delay processing of results or exceptions until all complete.\n * Method {@code invokeAll} (available in multiple versions)\n * performs the most common form of parallel invocation: forking a set\n * of tasks and joining them all.\n *\n * <p>In the most typical usages, a fork-join pair act like a call\n * (fork) and return (join) from a parallel recursive function. As is\n * the case with other forms of recursive calls, returns (joins)\n * should be performed innermost-first. For example, {@code a.fork();\n * b.fork(); b.join(); a.join();} is likely to be substantially more\n * efficient than joining {@code a} before {@code b}.\n *\n * <p>The execution status of tasks may be queried at several levels\n * of detail: {@link #isDone} is true if a task completed in any way\n * (including the case where a task was cancelled without executing);\n * {@link #isCompletedNormally} is true if a task completed without\n * cancellation or encountering an exception; {@link #isCancelled} is\n * true if the task was cancelled (in which case {@link #getException}\n * returns a {@link CancellationException}); and\n * {@link #isCompletedAbnormally} is true if a task was either\n * cancelled or encountered an exception, in which case {@link\n * #getException} will return either the encountered exception or\n * {@link CancellationException}.\n *\n * <p>The ForkJoinTask class is not usually directly subclassed.\n * Instead, you subclass one of the abstract classes that support a\n * particular style of fork/join processing, typically {@link\n * RecursiveAction} for most computations that do not return results,\n * {@link RecursiveTask} for those that do, and {@link\n * CountedCompleter} for those in which completed actions trigger\n * other actions.  Normally, a concrete ForkJoinTask subclass declares\n * fields comprising its parameters, established in a constructor, and\n * then defines a {@code compute} method that somehow uses the control\n * methods supplied by this base class.\n *\n * <p>Method {@link #join} and its variants are appropriate for use\n * only when completion dependencies are acyclic; that is, the\n * parallel computation can be described as a directed acyclic graph\n * (DAG). Otherwise, executions may encounter a form of deadlock as\n * tasks cyclically wait for each other.  However, this framework\n * supports other methods and techniques (for example the use of\n * {@link Phaser}, {@link #helpQuiesce}, and {@link #complete}) that\n * may be of use in constructing custom subclasses for problems that\n * are not statically structured as DAGs. To support such usages, a\n * ForkJoinTask may be atomically <em>tagged</em> with a {@code short}\n * value using {@link #setForkJoinTaskTag} or {@link\n * #compareAndSetForkJoinTaskTag} and checked using {@link\n * #getForkJoinTaskTag}. The ForkJoinTask implementation does not use\n * these {@code protected} methods or tags for any purpose, but they\n * may be of use in the construction of specialized subclasses.  For\n * example, parallel graph traversals can use the supplied methods to\n * avoid revisiting nodes/tasks that have already been processed.\n * (Method names for tagging are bulky in part to encourage definition\n * of methods that reflect their usage patterns.)\n *\n * <p>Most base support methods are {@code final}, to prevent\n * overriding of implementations that are intrinsically tied to the\n * underlying lightweight task scheduling framework.  Developers\n * creating new basic styles of fork/join processing should minimally\n * implement {@code protected} methods {@link #exec}, {@link\n * #setRawResult}, and {@link #getRawResult}, while also introducing\n * an abstract computational method that can be implemented in its\n * subclasses, possibly relying on other {@code protected} methods\n * provided by this class.\n *\n * <p>ForkJoinTasks should perform relatively small amounts of\n * computation. Large tasks should be split into smaller subtasks,\n * usually via recursive decomposition. As a very rough rule of thumb,\n * a task should perform more than 100 and less than 10000 basic\n * computational steps, and should avoid indefinite looping. If tasks\n * are too big, then parallelism cannot improve throughput. If too\n * small, then memory and internal task maintenance overhead may\n * overwhelm processing.\n *\n * <p>This class provides {@code adapt} methods for {@link Runnable}\n * and {@link Callable}, that may be of use when mixing execution of\n * {@code ForkJoinTasks} with other kinds of tasks. When all tasks are\n * of this form, consider using a pool constructed in <em>asyncMode</em>.\n *\n * <p>ForkJoinTasks are {@code Serializable}, which enables them to be\n * used in extensions such as remote execution frameworks. It is\n * sensible to serialize tasks only before or after, but not during,\n * execution. Serialization is not relied on during execution itself.\n *\n * @since 1.7\n * @author Doug Lea\n ",
+  "links" : [ "#invokeAll(ForkJoinTask...)", "java.util.concurrent.ForkJoinPool#getParallelism", "java.util.concurrent.RecursiveTask", "#isCompletedAbnormally", "#getRawResult", "java.util.concurrent.Callable", "java.util.concurrent.Future#get", "ForkJoinPool.ManagedBlocker", "#join", "java.util.concurrent.Future", "java.util.concurrent.RejectedExecutionException", "java.util.concurrent.CountedCompleter", "#helpQuiesce", "#setForkJoinTaskTag", "#getException", "#isCompletedNormally", "java.util.concurrent.CancellationException", "#compareAndSetForkJoinTaskTag", "#exec", "#setRawResult", "java.util.concurrent.RecursiveAction", "#isCancelled", "#getForkJoinTaskTag", "#isDone", "java.util.concurrent.ForkJoinPool", "#invoke", "java.util.concurrent.Phaser", "Runnable", "#fork", "#complete", "java.util.concurrent.ForkJoinPool#commonPool()" ],
+  "variables" : [ {
+    "name" : "DONE",
+    "type" : "int",
+    "comment" : " must be negative",
+    "links" : [ ]
+  }, {
+    "name" : "ABNORMAL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "THROWN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SMASK",
+    "type" : "int",
+    "comment" : " short bits for tags",
+    "links" : [ ]
+  }, {
+    "name" : "UNCOMPENSATE",
+    "type" : "int",
+    "comment" : " helpJoin return sentinel",
+    "links" : [ ]
+  }, {
+    "name" : "status",
+    "type" : "int",
+    "comment" : " accessed directly by pool and workers",
+    "links" : [ ]
+  }, {
+    "name" : "aux",
+    "type" : "Aux",
+    "comment" : " either waiters or thrown Exception",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS",
+    "type" : "VarHandle",
+    "comment" : " Support for atomic operations",
+    "links" : [ ]
+  }, {
+    "name" : "AUX",
+    "type" : "VarHandle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private int getAndBitwiseOrStatus(int v)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean casStatus(int c, int v)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean casAux(Aux c, Aux v)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void signalWaiters()",
+    "returnType" : "void",
+    "comment" : " Removes and unparks waiters ",
+    "links" : [ ]
+  }, {
+    "name" : "private int setDone()",
+    "returnType" : "int",
+    "comment" : "\n     * Sets DONE status and wakes up threads waiting to join this task.\n     * @return status on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int trySetCancelled()",
+    "returnType" : "int",
+    "comment" : "\n     * Sets ABNORMAL DONE status unless already done, and wakes up threads\n     * waiting to join this task.\n     * @return status on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final int trySetThrown(Throwable ex)",
+    "returnType" : "int",
+    "comment" : "\n     * Records exception and sets ABNORMAL THROWN DONE status unless\n     * already done, and wakes up threads waiting to join this task.\n     * If losing a race with setDone or trySetCancelled, the exception\n     * may be recorded but not reported.\n     *\n     * @return status on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " int trySetException(Throwable ex)",
+    "returnType" : "int",
+    "comment" : "\n     * Records exception unless already done. Overridable in subclasses.\n     *\n     * @return status on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean isExceptionalStatus(int s)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final int doExec()",
+    "returnType" : "int",
+    "comment" : "\n     * Unless done, calls exec and records status if completed, but\n     * doesn't wait for completion otherwise.\n     *\n     * @return status on exit from this method\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int awaitDone(ForkJoinPool pool, boolean ran, boolean interruptible, boolean timed, long nanos)",
+    "returnType" : "int",
+    "comment" : "\n     * Helps and/or waits for completion from join, get, or invoke;\n     * called from either internal or external threads.\n     *\n     * @param pool if nonnull, known submitted pool, else assumes current pool\n     * @param ran true if task known to have been exec'd\n     * @param interruptible true if park interruptibly when external\n     * @param timed true if use timed wait\n     * @param nanos if timed, timeout value\n     * @return ABNORMAL if interrupted, else status on exit\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static final void cancelIgnoringExceptions(Future<?> t)",
+    "returnType" : "void",
+    "comment" : "\n     * Cancels, ignoring any exceptions thrown by cancel.  Cancel is\n     * spec'ed not to throw any exceptions, but if it does anyway, we\n     * have no recourse, so guard against this case.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Throwable getThrowableException()",
+    "returnType" : "Throwable",
+    "comment" : "\n     * Returns a rethrowable exception for this task, if available.\n     * To provide accurate stack traces, if the exception was not\n     * thrown by the current thread, we try to create a new exception\n     * of the same type as the one thrown, but with the recorded\n     * exception as its cause. If there is no such constructor, we\n     * instead try to use a no-arg constructor, followed by initCause,\n     * to the same effect. If none of these apply, or any fail due to\n     * other exceptions, we return the recorded exception, which is\n     * still correct, although it may contain a misleading stack\n     * trace.\n     *\n     * @return the exception, or null if none\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Throwable getException(int s)",
+    "returnType" : "Throwable",
+    "comment" : "\n     * Returns exception associated with the given status, or null if none.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void reportException(int s)",
+    "returnType" : "void",
+    "comment" : "\n     * Throws exception associated with the given status, or\n     * CancellationException if none recorded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void reportExecutionException(int s)",
+    "returnType" : "void",
+    "comment" : "\n     * Throws exception for (timed or untimed) get, wrapping if\n     * necessary in an ExecutionException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void rethrow(Throwable ex)",
+    "returnType" : "void",
+    "comment" : "\n     * A version of \"sneaky throw\" to relay exceptions in other\n     * contexts.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void uncheckedThrow(Throwable t) throws T",
+    "returnType" : "void",
+    "comment" : "\n     * The sneaky part of sneaky throw, relying on generics\n     * limitations to evade compiler complaints about rethrowing\n     * unchecked exceptions. If argument null, throws\n     * CancellationException.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ForkJoinTask<V> fork()",
+    "returnType" : "ForkJoinTask<V>",
+    "comment" : "\n     * Arranges to asynchronously execute this task in the pool the\n     * current task is running in, if applicable, or using the {@link\n     * ForkJoinPool#commonPool()} if not {@link #inForkJoinPool}.  While\n     * it is not necessarily enforced, it is a usage error to fork a\n     * task more than once unless it has completed and been\n     * reinitialized.  Subsequent modifications to the state of this\n     * task or any data it operates on are not necessarily\n     * consistently observable by any thread other than the one\n     * executing it unless preceded by a call to {@link #join} or\n     * related methods, or a call to {@link #isDone} returning {@code\n     * true}.\n     *\n     * @return {@code this}, to simplify usage\n     ",
+    "links" : [ "#join", "#isDone", "#inForkJoinPool", "java.util.concurrent.ForkJoinPool#commonPool()" ]
+  }, {
+    "name" : "public final V join()",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the result of the computation when it\n     * {@linkplain #isDone is done}.\n     * This method differs from {@link #get()} in that abnormal\n     * completion results in {@code RuntimeException} or {@code Error},\n     * not {@code ExecutionException}, and that interrupts of the\n     * calling thread do <em>not</em> cause the method to abruptly\n     * return by throwing {@code InterruptedException}.\n     *\n     * @return the computed result\n     ",
+    "links" : [ "#get()" ]
+  }, {
+    "name" : "public final V invoke()",
+    "returnType" : "V",
+    "comment" : "\n     * Commences performing this task, awaits its completion if\n     * necessary, and returns its result, or throws an (unchecked)\n     * {@code RuntimeException} or {@code Error} if the underlying\n     * computation did so.\n     *\n     * @return the computed result\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void invokeAll(ForkJoinTask<?> t1, ForkJoinTask<?> t2)",
+    "returnType" : "void",
+    "comment" : "\n     * Forks the given tasks, returning when {@code isDone} holds for\n     * each task or an (unchecked) exception is encountered, in which\n     * case the exception is rethrown. If more than one task\n     * encounters an exception, then this method throws any one of\n     * these exceptions. If any task encounters an exception, the\n     * other may be cancelled. However, the execution status of\n     * individual tasks is not guaranteed upon exceptional return. The\n     * status of each task may be obtained using {@link\n     * #getException()} and related methods to check if they have been\n     * cancelled, completed normally or exceptionally, or left\n     * unprocessed.\n     *\n     * @param t1 the first task\n     * @param t2 the second task\n     * @throws NullPointerException if any task is null\n     ",
+    "links" : [ "#getException()" ]
+  }, {
+    "name" : "public static void invokeAll(ForkJoinTask<?>... tasks)",
+    "returnType" : "void",
+    "comment" : "\n     * Forks the given tasks, returning when {@code isDone} holds for\n     * each task or an (unchecked) exception is encountered, in which\n     * case the exception is rethrown. If more than one task\n     * encounters an exception, then this method throws any one of\n     * these exceptions. If any task encounters an exception, others\n     * may be cancelled. However, the execution status of individual\n     * tasks is not guaranteed upon exceptional return. The status of\n     * each task may be obtained using {@link #getException()} and\n     * related methods to check if they have been cancelled, completed\n     * normally or exceptionally, or left unprocessed.\n     *\n     * @param tasks the tasks\n     * @throws NullPointerException if any task is null\n     ",
+    "links" : [ "#getException()" ]
+  }, {
+    "name" : "public static Collection<T> invokeAll(Collection<T> tasks)",
+    "returnType" : "Collection<T>",
+    "comment" : "\n     * Forks all tasks in the specified collection, returning when\n     * {@code isDone} holds for each task or an (unchecked) exception\n     * is encountered, in which case the exception is rethrown. If\n     * more than one task encounters an exception, then this method\n     * throws any one of these exceptions. If any task encounters an\n     * exception, others may be cancelled. However, the execution\n     * status of individual tasks is not guaranteed upon exceptional\n     * return. The status of each task may be obtained using {@link\n     * #getException()} and related methods to check if they have been\n     * cancelled, completed normally or exceptionally, or left\n     * unprocessed.\n     *\n     * @param tasks the collection of tasks\n     * @param <T> the type of the values returned from the tasks\n     * @return the tasks argument, to simplify usage\n     * @throws NullPointerException if tasks or any element are null\n     ",
+    "links" : [ "#getException()" ]
+  }, {
+    "name" : "public boolean cancel(boolean mayInterruptIfRunning)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Attempts to cancel execution of this task. This attempt will\n     * fail if the task has already completed or could not be\n     * cancelled for some other reason. If successful, and this task\n     * has not started when {@code cancel} is called, execution of\n     * this task is suppressed. After this method returns\n     * successfully, unless there is an intervening call to {@link\n     * #reinitialize}, subsequent calls to {@link #isCancelled},\n     * {@link #isDone}, and {@code cancel} will return {@code true}\n     * and calls to {@link #join} and related methods will result in\n     * {@code CancellationException}.\n     *\n     * <p>This method may be overridden in subclasses, but if so, must\n     * still ensure that these properties hold. In particular, the\n     * {@code cancel} method itself must not throw exceptions.\n     *\n     * <p>This method is designed to be invoked by <em>other</em>\n     * tasks. To terminate the current task, you can just return or\n     * throw an unchecked exception from its computation method, or\n     * invoke {@link #completeExceptionally(Throwable)}.\n     *\n     * @param mayInterruptIfRunning this value has no effect in the\n     * default implementation because interrupts are not used to\n     * control cancellation.\n     *\n     * @return {@code true} if this task is now cancelled\n     ",
+    "links" : [ "#join", "#isDone", "#isCancelled", "#completeExceptionally(Throwable)", "#reinitialize" ]
+  }, {
+    "name" : "public final boolean isDone()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isCancelled()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isCompletedAbnormally()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this task threw an exception or was cancelled.\n     *\n     * @return {@code true} if this task threw an exception or was cancelled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isCompletedNormally()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this task completed without throwing an\n     * exception and was not cancelled.\n     *\n     * @return {@code true} if this task completed without throwing an\n     * exception and was not cancelled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Throwable getException()",
+    "returnType" : "Throwable",
+    "comment" : "\n     * Returns the exception thrown by the base computation, or a\n     * {@code CancellationException} if cancelled, or {@code null} if\n     * none or if the method has not yet completed.\n     *\n     * @return the exception, or {@code null} if none\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void completeExceptionally(Throwable ex)",
+    "returnType" : "void",
+    "comment" : "\n     * Completes this task abnormally, and if not already aborted or\n     * cancelled, causes it to throw the given exception upon\n     * {@code join} and related operations. This method may be used\n     * to induce exceptions in asynchronous tasks, or to force\n     * completion of tasks that would not otherwise complete.  Its use\n     * in other situations is discouraged.  This method is\n     * overridable, but overridden versions must invoke {@code super}\n     * implementation to maintain guarantees.\n     *\n     * @param ex the exception to throw. If this exception is not a\n     * {@code RuntimeException} or {@code Error}, the actual exception\n     * thrown will be a {@code RuntimeException} with cause {@code ex}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void complete(V value)",
+    "returnType" : "void",
+    "comment" : "\n     * Completes this task, and if not already aborted or cancelled,\n     * returning the given value as the result of subsequent\n     * invocations of {@code join} and related operations. This method\n     * may be used to provide results for asynchronous tasks, or to\n     * provide alternative handling for tasks that would not otherwise\n     * complete normally. Its use in other situations is\n     * discouraged. This method is overridable, but overridden\n     * versions must invoke {@code super} implementation to maintain\n     * guarantees.\n     *\n     * @param value the result value for this task\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void quietlyComplete()",
+    "returnType" : "void",
+    "comment" : "\n     * Completes this task normally without setting a value. The most\n     * recent value established by {@link #setRawResult} (or {@code\n     * null} by default) will be returned as the result of subsequent\n     * invocations of {@code join} and related operations.\n     *\n     * @since 1.8\n     ",
+    "links" : [ "#setRawResult" ]
+  }, {
+    "name" : "public final V get() throws InterruptedException, ExecutionException",
+    "returnType" : "V",
+    "comment" : "\n     * Waits if necessary for the computation to complete, and then\n     * retrieves its result.\n     *\n     * @return the computed result\n     * @throws CancellationException if the computation was cancelled\n     * @throws ExecutionException if the computation threw an\n     * exception\n     * @throws InterruptedException if the current thread is not a\n     * member of a ForkJoinPool and was interrupted while waiting\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException",
+    "returnType" : "V",
+    "comment" : "\n     * Waits if necessary for at most the given time for the computation\n     * to complete, and then retrieves its result, if available.\n     *\n     * @param timeout the maximum time to wait\n     * @param unit the time unit of the timeout argument\n     * @return the computed result\n     * @throws CancellationException if the computation was cancelled\n     * @throws ExecutionException if the computation threw an\n     * exception\n     * @throws InterruptedException if the current thread is not a\n     * member of a ForkJoinPool and was interrupted while waiting\n     * @throws TimeoutException if the wait timed out\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void quietlyJoin()",
+    "returnType" : "void",
+    "comment" : "\n     * Joins this task, without returning its result or throwing its\n     * exception. This method may be useful when processing\n     * collections of tasks when some have been cancelled or otherwise\n     * known to have aborted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void quietlyInvoke()",
+    "returnType" : "void",
+    "comment" : "\n     * Commences performing this task and awaits its completion if\n     * necessary, without returning its result or throwing its\n     * exception.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void awaitPoolInvoke(ForkJoinPool pool)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void awaitPoolInvoke(ForkJoinPool pool, long nanos)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final V joinForPoolInvoke(ForkJoinPool pool)",
+    "returnType" : "V",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final V getForPoolInvoke(ForkJoinPool pool) throws InterruptedException, ExecutionException",
+    "returnType" : "V",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final V getForPoolInvoke(ForkJoinPool pool, long nanos) throws InterruptedException, ExecutionException, TimeoutException",
+    "returnType" : "V",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void helpQuiesce()",
+    "returnType" : "void",
+    "comment" : "\n     * Possibly executes tasks until the pool hosting the current task\n     * {@linkplain ForkJoinPool#isQuiescent is quiescent}.  This\n     * method may be of use in designs in which many tasks are forked,\n     * but none are explicitly joined, instead executing them until\n     * all are processed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reinitialize()",
+    "returnType" : "void",
+    "comment" : "\n     * Resets the internal bookkeeping state of this task, allowing a\n     * subsequent {@code fork}. This method allows repeated reuse of\n     * this task, but only if reuse occurs when this task has either\n     * never been forked, or has been forked, then completed and all\n     * outstanding joins of this task have also completed. Effects\n     * under any other usage conditions are not guaranteed.\n     * This method may be useful when executing\n     * pre-constructed trees of subtasks in loops.\n     *\n     * <p>Upon completion of this method, {@code isDone()} reports\n     * {@code false}, and {@code getException()} reports {@code\n     * null}. However, the value returned by {@code getRawResult} is\n     * unaffected. To clear this value, you can invoke {@code\n     * setRawResult(null)}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ForkJoinPool getPool()",
+    "returnType" : "ForkJoinPool",
+    "comment" : "\n     * Returns the pool hosting the current thread, or {@code null}\n     * if the current thread is executing outside of any ForkJoinPool.\n     *\n     * <p>This method returns {@code null} if and only if {@link\n     * #inForkJoinPool} returns {@code false}.\n     *\n     * @return the pool, or {@code null} if none\n     ",
+    "links" : [ "#inForkJoinPool" ]
+  }, {
+    "name" : "public static boolean inForkJoinPool()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if the current thread is a {@link\n     * ForkJoinWorkerThread} executing as a ForkJoinPool computation.\n     *\n     * @return {@code true} if the current thread is a {@link\n     * ForkJoinWorkerThread} executing as a ForkJoinPool computation,\n     * or {@code false} otherwise\n     ",
+    "links" : [ "java.util.concurrent.ForkJoinWorkerThread" ]
+  }, {
+    "name" : "public boolean tryUnfork()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tries to unschedule this task for execution. This method will\n     * typically (but is not guaranteed to) succeed if this task is\n     * the most recently forked task by the current thread, and has\n     * not commenced executing in another thread.  This method may be\n     * useful when arranging alternative local processing of tasks\n     * that could have been, but were not, stolen.\n     *\n     * @return {@code true} if unforked\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getQueuedTaskCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns an estimate of the number of tasks that have been\n     * forked by the current worker thread but not yet executed. This\n     * value may be useful for heuristic decisions about whether to\n     * fork other tasks.\n     *\n     * @return the number of tasks\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getSurplusQueuedTaskCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns an estimate of how many more locally queued tasks are\n     * held by the current worker thread than there are other worker\n     * threads that might steal them, or zero if this thread is not\n     * operating in a ForkJoinPool. This value may be useful for\n     * heuristic decisions about whether to fork other tasks. In many\n     * usages of ForkJoinTasks, at steady state, each worker should\n     * aim to maintain a small constant surplus (for example, 3) of\n     * tasks, and to process computations locally if this threshold is\n     * exceeded.\n     *\n     * @return the surplus number of tasks, which may be negative\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract V getRawResult()",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the result that would be returned by {@link #join}, even\n     * if this task completed abnormally, or {@code null} if this task\n     * is not known to have been completed.  This method is designed\n     * to aid debugging, as well as to support extensions. Its use in\n     * any other context is discouraged.\n     *\n     * @return the result, or {@code null} if not completed\n     ",
+    "links" : [ "#join" ]
+  }, {
+    "name" : "protected abstract void setRawResult(V value)",
+    "returnType" : "void",
+    "comment" : "\n     * Forces the given value to be returned as a result.  This method\n     * is designed to support extensions, and should not in general be\n     * called otherwise.\n     *\n     * @param value the value\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract boolean exec()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Immediately performs the base action of this task and returns\n     * true if, upon return from this method, this task is guaranteed\n     * to have completed. This method may return false otherwise, to\n     * indicate that this task is not necessarily complete (or is not\n     * known to be complete), for example in asynchronous actions that\n     * require explicit invocations of completion methods. This method\n     * may also throw an (unchecked) exception to indicate abnormal\n     * exit. This method is designed to support extensions, and should\n     * not in general be called otherwise.\n     *\n     * @return {@code true} if this task is known to have completed normally\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static ForkJoinTask<?> peekNextLocalTask()",
+    "returnType" : "ForkJoinTask<?>",
+    "comment" : "\n     * Returns, but does not unschedule or execute, a task queued by\n     * the current thread but not yet executed, if one is immediately\n     * available. There is no guarantee that this task will actually\n     * be polled or executed next. Conversely, this method may return\n     * null even if a task exists but cannot be accessed without\n     * contention with other threads.  This method is designed\n     * primarily to support extensions, and is unlikely to be useful\n     * otherwise.\n     *\n     * @return the next task, or {@code null} if none are available\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static ForkJoinTask<?> pollNextLocalTask()",
+    "returnType" : "ForkJoinTask<?>",
+    "comment" : "\n     * Unschedules and returns, without executing, the next task\n     * queued by the current thread but not yet executed, if the\n     * current thread is operating in a ForkJoinPool.  This method is\n     * designed primarily to support extensions, and is unlikely to be\n     * useful otherwise.\n     *\n     * @return the next task, or {@code null} if none are available\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static ForkJoinTask<?> pollTask()",
+    "returnType" : "ForkJoinTask<?>",
+    "comment" : "\n     * If the current thread is operating in a ForkJoinPool,\n     * unschedules and returns, without executing, the next task\n     * queued by the current thread but not yet executed, if one is\n     * available, or if not available, a task that was forked by some\n     * other thread, if available. Availability may be transient, so a\n     * {@code null} result does not necessarily imply quiescence of\n     * the pool this task is operating in.  This method is designed\n     * primarily to support extensions, and is unlikely to be useful\n     * otherwise.\n     *\n     * @return a task, or {@code null} if none are available\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected static ForkJoinTask<?> pollSubmission()",
+    "returnType" : "ForkJoinTask<?>",
+    "comment" : "\n     * If the current thread is operating in a ForkJoinPool,\n     * unschedules and returns, without executing, a task externally\n     * submitted to the pool, if one is available. Availability may be\n     * transient, so a {@code null} result does not necessarily imply\n     * quiescence of the pool.  This method is designed primarily to\n     * support extensions, and is unlikely to be useful otherwise.\n     *\n     * @return a task, or {@code null} if none are available\n     * @since 9\n     * @hide API from OpenJDK 9, not yet exposed on Android.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final short getForkJoinTaskTag()",
+    "returnType" : "short",
+    "comment" : "\n     * Returns the tag for this task.\n     *\n     * @return the tag for this task\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final short setForkJoinTaskTag(short newValue)",
+    "returnType" : "short",
+    "comment" : "\n     * Atomically sets the tag value for this task and returns the old value.\n     *\n     * @param newValue the new tag value\n     * @return the previous value of the tag\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean compareAndSetForkJoinTaskTag(short expect, short update)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Atomically conditionally sets the tag value for this task.\n     * Among other applications, tags can be used as visit markers\n     * in tasks operating on graphs, as in methods that check: {@code\n     * if (task.compareAndSetForkJoinTaskTag((short)0, (short)1))}\n     * before processing, otherwise exiting because the node has\n     * already been visited.\n     *\n     * @param expect the expected tag value\n     * @param update the new tag value\n     * @return {@code true} if successful; i.e., the current value was\n     * equal to {@code expect} and was changed to {@code update}.\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ForkJoinTask<?> adapt(Runnable runnable)",
+    "returnType" : "ForkJoinTask<?>",
+    "comment" : "\n     * Returns a new {@code ForkJoinTask} that performs the {@code run}\n     * method of the given {@code Runnable} as its action, and returns\n     * a null result upon {@link #join}.\n     *\n     * @param runnable the runnable action\n     * @return the task\n     ",
+    "links" : [ "#join" ]
+  }, {
+    "name" : "public static ForkJoinTask<T> adapt(Runnable runnable, T result)",
+    "returnType" : "ForkJoinTask<T>",
+    "comment" : "\n     * Returns a new {@code ForkJoinTask} that performs the {@code run}\n     * method of the given {@code Runnable} as its action, and returns\n     * the given result upon {@link #join}.\n     *\n     * @param runnable the runnable action\n     * @param result the result upon completion\n     * @param <T> the type of the result\n     * @return the task\n     ",
+    "links" : [ "#join" ]
+  }, {
+    "name" : "public static ForkJoinTask<T> adapt(Callable<? extends T> callable)",
+    "returnType" : "ForkJoinTask<T>",
+    "comment" : "\n     * Returns a new {@code ForkJoinTask} that performs the {@code call}\n     * method of the given {@code Callable} as its action, and returns\n     * its result upon {@link #join}, translating any checked exceptions\n     * encountered into {@code RuntimeException}.\n     *\n     * @param callable the callable action\n     * @param <T> the type of the callable's result\n     * @return the task\n     ",
+    "links" : [ "#join" ]
+  }, {
+    "name" : "private static ForkJoinTask<T> adaptInterruptible(Callable<? extends T> callable)",
+    "returnType" : "ForkJoinTask<T>",
+    "comment" : " TODO: public ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Saves this task to a stream (that is, serializes it).\n     *\n     * @param s the stream\n     * @throws java.io.IOException if an I/O error occurs\n     * @serialData the current run status and the exception thrown\n     * during execution, or {@code null} if none\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reconstitutes this task from a stream (that is, deserializes it).\n     * @param s the stream\n     * @throws ClassNotFoundException if the class of a serialized object\n     *         could not be found\n     * @throws java.io.IOException if an I/O error occurs\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private int getAndBitwiseOrStatus(int v)", "private boolean casStatus(int c, int v)", "private boolean casAux(Aux c, Aux v)", "private void signalWaiters()", "private int setDone()", "private int trySetCancelled()", " final int trySetThrown(Throwable ex)", " int trySetException(Throwable ex)", " static boolean isExceptionalStatus(int s)", " final int doExec()", "private int awaitDone(ForkJoinPool pool, boolean ran, boolean interruptible, boolean timed, long nanos)", " static final void cancelIgnoringExceptions(Future<?> t)", "private Throwable getThrowableException()", "private Throwable getException(int s)", "private void reportException(int s)", "private void reportExecutionException(int s)", " static void rethrow(Throwable ex)", " static void uncheckedThrow(Throwable t) throws T", "public final ForkJoinTask<V> fork()", "public final V join()", "public final V invoke()", "public static void invokeAll(ForkJoinTask<?> t1, ForkJoinTask<?> t2)", "public static void invokeAll(ForkJoinTask<?>... tasks)", "public static Collection<T> invokeAll(Collection<T> tasks)", "public boolean cancel(boolean mayInterruptIfRunning)", "public final boolean isDone()", "public final boolean isCancelled()", "public final boolean isCompletedAbnormally()", "public final boolean isCompletedNormally()", "public final Throwable getException()", "public void completeExceptionally(Throwable ex)", "public void complete(V value)", "public final void quietlyComplete()", "public final V get() throws InterruptedException, ExecutionException", "public final V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException", "public final void quietlyJoin()", "public final void quietlyInvoke()", " final void awaitPoolInvoke(ForkJoinPool pool)", " final void awaitPoolInvoke(ForkJoinPool pool, long nanos)", " final V joinForPoolInvoke(ForkJoinPool pool)", " final V getForPoolInvoke(ForkJoinPool pool) throws InterruptedException, ExecutionException", " final V getForPoolInvoke(ForkJoinPool pool, long nanos) throws InterruptedException, ExecutionException, TimeoutException", "public static void helpQuiesce()", "public void reinitialize()", "public static ForkJoinPool getPool()", "public static boolean inForkJoinPool()", "public boolean tryUnfork()", "public static int getQueuedTaskCount()", "public static int getSurplusQueuedTaskCount()", "public abstract V getRawResult()", "protected abstract void setRawResult(V value)", "protected abstract boolean exec()", "protected static ForkJoinTask<?> peekNextLocalTask()", "protected static ForkJoinTask<?> pollNextLocalTask()", "protected static ForkJoinTask<?> pollTask()", "protected static ForkJoinTask<?> pollSubmission()", "public final short getForkJoinTaskTag()", "public final short setForkJoinTaskTag(short newValue)", "public final boolean compareAndSetForkJoinTaskTag(short expect, short update)", "public static ForkJoinTask<?> adapt(Runnable runnable)", "public static ForkJoinTask<T> adapt(Runnable runnable, T result)", "public static ForkJoinTask<T> adapt(Callable<? extends T> callable)", "private static ForkJoinTask<T> adaptInterruptible(Callable<? extends T> callable)", "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException", "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException" ],
+  "variableNames" : [ "DONE", "ABNORMAL", "THROWN", "SMASK", "UNCOMPENSATE", "status", "aux", "STATUS", "AUX", "serialVersionUID" ]
+}

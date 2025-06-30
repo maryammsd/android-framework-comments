@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/content/res/Resources.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/content/res/Resources.java",
   "packageName" : "android.content.res",
   "className" : "Resources",
   "comment" : "\n * Class for accessing an application's resources.  This sits on top of the\n * asset manager of the application (accessible through {@link #getAssets}) and\n * provides a high-level API for getting typed data from the assets.\n *\n * <p>The Android resource system keeps track of all non-code assets associated with an\n * application. You can use this class to access your application's resources. You can generally\n * acquire the {@link android.content.res.Resources} instance associated with your application\n * with {@link android.content.Context#getResources getResources()}.</p>\n *\n * <p>The Android SDK tools compile your application's resources into the application binary\n * at build time.  To use a resource, you must install it correctly in the source tree (inside\n * your project's {@code res/} directory) and build your application.  As part of the build\n * process, the SDK tools generate symbols for each resource, which you can use in your application\n * code to access the resources.</p>\n *\n * <p>Using application resources makes it easy to update various characteristics of your\n * application without modifying code, and&mdash;by providing sets of alternative\n * resources&mdash;enables you to optimize your application for a variety of device configurations\n * (such as for different languages and screen sizes). This is an important aspect of developing\n * Android applications that are compatible on different types of devices.</p>\n *\n * <p>After {@link Build.VERSION_CODES#R}, {@link Resources} must be obtained by\n * {@link android.app.Activity} or {@link android.content.Context} created with\n * {@link android.content.Context#createWindowContext(int, Bundle)}.\n * {@link Application#getResources()} may report wrong values in multi-window or on secondary\n * displays.\n *\n * <p>For more information about using resources, see the documentation about <a\n * href=\"{@docRoot}guide/topics/resources/index.html\">Application Resources</a>.</p>\n ",
+  "links" : [ "android.content.Context", "android.app.Application#getResources()", "android.content.Context#getResources", "#getAssets", "Build.VERSION_CODES#R", "android.app.Activity", "android.content.Context#createWindowContext(int", "android.content.res.Resources" ],
   "variables" : [ {
     "name" : "ID_NULL",
     "type" : "int",
@@ -24,6 +25,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "PRELOAD_RESOURCES",
+    "type" : "boolean",
+    "comment" : "\n     * Controls whether we should preload resources during zygote init.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "mSystem",
     "type" : "Resources",
     "comment" : " Used by BridgeResources in layoutlib",
@@ -43,11 +49,6 @@
     "type" : "DrawableInflater",
     "comment" : " Used to inflate drawable objects from XML. ",
     "links" : [ ]
-  }, {
-    "name" : "mOverrideDisplayAdjustments",
-    "type" : "DisplayAdjustments",
-    "comment" : " Used to override the returned adjustments of {@link #getDisplayAdjustments}. ",
-    "links" : [ "#getDisplayAdjustments" ]
   }, {
     "name" : "mTmpValueLock",
     "type" : "Object",
@@ -79,6 +80,11 @@
     "comment" : "\n     * To avoid leaking WeakReferences to garbage collected Themes on the\n     * mThemeRefs list, we flush the list of stale references any time the\n     * mThemeRefNextFlushSize is reached.\n     ",
     "links" : [ ]
   }, {
+    "name" : "MAX_THEME_REFS_FLUSH_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mThemeRefsNextFlushSize",
     "type" : "int",
     "comment" : "",
@@ -87,6 +93,11 @@
     "name" : "mBaseApkAssetsSize",
     "type" : "int",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sResourcesHistory",
+    "type" : "Set<Resources>",
+    "comment" : " @hide ",
     "links" : [ ]
   } ],
   "methods" : [ {
@@ -107,7 +118,7 @@
   }, {
     "name" : "public void setImpl(ResourcesImpl impl)",
     "returnType" : "void",
-    "comment" : "\n     * Set the underlying implementation (containing all the resources and caches)\n     * and updates all Theme references to new implementations as well.\n     * @hide\n     ",
+    "comment" : "\n     * Set the underlying implementation (containing all the resources and caches)\n     * and updates all Theme implementations as well.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void setCallbacks(UpdateCallbacks callbacks)",
@@ -365,6 +376,16 @@
     "comment" : "\n     * Returns the resource ID of the resource that was used to create this AttributeSet.\n     *\n     * @param set AttributeSet for which we want to find the source.\n     * @return The resource ID for the source that is backing the given AttributeSet or\n     * {@link Resources#ID_NULL} if the AttributeSet is {@code null}.\n     ",
     "links" : [ "android.content.res.Resources#ID_NULL" ]
   }, {
+    "name" : " static int nextPowerOf2(int number)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void cleanupThemeReferences()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "public final Theme newTheme()",
     "returnType" : "Theme",
     "comment" : "\n     * Generate a new Theme object for this set of Resources.  It initially\n     * starts out empty.\n     *\n     * @return Theme The newly created Theme container.\n     ",
@@ -392,18 +413,13 @@
   }, {
     "name" : "public DisplayMetrics getDisplayMetrics()",
     "returnType" : "DisplayMetrics",
-    "comment" : "\n     * Return the current display metrics that are in effect for this resource\n     * object. The returned object should be treated as read-only.\n     *\n     * <p>Note that the reported value may be different than the window this application is\n     * interested in.</p>\n     *\n     * <p>Best practices are to obtain metrics from {@link WindowManager#getCurrentWindowMetrics()}\n     * for window bounds, {@link Display#getRealMetrics(DisplayMetrics)} for display bounds and\n     * obtain density from {@link Configuration#densityDpi}. The value obtained from this API may be\n     * wrong if the {@link Resources} is from the context which is different than the window is\n     * attached such as {@link Application#getResources()}.\n     * <p/>\n     *\n     * @return The resource's current display metrics.\n     ",
-    "links" : [ "android.app.Application#getResources()", "android.content.res.Configuration#densityDpi", "android.view.WindowManager#getCurrentWindowMetrics()", "android.view.Display#getRealMetrics(DisplayMetrics)", "android.content.res.Resources" ]
+    "comment" : "\n     * Returns the current display metrics that are in effect for this resource\n     * object. The returned object should be treated as read-only.\n     *\n     * <p>Note that the reported value may be different than the window this application is\n     * interested in.</p>\n     *\n     * <p>The best practices is to obtain metrics from\n     * {@link WindowManager#getCurrentWindowMetrics()} for window bounds. The value obtained from\n     * this API may be wrong if {@link Context#getResources()} is not from a {@code UiContext}.\n     * For example, use the {@link DisplayMetrics} obtained from {@link Application#getResources()}\n     * to build {@link android.app.Activity} UI elements especially when the\n     * {@link android.app.Activity} is in the multi-window mode or on the secondary {@link Display}.\n     * <p/>\n     *\n     * @return The resource's current display metrics.\n     ",
+    "links" : [ "android.content.Context#getResources()", "android.app.Application#getResources()", "android.view.Display", "android.view.WindowManager#getCurrentWindowMetrics()", "android.app.Activity", "android.util.DisplayMetrics" ]
   }, {
     "name" : "public DisplayAdjustments getDisplayAdjustments()",
     "returnType" : "DisplayAdjustments",
     "comment" : " @hide ",
     "links" : [ ]
-  }, {
-    "name" : "public void overrideDisplayAdjustments(@Nullable Consumer<DisplayAdjustments> override)",
-    "returnType" : "void",
-    "comment" : "\n     * Customize the display adjustments based on the current one in {@link #mResourcesImpl}, in\n     * order to isolate the effect with other instances of {@link Resource} that may share the same\n     * instance of {@link ResourcesImpl}.\n     *\n     * @param override The operation to override the existing display adjustments. If it is null,\n     *                 the override adjustments will be cleared.\n     * @hide\n     ",
-    "links" : [ "Resource", "android.content.res.ResourcesImpl", "#mResourcesImpl" ]
   }, {
     "name" : "public boolean hasOverrideDisplayAdjustments()",
     "returnType" : "boolean",
@@ -416,6 +432,11 @@
     "links" : [ ]
   }, {
     "name" : "public Configuration[] getSizeConfigurations()",
+    "returnType" : "Configuration[]",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public Configuration[] getSizeAndUiModeConfigurations()",
     "returnType" : "Configuration[]",
     "comment" : " @hide ",
     "links" : [ ]
@@ -544,7 +565,42 @@
     "returnType" : "void",
     "comment" : "\n     * Removes all {@link ResourcesLoader ResourcesLoader(s)}.\n     *\n     * <p>This should only be called from the UI thread to avoid lock contention when propagating\n     * loader changes.\n     * @hide\n     ",
     "links" : [ "android.content.res.loader.ResourcesLoader" ]
+  }, {
+    "name" : "public static void preloadResources()",
+    "returnType" : "void",
+    "comment" : "\n     * Load in commonly used resources, so they can be shared across processes.\n     *\n     * These tend to be a few Kbytes, but are frequently in the 20-40K range, and occasionally even\n     * larger.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int preloadColorStateLists(Resources resources, TypedArray ar)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int preloadDrawables(Resources resources, TypedArray ar)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void resetPreloadDrawableStateCache()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the cache when the framework resources packages is changed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(PrintWriter pw, String prefix)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void dumpHistory(PrintWriter pw, String prefix)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void registerResourcePaths(@NonNull String uniqueId, @NonNull ApplicationInfo appInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Register the resources paths of a package (e.g. a shared library). This will collect the\n     * package resources' paths from its ApplicationInfo and add them to all existing and future\n     * contexts while the application is running.\n     * A second call with the same uniqueId is a no-op.\n     * The paths are not persisted during application restarts. The application is responsible for\n     * calling the API again if this happens.\n     *\n     * @param uniqueId The unique id for the ApplicationInfo object, to detect and ignore repeated\n     *                 API calls.\n     * @param appInfo The ApplicationInfo that contains resources paths of the package.\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "ID_NULL", "TAG", "sSync", "mUpdateLock", "mSystem", "mResourcesImpl", "mTypedArrayPool", "mDrawableInflater", "mOverrideDisplayAdjustments", "mTmpValueLock", "mTmpValue", "mClassLoader", "mCallbacks", "mThemeRefs", "MIN_THEME_REFS_FLUSH_SIZE", "mThemeRefsNextFlushSize", "mBaseApkAssetsSize" ],
-  "methodNames" : [ "public static int selectDefaultTheme(int curTheme, int targetSdkVersion)", "public static int selectSystemTheme(int curTheme, int targetSdkVersion, int orig, int holo, int dark, int deviceDefault)", "public static Resources getSystem()", "public void setImpl(ResourcesImpl impl)", "public void setCallbacks(UpdateCallbacks callbacks)", "public ResourcesImpl getImpl()", "public ClassLoader getClassLoader()", "public final DrawableInflater getDrawableInflater()", "public ConfigurationBoundResourceCache<Animator> getAnimatorCache()", "public ConfigurationBoundResourceCache<StateListAnimator> getStateListAnimatorCache()", "public CharSequence getText(@StringRes int id) throws NotFoundException", "public Typeface getFont(@FontRes int id) throws NotFoundException", " Typeface getFont(@NonNull TypedValue value, @FontRes int id) throws NotFoundException", "public void preloadFonts(@ArrayRes int id)", "public CharSequence getQuantityText(@PluralsRes int id, int quantity) throws NotFoundException", "public String getString(@StringRes int id) throws NotFoundException", "public String getString(@StringRes int id, Object... formatArgs) throws NotFoundException", "public String getQuantityString(@PluralsRes int id, int quantity, Object... formatArgs) throws NotFoundException", "public String getQuantityString(@PluralsRes int id, int quantity) throws NotFoundException", "public CharSequence getText(@StringRes int id, CharSequence def)", "public CharSequence[] getTextArray(@ArrayRes int id) throws NotFoundException", "public String[] getStringArray(@ArrayRes int id) throws NotFoundException", "public int[] getIntArray(@ArrayRes int id) throws NotFoundException", "public TypedArray obtainTypedArray(@ArrayRes int id) throws NotFoundException", "public float getDimension(@DimenRes int id) throws NotFoundException", "public int getDimensionPixelOffset(@DimenRes int id) throws NotFoundException", "public int getDimensionPixelSize(@DimenRes int id) throws NotFoundException", "public float getFraction(@FractionRes int id, int base, int pbase)", "public Drawable getDrawable(@DrawableRes int id) throws NotFoundException", "public Drawable getDrawable(@DrawableRes int id, @Nullable Theme theme) throws NotFoundException", "public Drawable getDrawableForDensity(@DrawableRes int id, int density) throws NotFoundException", "public Drawable getDrawableForDensity(@DrawableRes int id, int density, @Nullable Theme theme)", " Drawable loadDrawable(@NonNull TypedValue value, int id, int density, @Nullable Theme theme) throws NotFoundException", "public Movie getMovie(@RawRes int id) throws NotFoundException", "public int getColor(@ColorRes int id) throws NotFoundException", "public int getColor(@ColorRes int id, @Nullable Theme theme) throws NotFoundException", "public ColorStateList getColorStateList(@ColorRes int id) throws NotFoundException", "public ColorStateList getColorStateList(@ColorRes int id, @Nullable Theme theme) throws NotFoundException", " ColorStateList loadColorStateList(@NonNull TypedValue value, int id, @Nullable Theme theme) throws NotFoundException", "public ComplexColor loadComplexColor(@NonNull TypedValue value, int id, @Nullable Theme theme)", "public boolean getBoolean(@BoolRes int id) throws NotFoundException", "public int getInteger(@IntegerRes int id) throws NotFoundException", "public float getFloat(@DimenRes int id)", "public XmlResourceParser getLayout(@LayoutRes int id) throws NotFoundException", "public XmlResourceParser getAnimation(@AnimatorRes @AnimRes int id) throws NotFoundException", "public XmlResourceParser getXml(@XmlRes int id) throws NotFoundException", "public InputStream openRawResource(@RawRes int id) throws NotFoundException", "private TypedValue obtainTempTypedValue()", "private void releaseTempTypedValue(TypedValue value)", "public InputStream openRawResource(@RawRes int id, TypedValue value) throws NotFoundException", "public AssetFileDescriptor openRawResourceFd(@RawRes int id) throws NotFoundException", "public void getValue(@AnyRes int id, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public void getValueForDensity(@AnyRes int id, int density, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public void getValue(String name, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public static int getAttributeSetSourceResId(@Nullable AttributeSet set)", "public final Theme newTheme()", "public TypedArray obtainAttributes(AttributeSet set, @StyleableRes int[] attrs)", "public void updateConfiguration(Configuration config, DisplayMetrics metrics)", "public void updateConfiguration(Configuration config, DisplayMetrics metrics, CompatibilityInfo compat)", "public static void updateSystemConfiguration(Configuration config, DisplayMetrics metrics, CompatibilityInfo compat)", "public DisplayMetrics getDisplayMetrics()", "public DisplayAdjustments getDisplayAdjustments()", "public void overrideDisplayAdjustments(@Nullable Consumer<DisplayAdjustments> override)", "public boolean hasOverrideDisplayAdjustments()", "public Configuration getConfiguration()", "public Configuration[] getSizeConfigurations()", "public CompatibilityInfo getCompatibilityInfo()", "public void setCompatibilityInfo(CompatibilityInfo ci)", "public int getIdentifier(String name, String defType, String defPackage)", "public static boolean resourceHasPackage(@AnyRes int resid)", "public String getResourceName(@AnyRes int resid) throws NotFoundException", "public String getResourcePackageName(@AnyRes int resid) throws NotFoundException", "public String getResourceTypeName(@AnyRes int resid) throws NotFoundException", "public String getResourceEntryName(@AnyRes int resid) throws NotFoundException", "public String getLastResourceResolution() throws NotFoundException", "public void parseBundleExtras(XmlResourceParser parser, Bundle outBundle) throws XmlPullParserException, IOException", "public void parseBundleExtra(String tagName, AttributeSet attrs, Bundle outBundle) throws XmlPullParserException", "public final AssetManager getAssets()", "public final void flushLayoutCache()", "public final void startPreloading()", "public final void finishPreloading()", "public LongSparseArray<ConstantState> getPreloadedDrawables()", " XmlResourceParser loadXmlResourceParser(@AnyRes int id, @NonNull String type) throws NotFoundException", " XmlResourceParser loadXmlResourceParser(String file, int id, int assetCookie, String type) throws NotFoundException", "public int calcConfigChanges(Configuration config)", "public static TypedArray obtainAttributes(Resources res, Theme theme, AttributeSet set, int[] attrs)", "private void checkCallbacksRegistered()", "public List<ResourcesLoader> getLoaders()", "public void addLoaders(@NonNull ResourcesLoader... loaders)", "public void removeLoaders(@NonNull ResourcesLoader... loaders)", "public void clearLoaders()" ]
+  "methodNames" : [ "public static int selectDefaultTheme(int curTheme, int targetSdkVersion)", "public static int selectSystemTheme(int curTheme, int targetSdkVersion, int orig, int holo, int dark, int deviceDefault)", "public static Resources getSystem()", "public void setImpl(ResourcesImpl impl)", "public void setCallbacks(UpdateCallbacks callbacks)", "public ResourcesImpl getImpl()", "public ClassLoader getClassLoader()", "public final DrawableInflater getDrawableInflater()", "public ConfigurationBoundResourceCache<Animator> getAnimatorCache()", "public ConfigurationBoundResourceCache<StateListAnimator> getStateListAnimatorCache()", "public CharSequence getText(@StringRes int id) throws NotFoundException", "public Typeface getFont(@FontRes int id) throws NotFoundException", " Typeface getFont(@NonNull TypedValue value, @FontRes int id) throws NotFoundException", "public void preloadFonts(@ArrayRes int id)", "public CharSequence getQuantityText(@PluralsRes int id, int quantity) throws NotFoundException", "public String getString(@StringRes int id) throws NotFoundException", "public String getString(@StringRes int id, Object... formatArgs) throws NotFoundException", "public String getQuantityString(@PluralsRes int id, int quantity, Object... formatArgs) throws NotFoundException", "public String getQuantityString(@PluralsRes int id, int quantity) throws NotFoundException", "public CharSequence getText(@StringRes int id, CharSequence def)", "public CharSequence[] getTextArray(@ArrayRes int id) throws NotFoundException", "public String[] getStringArray(@ArrayRes int id) throws NotFoundException", "public int[] getIntArray(@ArrayRes int id) throws NotFoundException", "public TypedArray obtainTypedArray(@ArrayRes int id) throws NotFoundException", "public float getDimension(@DimenRes int id) throws NotFoundException", "public int getDimensionPixelOffset(@DimenRes int id) throws NotFoundException", "public int getDimensionPixelSize(@DimenRes int id) throws NotFoundException", "public float getFraction(@FractionRes int id, int base, int pbase)", "public Drawable getDrawable(@DrawableRes int id) throws NotFoundException", "public Drawable getDrawable(@DrawableRes int id, @Nullable Theme theme) throws NotFoundException", "public Drawable getDrawableForDensity(@DrawableRes int id, int density) throws NotFoundException", "public Drawable getDrawableForDensity(@DrawableRes int id, int density, @Nullable Theme theme)", " Drawable loadDrawable(@NonNull TypedValue value, int id, int density, @Nullable Theme theme) throws NotFoundException", "public Movie getMovie(@RawRes int id) throws NotFoundException", "public int getColor(@ColorRes int id) throws NotFoundException", "public int getColor(@ColorRes int id, @Nullable Theme theme) throws NotFoundException", "public ColorStateList getColorStateList(@ColorRes int id) throws NotFoundException", "public ColorStateList getColorStateList(@ColorRes int id, @Nullable Theme theme) throws NotFoundException", " ColorStateList loadColorStateList(@NonNull TypedValue value, int id, @Nullable Theme theme) throws NotFoundException", "public ComplexColor loadComplexColor(@NonNull TypedValue value, int id, @Nullable Theme theme)", "public boolean getBoolean(@BoolRes int id) throws NotFoundException", "public int getInteger(@IntegerRes int id) throws NotFoundException", "public float getFloat(@DimenRes int id)", "public XmlResourceParser getLayout(@LayoutRes int id) throws NotFoundException", "public XmlResourceParser getAnimation(@AnimatorRes @AnimRes int id) throws NotFoundException", "public XmlResourceParser getXml(@XmlRes int id) throws NotFoundException", "public InputStream openRawResource(@RawRes int id) throws NotFoundException", "private TypedValue obtainTempTypedValue()", "private void releaseTempTypedValue(TypedValue value)", "public InputStream openRawResource(@RawRes int id, TypedValue value) throws NotFoundException", "public AssetFileDescriptor openRawResourceFd(@RawRes int id) throws NotFoundException", "public void getValue(@AnyRes int id, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public void getValueForDensity(@AnyRes int id, int density, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public void getValue(String name, TypedValue outValue, boolean resolveRefs) throws NotFoundException", "public static int getAttributeSetSourceResId(@Nullable AttributeSet set)", " static int nextPowerOf2(int number)", "private void cleanupThemeReferences()", "public final Theme newTheme()", "public TypedArray obtainAttributes(AttributeSet set, @StyleableRes int[] attrs)", "public void updateConfiguration(Configuration config, DisplayMetrics metrics)", "public void updateConfiguration(Configuration config, DisplayMetrics metrics, CompatibilityInfo compat)", "public static void updateSystemConfiguration(Configuration config, DisplayMetrics metrics, CompatibilityInfo compat)", "public DisplayMetrics getDisplayMetrics()", "public DisplayAdjustments getDisplayAdjustments()", "public boolean hasOverrideDisplayAdjustments()", "public Configuration getConfiguration()", "public Configuration[] getSizeConfigurations()", "public Configuration[] getSizeAndUiModeConfigurations()", "public CompatibilityInfo getCompatibilityInfo()", "public void setCompatibilityInfo(CompatibilityInfo ci)", "public int getIdentifier(String name, String defType, String defPackage)", "public static boolean resourceHasPackage(@AnyRes int resid)", "public String getResourceName(@AnyRes int resid) throws NotFoundException", "public String getResourcePackageName(@AnyRes int resid) throws NotFoundException", "public String getResourceTypeName(@AnyRes int resid) throws NotFoundException", "public String getResourceEntryName(@AnyRes int resid) throws NotFoundException", "public String getLastResourceResolution() throws NotFoundException", "public void parseBundleExtras(XmlResourceParser parser, Bundle outBundle) throws XmlPullParserException, IOException", "public void parseBundleExtra(String tagName, AttributeSet attrs, Bundle outBundle) throws XmlPullParserException", "public final AssetManager getAssets()", "public final void flushLayoutCache()", "public final void startPreloading()", "public final void finishPreloading()", "public LongSparseArray<ConstantState> getPreloadedDrawables()", " XmlResourceParser loadXmlResourceParser(@AnyRes int id, @NonNull String type) throws NotFoundException", " XmlResourceParser loadXmlResourceParser(String file, int id, int assetCookie, String type) throws NotFoundException", "public int calcConfigChanges(Configuration config)", "public static TypedArray obtainAttributes(Resources res, Theme theme, AttributeSet set, int[] attrs)", "private void checkCallbacksRegistered()", "public List<ResourcesLoader> getLoaders()", "public void addLoaders(@NonNull ResourcesLoader... loaders)", "public void removeLoaders(@NonNull ResourcesLoader... loaders)", "public void clearLoaders()", "public static void preloadResources()", "private static int preloadColorStateLists(Resources resources, TypedArray ar)", "private static int preloadDrawables(Resources resources, TypedArray ar)", "public static void resetPreloadDrawableStateCache()", "public void dump(PrintWriter pw, String prefix)", "public static void dumpHistory(PrintWriter pw, String prefix)", "public static void registerResourcePaths(@NonNull String uniqueId, @NonNull ApplicationInfo appInfo)" ],
+  "variableNames" : [ "ID_NULL", "TAG", "sSync", "mUpdateLock", "PRELOAD_RESOURCES", "mSystem", "mResourcesImpl", "mTypedArrayPool", "mDrawableInflater", "mTmpValueLock", "mTmpValue", "mClassLoader", "mCallbacks", "mThemeRefs", "MIN_THEME_REFS_FLUSH_SIZE", "MAX_THEME_REFS_FLUSH_SIZE", "mThemeRefsNextFlushSize", "mBaseApkAssetsSize", "sResourcesHistory" ]
 }

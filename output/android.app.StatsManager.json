@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/StatsManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/StatsManager.java",
   "packageName" : "android.app",
   "className" : "StatsManager",
   "comment" : "\n * API for statsd clients to send configurations and retrieve data.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -64,6 +65,11 @@
     "comment" : "\n     * Long array extra of the active configs for the uid that added those configs.\n     ",
     "links" : [ ]
   }, {
+    "name" : "EXTRA_STATS_RESTRICTED_METRIC_IDS",
+    "type" : "String",
+    "comment" : "\n     * Long array extra of the restricted metric ids present for the client.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "ACTION_STATSD_STARTED",
     "type" : "String",
     "comment" : "\n     * Broadcast Action: Statsd has started.\n     * Configurations and PendingIntents can now be sent to it.\n     ",
@@ -86,13 +92,23 @@
   }, {
     "name" : "DEFAULT_TIMEOUT_MILLIS",
     "type" : "long",
-    "comment" : " 2 seconds.",
+    "comment" : " 1.5 seconds.",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_BUFFER_SIZE",
+    "type" : "int",
+    "comment" : " 20MB",
+    "links" : [ ]
+  }, {
+    "name" : "CHUNK_SIZE",
+    "type" : "int",
+    "comment" : " 64kB",
     "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public void addConfig(long configKey, byte[] config) throws StatsUnavailableException",
     "returnType" : "void",
-    "comment" : "\n     * Adds the given configuration and associates it with the given configKey. If a config with the\n     * given configKey already exists for the caller's uid, it is replaced with the new one.\n     *\n     * @param configKey An arbitrary integer that allows clients to track the configuration.\n     * @param config    Wire-encoded StatsdConfig proto that specifies metrics (and all\n     *                  dependencies eg, conditions and matchers).\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     * @throws IllegalArgumentException if config is not a wire-encoded StatsdConfig proto\n     ",
+    "comment" : "\n     * Adds the given configuration and associates it with the given configKey. If a config with the\n     * given configKey already exists for the caller's uid, it is replaced with the new one.\n     * This call can block on statsd.\n     *\n     * @param configKey An arbitrary integer that allows clients to track the configuration.\n     * @param config    Wire-encoded StatsdConfig proto that specifies metrics (and all\n     *                  dependencies eg, conditions and matchers).\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     * @throws IllegalArgumentException if config is not a wire-encoded StatsdConfig proto\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean addConfiguration(long configKey, byte[] config)",
@@ -102,7 +118,7 @@
   }, {
     "name" : "public void removeConfig(long configKey) throws StatsUnavailableException",
     "returnType" : "void",
-    "comment" : "\n     * Remove a configuration from logging.\n     *\n     * @param configKey Configuration key to remove.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Remove a configuration from logging.\n     *\n     * This call can block on statsd.\n     *\n     * @param configKey Configuration key to remove.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean removeConfiguration(long configKey)",
@@ -112,7 +128,7 @@
   }, {
     "name" : "public void setBroadcastSubscriber(PendingIntent pendingIntent, long configKey, long subscriberId) throws StatsUnavailableException",
     "returnType" : "void",
-    "comment" : "\n     * Set the PendingIntent to be used when broadcasting subscriber information to the given\n     * subscriberId within the given config.\n     * <p>\n     * Suppose that the calling uid has added a config with key configKey, and that in this config\n     * it is specified that when a particular anomaly is detected, a broadcast should be sent to\n     * a BroadcastSubscriber with id subscriberId. This function links the given pendingIntent with\n     * that subscriberId (for that config), so that this pendingIntent is used to send the broadcast\n     * when the anomaly is detected.\n     * <p>\n     * When statsd sends the broadcast, the PendingIntent will used to send an intent with\n     * information of\n     * {@link #EXTRA_STATS_CONFIG_UID},\n     * {@link #EXTRA_STATS_CONFIG_KEY},\n     * {@link #EXTRA_STATS_SUBSCRIPTION_ID},\n     * {@link #EXTRA_STATS_SUBSCRIPTION_RULE_ID},\n     * {@link #EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES}, and\n     * {@link #EXTRA_STATS_DIMENSIONS_VALUE}.\n     * <p>\n     * This function can only be called by the owner (uid) of the config. It must be called each\n     * time statsd starts. The config must have been added first (via {@link #addConfig}).\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it undoes any previous setting of this subscriberId.\n     * @param configKey     The integer naming the config to which this subscriber is attached.\n     * @param subscriberId  ID of the subscriber, as used in the config.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Set the PendingIntent to be used when broadcasting subscriber information to the given\n     * subscriberId within the given config.\n     * <p>\n     * Suppose that the calling uid has added a config with key configKey, and that in this config\n     * it is specified that when a particular anomaly is detected, a broadcast should be sent to\n     * a BroadcastSubscriber with id subscriberId. This function links the given pendingIntent with\n     * that subscriberId (for that config), so that this pendingIntent is used to send the broadcast\n     * when the anomaly is detected.\n     * <p>\n     * When statsd sends the broadcast, the PendingIntent will used to send an intent with\n     * information of\n     * {@link #EXTRA_STATS_CONFIG_UID},\n     * {@link #EXTRA_STATS_CONFIG_KEY},\n     * {@link #EXTRA_STATS_SUBSCRIPTION_ID},\n     * {@link #EXTRA_STATS_SUBSCRIPTION_RULE_ID},\n     * {@link #EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES}, and\n     * {@link #EXTRA_STATS_DIMENSIONS_VALUE}.\n     * <p>\n     * This function can only be called by the owner (uid) of the config. It must be called each\n     * time statsd starts. The config must have been added first (via {@link #addConfig}).\n     * This call can block on statsd.\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it undoes any previous setting of this subscriberId.\n     * @param configKey     The integer naming the config to which this subscriber is attached.\n     * @param subscriberId  ID of the subscriber, as used in the config.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ "#EXTRA_STATS_CONFIG_UID", "#EXTRA_STATS_CONFIG_KEY", "#addConfig", "#EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES", "#EXTRA_STATS_SUBSCRIPTION_RULE_ID", "#EXTRA_STATS_DIMENSIONS_VALUE", "#EXTRA_STATS_SUBSCRIPTION_ID" ]
   }, {
     "name" : "public boolean setBroadcastSubscriber(long configKey, long subscriberId, PendingIntent pendingIntent)",
@@ -122,13 +138,23 @@
   }, {
     "name" : "public void setFetchReportsOperation(PendingIntent pendingIntent, long configKey) throws StatsUnavailableException",
     "returnType" : "void",
-    "comment" : "\n     * Registers the operation that is called to retrieve the metrics data. This must be called\n     * each time statsd starts. The config must have been added first (via {@link #addConfig},\n     * although addConfig could have been called on a previous boot). This operation allows\n     * statsd to send metrics data whenever statsd determines that the metrics in memory are\n     * approaching the memory limits. The fetch operation should call {@link #getReports} to fetch\n     * the data, which also deletes the retrieved metrics from statsd's memory.\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it removes any associated pending intent with this configKey.\n     * @param configKey     The integer naming the config to which this operation is attached.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Registers the operation that is called to retrieve the metrics data. This must be called\n     * each time statsd starts. The config must have been added first (via {@link #addConfig},\n     * although addConfig could have been called on a previous boot). This operation allows\n     * statsd to send metrics data whenever statsd determines that the metrics in memory are\n     * approaching the memory limits. The fetch operation should call {@link #getReports} to fetch\n     * the data, which also deletes the retrieved metrics from statsd's memory.\n     * This call can block on statsd.\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it removes any associated pending intent with this configKey.\n     * @param configKey     The integer naming the config to which this operation is attached.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ "#addConfig", "#getReports" ]
   }, {
     "name" : "public long[] setActiveConfigsChangedOperation(@Nullable PendingIntent pendingIntent) throws StatsUnavailableException",
     "returnType" : "long[]",
-    "comment" : "\n     * Registers the operation that is called whenever there is a change in which configs are\n     * active. This must be called each time statsd starts. This operation allows\n     * statsd to inform clients that they should pull data of the configs that are currently\n     * active. The activeConfigsChangedOperation should set periodic alarms to pull data of configs\n     * that are active and stop pulling data of configs that are no longer active.\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it removes any associated pending intent for this client.\n     * @return A list of configs that are currently active for this client. If the pendingIntent is\n     *         null, this will be an empty list.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Registers the operation that is called whenever there is a change in which configs are\n     * active. This must be called each time statsd starts. This operation allows\n     * statsd to inform clients that they should pull data of the configs that are currently\n     * active. The activeConfigsChangedOperation should set periodic alarms to pull data of configs\n     * that are active and stop pulling data of configs that are no longer active.\n     * This call can block on statsd.\n     *\n     * @param pendingIntent the PendingIntent to use when broadcasting info to the subscriber\n     *                      associated with the given subscriberId. May be null, in which case\n     *                      it removes any associated pending intent for this client.\n     * @return A list of configs that are currently active for this client. If the pendingIntent is\n     *         null, this will be an empty list.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public long[] setRestrictedMetricsChangedOperation(long configKey, @NonNull String configPackage, @Nullable PendingIntent pendingIntent) throws StatsUnavailableException",
+    "returnType" : "long[]",
+    "comment" : "\n     * Registers the operation that is called whenever there is a change in the restricted metrics\n     * for a specified config that are present for this client. This operation allows statsd to\n     * inform the client about the current restricted metric ids available to be queried for the\n     * specified config. This call can block on statsd.\n     *\n     * If there is no config in statsd that matches the provided config package and key, an empty\n     * list is returned. The pending intent will be tracked, and the operation will be called\n     * whenever a matching config is added.\n     *\n     * @param configKey The configKey passed by the package that added the config in\n     *                  StatsManager#addConfig\n     * @param configPackage The package that added the config in StatsManager#addConfig\n     * @param pendingIntent the PendingIntent to use when broadcasting info to caller.\n     *                      May be null, in which case it removes any associated pending intent\n     *                      for this client.\n     * @return A list of metric ids identifying the restricted metrics that are currently available\n     *         to be queried for the specified config.\n     *         If the pendingIntent is null, this will be an empty list.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void query(long configKey, @NonNull String configPackage, @NonNull StatsQuery query, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<StatsCursor, StatsQueryException> outcomeReceiver) throws StatsUnavailableException",
+    "returnType" : "void",
+    "comment" : "\n     * Queries the underlying service based on query received and populates the OutcomeReceiver via\n     * callback. This call is blocking on statsd being available, but is otherwise nonblocking.\n     * i.e. the call can return before the query processing is done.\n     * <p>\n     * Two types of tables are supported: Metric tables and the device information table.\n     * </p>\n     * <p>\n     * The device information table is named device_info and contains the following columns:\n     * sdkVersion, model, product, hardware, device, osBuild, fingerprint, brand, manufacturer, and\n     * board. These columns correspond to {@link Build.VERSION.SDK_INT}, {@link Build.MODEL},\n     * {@link Build.PRODUCT}, {@link Build.HARDWARE}, {@link Build.DEVICE}, {@link Build.ID},\n     * {@link Build.FINGERPRINT}, {@link Build.BRAND}, {@link Build.MANUFACTURER},\n     * {@link Build.BOARD} respectively.\n     * </p>\n     * <p>\n     * The metric tables are named metric_METRIC_ID where METRIC_ID is the metric id that is part\n     * of the wire encoded config passed to {@link #addConfig(long, byte[])}. If the metric id is\n     * negative, then the '-' character is replaced with 'n' in the table name. Each metric table\n     * contains the 3 columns followed by n columns of the following form: atomId,\n     * elapsedTimestampNs, wallTimestampNs, field_1, field_2, field_3 ... field_n. These\n     * columns correspond to to the id of the atom from frameworks/proto_logging/stats/atoms.proto,\n     * time when the atom is recorded, and the data fields within each atom.\n     * </p>\n     * @param configKey The configKey passed by the package that added\n     *                        the config being queried in StatsManager#addConfig\n     * @param configPackage The package that added the config being queried in\n     *                        StatsManager#addConfig\n     * @param query the query object encapsulating a sql-string and necessary config to query\n     *              underlying sql-based data store.\n     * @param executor the executor on which outcomeReceiver will be invoked.\n     * @param outcomeReceiver the receiver to be populated with cursor pointing to result data.\n     ",
+    "links" : [ "#addConfig(long", "Build.PRODUCT", "Build.DEVICE", "Build.FINGERPRINT", "Build.ID", "Build.VERSION.SDK_INT", "Build.HARDWARE", "Build.BRAND", "Build.BOARD", "Build.MODEL", "Build.MANUFACTURER" ]
   }, {
     "name" : "public boolean setDataFetchOperation(long configKey, PendingIntent pendingIntent)",
     "returnType" : "boolean",
@@ -137,7 +163,7 @@
   }, {
     "name" : "public byte[] getReports(long configKey) throws StatsUnavailableException",
     "returnType" : "byte[]",
-    "comment" : "\n     * Request the data collected for the given configKey.\n     * This getter is destructive - it also clears the retrieved metrics from statsd's memory.\n     *\n     * @param configKey Configuration key to retrieve data from.\n     * @return Serialized ConfigMetricsReportList proto.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Request the data collected for the given configKey.\n     * This getter is destructive - it also clears the retrieved metrics from statsd's memory.\n     * This call can block on statsd.\n     *\n     * @param configKey Configuration key to retrieve data from.\n     * @return Serialized ConfigMetricsReportList proto.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ ]
   }, {
     "name" : "public byte[] getData(long configKey)",
@@ -147,7 +173,7 @@
   }, {
     "name" : "public byte[] getStatsMetadata() throws StatsUnavailableException",
     "returnType" : "byte[]",
-    "comment" : "\n     * Clients can request metadata for statsd. Will contain stats across all configurations but not\n     * the actual metrics themselves (metrics must be collected via {@link #getReports(long)}.\n     * This getter is not destructive and will not reset any metrics/counters.\n     *\n     * @return Serialized StatsdStatsReport proto.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Clients can request metadata for statsd. Will contain stats across all configurations but not\n     * the actual metrics themselves (metrics must be collected via {@link #getReports(long)}.\n     * This getter is not destructive and will not reset any metrics/counters.\n     * This call can block on statsd.\n     *\n     * @return Serialized StatsdStatsReport proto.\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ "#getReports(long)" ]
   }, {
     "name" : "public byte[] getMetadata()",
@@ -157,7 +183,7 @@
   }, {
     "name" : "public long[] getRegisteredExperimentIds() throws StatsUnavailableException",
     "returnType" : "long[]",
-    "comment" : "\n     * Returns the experiments IDs registered with statsd, or an empty array if there aren't any.\n     *\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
+    "comment" : "\n     * Returns the experiments IDs registered with statsd, or an empty array if there aren't any.\n     *\n     * This call can block on statsd.\n     *\n     * @throws StatsUnavailableException if unsuccessful due to failing to connect to stats service\n     ",
     "links" : [ ]
   }, {
     "name" : "public void setPullAtomCallback(int atomTag, @Nullable PullAtomMetadata metadata, @NonNull @CallbackExecutor Executor executor, @NonNull StatsPullAtomCallback callback)",
@@ -174,7 +200,17 @@
     "returnType" : "IStatsManagerService",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "private static boolean getUseFileDescriptor()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static byte[] getDataWithFd(IStatsManagerService service, long configKey, String packageName) throws IllegalStateException, RemoteException",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Executes a binder transaction with file descriptors.\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "sLock", "mContext", "mStatsManagerService", "EXTRA_STATS_CONFIG_UID", "EXTRA_STATS_CONFIG_KEY", "EXTRA_STATS_SUBSCRIPTION_ID", "EXTRA_STATS_SUBSCRIPTION_RULE_ID", "EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES", "EXTRA_STATS_DIMENSIONS_VALUE", "EXTRA_STATS_ACTIVE_CONFIG_KEYS", "ACTION_STATSD_STARTED", "PULL_SUCCESS", "PULL_SKIP", "DEFAULT_COOL_DOWN_MILLIS", "DEFAULT_TIMEOUT_MILLIS" ],
-  "methodNames" : [ "public void addConfig(long configKey, byte[] config) throws StatsUnavailableException", "public boolean addConfiguration(long configKey, byte[] config)", "public void removeConfig(long configKey) throws StatsUnavailableException", "public boolean removeConfiguration(long configKey)", "public void setBroadcastSubscriber(PendingIntent pendingIntent, long configKey, long subscriberId) throws StatsUnavailableException", "public boolean setBroadcastSubscriber(long configKey, long subscriberId, PendingIntent pendingIntent)", "public void setFetchReportsOperation(PendingIntent pendingIntent, long configKey) throws StatsUnavailableException", "public long[] setActiveConfigsChangedOperation(@Nullable PendingIntent pendingIntent) throws StatsUnavailableException", "public boolean setDataFetchOperation(long configKey, PendingIntent pendingIntent)", "public byte[] getReports(long configKey) throws StatsUnavailableException", "public byte[] getData(long configKey)", "public byte[] getStatsMetadata() throws StatsUnavailableException", "public byte[] getMetadata()", "public long[] getRegisteredExperimentIds() throws StatsUnavailableException", "public void setPullAtomCallback(int atomTag, @Nullable PullAtomMetadata metadata, @NonNull @CallbackExecutor Executor executor, @NonNull StatsPullAtomCallback callback)", "public void clearPullAtomCallback(int atomTag)", "private IStatsManagerService getIStatsManagerServiceLocked()" ]
+  "methodNames" : [ "public void addConfig(long configKey, byte[] config) throws StatsUnavailableException", "public boolean addConfiguration(long configKey, byte[] config)", "public void removeConfig(long configKey) throws StatsUnavailableException", "public boolean removeConfiguration(long configKey)", "public void setBroadcastSubscriber(PendingIntent pendingIntent, long configKey, long subscriberId) throws StatsUnavailableException", "public boolean setBroadcastSubscriber(long configKey, long subscriberId, PendingIntent pendingIntent)", "public void setFetchReportsOperation(PendingIntent pendingIntent, long configKey) throws StatsUnavailableException", "public long[] setActiveConfigsChangedOperation(@Nullable PendingIntent pendingIntent) throws StatsUnavailableException", "public long[] setRestrictedMetricsChangedOperation(long configKey, @NonNull String configPackage, @Nullable PendingIntent pendingIntent) throws StatsUnavailableException", "public void query(long configKey, @NonNull String configPackage, @NonNull StatsQuery query, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<StatsCursor, StatsQueryException> outcomeReceiver) throws StatsUnavailableException", "public boolean setDataFetchOperation(long configKey, PendingIntent pendingIntent)", "public byte[] getReports(long configKey) throws StatsUnavailableException", "public byte[] getData(long configKey)", "public byte[] getStatsMetadata() throws StatsUnavailableException", "public byte[] getMetadata()", "public long[] getRegisteredExperimentIds() throws StatsUnavailableException", "public void setPullAtomCallback(int atomTag, @Nullable PullAtomMetadata metadata, @NonNull @CallbackExecutor Executor executor, @NonNull StatsPullAtomCallback callback)", "public void clearPullAtomCallback(int atomTag)", "private IStatsManagerService getIStatsManagerServiceLocked()", "private static boolean getUseFileDescriptor()", "private static byte[] getDataWithFd(IStatsManagerService service, long configKey, String packageName) throws IllegalStateException, RemoteException" ],
+  "variableNames" : [ "TAG", "DEBUG", "sLock", "mContext", "mStatsManagerService", "EXTRA_STATS_CONFIG_UID", "EXTRA_STATS_CONFIG_KEY", "EXTRA_STATS_SUBSCRIPTION_ID", "EXTRA_STATS_SUBSCRIPTION_RULE_ID", "EXTRA_STATS_BROADCAST_SUBSCRIBER_COOKIES", "EXTRA_STATS_DIMENSIONS_VALUE", "EXTRA_STATS_ACTIVE_CONFIG_KEYS", "EXTRA_STATS_RESTRICTED_METRIC_IDS", "ACTION_STATSD_STARTED", "PULL_SUCCESS", "PULL_SKIP", "DEFAULT_COOL_DOWN_MILLIS", "DEFAULT_TIMEOUT_MILLIS", "MAX_BUFFER_SIZE", "CHUNK_SIZE" ]
 }

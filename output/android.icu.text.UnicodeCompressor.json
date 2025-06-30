@@ -1,0 +1,106 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/UnicodeCompressor.java",
+  "packageName" : "android.icu.text",
+  "className" : "UnicodeCompressor",
+  "comment" : "\n*\n* COMPRESSION STRATEGY\n*\n* Single Byte Mode\n*\n* There are three relevant cases.\n* If the character is in the current window or is Latin-1 (U+0000,\n* U+0009, U+000A, U+000D, U+0020 - U+007F), the character is placed\n* directly in the stream as a single byte.\n*\n*  1. Current character is in defined, inactive window.\n*  2. Current character is in undefined window.\n*  3. Current character is uncompressible Unicode (U+3400 - U+DFFF).\n* \n*  1. Current character is in defined, inactive window\n*    A. Look ahead two characters\n*    B. If both following characters in same window as current character, \n*       switch to defined window\n*    C. If only next character is in same window as current character, \n*       quote defined window\n*    D. If neither of following characters is in same window as current, \n*       quote defined window\n*   \n*  2. Current character is in undefined window\n*    A. Look ahead two characters\n*    B. If both following characters in same window as current character, \n*       define new window\n*    C. If only next character in same window as current character, \n*       switch to Unicode mode\n*       NOTE: This costs us one extra byte.  However, \n*        since we have a limited number of windows to work with, it is \n*        assumed the cost will pay off later in savings from a window with\n*        more characters in it.\n*    D. If neither of following characters in same window as current, \n*       switch to Unicode mode.  Alternative to above: just quote \n*       Unicode (same byte cost)\n*   \n*  3. Current character is uncompressible Unicode (U+3400 - U+DFFF)\n*    A. Look ahead one character\n*    B. If next character in non-compressible region, switch to \n*       Unicode mode\n*    C. If next character not in non-compressible region, quote Unicode\n*   \n*\n* The following chart illustrates the bytes required for encoding characters\n* in each possible way\n*\n* \n*                                   SINGLE BYTE MODE\n*                                       Characters in a row with same index\n*               tag encountered             1       2       3       4\n*               ---------------------------------------------------------------\n*               none (in current window)    1       2       3       4\n*\n*               quote Unicode               3       6       9       12\n*\n*   window not  switch to Unicode           3       5       7       9     byte\n*   defined     define window               3       4       5       6     cost\n*      \n*   window      switch to window            2       3       4       5\n*   defined     quote window                2       4       6       8\n*\n*  Unicode Mode\n*\n* There are two relevant cases.\n* If the character is in the non-compressible region\n* (U+3400 - U+DFFF), the character is simply written to the\n* stream as a pair of bytes.\n*\n* 1. Current character is in defined, inactive window.\n* 2. Current character is in undefined window.\n*\n*  1.Current character is in defined, inactive window\n*    A. Look ahead one character\n*    B. If next character has same index as current character, \n*       switch to defined window (and switch to single-byte mode)\n*    C. If not, just put bytes in stream\n*   \n*  \n*  2. Current character is in undefined window\n*    A. Look ahead two characters\n*    B. If both in same window as current character, define window \n*       (and switch to single-byte mode)\n*    C. If only next character in same window, just put bytes in stream\n*        NOTE: This costs us one extra byte.  However, \n*        since we have a limited number of windows to work with, it is \n*        assumed the cost will pay off later in savings from a window with \n*        more characters in it.\n*    D. If neither in same window, put bytes in stream\n*   \n*\n* The following chart illustrates the bytes required for encoding characters\n* in each possible way\n*\n* \n*                                   UNICODE MODE\n*                                       Characters in a row with same index\n*               tag encountered             1       2       3       4\n*               ---------------------------------------------------------------\n*               none                        2       4       6       8\n*\n*               quote Unicode               3       6       9       12\n*\n*   window not  define window               3       4       5       6     byte\n*   defined                                                               cost\n*   window      switch to window            2       3       4       5\n*   defined\n",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "sSingleTagTable",
+    "type" : "boolean[]",
+    "comment" : " For quick identification of a byte as a single-byte mode tag ",
+    "links" : [ ]
+  }, {
+    "name" : "sUnicodeTagTable",
+    "type" : "boolean[]",
+    "comment" : " For quick identification of a byte as a unicode mode tag ",
+    "links" : [ ]
+  }, {
+    "name" : "fCurrentWindow",
+    "type" : "int",
+    "comment" : " Alias to current dynamic window ",
+    "links" : [ ]
+  }, {
+    "name" : "fOffsets",
+    "type" : "int[]",
+    "comment" : " Dynamic compression window offsets ",
+    "links" : [ ]
+  }, {
+    "name" : "fMode",
+    "type" : "int",
+    "comment" : " Current compression mode ",
+    "links" : [ ]
+  }, {
+    "name" : "fIndexCount",
+    "type" : "int[]",
+    "comment" : " Keeps count of times character indices are encountered ",
+    "links" : [ ]
+  }, {
+    "name" : "fTimeStamps",
+    "type" : "int[]",
+    "comment" : " The time stamps indicate when a window was last defined ",
+    "links" : [ ]
+  }, {
+    "name" : "fTimeStamp",
+    "type" : "int",
+    "comment" : " The current time stamp ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static byte[] compress(String buffer)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Compress a string into a byte array.\n     * @param buffer The string to compress.\n     * @return A byte array containing the compressed characters.\n     * @see #compress(char [], int, int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static byte[] compress(char[] buffer, int start, int limit)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Compress a Unicode character array into a byte array.\n     * @param buffer The character buffer to compress.\n     * @param start The start of the character run to compress.\n     * @param limit The limit of the character run to compress.\n     * @return A byte array containing the compressed characters.\n     * @see #compress(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compress(char[] charBuffer, int charBufferStart, int charBufferLimit, int[] charsRead, byte[] byteBuffer, int byteBufferStart, int byteBufferLimit)",
+    "returnType" : "int",
+    "comment" : "\n     * Compress a Unicode character array into a byte array.\n     *\n     * This function will only consume input that can be completely\n     * output.\n     *\n     * @param charBuffer The character buffer to compress.\n     * @param charBufferStart The start of the character run to compress.\n     * @param charBufferLimit The limit of the character run to compress.\n     * @param charsRead A one-element array.  If not null, on return \n     * the number of characters read from charBuffer.\n     * @param byteBuffer A buffer to receive the compressed data.  This \n     * buffer must be at minimum four bytes in size.\n     * @param byteBufferStart The starting offset to which to write \n     * compressed data.\n     * @param byteBufferLimit The limiting offset for writing compressed data.\n     * @return The number of bytes written to byteBuffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : " \n     * Reset the compressor to its initial state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int makeIndex(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Create the index value for a character.\n     * For more information on this function, refer to table X-3\n     * <A HREF=\"https://www.unicode.org/reports/tr6\">UTR6</A>.\n     * @param c The character in question.\n     * @return An index for c\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean inDynamicWindow(int c, int whichWindow)",
+    "returnType" : "boolean",
+    "comment" : "\n    * Determine if a character is in a dynamic window.\n    * @param c The character to test\n    * @param whichWindow The dynamic window the test\n    * @return true if <TT>c</TT> will fit in <TT>whichWindow</TT>, \n    * false otherwise.\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean inStaticWindow(int c, int whichWindow)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determine if a character is in a static window.\n    * @param c The character to test\n    * @param whichWindow The static window the test\n    * @return true if <TT>c</TT> will fit in <TT>whichWindow</TT>, \n    * false otherwise.\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isCompressible(int c)",
+    "returnType" : "boolean",
+    "comment" : "\n    * Determine if a character is compressible.\n    * @param c The character to test.\n    * @return true if the <TT>c</TT> is compressible, false otherwise.\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findDynamicWindow(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Determine if a dynamic window for a certain character is defined\n     * @param c The character in question\n     * @return The dynamic window containing <TT>c</TT>, or \n     * INVALIDWINDOW if not defined.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int findStaticWindow(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Determine if a static window for a certain character is defined\n     * @param c The character in question\n     * @return The static window containing <TT>c</TT>, or \n     * INVALIDWINDOW if not defined.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getLRDefinedWindow()",
+    "returnType" : "int",
+    "comment" : " Find the least-recently defined window ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static byte[] compress(String buffer)", "public static byte[] compress(char[] buffer, int start, int limit)", "public int compress(char[] charBuffer, int charBufferStart, int charBufferLimit, int[] charsRead, byte[] byteBuffer, int byteBufferStart, int byteBufferLimit)", "public void reset()", "private static int makeIndex(int c)", "private boolean inDynamicWindow(int c, int whichWindow)", "private static boolean inStaticWindow(int c, int whichWindow)", "private static boolean isCompressible(int c)", "private int findDynamicWindow(int c)", "private static int findStaticWindow(int c)", "private int getLRDefinedWindow()" ],
+  "variableNames" : [ "sSingleTagTable", "sUnicodeTagTable", "fCurrentWindow", "fOffsets", "fMode", "fIndexCount", "fTimeStamps", "fTimeStamp" ]
+}

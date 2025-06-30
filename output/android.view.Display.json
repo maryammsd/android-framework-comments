@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/view/Display.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/view/Display.java",
   "packageName" : "android.view",
   "className" : "Display",
-  "comment" : "\n * Provides information about the size and density of a logical display.\n * <p>\n * The display area is described in two different ways.\n * <ul>\n * <li>The application display area specifies the part of the display that may contain\n * an application window, excluding the system decorations.  The application display area may\n * be smaller than the real display area because the system subtracts the space needed\n * for decor elements such as the status bar.  Use {@link WindowMetrics#getBounds()} to query the\n * application window bounds.</li>\n * <li>The real display area specifies the part of the display that contains content\n * including the system decorations.  Even so, the real display area may be smaller than the\n * physical size of the display if the window manager is emulating a smaller display\n * using (adb shell wm size).  Use the following methods to query the\n * real display area: {@link #getRealSize}, {@link #getRealMetrics}.</li>\n * </ul>\n * </p><p>\n * A logical display does not necessarily represent a particular physical display device\n * such as the internal display or an external display.  The contents of a logical\n * display may be presented on one or more physical displays according to the devices\n * that are currently attached and whether mirroring has been enabled.\n * </p>\n ",
+  "comment" : "\n * Provides information about the size and density of a logical display.\n * <p>\n * The display area is described in two different ways.\n * <ul>\n * <li>The application display area specifies the part of the display that may contain\n * an application window, excluding the system decorations.  The application display area may\n * be smaller than the real display area because the system subtracts the space needed\n * for decor elements such as the status bar.  Use {@link WindowMetrics#getBounds()} to query the\n * application window bounds.</li>\n * <li>The real display area specifies the part of the display that is accessible to an application\n * in the current system state. The real display area may be smaller than the physical size of the\n * display in a few scenarios. Use {@link WindowManager#getCurrentWindowMetrics()} to identify the\n * current size of the activity window. UI-related work, such as choosing UI layouts, should rely\n * upon {@link WindowMetrics#getBounds()}. See {@link #getRealSize} / {@link #getRealMetrics} for\n * details.</li>\n * </ul>\n * </p><p>\n * A logical display does not necessarily represent a particular physical display device\n * such as the internal display or an external display.  The contents of a logical\n * display may be presented on one or more physical displays according to the devices\n * that are currently attached and whether mirroring has been enabled.\n * </p>\n ",
+  "links" : [ "android.view.WindowMetrics#getBounds()", "#getRealMetrics", "android.view.WindowManager#getCurrentWindowMetrics()", "#getRealSize" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -11,6 +12,11 @@
   }, {
     "name" : "DEBUG",
     "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -24,11 +30,6 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mLayerStack",
-    "type" : "int",
-    "comment" : "",
-    "links" : [ ]
-  }, {
     "name" : "mFlags",
     "type" : "int",
     "comment" : "",
@@ -36,11 +37,6 @@
   }, {
     "name" : "mType",
     "type" : "int",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mAddress",
-    "type" : "DisplayAddress",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -99,10 +95,10 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mMayAdjustByFixedRotation",
-    "type" : "boolean",
-    "comment" : "\n     * Indicates that the application is started in a different rotation than the real display, so\n     * the display information may be adjusted. That ensures the methods {@link #getRotation},\n     * {@link #getRealSize}, {@link #getRealMetrics}, and {@link #getCutout} are consistent with how\n     * the application window is laid out.\n     ",
-    "links" : [ "#getRealMetrics", "#getCutout", "#getRealSize", "#getRotation" ]
+    "name" : "mHdrSdrRatioListeners",
+    "type" : "ArrayList<HdrSdrRatioListenerWrapper>",
+    "comment" : "",
+    "links" : [ ]
   }, {
     "name" : "DEFAULT_DISPLAY",
     "type" : "int",
@@ -112,6 +108,31 @@
     "name" : "INVALID_DISPLAY",
     "type" : "int",
     "comment" : "\n     * Invalid display id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INVALID_DISPLAY_WIDTH",
+    "type" : "int",
+    "comment" : "\n     * Invalid resolution width.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INVALID_DISPLAY_HEIGHT",
+    "type" : "int",
+    "comment" : "\n     * Invalid resolution height.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INVALID_DISPLAY_REFRESH_RATE",
+    "type" : "float",
+    "comment" : "\n     * Invalid refresh rate.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_DISPLAY_GROUP",
+    "type" : "int",
+    "comment" : "\n     * The default display group id, which is the display group id of the primary display assuming\n     * there is one.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "INVALID_DISPLAY_GROUP",
+    "type" : "int",
+    "comment" : "\n     * Invalid display group id.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "FLAG_SUPPORTS_PROTECTED_BUFFERS",
@@ -146,12 +167,47 @@
   }, {
     "name" : "FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS",
     "type" : "int",
-    "comment" : " TODO (b/114338689): Remove the flag and use IWindowManager#setShouldShowSystemDecors",
-    "links" : [ ]
+    "comment" : "\n     * Display flag: Indicates that the display should show system decorations.\n     * <p>\n     * This flag identifies secondary displays that should show system decorations, such as\n     * navigation bar, home activity or wallpaper.\n     * </p>\n     * <p>Note that this flag doesn't work without {@link #FLAG_TRUSTED}</p>\n     *\n     * @see #getFlags()\n     * @hide\n     ",
+    "links" : [ "#FLAG_TRUSTED" ]
   }, {
     "name" : "FLAG_TRUSTED",
     "type" : "int",
     "comment" : "\n     * Flag: The display is trusted to show system decorations and receive inputs without users'\n     * touch.\n     * @see #FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS\n     *\n     * @see #getFlags()\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_OWN_DISPLAY_GROUP",
+    "type" : "int",
+    "comment" : "\n     * Flag: Indicates that the display should not be a part of the default DisplayGroup and\n     * instead be part of a new DisplayGroup.\n     *\n     * @hide\n     * @see #getFlags()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ALWAYS_UNLOCKED",
+    "type" : "int",
+    "comment" : "\n     * Flag: Indicates that the display should always be unlocked. Only valid on virtual displays\n     * that aren't in the default display group.\n     *\n     * @hide\n     * @see #getFlags()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_TOUCH_FEEDBACK_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Flag: Indicates that the display should not play sound effects or perform haptic feedback\n     * when the user touches the screen.\n     *\n     * @hide\n     * @see #getFlags()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_OWN_FOCUS",
+    "type" : "int",
+    "comment" : "\n     * Flag: Indicates that the display maintains its own focus and touch mode.\n     *\n     * This flag is similar to {@link com.android.internal.R.bool.config_perDisplayFocusEnabled} in\n     * behavior, but only applies to the specific display instead of system-wide to all displays.\n     *\n     * Note: The display must be trusted in order to have its own focus.\n     *\n     * @see #FLAG_TRUSTED\n     * @hide\n     ",
+    "links" : [ "com.android.internal.R.bool.config_perDisplayFocusEnabled" ]
+  }, {
+    "name" : "FLAG_STEAL_TOP_FOCUS_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Flag: Indicates that the display should not become the top focused display by stealing the\n     * top focus from another display.\n     *\n     * <p>The result is that only targeted input events (displayId of input event matches the\n     * displayId of the display) can reach this display. A display with this flag set can still\n     * become the top focused display, if the system consists of only one display or if all\n     * displays have this flag set. In both cases the default display becomes the top focused\n     * display.\n     *\n     * <p>Note:  A display only has a focused window if either\n     * - the display is the top focused display or\n     * - the display manages its own focus (via {@link #FLAG_OWN_FOCUS})\n     * - or all the displays manage their own focus (via {@code config_perDisplayFocusEnabled} flag)\n     * If a display has no focused window, no input event is dispatched to it. Therefore this\n     * flag is only useful together with {@link #FLAG_OWN_FOCUS} and will be\n     * ignored if it is not set.\n     *\n     * <p>Note: The framework only supports IME on the top focused display (b/262520411). Therefore,\n     * Enabling this flag on a display implicitly disables showing any IME. This is not intended\n     * behavior but cannot be fixed until b/262520411 is implemented. If you need IME on display do\n     * not set this flag.\n     *\n     * @hide\n     * @see #getFlags()\n     ",
+    "links" : [ "#FLAG_OWN_FOCUS" ]
+  }, {
+    "name" : "FLAG_REAR",
+    "type" : "int",
+    "comment" : "\n     * Display flag: Indicates that the display is a rear display.\n     * <p>\n     * This flag identifies complementary displays that are facing away from the user.\n     * </p>\n     *\n     * @hide\n     * @see #getFlags()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_ROTATES_WITH_CONTENT",
+    "type" : "int",
+    "comment" : "\n     * Display flag: Indicates that the orientation of this display is not fixed and is coupled to\n     * the orientation of its content.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "FLAG_SCALING_DISABLED",
@@ -224,6 +280,46 @@
     "comment" : " 6",
     "links" : [ ]
   }, {
+    "name" : "STATE_REASON_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * The cause of the display state change is unknown.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_DEFAULT_POLICY",
+    "type" : "int",
+    "comment" : "\n     * The default power and display policy caused the display state.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_DRAW_WAKE_LOCK",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to acquiring a draw wake lock.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_OFFLOAD",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to display offloading.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_TILT",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to a tilt event.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_DREAM_MANAGER",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to the dream manager.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_REASON_KEY",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to a {@link KeyEvent}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.KeyEvent" ]
+  }, {
+    "name" : "STATE_REASON_MOTION",
+    "type" : "int",
+    "comment" : "\n     * The display state was changed due to a {@link MotionEvent}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.MotionEvent" ]
+  }, {
     "name" : "COLOR_MODE_INVALID",
     "type" : "int",
     "comment" : "\n     * Display color mode: The current color mode is unknown or invalid.\n     * @hide\n     ",
@@ -288,6 +384,11 @@
     "type" : "int",
     "comment" : " TODO (b/114338689): Remove the flag and use WindowManager#REMOVE_CONTENT_MODE_DESTROY",
     "links" : [ ]
+  }, {
+    "name" : "DISPLAY_MODE_ID_FOR_FRAME_RATE_OVERRIDE",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public int getDisplayId()",
@@ -350,14 +451,24 @@
     "comment" : "\n     * Gets the name of the display.\n     * <p>\n     * Note that some displays may be renamed by the user.\n     * </p>\n     *\n     * @return The display's name.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public float getBrightnessDefault()",
+    "returnType" : "float",
+    "comment" : "\n     * Gets the default brightness configured for the display.\n     *\n     * @return Default brightness between 0.0-1.0\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public BrightnessInfo getBrightnessInfo()",
+    "returnType" : "BrightnessInfo",
+    "comment" : "\n     * @return Brightness information about the display.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void getSize(Point outSize)",
     "returnType" : "void",
-    "comment" : "\n     * Gets the size of the display, in pixels.\n     * Value returned by this method does not necessarily represent the actual raw size\n     * (native resolution) of the display.\n     * <p>\n     * 1. The returned size may be adjusted to exclude certain system decor elements\n     * that are always visible.\n     * </p><p>\n     * 2. It may be scaled to provide compatibility with older applications that\n     * were originally designed for smaller displays.\n     * </p><p>\n     * 3. It can be different depending on the WindowManager to which the display belongs.\n     * </p><p>\n     * - If requested from non-Activity context (e.g. Application context via\n     * {@code (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE)})\n     * it will report the size of the entire display based on current rotation and with subtracted\n     * system decoration areas.\n     * </p><p>\n     * - If requested from activity (either using {@code getWindowManager()} or\n     * {@code (WindowManager) getSystemService(Context.WINDOW_SERVICE)}) resulting size will\n     * correspond to current app window size. In this case it can be smaller than physical size in\n     * multi-window mode.\n     * </p><p>\n     * Typically for the purposes of layout apps should make a request from activity context\n     * to obtain size available for the app content.\n     * </p>\n     *\n     * @param outSize A {@link Point} object to receive the size information.\n     * @deprecated Use {@link WindowManager#getCurrentWindowMetrics()} to obtain an instance of\n     * {@link WindowMetrics} and use {@link WindowMetrics#getBounds()} instead.\n     ",
+    "comment" : "\n     * Gets the size of the display in pixels.\n     *\n     * <p>The return value does not necessarily represent the actual size (native resolution) of the\n     * display. The returned size might be adjusted to exclude certain system decor elements that\n     * are always visible, or the size might be scaled to provide compatibility with older\n     * applications that were originally designed for smaller displays.\n     *\n     * <p>The returned size can also be different depending on the WindowManager bound to the\n     * display:\n     * <ul>\n     *     <li>If size is requested from an activity (either using a WindowManager accessed by\n     *         {@code getWindowManager()} or {@code getSystemService(Context.WINDOW_SERVICE)}), the\n     *         size of the current app window is returned. As a result, in multi-window mode, the\n     *         returned size can be smaller than the size of the device screen.\n     *     <li>If size is requested from a non-activity context (for example, the application\n     *         context, where the WindowManager is accessed by\n     *         {@code getApplicationContext().getSystemService(Context.WINDOW_SERVICE)}), the\n     *         returned size can vary depending on API level:\n     *         <ul>\n     *             <li>API level 29 and below &mdash; The size of the entire display (based on\n     *                 current rotation) minus system decoration areas is returned.\n     *             <li>API level 30 and above &mdash; The size of the top running activity in the\n     *                 current process is returned. If the current process has no running\n     *                 activities, the size of the device default display, including system\n     *                 decoration areas, is returned.\n     *         </ul>\n     * </ul>\n     *\n     * <p>For layout purposes, apps should make a request from an activity context to obtain the\n     * size of the display area available for app content.\n     *\n     * @param outSize A {@link Point} object which receives the display size information.\n     *\n     * @deprecated Use {@link WindowMetrics} instead. Obtain a {@code WindowMetrics} instance by\n     *     calling {@link WindowManager#getCurrentWindowMetrics()}, then call\n     *     {@link WindowMetrics#getBounds()} to get the dimensions of the application window.\n     ",
     "links" : [ "android.view.WindowMetrics", "android.view.WindowMetrics#getBounds()", "android.graphics.Point", "android.view.WindowManager#getCurrentWindowMetrics()" ]
   }, {
     "name" : "public void getRectSize(Rect outSize)",
     "returnType" : "void",
-    "comment" : "\n     * Gets the size of the display as a rectangle, in pixels.\n     *\n     * @param outSize A {@link Rect} object to receive the size information.\n     * @deprecated Use {@link WindowMetrics#getBounds()} to get the dimensions of the application\n     * window area.\n     ",
+    "comment" : "\n     * Gets the size of the display as a rectangle, in pixels.\n     *\n     * @param outSize A {@link Rect} object to receive the size information.\n     *\n     * @deprecated Use {@link WindowMetrics#getBounds()} to get the dimensions of the application\n     * window.\n     ",
     "links" : [ "android.graphics.Rect", "android.view.WindowMetrics#getBounds()" ]
   }, {
     "name" : "public void getCurrentSizeRange(Point outSmallestSize, Point outLargestSize)",
@@ -382,8 +493,13 @@
   }, {
     "name" : "public int getRotation()",
     "returnType" : "int",
-    "comment" : "\n     * Returns the rotation of the screen from its \"natural\" orientation.\n     * The returned value may be {@link Surface#ROTATION_0 Surface.ROTATION_0}\n     * (no rotation), {@link Surface#ROTATION_90 Surface.ROTATION_90},\n     * {@link Surface#ROTATION_180 Surface.ROTATION_180}, or\n     * {@link Surface#ROTATION_270 Surface.ROTATION_270}.  For\n     * example, if a device has a naturally tall screen, and the user has\n     * turned it on its side to go into a landscape orientation, the value\n     * returned here may be either {@link Surface#ROTATION_90 Surface.ROTATION_90}\n     * or {@link Surface#ROTATION_270 Surface.ROTATION_270} depending on\n     * the direction it was turned.  The angle is the rotation of the drawn\n     * graphics on the screen, which is the opposite direction of the physical\n     * rotation of the device.  For example, if the device is rotated 90\n     * degrees counter-clockwise, to compensate rendering will be rotated by\n     * 90 degrees clockwise and thus the returned value here will be\n     * {@link Surface#ROTATION_90 Surface.ROTATION_90}.\n     ",
-    "links" : [ "android.view.Surface#ROTATION_270", "android.view.Surface#ROTATION_180", "android.view.Surface#ROTATION_90", "android.view.Surface#ROTATION_0" ]
+    "comment" : "\n     * Returns the rotation of the screen from its \"natural\" orientation.\n     * The returned value may be {@link Surface#ROTATION_0 Surface.ROTATION_0}\n     * (no rotation), {@link Surface#ROTATION_90 Surface.ROTATION_90},\n     * {@link Surface#ROTATION_180 Surface.ROTATION_180}, or\n     * {@link Surface#ROTATION_270 Surface.ROTATION_270}.  For\n     * example, if a device has a naturally tall screen, and the user has\n     * turned it on its side to go into a landscape orientation, the value\n     * returned here may be either {@link Surface#ROTATION_90 Surface.ROTATION_90}\n     * or {@link Surface#ROTATION_270 Surface.ROTATION_270} depending on\n     * the direction it was turned.  The angle is the rotation of the drawn\n     * graphics on the screen, which is the opposite direction of the physical\n     * rotation of the device.  For example, if the device is rotated 90\n     * degrees counter-clockwise, to compensate rendering will be rotated by\n     * 90 degrees clockwise and thus the returned value here will be\n     * {@link Surface#ROTATION_90 Surface.ROTATION_90}.\n     *\n     * This rotation value will match the results of {@link #getMetrics}: this means that the\n     * rotation value will correspond to the activity if accessed through the activity.\n     ",
+    "links" : [ "android.view.Surface#ROTATION_270", "android.view.Surface#ROTATION_180", "android.view.Surface#ROTATION_90", "#getMetrics", "android.view.Surface#ROTATION_0" ]
+  }, {
+    "name" : "public int getInstallOrientation()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the install orientation of the display.\n     * @hide\n     ",
+    "links" : [ ]
   }, {
     "name" : "public int getOrientation()",
     "returnType" : "int",
@@ -394,6 +510,16 @@
     "returnType" : "DisplayCutout",
     "comment" : "\n     * Returns the {@link DisplayCutout}, or {@code null} if there is none.\n     *\n     * @see DisplayCutout\n     ",
     "links" : [ "android.view.DisplayCutout" ]
+  }, {
+    "name" : "public RoundedCorner getRoundedCorner(@RoundedCorner.Position int position)",
+    "returnType" : "RoundedCorner",
+    "comment" : "\n     * Returns the {@link RoundedCorner} of the given position if there is one.\n     *\n     * @param position the position of the rounded corner on the display.\n     *\n     * @return the rounded corner of the given position. Returns {@code null} if there is none.\n     ",
+    "links" : [ "android.view.RoundedCorner" ]
+  }, {
+    "name" : "public DisplayShape getShape()",
+    "returnType" : "DisplayShape",
+    "comment" : "\n     * Returns the {@link DisplayShape} which is based on display coordinates.\n     *\n     * To get the {@link DisplayShape} based on the window frame, use\n     * {@link WindowInsets#getDisplayShape()} instead.\n     *\n     * @see DisplayShape\n     ",
+    "links" : [ "android.view.WindowInsets#getDisplayShape()", "android.view.DisplayShape" ]
   }, {
     "name" : "public int getPixelFormat()",
     "returnType" : "int",
@@ -413,6 +539,11 @@
     "name" : "public Mode getMode()",
     "returnType" : "Mode",
     "comment" : "\n     * Returns the active mode of the display.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Mode getDefaultMode()",
+    "returnType" : "Mode",
+    "comment" : "\n     * Returns the default mode of the display.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public Mode[] getSupportedModes()",
@@ -440,9 +571,24 @@
     "comment" : " TODO (b/114338689): Remove the method and use IWindowManager#getRemoveContentMode",
     "links" : [ ]
   }, {
+    "name" : "public Display.Mode getSystemPreferredDisplayMode()",
+    "returnType" : "Display.Mode",
+    "comment" : "\n     * Returns the system's preferred display mode. This mode will be used when the user has not\n     * specified a display-mode preference. This returns null if the boot display mode feature is\n     * not supported by system.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public HdrCapabilities getHdrCapabilities()",
     "returnType" : "HdrCapabilities",
-    "comment" : "\n     * Returns the display's HDR capabilities.\n     *\n     * @see #isHdr()\n     ",
+    "comment" : "\n     * Returns the current display mode's HDR capabilities.\n     *\n     * @see #isHdr()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean contains(int[] disabledHdrTypes, int hdrType)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int[] getReportedHdrTypes()",
+    "returnType" : "int[]",
+    "comment" : "\n     * @hide\n     * Returns the current mode's supported HDR types.\n     *\n     * @see #isHdr()\n     * @see Mode#getSupportedHdrTypes()\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean isHdr()",
@@ -450,15 +596,60 @@
     "comment" : "\n     * Returns whether this display supports any HDR type.\n     *\n     * @see #getHdrCapabilities()\n     * @see HdrCapabilities#getSupportedHdrTypes()\n     ",
     "links" : [ ]
   }, {
+    "name" : "public boolean isHdrSdrRatioAvailable()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return Whether the display supports reporting an hdr/sdr ratio. If this is false,\n     *         {@link #getHdrSdrRatio()} will always be 1.0f\n     ",
+    "links" : [ "#getHdrSdrRatio()" ]
+  }, {
+    "name" : "public float getHdrSdrRatio()",
+    "returnType" : "float",
+    "comment" : "\n     * @return The current hdr/sdr ratio expressed as the ratio of targetHdrPeakBrightnessInNits /\n     *         targetSdrWhitePointInNits. If {@link #isHdrSdrRatioAvailable()} is false, this\n     *         always returns 1.0f.\n     ",
+    "links" : [ "#isHdrSdrRatioAvailable()" ]
+  }, {
+    "name" : "private int findHdrSdrRatioListenerLocked(Consumer<Display> listener)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerHdrSdrRatioChangedListener(@NonNull Executor executor, @NonNull Consumer<Display> listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a listener that will be invoked whenever the display's hdr/sdr ratio has changed.\n     * After receiving the callback on the specified Executor, call {@link #getHdrSdrRatio()} to\n     * get the updated value.\n     * If {@link #isHdrSdrRatioAvailable()} is false, then an IllegalStateException will be thrown\n     *\n     * @see #unregisterHdrSdrRatioChangedListener(Consumer)\n     * @param executor The executor to invoke the listener on\n     * @param listener The listener to invoke when the HDR/SDR ratio changes\n     * @throws IllegalStateException if {@link #isHdrSdrRatioAvailable()} is false\n     ",
+    "links" : [ "#isHdrSdrRatioAvailable()", "#getHdrSdrRatio()" ]
+  }, {
+    "name" : "public void unregisterHdrSdrRatioChangedListener(@NonNull Consumer<Display> listener)",
+    "returnType" : "void",
+    "comment" : "\n     * @param listener  The previously\n     *                  {@link #registerHdrSdrRatioChangedListener(Executor, Consumer) registered}\n     *                  hdr/sdr ratio listener to remove.\n     *\n     * @see #registerHdrSdrRatioChangedListener(Executor, Consumer)\n     ",
+    "links" : [ "#registerHdrSdrRatioChangedListener(Executor" ]
+  }, {
+    "name" : "public void setUserPreferredDisplayMode(@NonNull Display.Mode mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the default {@link Display.Mode} to use for the display.  The display mode includes\n     * preference for resolution and refresh rate.\n     * If the mode specified is not supported by the display, then no mode change occurs.\n     *\n     * @param mode The {@link Display.Mode} to set, which can include resolution and/or\n     * refresh-rate. It is created using {@link Display.Mode.Builder}.\n     *`\n     * @hide\n     ",
+    "links" : [ "Display.Mode", "Display.Mode.Builder" ]
+  }, {
+    "name" : "public void clearUserPreferredDisplayMode()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes the display's user preferred display mode.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Display.Mode getUserPreferredDisplayMode()",
+    "returnType" : "Display.Mode",
+    "comment" : "\n     * Returns the display's user preferred display mode.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public boolean isWideColorGamut()",
     "returnType" : "boolean",
     "comment" : "\n     * Returns whether this display can be used to display wide color gamut content.\n     * This does not necessarily mean the device itself can render wide color gamut\n     * content. To ensure wide color gamut content can be produced, refer to\n     * {@link Configuration#isScreenWideColorGamut()}.\n     ",
-    "links" : [ "android.content.res.Configuration#isScreenWideColorGamut()" ]
+    "links" : [ "android.app.WindowConfiguration#isScreenWideColorGamut()" ]
   }, {
     "name" : "public ColorSpace getPreferredWideGamutColorSpace()",
     "returnType" : "ColorSpace",
     "comment" : "\n     * Returns the preferred wide color space of the Display.\n     * The returned wide gamut color space is based on hardware capability and\n     * is preferred by the composition pipeline.\n     * Returns null if the display doesn't support wide color gamut.\n     * {@link Display#isWideColorGamut()}.\n     ",
     "links" : [ "android.view.Display#isWideColorGamut()" ]
+  }, {
+    "name" : "public OverlayProperties getOverlaySupport()",
+    "returnType" : "OverlayProperties",
+    "comment" : "\n     * Returns the {@link OverlayProperties} of the display.\n     ",
+    "links" : [ "android.hardware.OverlayProperties" ]
   }, {
     "name" : "public int[] getSupportedColorModes()",
     "returnType" : "int[]",
@@ -480,25 +671,40 @@
     "comment" : "\n     * This is how far in advance a buffer must be queued for presentation at\n     * a given time.  If you want a buffer to appear on the screen at\n     * time N, you must submit the buffer before (N - presentationDeadline).\n     * <p>\n     * The desired presentation time for GLES rendering may be set with\n     * {@link android.opengl.EGLExt#eglPresentationTimeANDROID}.  For video decoding, use\n     * {@link android.media.MediaCodec#releaseOutputBuffer(int, long)}.  Times are\n     * expressed in nanoseconds, using the system monotonic clock\n     * ({@link System#nanoTime}).\n     ",
     "links" : [ "android.opengl.EGLExt#eglPresentationTimeANDROID", "#nanoTime", "android.media.MediaCodec#releaseOutputBuffer(int" ]
   }, {
+    "name" : "public DeviceProductInfo getDeviceProductInfo()",
+    "returnType" : "DeviceProductInfo",
+    "comment" : "\n     * Returns the product-specific information about the display or the directly connected\n     * device on the display chain.\n     * For example, if the display is transitively connected, this field may contain product\n     * information about the intermediate device.\n     * Returns {@code null} if product information is not available.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void getMetrics(DisplayMetrics outMetrics)",
     "returnType" : "void",
-    "comment" : "\n     * Gets display metrics that describe the size and density of this display.\n     * The size returned by this method does not necessarily represent the\n     * actual raw size (native resolution) of the display.\n     * <p>\n     * 1. The returned size may be adjusted to exclude certain system decor elements\n     * that are always visible.\n     * </p><p>\n     * 2. It may be scaled to provide compatibility with older applications that\n     * were originally designed for smaller displays.\n     * </p><p>\n     * 3. It can be different depending on the WindowManager to which the display belongs.\n     * </p><p>\n     * - If requested from non-Activity context (e.g. Application context via\n     * {@code (WindowManager) getApplicationContext().getSystemService(Context.WINDOW_SERVICE)})\n     * metrics will report the size of the entire display based on current rotation and with\n     * subtracted system decoration areas.\n     * </p><p>\n     * - If requested from activity (either using {@code getWindowManager()} or\n     * {@code (WindowManager) getSystemService(Context.WINDOW_SERVICE)}) resulting metrics will\n     * correspond to current app window metrics. In this case the size can be smaller than physical\n     * size in multi-window mode.\n     * </p>\n     *\n     * @param outMetrics A {@link DisplayMetrics} object to receive the metrics.\n     * @deprecated Use {@link WindowMetrics#getBounds()} to get the dimensions of the application\n     * window area, and {@link Configuration#densityDpi} to get the current density.\n     ",
-    "links" : [ "android.view.WindowMetrics#getBounds()", "android.content.res.Configuration#densityDpi", "android.util.DisplayMetrics" ]
+    "comment" : "\n     * Gets the size and density of this display.\n     *\n     * <p>The size returned does not necessarily represent the actual size (native resolution) of\n     * the display. The returned size might be adjusted to exclude certain system decor elements\n     * that are always visible, or the size might be scaled to provide compatibility with older\n     * applications that were originally designed for smaller displays.\n     *\n     * <p>The returned size can also be different depending on the WindowManager associated with the\n     * display:\n     * <ul>\n     *     <li>If metrics are requested from an activity (either using a WindowManager accessed by\n     *         {@code getWindowManager()} or {@code getSystemService(Context.WINDOW_SERVICE)}), the\n     *         returned metrics provide the size of the current app window. As a result, in\n     *         multi-window mode, the returned size can be smaller than the size of the device\n     *         screen.\n     *     <li>If metrics are requested from a non-activity context (for example, the application\n     *         context, where the WindowManager is accessed by\n     *         {@code getApplicationContext().getSystemService(Context.WINDOW_SERVICE)}), the\n     *         returned size can vary depending on API level:\n     *         <ul>\n     *             <li>API level 29 and below &mdash; The returned metrics provide the size of the\n     *                 entire display (based on current rotation) minus system decoration areas.\n     *             <li>API level 30 and above &mdash; The returned metrics provide the size of the\n     *                 top running activity in the current process. If the current process has no\n     *                 running activities, the metrics provide the size of the default display of\n     *                 the device, including system decoration areas.\n     *         </ul>\n     * </ul>\n     *\n     * @param outMetrics A {@link DisplayMetrics} object which receives the display metrics.\n     *\n     * @deprecated Use {@link WindowMetrics#getBounds()} to get the dimensions of the application\n     *     window. Use {@link WindowMetrics#getDensity()} to get the density of the application\n     *     window.\n     ",
+    "links" : [ "android.view.WindowMetrics#getBounds()", "android.view.WindowMetrics#getDensity()", "android.util.DisplayMetrics" ]
   }, {
     "name" : "public void getRealSize(Point outSize)",
     "returnType" : "void",
-    "comment" : "\n     * Gets the real size of the display without subtracting any window decor or\n     * applying any compatibility scale factors.\n     * <p>\n     * The size is adjusted based on the current rotation of the display.\n     * </p><p>\n     * The real size may be smaller than the physical size of the screen when the\n     * window manager is emulating a smaller display (using adb shell wm size).\n     * </p>\n     *\n     * @param outSize Set to the real size of the display.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Gets the size of the largest region of the display accessible to an app in the current system\n     * state, without subtracting any window decor or applying scaling factors.\n     * <p>\n     * The size is adjusted based on the current rotation of the display.\n     * <p></p>\n     * The returned size will fall into one of these scenarios:\n     * <ol>\n     * <li>The device has no partitions on the display. The returned value is the largest region\n     * of the display accessible to an app in the current system state, regardless of windowing\n     * mode.</li>\n     * <li>The device divides a single display into multiple partitions. An application is\n     * restricted to a portion of the display. This is common in devices where the display changes\n     * size, such as foldables or large screens. The returned size will match the portion of\n     * the display the application is restricted to.</li>\n     * <li>The window manager is emulating a different display size, using {@code adb shell wm\n     * size}. The returned size will match the emulated display size.</li>\n     * </ol>\n     * </p><p>\n     * The returned value is <b>unsuitable to use when sizing and placing UI elements</b>, since it\n     * does not reflect the application window size in any of these scenarios.\n     * {@link WindowManager#getCurrentWindowMetrics()} is an alternative that returns the size\n     * of the current application window, even if the window is on a device with a partitioned\n     * display. This helps prevent UI bugs where UI elements are misaligned or placed beyond the\n     * bounds of the window.\n     * <p></p>\n     * Handling multi-window mode correctly is necessary since applications are not always\n     * fullscreen. A user on a large screen device, such as a tablet or ChromeOS devices, is more\n     * likely to use multi-window modes.\n     * <p></p>\n     * For example, consider a device with a display partitioned into two halves. The user may have\n     * a fullscreen application open on the first partition. They may have two applications open in\n     * split screen (an example of multi-window mode) on the second partition, with each application\n     * consuming half of the partition. In this case,\n     * {@link WindowManager#getCurrentWindowMetrics()} reports the fullscreen window is half of the\n     * screen in size, and each split screen window is a quarter of the screen in size. On the other\n     * hand, {@link #getRealSize} reports half of the screen size for all windows, since the\n     * application windows are all restricted to their respective partitions.\n     * </p>\n     *\n     * @param outSize Set to the real size of the display.\n     * @deprecated Use {@link WindowManager#getCurrentWindowMetrics()} to identify the current size\n     * of the activity window. UI-related work, such as choosing UI layouts, should rely\n     * upon {@link WindowMetrics#getBounds()}.\n     ",
+    "links" : [ "android.view.WindowMetrics#getBounds()", "android.view.WindowManager#getCurrentWindowMetrics()", "#getRealSize" ]
   }, {
     "name" : "public void getRealMetrics(DisplayMetrics outMetrics)",
     "returnType" : "void",
-    "comment" : "\n     * Gets display metrics based on the real size of this display.\n     * <p>\n     * The size is adjusted based on the current rotation of the display.\n     * </p><p>\n     * The real size may be smaller than the physical size of the screen when the\n     * window manager is emulating a smaller display (using adb shell wm size).\n     * </p>\n     *\n     * @param outMetrics A {@link DisplayMetrics} object to receive the metrics.\n     ",
-    "links" : [ "android.util.DisplayMetrics" ]
+    "comment" : "\n     * Gets the size of the largest region of the display accessible to an app in the current system\n     * state, without subtracting any window decor or applying scaling factors.\n     * <p>\n     * The size is adjusted based on the current rotation of the display.\n     * <p></p>\n     * The returned size will fall into one of these scenarios:\n     * <ol>\n     * <li>The device has no partitions on the display. The returned value is the largest region\n     * of the display accessible to an app in the current system state, regardless of windowing\n     * mode.</li>\n     * <li>The device divides a single display into multiple partitions. An application is\n     * restricted to a portion of the display. This is common in devices where the display changes\n     * size, such as foldables or large screens. The returned size will match the portion of\n     * the display the application is restricted to.</li>\n     * <li>The window manager is emulating a different display size, using {@code adb shell wm\n     * size}. The returned size will match the emulated display size.</li>\n     * </ol>\n     * </p><p>\n     * The returned value is <b>unsuitable to use when sizing and placing UI elements</b>, since it\n     * does not reflect the application window size in any of these scenarios.\n     * {@link WindowManager#getCurrentWindowMetrics()} is an alternative that returns the size\n     * of the current application window, even if the window is on a device with a partitioned\n     * display. This helps prevent UI bugs where UI elements are misaligned or placed beyond the\n     * bounds of the window.\n     * <p></p>\n     * Handling multi-window mode correctly is necessary since applications are not always\n     * fullscreen. A user on a large screen device, such as a tablet or ChromeOS devices, is more\n     * likely to use multi-window modes.\n     * <p></p>\n     * For example, consider a device with a display partitioned into two halves. The user may have\n     * a fullscreen application open on the first partition. They may have two applications open in\n     * split screen (an example of multi-window mode) on the second partition, with each application\n     * consuming half of the partition. In this case,\n     * {@link WindowManager#getCurrentWindowMetrics()} reports the fullscreen window is half of the\n     * screen in size, and each split screen window is a quarter of the screen in size. On the other\n     * hand, {@link #getRealMetrics} reports half of the screen size for all windows, since the\n     * application windows are all restricted to their respective partitions.\n     * </p>\n     *\n     * @param outMetrics A {@link DisplayMetrics} object to receive the metrics.\n     * @deprecated Use {@link WindowManager#getCurrentWindowMetrics()} to identify the current size\n     * of the activity window. UI-related work, such as choosing UI layouts, should rely\n     * upon {@link WindowMetrics#getBounds()}. Use {@link Configuration#densityDpi} to\n     * get the current density.\n     ",
+    "links" : [ "android.view.WindowMetrics#getBounds()", "#getRealMetrics", "android.app.WindowConfiguration#densityDpi", "android.view.WindowManager#getCurrentWindowMetrics()", "android.util.DisplayMetrics" ]
+  }, {
+    "name" : "private boolean shouldReportMaxBounds()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines if {@link WindowConfiguration#getMaxBounds()} should be reported as the\n     * display dimensions. The max bounds field may be smaller than the logical dimensions\n     * when apps need to be sandboxed.\n     *\n     * Depends upon {@link WindowConfiguration#getMaxBounds()} being set in\n     * {@link com.android.server.wm.ConfigurationContainer#providesMaxBounds()}. In most cases, this\n     * value reflects the size of the current DisplayArea.\n     * @return {@code true} when max bounds should be applied.\n     ",
+    "links" : [ "com.android.server.wm.ConfigurationContainer#providesMaxBounds()", "android.app.WindowConfiguration#getMaxBounds()" ]
   }, {
     "name" : "public int getState()",
     "returnType" : "int",
     "comment" : "\n     * Gets the state of the display, such as whether it is on or off.\n     *\n     * @return The state of the display: one of {@link #STATE_OFF}, {@link #STATE_ON},\n     * {@link #STATE_DOZE}, {@link #STATE_DOZE_SUSPEND}, {@link #STATE_ON_SUSPEND}, or\n     * {@link #STATE_UNKNOWN}.\n     ",
     "links" : [ "#STATE_ON_SUSPEND", "#STATE_ON", "#STATE_DOZE_SUSPEND", "#STATE_OFF", "#STATE_UNKNOWN", "#STATE_DOZE" ]
+  }, {
+    "name" : "public int getCommittedState()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the committed state of the display.\n     *\n     * @return The latest committed display state, such as {@link #STATE_ON}. The display state\n     * {@link Display#getState()} is set as committed only after power state changes finish.\n     *\n     * @hide\n     ",
+    "links" : [ "#STATE_ON", "android.view.Display#getState()" ]
   }, {
     "name" : "public boolean hasAccess(int uid)",
     "returnType" : "boolean",
@@ -520,6 +726,11 @@
     "comment" : "\n     * @return {@code true} if the display is a trusted display.\n     *\n     * @see #FLAG_TRUSTED\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public boolean canStealTopFocus()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return {@code true} if the display can steal the top focus from another display.\n     *\n     * @see #FLAG_STEAL_TOP_FOCUS_DISABLED\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "private void updateDisplayInfoLocked()",
     "returnType" : "void",
     "comment" : "",
@@ -527,6 +738,26 @@
   }, {
     "name" : "private void updateCachedAppSizeIfNeededLocked()",
     "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean noFlip(@Surface.Rotation int realRotation, @Surface.Rotation int localRotation)",
+    "returnType" : "boolean",
+    "comment" : " Returns {@code false} if the width and height of display should swap. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void adjustSize(@NonNull Point size, @Surface.Rotation int realRotation, @Surface.Rotation int localRotation)",
+    "returnType" : "void",
+    "comment" : "\n     * Adjusts the given size by a rotation offset if necessary.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void adjustMetrics(@NonNull DisplayMetrics metrics, @Surface.Rotation int realRotation, @Surface.Rotation int localRotation)",
+    "returnType" : "void",
+    "comment" : "\n     * Adjusts the given metrics by a rotation offset if necessary.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getLocalRotation()",
+    "returnType" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -545,6 +776,11 @@
     "comment" : "\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public static String stateReasonToString(@StateReason int reason)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
     "name" : "public static boolean isSuspendedState(int state)",
     "returnType" : "boolean",
     "comment" : "\n     * Returns true if display updates may be suspended while in the specified\n     * display power state. In SUSPEND states, updates are absolutely forbidden.\n     * @hide\n     ",
@@ -559,7 +795,37 @@
     "returnType" : "boolean",
     "comment" : "\n     * Returns true if the display is in active state such as {@link #STATE_ON}\n     * or {@link #STATE_VR}.\n     * @hide\n     ",
     "links" : [ "#STATE_ON", "#STATE_VR" ]
+  }, {
+    "name" : "public static boolean isOffState(int state)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the display is in an off state such as {@link #STATE_OFF}.\n     * @hide\n     ",
+    "links" : [ "#STATE_OFF" ]
+  }, {
+    "name" : "public static boolean isOnState(int state)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the display is in an on state such as {@link #STATE_ON}\n     * or {@link #STATE_VR} or {@link #STATE_ON_SUSPEND}.\n     * @hide\n     ",
+    "links" : [ "#STATE_ON_SUSPEND", "#STATE_ON", "#STATE_VR" ]
+  }, {
+    "name" : "public static boolean isWidthValid(int width)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the specified width is valid.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isHeightValid(int height)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the specified height is valid.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isRefreshRateValid(float refreshRate)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the specified refresh-rate is valid.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public DisplayDecorationSupport getDisplayDecorationSupport()",
+    "returnType" : "DisplayDecorationSupport",
+    "comment" : "\n     * Returns whether/how the specified display supports DISPLAY_DECORATION.\n     *\n     * Composition.DISPLAY_DECORATION is a special layer type which is used to\n     * render the screen decorations (i.e. antialiased rounded corners and\n     * cutouts) while taking advantage of specific hardware.\n     *\n     * @hide\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "mGlobal", "mDisplayId", "mLayerStack", "mFlags", "mType", "mAddress", "mOwnerUid", "mOwnerPackageName", "mResources", "mDisplayAdjustments", "mDisplayInfo", "mIsValid", "mTempMetrics", "CACHED_APP_SIZE_DURATION_MILLIS", "mLastCachedAppSizeUpdate", "mCachedAppWidthCompat", "mCachedAppHeightCompat", "mMayAdjustByFixedRotation", "DEFAULT_DISPLAY", "INVALID_DISPLAY", "FLAG_SUPPORTS_PROTECTED_BUFFERS", "FLAG_SECURE", "FLAG_PRIVATE", "FLAG_PRESENTATION", "FLAG_ROUND", "FLAG_CAN_SHOW_WITH_INSECURE_KEYGUARD", "FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS", "FLAG_TRUSTED", "FLAG_SCALING_DISABLED", "TYPE_UNKNOWN", "TYPE_INTERNAL", "TYPE_EXTERNAL", "TYPE_WIFI", "TYPE_OVERLAY", "TYPE_VIRTUAL", "STATE_UNKNOWN", "STATE_OFF", "STATE_ON", "STATE_DOZE", "STATE_DOZE_SUSPEND", "STATE_VR", "STATE_ON_SUSPEND", "COLOR_MODE_INVALID", "COLOR_MODE_DEFAULT", "COLOR_MODE_BT601_625", "COLOR_MODE_BT601_625_UNADJUSTED", "COLOR_MODE_BT601_525", "COLOR_MODE_BT601_525_UNADJUSTED", "COLOR_MODE_BT709", "COLOR_MODE_DCI_P3", "COLOR_MODE_SRGB", "COLOR_MODE_ADOBE_RGB", "COLOR_MODE_DISPLAY_P3", "REMOVE_MODE_MOVE_CONTENT_TO_PRIMARY", "REMOVE_MODE_DESTROY_CONTENT" ],
-  "methodNames" : [ "public int getDisplayId()", "public String getUniqueId()", "public boolean isValid()", "public boolean getDisplayInfo(DisplayInfo outDisplayInfo)", "public int getLayerStack()", "public int getFlags()", "public int getType()", "public DisplayAddress getAddress()", "public int getOwnerUid()", "public String getOwnerPackageName()", "public DisplayAdjustments getDisplayAdjustments()", "public String getName()", "public void getSize(Point outSize)", "public void getRectSize(Rect outSize)", "public void getCurrentSizeRange(Point outSmallestSize, Point outLargestSize)", "public int getMaximumSizeDimension()", "public int getWidth()", "public int getHeight()", "public int getRotation()", "public int getOrientation()", "public DisplayCutout getCutout()", "public int getPixelFormat()", "public float getRefreshRate()", "public float[] getSupportedRefreshRates()", "public Mode getMode()", "public Mode[] getSupportedModes()", "public boolean isMinimalPostProcessingSupported()", "public void requestColorMode(int colorMode)", "public int getColorMode()", "public int getRemoveMode()", "public HdrCapabilities getHdrCapabilities()", "public boolean isHdr()", "public boolean isWideColorGamut()", "public ColorSpace getPreferredWideGamutColorSpace()", "public int[] getSupportedColorModes()", "public ColorSpace[] getSupportedWideColorGamut()", "public long getAppVsyncOffsetNanos()", "public long getPresentationDeadlineNanos()", "public void getMetrics(DisplayMetrics outMetrics)", "public void getRealSize(Point outSize)", "public void getRealMetrics(DisplayMetrics outMetrics)", "public int getState()", "public boolean hasAccess(int uid)", "public static boolean hasAccess(int uid, int flags, int ownerUid, int displayId)", "public boolean isPublicPresentation()", "public boolean isTrusted()", "private void updateDisplayInfoLocked()", "private void updateCachedAppSizeIfNeededLocked()", "public String toString()", "public static String typeToString(int type)", "public static String stateToString(int state)", "public static boolean isSuspendedState(int state)", "public static boolean isDozeState(int state)", "public static boolean isActiveState(int state)" ]
+  "methodNames" : [ "public int getDisplayId()", "public String getUniqueId()", "public boolean isValid()", "public boolean getDisplayInfo(DisplayInfo outDisplayInfo)", "public int getLayerStack()", "public int getFlags()", "public int getType()", "public DisplayAddress getAddress()", "public int getOwnerUid()", "public String getOwnerPackageName()", "public DisplayAdjustments getDisplayAdjustments()", "public String getName()", "public float getBrightnessDefault()", "public BrightnessInfo getBrightnessInfo()", "public void getSize(Point outSize)", "public void getRectSize(Rect outSize)", "public void getCurrentSizeRange(Point outSmallestSize, Point outLargestSize)", "public int getMaximumSizeDimension()", "public int getWidth()", "public int getHeight()", "public int getRotation()", "public int getInstallOrientation()", "public int getOrientation()", "public DisplayCutout getCutout()", "public RoundedCorner getRoundedCorner(@RoundedCorner.Position int position)", "public DisplayShape getShape()", "public int getPixelFormat()", "public float getRefreshRate()", "public float[] getSupportedRefreshRates()", "public Mode getMode()", "public Mode getDefaultMode()", "public Mode[] getSupportedModes()", "public boolean isMinimalPostProcessingSupported()", "public void requestColorMode(int colorMode)", "public int getColorMode()", "public int getRemoveMode()", "public Display.Mode getSystemPreferredDisplayMode()", "public HdrCapabilities getHdrCapabilities()", "private boolean contains(int[] disabledHdrTypes, int hdrType)", "public int[] getReportedHdrTypes()", "public boolean isHdr()", "public boolean isHdrSdrRatioAvailable()", "public float getHdrSdrRatio()", "private int findHdrSdrRatioListenerLocked(Consumer<Display> listener)", "public void registerHdrSdrRatioChangedListener(@NonNull Executor executor, @NonNull Consumer<Display> listener)", "public void unregisterHdrSdrRatioChangedListener(@NonNull Consumer<Display> listener)", "public void setUserPreferredDisplayMode(@NonNull Display.Mode mode)", "public void clearUserPreferredDisplayMode()", "public Display.Mode getUserPreferredDisplayMode()", "public boolean isWideColorGamut()", "public ColorSpace getPreferredWideGamutColorSpace()", "public OverlayProperties getOverlaySupport()", "public int[] getSupportedColorModes()", "public ColorSpace[] getSupportedWideColorGamut()", "public long getAppVsyncOffsetNanos()", "public long getPresentationDeadlineNanos()", "public DeviceProductInfo getDeviceProductInfo()", "public void getMetrics(DisplayMetrics outMetrics)", "public void getRealSize(Point outSize)", "public void getRealMetrics(DisplayMetrics outMetrics)", "private boolean shouldReportMaxBounds()", "public int getState()", "public int getCommittedState()", "public boolean hasAccess(int uid)", "public static boolean hasAccess(int uid, int flags, int ownerUid, int displayId)", "public boolean isPublicPresentation()", "public boolean isTrusted()", "public boolean canStealTopFocus()", "private void updateDisplayInfoLocked()", "private void updateCachedAppSizeIfNeededLocked()", "private static boolean noFlip(@Surface.Rotation int realRotation, @Surface.Rotation int localRotation)", "private void adjustSize(@NonNull Point size, @Surface.Rotation int realRotation, @Surface.Rotation int localRotation)", "private void adjustMetrics(@NonNull DisplayMetrics metrics, @Surface.Rotation int realRotation, @Surface.Rotation int localRotation)", "private int getLocalRotation()", "public String toString()", "public static String typeToString(int type)", "public static String stateToString(int state)", "public static String stateReasonToString(@StateReason int reason)", "public static boolean isSuspendedState(int state)", "public static boolean isDozeState(int state)", "public static boolean isActiveState(int state)", "public static boolean isOffState(int state)", "public static boolean isOnState(int state)", "public static boolean isWidthValid(int width)", "public static boolean isHeightValid(int height)", "public static boolean isRefreshRateValid(float refreshRate)", "public DisplayDecorationSupport getDisplayDecorationSupport()" ],
+  "variableNames" : [ "TAG", "DEBUG", "mLock", "mGlobal", "mDisplayId", "mFlags", "mType", "mOwnerUid", "mOwnerPackageName", "mResources", "mDisplayAdjustments", "mDisplayInfo", "mIsValid", "mTempMetrics", "CACHED_APP_SIZE_DURATION_MILLIS", "mLastCachedAppSizeUpdate", "mCachedAppWidthCompat", "mCachedAppHeightCompat", "mHdrSdrRatioListeners", "DEFAULT_DISPLAY", "INVALID_DISPLAY", "INVALID_DISPLAY_WIDTH", "INVALID_DISPLAY_HEIGHT", "INVALID_DISPLAY_REFRESH_RATE", "DEFAULT_DISPLAY_GROUP", "INVALID_DISPLAY_GROUP", "FLAG_SUPPORTS_PROTECTED_BUFFERS", "FLAG_SECURE", "FLAG_PRIVATE", "FLAG_PRESENTATION", "FLAG_ROUND", "FLAG_CAN_SHOW_WITH_INSECURE_KEYGUARD", "FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS", "FLAG_TRUSTED", "FLAG_OWN_DISPLAY_GROUP", "FLAG_ALWAYS_UNLOCKED", "FLAG_TOUCH_FEEDBACK_DISABLED", "FLAG_OWN_FOCUS", "FLAG_STEAL_TOP_FOCUS_DISABLED", "FLAG_REAR", "FLAG_ROTATES_WITH_CONTENT", "FLAG_SCALING_DISABLED", "TYPE_UNKNOWN", "TYPE_INTERNAL", "TYPE_EXTERNAL", "TYPE_WIFI", "TYPE_OVERLAY", "TYPE_VIRTUAL", "STATE_UNKNOWN", "STATE_OFF", "STATE_ON", "STATE_DOZE", "STATE_DOZE_SUSPEND", "STATE_VR", "STATE_ON_SUSPEND", "STATE_REASON_UNKNOWN", "STATE_REASON_DEFAULT_POLICY", "STATE_REASON_DRAW_WAKE_LOCK", "STATE_REASON_OFFLOAD", "STATE_REASON_TILT", "STATE_REASON_DREAM_MANAGER", "STATE_REASON_KEY", "STATE_REASON_MOTION", "COLOR_MODE_INVALID", "COLOR_MODE_DEFAULT", "COLOR_MODE_BT601_625", "COLOR_MODE_BT601_625_UNADJUSTED", "COLOR_MODE_BT601_525", "COLOR_MODE_BT601_525_UNADJUSTED", "COLOR_MODE_BT709", "COLOR_MODE_DCI_P3", "COLOR_MODE_SRGB", "COLOR_MODE_ADOBE_RGB", "COLOR_MODE_DISPLAY_P3", "REMOVE_MODE_MOVE_CONTENT_TO_PRIMARY", "REMOVE_MODE_DESTROY_CONTENT", "DISPLAY_MODE_ID_FOR_FRAME_RATE_OVERRIDE" ]
 }

@@ -1,0 +1,386 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/impl/coll/CollationBuilder.java",
+  "packageName" : "android.icu.impl.coll",
+  "className" : "CollationBuilder",
+  "comment" : "\n * @hide Only a subset of ICU is exposed in Android\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "kClosureLoopLimit",
+    "type" : "int",
+    "comment" : " usage.",
+    "links" : [ ]
+  }, {
+    "name" : "COMPOSITES",
+    "type" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_INDEX",
+    "type" : "int",
+    "comment" : " At most 1M nodes, limited by the 20 bits in node bit fields. ",
+    "links" : [ ]
+  }, {
+    "name" : "HAS_BEFORE2",
+    "type" : "int",
+    "comment" : "\n     * Node bit 6 is set on a primary node if there are nodes\n     * with secondary values below the common secondary weight (05).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HAS_BEFORE3",
+    "type" : "int",
+    "comment" : "\n     * Node bit 5 is set on a primary or secondary node if there are nodes\n     * with tertiary values below the common tertiary weight (05).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "IS_TAILORED",
+    "type" : "int",
+    "comment" : "\n     * Node bit 3 distinguishes a tailored node, which has no weight value,\n     * from a node with an explicit (root or default) weight.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "nfd",
+    "type" : "Normalizer2",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "fcd",
+    "type" : "Normalizer2",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "nfcImpl",
+    "type" : "Normalizer2Impl",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "base",
+    "type" : "CollationTailoring",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "baseData",
+    "type" : "CollationData",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "rootElements",
+    "type" : "CollationRootElements",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "variableTop",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "dataBuilder",
+    "type" : "CollationDataBuilder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "fastLatinEnabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "optimizeSet",
+    "type" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ces",
+    "type" : "long[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "cesLength",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "rootPrimaryIndexes",
+    "type" : "UVector32",
+    "comment" : "\n     * Indexes of nodes with root primary weights, sorted by primary.\n     * Compact form of a TreeMap from root primary to node index.\n     *\n     * This is a performance optimization for finding reset positions.\n     * Without this, we would have to search through the entire nodes list.\n     * It also allows storing root primary weights in list head nodes,\n     * without previous index, leaving room in root primary nodes for 32-bit primary weights.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "nodes",
+    "type" : "UVector64",
+    "comment" : "\n     * Data structure for assigning tailored weights and CEs.\n     * Doubly-linked lists of nodes in mostly collation order.\n     * Each list starts with a root primary node and ends with a nextIndex of 0.\n     *\n     * When there are any nodes in the list, then there is always a root primary node at index 0.\n     * This allows some code not to have to check explicitly for nextIndex==0.\n     *\n     * Root primary nodes have 32-bit weights but do not have previous indexes.\n     * All other nodes have at most 16-bit weights and do have previous indexes.\n     *\n     * Nodes with explicit weights store root collator weights,\n     * or default weak weights (e.g., secondary 05) for stronger nodes.\n     * \"Tailored\" nodes, with the IS_TAILORED bit set,\n     * do not store explicit weights but rather\n     * create a difference of a certain strength from the preceding node.\n     *\n     * A root node is followed by either\n     * - a root/default node of the same strength, or\n     * - a root/default node of the next-weaker strength, or\n     * - a tailored node of the same strength.\n     *\n     * A node of a given strength normally implies \"common\" weights on weaker levels.\n     *\n     * A node with HAS_BEFORE2 must be immediately followed by\n     * a secondary node with an explicit below-common weight, then a secondary tailored node,\n     * and later an explicit common-secondary node.\n     * The below-common weight can be a root weight,\n     * or it can be BEFORE_WEIGHT16 for tailoring before an implied common weight\n     * or before the lowest root weight.\n     * (&[before 2] resets to an explicit secondary node so that\n     * the following addRelation(secondary) tailors right after that.\n     * If we did not have this node and instead were to reset on the primary node,\n     * then addRelation(secondary) would skip forward to the the COMMON_WEIGHT16 node.)\n     *\n     * If the flag is not set, then there are no explicit secondary nodes\n     * with the common or lower weights.\n     *\n     * Same for HAS_BEFORE3 for tertiary nodes and weights.\n     * A node must not have both flags set.\n     *\n     * Tailored CEs are initially represented in a CollationDataBuilder as temporary CEs\n     * which point to stable indexes in this list,\n     * and temporary CEs stored in a CollationDataBuilder only point to tailored nodes.\n     *\n     * A temporary CE in the ces[] array may point to a non-tailored reset-before-position node,\n     * until the next relation is added.\n     *\n     * At the end, the tailored weights are allocated as necessary,\n     * then the tailored nodes are replaced with final CEs,\n     * and the CollationData is rewritten by replacing temporary CEs with final ones.\n     *\n     * We cannot simply insert new nodes in the middle of the array\n     * because that would invalidate the indexes stored in existing temporary CEs.\n     * We need to use a linked graph with stable indexes to existing nodes.\n     * A doubly-linked list seems easiest to maintain.\n     *\n     * Each node is stored as an long, with its fields stored as bit fields.\n     *\n     * Root primary node:\n     * - primary weight: 32 bits 63..32\n     * - reserved/unused/zero: 4 bits 31..28\n     *\n     * Weaker root nodes & tailored nodes:\n     * - a weight: 16 bits 63..48\n     *   + a root or default weight for a non-tailored node\n     *   + unused/zero for a tailored node\n     * - index to the previous node: 20 bits 47..28\n     *\n     * All types of nodes:\n     * - index to the next node: 20 bits 27..8\n     *   + nextIndex=0 in last node per root-primary list\n     * - reserved/unused/zero bits: bits 7, 4, 2\n     * - HAS_BEFORE2: bit 6\n     * - HAS_BEFORE3: bit 5\n     * - IS_TAILORED: bit 3\n     * - the difference strength (primary/secondary/tertiary/quaternary): 2 bits 1..0\n     *\n     * We could allocate structs with pointers, but we would have to store them\n     * in a pointer list so that they can be indexed from temporary CEs,\n     * and they would require more memory allocations.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public CollationTailoring parseAndBuild(String ruleString) throws ParseException",
+    "returnType" : "CollationTailoring",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void addReset(int strength, CharSequence str)",
+    "returnType" : "void",
+    "comment" : " Implements CollationRuleParser.Sink. ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getWeight16Before(int index, long node, int level)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the secondary or tertiary weight preceding the current node's weight.\n     * node=nodes[index].\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long getSpecialResetPosition(CharSequence str)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void addRelation(int strength, CharSequence prefix, CharSequence str, CharSequence extension)",
+    "returnType" : "void",
+    "comment" : " Implements CollationRuleParser.Sink. ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findOrInsertNodeForCEs(int strength)",
+    "returnType" : "int",
+    "comment" : "\n     * Picks one of the current CEs and finds or inserts a node in the graph\n     * for the CE + strength.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findOrInsertNodeForRootCE(long ce, int strength)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final int binarySearchForRootPrimaryNode(int[] rootPrimaryIndexes, int length, long[] nodes, long p)",
+    "returnType" : "int",
+    "comment" : "\n     * Like Java Collections.binarySearch(List, key, Comparator).\n     *\n     * @return the index>=0 where the item was found,\n     *         or the index<0 for inserting the string at ~index in sorted order\n     *         (index into rootPrimaryIndexes)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findOrInsertNodeForPrimary(long p)",
+    "returnType" : "int",
+    "comment" : " Finds or inserts the node for a root CE's primary weight. ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findOrInsertWeakNode(int index, int weight16, int level)",
+    "returnType" : "int",
+    "comment" : " Finds or inserts the node for a secondary or tertiary weight. ",
+    "links" : [ ]
+  }, {
+    "name" : "private int insertTailoredNodeAfter(int index, int strength)",
+    "returnType" : "int",
+    "comment" : "\n     * Makes and inserts a new tailored node into the list, after the one at index.\n     * Skips over nodes of weaker strength to maintain collation order\n     * (\"postpone insertion\").\n     * @return the new node's index\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int insertNodeBetween(int index, int nextIndex, long node)",
+    "returnType" : "int",
+    "comment" : "\n     * Inserts a new node into the list, between list-adjacent items.\n     * The node's previous and next indexes must not be set yet.\n     * @return the new node's index\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int findCommonNode(int index, int strength)",
+    "returnType" : "int",
+    "comment" : "\n     * Finds the node which implies or contains a common=05 weight of the given strength\n     * (secondary or tertiary), if the current node is stronger.\n     * Skips weaker nodes and tailored nodes if the current node is stronger\n     * and is followed by an explicit-common-weight node.\n     * Always returns the input index if that node is no stronger than the given strength.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setCaseBits(CharSequence nfdString)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void suppressContractions(UnicodeSet set)",
+    "returnType" : "void",
+    "comment" : " Implements CollationRuleParser.Sink. ",
+    "links" : [ ]
+  }, {
+    "name" : " void optimize(UnicodeSet set)",
+    "returnType" : "void",
+    "comment" : " Implements CollationRuleParser.Sink. ",
+    "links" : [ ]
+  }, {
+    "name" : "private int addWithClosure(CharSequence nfdPrefix, CharSequence nfdString, long[] newCEs, int newCEsLength, int ce32)",
+    "returnType" : "int",
+    "comment" : "\n     * Adds the mapping and its canonical closure.\n     * Takes ce32=dataBuilder.encodeCEs(...) so that the data builder\n     * need not re-encode the CEs multiple times.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int addOnlyClosure(CharSequence nfdPrefix, CharSequence nfdString, long[] newCEs, int newCEsLength, int ce32)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addTailComposites(CharSequence nfdPrefix, CharSequence nfdString)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean mergeCompositeIntoString(CharSequence nfdString, int indexAfterLastStarter, int composite, CharSequence decomp, StringBuilder newNFDString, StringBuilder newString)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean equalSubSequences(CharSequence left, int leftStart, CharSequence right, int rightStart)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean ignorePrefix(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean ignoreString(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isFCD(CharSequence s)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeOverComposites()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int addIfDifferent(CharSequence prefix, CharSequence str, long[] newCEs, int newCEsLength, int ce32)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean sameCEs(long[] ces1, int ces1Length, long[] ces2, int ces2Length)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static final int alignWeightRight(int w)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void makeTailoredCEs()",
+    "returnType" : "void",
+    "comment" : "\n     * Walks the tailoring graph and overwrites tailored nodes with new CEs.\n     * After this, the graph is destroyed.\n     * The nodes array can then be used only as a source of tailored CEs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countTailoredNodes(long[] nodesArray, int i, int strength)",
+    "returnType" : "int",
+    "comment" : "\n     * Counts the tailored nodes of the given strength up to the next node\n     * which is either stronger or has an explicit weight of this strength.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void finalizeCEs()",
+    "returnType" : "void",
+    "comment" : " Replaces temporary CEs with the final CEs they point to. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static long tempCEFromIndexAndStrength(int index, int strength)",
+    "returnType" : "long",
+    "comment" : "\n     * Encodes \"temporary CE\" data into a CE that fits into the CE32 data structure,\n     * with 2-byte primary, 1-byte secondary and 6-bit tertiary,\n     * with valid CE byte values.\n     *\n     * The index must not exceed 20 bits (0xfffff).\n     * The strength must fit into 2 bits (Collator.PRIMARY..Collator.QUATERNARY).\n     *\n     * Temporary CEs are distinguished from real CEs by their use of\n     * secondary weights 06..45 which are otherwise reserved for compressed sort keys.\n     *\n     * The case bits are unused and available.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int indexFromTempCE(long tempCE)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int strengthFromTempCE(long tempCE)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTempCE(long ce)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int indexFromTempCE32(int tempCE32)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTempCE32(int ce32)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int ceStrength(long ce)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long nodeFromWeight32(long weight32)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long nodeFromWeight16(int weight16)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long nodeFromPreviousIndex(int previous)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long nodeFromNextIndex(int next)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long nodeFromStrength(int strength)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long weight32FromNode(long node)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int weight16FromNode(long node)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int previousIndexFromNode(long node)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int nextIndexFromNode(long node)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int strengthFromNode(long node)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean nodeHasBefore2(long node)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean nodeHasBefore3(long node)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean nodeHasAnyBefore(long node)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isTailoredNode(long node)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long changeNodePreviousIndex(long node, int previous)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long changeNodeNextIndex(long node, int next)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public CollationTailoring parseAndBuild(String ruleString) throws ParseException", " void addReset(int strength, CharSequence str)", "private int getWeight16Before(int index, long node, int level)", "private long getSpecialResetPosition(CharSequence str)", " void addRelation(int strength, CharSequence prefix, CharSequence str, CharSequence extension)", "private int findOrInsertNodeForCEs(int strength)", "private int findOrInsertNodeForRootCE(long ce, int strength)", "private static final int binarySearchForRootPrimaryNode(int[] rootPrimaryIndexes, int length, long[] nodes, long p)", "private int findOrInsertNodeForPrimary(long p)", "private int findOrInsertWeakNode(int index, int weight16, int level)", "private int insertTailoredNodeAfter(int index, int strength)", "private int insertNodeBetween(int index, int nextIndex, long node)", "private int findCommonNode(int index, int strength)", "private void setCaseBits(CharSequence nfdString)", " void suppressContractions(UnicodeSet set)", " void optimize(UnicodeSet set)", "private int addWithClosure(CharSequence nfdPrefix, CharSequence nfdString, long[] newCEs, int newCEsLength, int ce32)", "private int addOnlyClosure(CharSequence nfdPrefix, CharSequence nfdString, long[] newCEs, int newCEsLength, int ce32)", "private void addTailComposites(CharSequence nfdPrefix, CharSequence nfdString)", "private boolean mergeCompositeIntoString(CharSequence nfdString, int indexAfterLastStarter, int composite, CharSequence decomp, StringBuilder newNFDString, StringBuilder newString)", "private boolean equalSubSequences(CharSequence left, int leftStart, CharSequence right, int rightStart)", "private boolean ignorePrefix(CharSequence s)", "private boolean ignoreString(CharSequence s)", "private boolean isFCD(CharSequence s)", "private void closeOverComposites()", "private int addIfDifferent(CharSequence prefix, CharSequence str, long[] newCEs, int newCEsLength, int ce32)", "private static boolean sameCEs(long[] ces1, int ces1Length, long[] ces2, int ces2Length)", "private static final int alignWeightRight(int w)", "private void makeTailoredCEs()", "private static int countTailoredNodes(long[] nodesArray, int i, int strength)", "private void finalizeCEs()", "private static long tempCEFromIndexAndStrength(int index, int strength)", "private static int indexFromTempCE(long tempCE)", "private static int strengthFromTempCE(long tempCE)", "private static boolean isTempCE(long ce)", "private static int indexFromTempCE32(int tempCE32)", "private static boolean isTempCE32(int ce32)", "private static int ceStrength(long ce)", "private static long nodeFromWeight32(long weight32)", "private static long nodeFromWeight16(int weight16)", "private static long nodeFromPreviousIndex(int previous)", "private static long nodeFromNextIndex(int next)", "private static long nodeFromStrength(int strength)", "private static long weight32FromNode(long node)", "private static int weight16FromNode(long node)", "private static int previousIndexFromNode(long node)", "private static int nextIndexFromNode(long node)", "private static int strengthFromNode(long node)", "private static boolean nodeHasBefore2(long node)", "private static boolean nodeHasBefore3(long node)", "private static boolean nodeHasAnyBefore(long node)", "private static boolean isTailoredNode(long node)", "private static long changeNodePreviousIndex(long node, int previous)", "private static long changeNodeNextIndex(long node, int next)" ],
+  "variableNames" : [ "DEBUG", "kClosureLoopLimit", "COMPOSITES", "MAX_INDEX", "HAS_BEFORE2", "HAS_BEFORE3", "IS_TAILORED", "nfd", "fcd", "nfcImpl", "base", "baseData", "rootElements", "variableTop", "dataBuilder", "fastLatinEnabled", "optimizeSet", "ces", "cesLength", "rootPrimaryIndexes", "nodes" ]
+}

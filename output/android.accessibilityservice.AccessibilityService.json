@@ -1,0 +1,876 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/accessibilityservice/AccessibilityService.java",
+  "packageName" : "android.accessibilityservice",
+  "className" : "AccessibilityService",
+  "comment" : "\n * Accessibility services should only be used to assist users with disabilities in using\n * Android devices and apps. They run in the background and receive callbacks by the system\n * when {@link AccessibilityEvent}s are fired. Such events denote some state transition\n * in the user interface, for example, the focus has changed, a button has been clicked,\n * etc. Such a service can optionally request the capability for querying the content\n * of the active window. Development of an accessibility service requires extending this\n * class and implementing its abstract methods.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about creating AccessibilityServices, read the\n * <a href=\"{@docRoot}guide/topics/ui/accessibility/index.html\">Accessibility</a>\n * developer guide.</p>\n * </div>\n *\n * <h3>Lifecycle</h3>\n * <p>\n * The lifecycle of an accessibility service is managed exclusively by the system and\n * follows the established service life cycle. Starting an accessibility service is triggered\n * exclusively by the user explicitly turning the service on in device settings. After the system\n * binds to a service, it calls {@link AccessibilityService#onServiceConnected()}. This method can\n * be overridden by clients that want to perform post binding setup.\n * </p>\n * <p>\n * An accessibility service stops either when the user turns it off in device settings or when\n * it calls {@link AccessibilityService#disableSelf()}.\n * </p>\n * <h3>Declaration</h3>\n * <p>\n * An accessibility is declared as any other service in an AndroidManifest.xml, but it\n * must do two things:\n * <ul>\n *     <li>\n *         Specify that it handles the \"android.accessibilityservice.AccessibilityService\"\n *         {@link android.content.Intent}.\n *     </li>\n *     <li>\n *         Request the {@link android.Manifest.permission#BIND_ACCESSIBILITY_SERVICE} permission to\n *         ensure that only the system can bind to it.\n *     </li>\n * </ul>\n * If either of these items is missing, the system will ignore the accessibility service.\n * Following is an example declaration:\n * </p>\n * <pre> &lt;service android:name=\".MyAccessibilityService\"\n *         android:permission=\"android.permission.BIND_ACCESSIBILITY_SERVICE\"&gt;\n *     &lt;intent-filter&gt;\n *         &lt;action android:name=\"android.accessibilityservice.AccessibilityService\" /&gt;\n *     &lt;/intent-filter&gt;\n *     . . .\n * &lt;/service&gt;</pre>\n * <h3>Configuration</h3>\n * <p>\n * An accessibility service can be configured to receive specific types of accessibility events,\n * listen only to specific packages, get events from each type only once in a given time frame,\n * retrieve window content, specify a settings activity, etc.\n * </p>\n * <p>\n * There are two approaches for configuring an accessibility service:\n * </p>\n * <ul>\n * <li>\n * Providing a {@link #SERVICE_META_DATA meta-data} entry in the manifest when declaring\n * the service. A service declaration with a meta-data tag is presented below:\n * <pre> &lt;service android:name=\".MyAccessibilityService\"&gt;\n *     &lt;intent-filter&gt;\n *         &lt;action android:name=\"android.accessibilityservice.AccessibilityService\" /&gt;\n *     &lt;/intent-filter&gt;\n *     &lt;meta-data android:name=\"android.accessibilityservice\" android:resource=\"@xml/accessibilityservice\" /&gt;\n * &lt;/service&gt;</pre>\n * <p class=\"note\">\n * <strong>Note:</strong> This approach enables setting all properties.\n * </p>\n * <p>\n * For more details refer to {@link #SERVICE_META_DATA} and\n * <code>&lt;{@link android.R.styleable#AccessibilityService accessibility-service}&gt;</code>.\n * </p>\n * </li>\n * <li>\n * Calling {@link AccessibilityService#setServiceInfo(AccessibilityServiceInfo)}. Note\n * that this method can be called any time to dynamically change the service configuration.\n * <p class=\"note\">\n * <strong>Note:</strong> This approach enables setting only dynamically configurable properties:\n * {@link AccessibilityServiceInfo#eventTypes},\n * {@link AccessibilityServiceInfo#feedbackType},\n * {@link AccessibilityServiceInfo#flags},\n * {@link AccessibilityServiceInfo#notificationTimeout},\n * {@link AccessibilityServiceInfo#packageNames}\n * </p>\n * <p>\n * For more details refer to {@link AccessibilityServiceInfo}.\n * </p>\n * </li>\n * </ul>\n * <h3>Retrieving window content</h3>\n * <p>\n * A service can specify in its declaration that it can retrieve window\n * content which is represented as a tree of {@link AccessibilityWindowInfo} and\n * {@link AccessibilityNodeInfo} objects. Note that\n * declaring this capability requires that the service declares its configuration via\n * an XML resource referenced by {@link #SERVICE_META_DATA}.\n * </p>\n * <p>\n * Window content may be retrieved with\n * {@link AccessibilityEvent#getSource() AccessibilityEvent.getSource()},\n * {@link AccessibilityService#findFocus(int)},\n * {@link AccessibilityService#getWindows()}, or\n * {@link AccessibilityService#getRootInActiveWindow()}.\n * </p>\n * <p class=\"note\">\n * <strong>Note</strong> An accessibility service may have requested to be notified for\n * a subset of the event types, and thus be unaware when the node hierarchy has changed. It is also\n * possible for a node to contain outdated information because the window content may change at any\n * time.\n * </p>\n * <h3>Drawing Accessibility Overlays</h3>\n * <p>Accessibility services can draw overlays on top of existing screen contents.\n * Accessibility overlays can be used to visually highlight items on the screen\n * e.g. indicate the current item with accessibility focus.\n * Overlays can also offer the user a way to interact with the service directly and quickly\n * customize the service's behavior.</p>\n * <p>Accessibility overlays can be attached to a particular window or to the display itself.\n * Attaching an overlay to a window allows the overly to move, grow and shrink as the window does.\n * The overlay will maintain the same relative position within the window bounds as the window\n * moves. The overlay will also maintain the same relative position within the window bounds if\n * the window is resized.\n * To attach an overlay to a window, use {@link #attachAccessibilityOverlayToWindow}.\n * Attaching an overlay to the display means that the overlay is independent of the active\n * windows on that display.\n * To attach an overlay to a display, use {@link #attachAccessibilityOverlayToDisplay}. </p>\n * <p> When positioning an overlay that is attached to a window, the service must use window\n * coordinates. In order to position an overlay on top of an existing UI element it is necessary\n * to know the bounds of that element in window coordinates. To find the bounds in window\n * coordinates of an element, find the corresponding {@link AccessibilityNodeInfo} as discussed\n * above and call {@link AccessibilityNodeInfo#getBoundsInWindow}. </p>\n * <h3>Notification strategy</h3>\n * <p>\n * All accessibility services are notified of all events they have requested, regardless of their\n * feedback type.\n * </p>\n * <p class=\"note\">\n * <strong>Note:</strong> The event notification timeout is useful to avoid propagating\n * events to the client too frequently since this is accomplished via an expensive\n * interprocess call. One can think of the timeout as a criteria to determine when\n * event generation has settled down.</p>\n * <h3>Event types</h3>\n * <ul>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_CLICKED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_LONG_CLICKED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_FOCUSED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_SELECTED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_TEXT_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_WINDOW_STATE_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_NOTIFICATION_STATE_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_TOUCH_EXPLORATION_GESTURE_START}</li>\n * <li>{@link AccessibilityEvent#TYPE_TOUCH_EXPLORATION_GESTURE_END}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_HOVER_ENTER}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_HOVER_EXIT}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_SCROLLED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_TEXT_SELECTION_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_WINDOW_CONTENT_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_ANNOUNCEMENT}</li>\n * <li>{@link AccessibilityEvent#TYPE_GESTURE_DETECTION_START}</li>\n * <li>{@link AccessibilityEvent#TYPE_GESTURE_DETECTION_END}</li>\n * <li>{@link AccessibilityEvent#TYPE_TOUCH_INTERACTION_START}</li>\n * <li>{@link AccessibilityEvent#TYPE_TOUCH_INTERACTION_END}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_ACCESSIBILITY_FOCUSED}</li>\n * <li>{@link AccessibilityEvent#TYPE_WINDOWS_CHANGED}</li>\n * <li>{@link AccessibilityEvent#TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED}</li>\n * </ul>\n * <h3>Feedback types</h3>\n * <ul>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_AUDIBLE}</li>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_HAPTIC}</li>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_SPOKEN}</li>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_VISUAL}</li>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_GENERIC}</li>\n * <li>{@link AccessibilityServiceInfo#FEEDBACK_BRAILLE}</li>\n * </ul>\n * @see AccessibilityEvent\n * @see AccessibilityServiceInfo\n * @see android.view.accessibility.AccessibilityManager\n ",
+  "links" : [ "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_CLICKED", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_BRAILLE", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_HOVER_ENTER", "android.accessibilityservice.AccessibilityService#findFocus(int)", "android.view.accessibility.AccessibilityEvent#TYPE_NOTIFICATION_STATE_CHANGED", "android.view.accessibility.AccessibilityEvent#TYPE_TOUCH_EXPLORATION_GESTURE_START", "android.accessibilityservice.AccessibilityService#disableSelf()", "android.accessibilityservice.AccessibilityServiceInfo#eventTypes", "android.accessibilityservice.AccessibilityServiceInfo", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_HAPTIC", "android.accessibilityservice.AccessibilityService#getWindows()", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_SELECTED", "android.view.accessibility.AccessibilityEvent", "android.view.accessibility.AccessibilityEvent#TYPE_WINDOW_STATE_CHANGED", "android.accessibilityservice.AccessibilityServiceInfo#packageNames", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_SPOKEN", "android.accessibilityservice.AccessibilityService#setServiceInfo(AccessibilityServiceInfo)", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_HOVER_EXIT", "android.accessibilityservice.AccessibilityService#getRootInActiveWindow()", "android.view.accessibility.AccessibilityEvent#getSource()", "android.view.accessibility.AccessibilityEvent#TYPE_TOUCH_EXPLORATION_GESTURE_END", "android.accessibilityservice.AccessibilityService#onServiceConnected()", "#SERVICE_META_DATA", "android.Manifest.permission#BIND_ACCESSIBILITY_SERVICE", "android.view.accessibility.AccessibilityNodeInfo", "android.content.Intent", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_AUDIBLE", "android.R.styleable#AccessibilityService", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_VISUAL", "android.view.accessibility.AccessibilityNodeInfo#getBoundsInWindow", "android.accessibilityservice.AccessibilityServiceInfo#flags", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_FOCUSED", "android.accessibilityservice.AccessibilityServiceInfo#feedbackType", "android.view.accessibility.AccessibilityEvent#TYPE_TOUCH_INTERACTION_END", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_TEXT_CHANGED", "android.accessibilityservice.AccessibilityServiceInfo#FEEDBACK_GENERIC", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_SCROLLED", "#attachAccessibilityOverlayToWindow", "android.accessibilityservice.AccessibilityServiceInfo#notificationTimeout", "android.view.accessibility.AccessibilityEvent#TYPE_WINDOW_CONTENT_CHANGED", "android.view.accessibility.AccessibilityEvent#TYPE_TOUCH_INTERACTION_START", "android.view.accessibility.AccessibilityEvent#TYPE_GESTURE_DETECTION_END", "#attachAccessibilityOverlayToDisplay", "android.view.accessibility.AccessibilityEvent#TYPE_WINDOWS_CHANGED", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_TEXT_SELECTION_CHANGED", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_LONG_CLICKED", "android.view.accessibility.AccessibilityEvent#TYPE_VIEW_ACCESSIBILITY_FOCUSED", "android.view.accessibility.AccessibilityEvent#TYPE_GESTURE_DETECTION_START", "android.view.accessibility.AccessibilityWindowInfo", "android.view.accessibility.AccessibilityEvent#TYPE_ANNOUNCEMENT" ],
+  "variables" : [ {
+    "name" : "GESTURE_TOUCH_EXPLORATION",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a touch-exploration gesture on the touch screen without ever\n     * triggering gesture detection. This gesture is only dispatched when {@link\n     * AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS} is set.\n     *\n     * @hide\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS" ]
+  }, {
+    "name" : "GESTURE_PASSTHROUGH",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a passthrough gesture on the touch screen without ever triggering\n     * gesture detection. This gesture is only dispatched when {@link\n     * AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS} is set.\n     * @hide\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS" ]
+  }, {
+    "name" : "GESTURE_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed an unrecognized gesture on the touch screen. This gesture is only\n     * dispatched when {@link AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS} is set.\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_SEND_MOTION_EVENTS" ]
+  }, {
+    "name" : "GESTURE_SWIPE_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_LEFT_AND_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe left and right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_RIGHT_AND_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe right and left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_UP_AND_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe up and down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_DOWN_AND_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a swipe down and up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_LEFT_AND_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a left and up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_LEFT_AND_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a left and down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_RIGHT_AND_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a right and up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_RIGHT_AND_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a right and down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_UP_AND_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed an up and left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_UP_AND_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed an up and right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_DOWN_AND_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a down and left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_SWIPE_DOWN_AND_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a down and right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_DOUBLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a double tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_DOUBLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a double tap and hold gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_SINGLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger single tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_DOUBLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger double tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_TRIPLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger triple tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SINGLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger single tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_DOUBLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger double tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_TRIPLE_TAP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger triple tap gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_SWIPE_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger swipe up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_SWIPE_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger swipe down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_SWIPE_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger swipe left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_SWIPE_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a two-finger swipe right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SWIPE_UP",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger swipe up gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SWIPE_DOWN",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger swipe down gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SWIPE_LEFT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger swipe left gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SWIPE_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * The user has performed a three-finger swipe right gesture on the touch screen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_SWIPE_UP",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger swipe up gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_SWIPE_DOWN",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger swipe down gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_SWIPE_LEFT",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger swipe left gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_SWIPE_RIGHT",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger swipe right gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_SINGLE_TAP",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger single tap gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_DOUBLE_TAP",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger double tap gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_TRIPLE_TAP",
+    "type" : "int",
+    "comment" : " The user has performed a four-finger triple tap gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_DOUBLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a two-finger double tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_DOUBLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a three-finger double tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_2_FINGER_TRIPLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a two-finger  triple-tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_SINGLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a three-finger  single-tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_3_FINGER_TRIPLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a three-finger  triple-tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "GESTURE_4_FINGER_DOUBLE_TAP_AND_HOLD",
+    "type" : "int",
+    "comment" : " The user has performed a two-finger double tap and hold gesture on the touch screen. ",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} that must be declared as handled by the service.\n     ",
+    "links" : [ "android.content.Intent" ]
+  }, {
+    "name" : "SERVICE_META_DATA",
+    "type" : "String",
+    "comment" : "\n     * Name under which an AccessibilityService component publishes information\n     * about itself. This meta-data must reference an XML resource containing an\n     * <code>&lt;{@link android.R.styleable#AccessibilityService accessibility-service}&gt;</code>\n     * tag. This is a sample XML file configuring an accessibility service:\n     * <pre> &lt;accessibility-service\n     *     android:accessibilityEventTypes=\"typeViewClicked|typeViewFocused\"\n     *     android:packageNames=\"foo.bar, foo.baz\"\n     *     android:accessibilityFeedbackType=\"feedbackSpoken\"\n     *     android:notificationTimeout=\"100\"\n     *     android:accessibilityFlags=\"flagDefault\"\n     *     android:settingsActivity=\"foo.bar.TestBackActivity\"\n     *     android:canRetrieveWindowContent=\"true\"\n     *     android:canRequestTouchExplorationMode=\"true\"\n     *     . . .\n     * /&gt;</pre>\n     ",
+    "links" : [ "android.R.styleable#AccessibilityService" ]
+  }, {
+    "name" : "GLOBAL_ACTION_BACK",
+    "type" : "int",
+    "comment" : "\n     * Action to go back.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_HOME",
+    "type" : "int",
+    "comment" : "\n     * Action to go home.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_RECENTS",
+    "type" : "int",
+    "comment" : "\n     * Action to toggle showing the overview of recent apps. Will fail on platforms that don't\n     * show recent apps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_NOTIFICATIONS",
+    "type" : "int",
+    "comment" : "\n     * Action to open the notifications.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_QUICK_SETTINGS",
+    "type" : "int",
+    "comment" : "\n     * Action to open the quick settings.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_POWER_DIALOG",
+    "type" : "int",
+    "comment" : "\n     * Action to open the power long-press dialog.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN",
+    "type" : "int",
+    "comment" : "\n     * Action to toggle docking the current app's window.\n     * <p>\n     * <strong>Note:</strong>  It is effective only if it appears in {@link #getSystemActions()}.\n     ",
+    "links" : [ "#getSystemActions()" ]
+  }, {
+    "name" : "GLOBAL_ACTION_LOCK_SCREEN",
+    "type" : "int",
+    "comment" : "\n     * Action to lock the screen\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_TAKE_SCREENSHOT",
+    "type" : "int",
+    "comment" : "\n     * Action to take a screenshot\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_KEYCODE_HEADSETHOOK",
+    "type" : "int",
+    "comment" : "\n     * Action to send the KEYCODE_HEADSETHOOK KeyEvent, which is used to answer and hang up calls\n     * and play and stop media. Calling takes priority. If there is an incoming call,\n     * this action can be used to answer that call, and if there is an ongoing call, to hang up on\n     * that call.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_ACCESSIBILITY_BUTTON",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger the Accessibility Button\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_ACCESSIBILITY_BUTTON_CHOOSER",
+    "type" : "int",
+    "comment" : "\n     * Action to bring up the Accessibility Button's chooser menu\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger the Accessibility Shortcut. This shortcut has a hardware trigger and can\n     * be activated by holding down the two volume keys.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS",
+    "type" : "int",
+    "comment" : "\n     * Action to show Launcher's all apps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE",
+    "type" : "int",
+    "comment" : "\n     * Action to dismiss the notification shade\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DPAD_UP",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger dpad up keyevent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DPAD_DOWN",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger dpad down keyevent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DPAD_LEFT",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger dpad left keyevent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DPAD_RIGHT",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger dpad right keyevent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GLOBAL_ACTION_DPAD_CENTER",
+    "type" : "int",
+    "comment" : "\n     * Action to trigger dpad center keyevent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_AUTO",
+    "type" : "int",
+    "comment" : "\n     * Allow the system to control when the soft keyboard is shown.\n     * @see SoftKeyboardController\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_HIDDEN",
+    "type" : "int",
+    "comment" : "\n     * Never show the soft keyboard.\n     * @see SoftKeyboardController\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_IGNORE_HARD_KEYBOARD",
+    "type" : "int",
+    "comment" : "\n     * Allow the soft keyboard to be shown, even if a hard keyboard is connected\n     * @see SoftKeyboardController\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_MASK",
+    "type" : "int",
+    "comment" : "\n     * Mask used to cover the show modes supported in public API\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_HARD_KEYBOARD_ORIGINAL_VALUE",
+    "type" : "int",
+    "comment" : "\n     * Bit used to hold the old value of the hard IME setting to restore when a service is shut\n     * down.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHOW_MODE_HARD_KEYBOARD_OVERRIDDEN",
+    "type" : "int",
+    "comment" : "\n     * Bit for show mode setting to indicate that the user has overridden the hard keyboard\n     * behavior.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TAKE_SCREENSHOT_SUCCESS",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is success.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_INTERNAL_ERROR",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is internal error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is no accessibility access.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is that too little time has\n     * elapsed since the last screenshot.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is invalid display Id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_INVALID_WINDOW",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is invalid accessibility window Id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_TAKE_SCREENSHOT_SECURE_WINDOW",
+    "type" : "int",
+    "comment" : "\n     * The status of taking screenshot is failure and the reason is the window contains secure\n     * content.\n     * @see WindowManager.LayoutParams#FLAG_SECURE\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACCESSIBILITY_TAKE_SCREENSHOT_REQUEST_INTERVAL_TIMES_MS",
+    "type" : "int",
+    "comment" : "\n     * The interval time of calling\n     * {@link AccessibilityService#takeScreenshot(int, Executor, Consumer)} API.\n     * @hide\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityService#takeScreenshot(int" ]
+  }, {
+    "name" : "KEY_ACCESSIBILITY_SCREENSHOT_STATUS",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_ACCESSIBILITY_SCREENSHOT_HARDWAREBUFFER",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_ACCESSIBILITY_SCREENSHOT_COLORSPACE",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_ACCESSIBILITY_SCREENSHOT_TIMESTAMP",
+    "type" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "OVERLAY_RESULT_SUCCESS",
+    "type" : "int",
+    "comment" : " Result code indicating the overlay was successfully attached. ",
+    "links" : [ ]
+  }, {
+    "name" : "OVERLAY_RESULT_INTERNAL_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Result code indicating the overlay could not be attached due to an internal\n     * error and not\n     * because of problems with the input.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "OVERLAY_RESULT_INVALID",
+    "type" : "int",
+    "comment" : "\n     * Result code indicating the overlay could not be attached because the\n     * specified display or\n     * window id was invalid.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInfo",
+    "type" : "AccessibilityServiceInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWindowToken",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWindowManager",
+    "type" : "WindowManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMagnificationControllers",
+    "type" : "SparseArray<MagnificationController>",
+    "comment" : " List of magnification controllers, mapping from displayId -> MagnificationController. ",
+    "links" : [ ]
+  }, {
+    "name" : "mTouchInteractionControllers",
+    "type" : "SparseArray<TouchInteractionController>",
+    "comment" : "\n     * List of touch interaction controllers, mapping from displayId -> TouchInteractionController.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSoftKeyboardController",
+    "type" : "SoftKeyboardController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputMethod",
+    "type" : "InputMethod",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputMethodInitialized",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAccessibilityButtonControllers",
+    "type" : "SparseArray<AccessibilityButtonController>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBrailleDisplayController",
+    "type" : "BrailleDisplayController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mGestureStatusCallbackSequence",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mGestureStatusCallbackInfos",
+    "type" : "SparseArray<GestureResultCallbackInfo>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mFingerprintGestureController",
+    "type" : "FingerprintGestureController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMotionEventSources",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public abstract void onAccessibilityEvent(AccessibilityEvent event)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback for {@link android.view.accessibility.AccessibilityEvent}s.\n     *\n     * @param event The new event. This event is owned by the caller and cannot be used after\n     * this method returns. Services wishing to use the event after this method returns should\n     * make a copy.\n     ",
+    "links" : [ "android.view.accessibility.AccessibilityEvent" ]
+  }, {
+    "name" : "public abstract void onInterrupt()",
+    "returnType" : "void",
+    "comment" : "\n     * Callback for interrupting the accessibility feedback.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispatchServiceConnected()",
+    "returnType" : "void",
+    "comment" : "\n     * Dispatches service connection to internal components first, then the\n     * client code.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateInputMethod(AccessibilityServiceInfo info)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onServiceConnected()",
+    "returnType" : "void",
+    "comment" : "\n     * This method is a part of the {@link AccessibilityService} lifecycle and is\n     * called after the system has successfully bound to the service. If is\n     * convenient to use this method for setting the {@link AccessibilityServiceInfo}.\n     *\n     * @see AccessibilityServiceInfo\n     * @see #setServiceInfo(AccessibilityServiceInfo)\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityService", "android.accessibilityservice.AccessibilityServiceInfo" ]
+  }, {
+    "name" : "protected boolean onGesture(int gestureId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called by {@link #onGesture(AccessibilityGestureEvent)} when the user performs a specific\n     * gesture on the default display.\n     *\n     * <strong>Note:</strong> To receive gestures an accessibility service must\n     * request that the device is in touch exploration mode by setting the\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE}\n     * flag.\n     *\n     * @param gestureId The unique id of the performed gesture.\n     *\n     * @return Whether the gesture was handled.\n     * @deprecated Override {@link #onGesture(AccessibilityGestureEvent)} instead.\n     *\n     * @see #GESTURE_SWIPE_UP\n     * @see #GESTURE_SWIPE_UP_AND_LEFT\n     * @see #GESTURE_SWIPE_UP_AND_DOWN\n     * @see #GESTURE_SWIPE_UP_AND_RIGHT\n     * @see #GESTURE_SWIPE_DOWN\n     * @see #GESTURE_SWIPE_DOWN_AND_LEFT\n     * @see #GESTURE_SWIPE_DOWN_AND_UP\n     * @see #GESTURE_SWIPE_DOWN_AND_RIGHT\n     * @see #GESTURE_SWIPE_LEFT\n     * @see #GESTURE_SWIPE_LEFT_AND_UP\n     * @see #GESTURE_SWIPE_LEFT_AND_RIGHT\n     * @see #GESTURE_SWIPE_LEFT_AND_DOWN\n     * @see #GESTURE_SWIPE_RIGHT\n     * @see #GESTURE_SWIPE_RIGHT_AND_UP\n     * @see #GESTURE_SWIPE_RIGHT_AND_LEFT\n     * @see #GESTURE_SWIPE_RIGHT_AND_DOWN\n     ",
+    "links" : [ "#onGesture(AccessibilityGestureEvent)", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE" ]
+  }, {
+    "name" : "public boolean onGesture(@NonNull AccessibilityGestureEvent gestureEvent)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called by the system when the user performs a specific gesture on the\n     * specific touch screen.\n     *<p>\n     * <strong>Note:</strong> To receive gestures an accessibility service must\n     * request that the device is in touch exploration mode by setting the\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE}\n     * flag.\n     *<p>\n     * <strong>Note:</strong> The default implementation calls {@link #onGesture(int)} when the\n     * touch screen is default display.\n     *\n     * @param gestureEvent The information of gesture.\n     *\n     * @return Whether the gesture was handled.\n     *\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE", "#onGesture(int)" ]
+  }, {
+    "name" : "protected boolean onKeyEvent(KeyEvent event)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Callback that allows an accessibility service to observe the key events\n     * before they are passed to the rest of the system. This means that the events\n     * are first delivered here before they are passed to the device policy, the\n     * input method, or applications.\n     * <p>\n     * <strong>Note:</strong> It is important that key events are handled in such\n     * a way that the event stream that would be passed to the rest of the system\n     * is well-formed. For example, handling the down event but not the up event\n     * and vice versa would generate an inconsistent event stream.\n     * </p>\n     * <p>\n     * <strong>Note:</strong> The key events delivered in this method are copies\n     * and modifying them will have no effect on the events that will be passed\n     * to the system. This method is intended to perform purely filtering\n     * functionality.\n     * <p>\n     *\n     * @param event The event to be processed. This event is owned by the caller and cannot be used\n     * after this method returns. Services wishing to use the event after this method returns should\n     * make a copy.\n     * @return If true then the event will be consumed and not delivered to\n     *         applications, otherwise it will be delivered as usual.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onMotionEvent(@NonNull MotionEvent event)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback that allows an accessibility service to observe generic {@link MotionEvent}s.\n     * <p>\n     * Prefer {@link TouchInteractionController} to observe and control touchscreen events,\n     * including touch gestures. If this or any enabled service is using\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} then\n     * {@link #onMotionEvent} will not receive touchscreen events.\n     * </p>\n     * <p>\n     * <strong>Note:</strong> The service must first request to listen to events using\n     * {@link AccessibilityServiceInfo#setMotionEventSources}.\n     * {@link MotionEvent}s from sources in {@link AccessibilityServiceInfo#getMotionEventSources()}\n     * are not sent to the rest of the system. To stop listening to events from a given source, call\n     * {@link AccessibilityServiceInfo#setMotionEventSources} with that source removed.\n     * </p>\n     * @param event The event to be processed.\n     ",
+    "links" : [ "#onMotionEvent", "android.view.MotionEvent", "android.accessibilityservice.AccessibilityServiceInfo#getMotionEventSources()", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE", "android.accessibilityservice.AccessibilityServiceInfo#setMotionEventSources", "android.accessibilityservice.TouchInteractionController" ]
+  }, {
+    "name" : "public List<AccessibilityWindowInfo> getWindows()",
+    "returnType" : "List<AccessibilityWindowInfo>",
+    "comment" : "\n     * Gets the windows on the screen of the default display. This method returns only the windows\n     * that a sighted user can interact with, as opposed to all windows.\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are on top are reported first. Since the user can always\n     * interact with the window that has input focus by typing, the focused\n     * window is always returned (even if covered by a modal window).\n     * <p>\n     * <strong>Note:</strong> In order to access the windows your service has\n     * to declare the capability to retrieve window content by setting the\n     * {@link android.R.styleable#AccessibilityService_canRetrieveWindowContent}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * Also the service has to opt-in to retrieve the interactive windows by\n     * setting the {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS}\n     * flag.\n     * </p>\n     *\n     * @return The windows if there are windows and the service is can retrieve\n     *         them, otherwise an empty list.\n     ",
+    "links" : [ "android.R.styleable#AccessibilityService_canRetrieveWindowContent", "#SERVICE_META_DATA", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
+  }, {
+    "name" : "public final SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()",
+    "returnType" : "SparseArray<List<AccessibilityWindowInfo>>",
+    "comment" : "\n     * Gets the windows on the screen of all displays. This method returns only the windows\n     * that a sighted user can interact with, as opposed to all windows.\n     * For example, if there is a modal dialog shown and the user cannot touch\n     * anything behind it, then only the modal window will be reported\n     * (assuming it is the top one). For convenience the returned windows\n     * are ordered in a descending layer order, which is the windows that\n     * are on top are reported first. Since the user can always\n     * interact with the window that has input focus by typing, the focused\n     * window is always returned (even if covered by a modal window).\n     * <p>\n     * <strong>Note:</strong> In order to access the windows your service has\n     * to declare the capability to retrieve window content by setting the\n     * {@link android.R.styleable#AccessibilityService_canRetrieveWindowContent}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * Also the service has to opt-in to retrieve the interactive windows by\n     * setting the {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS}\n     * flag.\n     * </p>\n     *\n     * @return The windows of all displays if there are windows and the service is can retrieve\n     *         them, otherwise an empty list. The key of SparseArray is display ID.\n     ",
+    "links" : [ "android.R.styleable#AccessibilityService_canRetrieveWindowContent", "#SERVICE_META_DATA", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
+  }, {
+    "name" : "public AccessibilityNodeInfo getRootInActiveWindow()",
+    "returnType" : "AccessibilityNodeInfo",
+    "comment" : "\n     * Gets the root node in the currently active window if this service\n     * can retrieve window content. The active window is the one that the user\n     * is currently touching or the window with input focus, if the user is not\n     * touching any window. It could be from any logical display.\n     * <p>\n     * <strong>Note:</strong> In order to access the root node your service has\n     * to declare the capability to retrieve window content by setting the\n     * {@link android.R.styleable#AccessibilityService_canRetrieveWindowContent}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * </p>\n     *\n     * @return The root node if this service can retrieve window content.\n     * @see AccessibilityWindowInfo#isActive() for more explanation about the active window.\n     ",
+    "links" : [ "android.R.styleable#AccessibilityService_canRetrieveWindowContent", "#SERVICE_META_DATA" ]
+  }, {
+    "name" : "public AccessibilityNodeInfo getRootInActiveWindow(@AccessibilityNodeInfo.PrefetchingStrategy int prefetchingStrategy)",
+    "returnType" : "AccessibilityNodeInfo",
+    "comment" : "\n     * Gets the root node in the currently active window if this service\n     * can retrieve window content. The active window is the one that the user\n     * is currently touching or the window with input focus, if the user is not\n     * touching any window. It could be from any logical display.\n     *\n     * @param prefetchingStrategy the prefetching strategy.\n     * @return The root node if this service can retrieve window content.\n     *\n     * @see #getRootInActiveWindow()\n     * @see AccessibilityNodeInfo#getParent(int) for a description of prefetching.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void disableSelf()",
+    "returnType" : "void",
+    "comment" : "\n     * Disables the service. After calling this method, the service will be disabled and settings\n     * will show that it is turned off.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Context createDisplayContext(Display display)",
+    "returnType" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Context createWindowContext(int type, @Nullable Bundle options)",
+    "returnType" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Context createWindowContext(@NonNull Display display, int type, @Nullable Bundle options)",
+    "returnType" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final MagnificationController getMagnificationController()",
+    "returnType" : "MagnificationController",
+    "comment" : "\n     * Returns the magnification controller, which may be used to query and\n     * modify the state of display magnification.\n     * <p>\n     * <strong>Note:</strong> In order to control magnification, your service\n     * must declare the capability by setting the\n     * {@link android.R.styleable#AccessibilityService_canControlMagnification}\n     * property in its meta-data. For more information, see\n     * {@link #SERVICE_META_DATA}.\n     *\n     * @return the magnification controller\n     ",
+    "links" : [ "#SERVICE_META_DATA", "android.R.styleable#AccessibilityService_canControlMagnification" ]
+  }, {
+    "name" : "public final MagnificationController getMagnificationController(int displayId)",
+    "returnType" : "MagnificationController",
+    "comment" : "\n     * Returns the magnification controller of specified logical display, which may be used to\n     * query and modify the state of display magnification.\n     * <p>\n     * <strong>Note:</strong> In order to control magnification, your service\n     * must declare the capability by setting the\n     * {@link android.R.styleable#AccessibilityService_canControlMagnification}\n     * property in its meta-data. For more information, see\n     * {@link #SERVICE_META_DATA}.\n     *\n     * @param displayId The logic display id, use {@link Display#DEFAULT_DISPLAY} for\n     *                  default display.\n     * @return the magnification controller\n     *\n     * @hide\n     ",
+    "links" : [ "#SERVICE_META_DATA", "android.R.styleable#AccessibilityService_canControlMagnification", "android.view.Display#DEFAULT_DISPLAY" ]
+  }, {
+    "name" : "public final FingerprintGestureController getFingerprintGestureController()",
+    "returnType" : "FingerprintGestureController",
+    "comment" : "\n     * Get the controller for fingerprint gestures. This feature requires {@link\n     * AccessibilityServiceInfo#CAPABILITY_CAN_REQUEST_FINGERPRINT_GESTURES}.\n     *\n     *<strong>Note: </strong> The service must be connected before this method is called.\n     *\n     * @return The controller for fingerprint gestures, or {@code null} if gestures are unavailable.\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#CAPABILITY_CAN_REQUEST_FINGERPRINT_GESTURES" ]
+  }, {
+    "name" : "public final boolean dispatchGesture(@NonNull GestureDescription gesture, @Nullable GestureResultCallback callback, @Nullable Handler handler)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Dispatch a gesture to the touch screen. Any gestures currently in progress, whether from\n     * the user, this service, or another service, will be cancelled.\n     * <p>\n     * The gesture will be dispatched as if it were performed directly on the screen by a user, so\n     * the events may be affected by features such as magnification and explore by touch.\n     * </p>\n     * <p>\n     * <strong>Note:</strong> In order to dispatch gestures, your service\n     * must declare the capability by setting the\n     * {@link android.R.styleable#AccessibilityService_canPerformGestures}\n     * property in its meta-data. For more information, see\n     * {@link #SERVICE_META_DATA}.\n     * </p>\n     * <p>Since many apps do not appropriately support {@link AccessibilityAction#ACTION_CLICK},\n     * if this action fails on an element that should be clickable, a service that is not a screen\n     * reader may send a tap directly to the element as a fallback. The example below\n     * demonstrates this fallback using the gesture dispatch APIs:\n     *\n     * <pre class=\"prettyprint\"><code>\n     *     private void tap(PointF point) {\n     *         StrokeDescription tap =  new StrokeDescription(path(point), 0,\n     *         ViewConfiguration.getTapTimeout());\n     *         GestureDescription.Builder builder = new GestureDescription.Builder();\n     *         builder.addStroke(tap);\n     *         dispatchGesture(builder.build(), null, null);\n     *     }\n     *</code>\n     * </pre>\n     * @param gesture The gesture to dispatch\n     * @param callback The object to call back when the status of the gesture is known. If\n     * {@code null}, no status is reported.\n     * @param handler The handler on which to call back the {@code callback} object. If\n     * {@code null}, the object is called back on the service's main thread.\n     *\n     * @return {@code true} if the gesture is dispatched, {@code false} if not.\n     ",
+    "links" : [ "#SERVICE_META_DATA", "android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction#ACTION_CLICK", "android.R.styleable#AccessibilityService_canPerformGestures" ]
+  }, {
+    "name" : "private int calculateGestureSampleTimeMs(int displayId)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the sample time in millis of gesture steps for the current display.\n     *\n     * <p>For gestures to be smooth they should line up with the refresh rate of the display.\n     * On versions of Android before R, the sample time was fixed to 100ms.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void onPerformGestureResult(int sequence, final boolean completedSuccessfully)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onMagnificationChanged(int displayId, @NonNull Region region, MagnificationConfig config)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onFingerprintCapturingGesturesChanged(boolean active)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback for fingerprint gesture handling\n     * @param active If gesture detection is active\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void onFingerprintGesture(int gesture)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback for fingerprint gesture handling\n     * @param gesture The identifier for the gesture performed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getConnectionId()",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final SoftKeyboardController getSoftKeyboardController()",
+    "returnType" : "SoftKeyboardController",
+    "comment" : "\n     * Returns the soft keyboard controller, which may be used to query and modify the soft keyboard\n     * show mode.\n     *\n     * @return the soft keyboard controller\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public InputMethod onCreateInputMethod()",
+    "returnType" : "InputMethod",
+    "comment" : "\n     * The default implementation returns our default {@link InputMethod}. Subclasses can override\n     * it to provide their own customized version. Accessibility services need to set the\n     * {@link AccessibilityServiceInfo#FLAG_INPUT_METHOD_EDITOR} flag to use input method APIs.\n     *\n     * @return the InputMethod.\n     ",
+    "links" : [ "android.accessibilityservice.InputMethod", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_INPUT_METHOD_EDITOR" ]
+  }, {
+    "name" : "public final InputMethod getInputMethod()",
+    "returnType" : "InputMethod",
+    "comment" : "\n     * Returns the InputMethod instance after the system calls {@link #onCreateInputMethod()},\n     * which may be used to input text or get editable text selection change notifications. It will\n     * return null if the accessibility service doesn't set the\n     * {@link AccessibilityServiceInfo#FLAG_INPUT_METHOD_EDITOR} flag or the system doesn't call\n     * {@link #onCreateInputMethod()}.\n     *\n     * @return the InputMethod instance\n     ",
+    "links" : [ "#onCreateInputMethod()", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_INPUT_METHOD_EDITOR" ]
+  }, {
+    "name" : "private void onSoftKeyboardShowModeChanged(int showMode)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final AccessibilityButtonController getAccessibilityButtonController()",
+    "returnType" : "AccessibilityButtonController",
+    "comment" : "\n     * Returns the controller for the accessibility button within the system's navigation area.\n     * This instance may be used to query the accessibility button's state and register listeners\n     * for interactions with and state changes for the accessibility button when\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_ACCESSIBILITY_BUTTON} is set.\n     * <p>\n     * <strong>Note:</strong> Not all devices are capable of displaying the accessibility button\n     * within a navigation area, and as such, use of this class should be considered only as an\n     * optional feature or shortcut on supported device implementations.\n     * </p>\n     *\n     * @return the accessibility button controller for this {@link AccessibilityService}\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityService", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_ACCESSIBILITY_BUTTON" ]
+  }, {
+    "name" : "public final AccessibilityButtonController getAccessibilityButtonController(int displayId)",
+    "returnType" : "AccessibilityButtonController",
+    "comment" : "\n     * Returns the controller of specified logical display for the accessibility button within the\n     * system's navigation area. This instance may be used to query the accessibility button's\n     * state and register listeners for interactions with and state changes for the accessibility\n     * button when {@link AccessibilityServiceInfo#FLAG_REQUEST_ACCESSIBILITY_BUTTON} is set.\n     * <p>\n     * <strong>Note:</strong> Not all devices are capable of displaying the accessibility button\n     * within a navigation area, and as such, use of this class should be considered only as an\n     * optional feature or shortcut on supported device implementations.\n     * </p>\n     *\n     * @param displayId The logic display id, use {@link Display#DEFAULT_DISPLAY} for default\n     *                  display.\n     * @return the accessibility button controller for this {@link AccessibilityService}\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityService", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_ACCESSIBILITY_BUTTON", "android.view.Display#DEFAULT_DISPLAY" ]
+  }, {
+    "name" : "private void onAccessibilityButtonClicked(int displayId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onAccessibilityButtonAvailabilityChanged(boolean available)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean setCacheEnabled(boolean enabled)",
+    "returnType" : "boolean",
+    "comment" : " Sets the cache status.\n     *\n     * <p>If {@code enabled}, enable the cache and prefetching. Otherwise, disable the cache\n     * and prefetching.\n     * Note: By default the cache is enabled.\n     * @param enabled whether to enable or disable the cache.\n     * @return {@code true} if the cache and connection are not null, so the cache status is set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean clearCachedSubtree(@NonNull AccessibilityNodeInfo node)",
+    "returnType" : "boolean",
+    "comment" : " Invalidates {@code node} and its subtree in the cache.\n     * @param node the node to invalidate.\n     * @return {@code true} if the subtree rooted at {@code node} was invalidated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean clearCache()",
+    "returnType" : "boolean",
+    "comment" : " Clears the cache.\n     * @return {@code true} if the cache was cleared\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isNodeInCache(@NonNull AccessibilityNodeInfo node)",
+    "returnType" : "boolean",
+    "comment" : " Checks if {@code node} is in the cache.\n     * @param node the node to check.\n     * @return {@code true} if {@code node} is in the cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isCacheEnabled()",
+    "returnType" : "boolean",
+    "comment" : " Returns {@code true} if the cache is enabled. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onSystemActionsChanged()",
+    "returnType" : "void",
+    "comment" : " This is called when the system action list is changed. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final List<AccessibilityAction> getSystemActions()",
+    "returnType" : "List<AccessibilityAction>",
+    "comment" : "\n     * Returns a list of system actions available in the system right now.\n     * <p>\n     * System actions that correspond to the global action constants will have matching action IDs.\n     * For example, an with id {@link #GLOBAL_ACTION_BACK} will perform the back action.\n     * </p>\n     * <p>\n     * These actions should be called by {@link #performGlobalAction}.\n     * </p>\n     *\n     * @return A list of available system actions.\n     ",
+    "links" : [ "#performGlobalAction", "#GLOBAL_ACTION_BACK" ]
+  }, {
+    "name" : "public final boolean performGlobalAction(int action)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Performs a global action. Such an action can be performed\n     * at any moment regardless of the current application or user\n     * location in that application. For example going back, going\n     * home, opening recents, etc.\n     *\n     * <p>\n     * Note: The global action ids themselves give no information about the current availability\n     * of their corresponding actions. To determine if a global action is available, use\n     * {@link #getSystemActions()}\n     *\n     * @param action The action to perform.\n     * @return Whether the action was successfully performed.\n     *\n     * Perform actions using ids like the id constants referenced below:\n     * @see #GLOBAL_ACTION_BACK\n     * @see #GLOBAL_ACTION_HOME\n     * @see #GLOBAL_ACTION_NOTIFICATIONS\n     * @see #GLOBAL_ACTION_RECENTS\n     * @see #GLOBAL_ACTION_DPAD_UP\n     * @see #GLOBAL_ACTION_DPAD_DOWN\n     * @see #GLOBAL_ACTION_DPAD_LEFT\n     * @see #GLOBAL_ACTION_DPAD_RIGHT\n     * @see #GLOBAL_ACTION_DPAD_CENTER\n     ",
+    "links" : [ "#getSystemActions()" ]
+  }, {
+    "name" : "public AccessibilityNodeInfo findFocus(int focus)",
+    "returnType" : "AccessibilityNodeInfo",
+    "comment" : "\n     * Find the view that has the specified focus type. The search is performed\n     * across all windows.\n     * <p>\n     * <strong>Note:</strong> In order to access the windows your service has\n     * to declare the capability to retrieve window content by setting the\n     * {@link android.R.styleable#AccessibilityService_canRetrieveWindowContent}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * Also the service has to opt-in to retrieve the interactive windows by\n     * setting the {@link AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS}\n     * flag. Otherwise, the search will be performed only in the active window.\n     * </p>\n     * <p>\n     * <strong>Note:</strong> If the view with {@link AccessibilityNodeInfo#FOCUS_INPUT}\n     * is on an embedded view hierarchy which is embedded in a {@link android.view.SurfaceView} via\n     * {@link android.view.SurfaceView#setChildSurfacePackage}, there is a limitation that this API\n     * won't be able to find the node for the view. It's because views don't know about\n     * the embedded hierarchies. Instead, you could traverse all the nodes to find the\n     * focus.\n     * </p>\n     *\n     * @param focus The focus to find. One of {@link AccessibilityNodeInfo#FOCUS_INPUT} or\n     *         {@link AccessibilityNodeInfo#FOCUS_ACCESSIBILITY}.\n     * @return The node info of the focused view or null.\n     *\n     * @see AccessibilityNodeInfo#FOCUS_INPUT\n     * @see AccessibilityNodeInfo#FOCUS_ACCESSIBILITY\n     ",
+    "links" : [ "android.R.styleable#AccessibilityService_canRetrieveWindowContent", "#SERVICE_META_DATA", "android.view.SurfaceView", "android.view.accessibility.AccessibilityNodeInfo#FOCUS_INPUT", "android.view.SurfaceView#setChildSurfacePackage", "android.view.accessibility.AccessibilityNodeInfo#FOCUS_ACCESSIBILITY", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_RETRIEVE_INTERACTIVE_WINDOWS" ]
+  }, {
+    "name" : "public final AccessibilityServiceInfo getServiceInfo()",
+    "returnType" : "AccessibilityServiceInfo",
+    "comment" : "\n     * Gets the an {@link AccessibilityServiceInfo} describing this\n     * {@link AccessibilityService}. This method is useful if one wants\n     * to change some of the dynamically configurable properties at\n     * runtime.\n     *\n     * @return The accessibility service info.\n     *\n     * @see AccessibilityServiceInfo\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityService", "android.accessibilityservice.AccessibilityServiceInfo" ]
+  }, {
+    "name" : "public final void setServiceInfo(AccessibilityServiceInfo info)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the {@link AccessibilityServiceInfo} that describes this service.\n     * <p>\n     * Note: You can call this method any time but the info will be picked up after\n     *       the system has bound to this service and when this method is called thereafter.\n     *\n     * @param info The info.\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo" ]
+  }, {
+    "name" : "private void sendServiceInfo()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the {@link AccessibilityServiceInfo} for this service if the latter is\n     * properly set and there is an {@link IAccessibilityServiceConnection} to the\n     * AccessibilityManagerService.\n     ",
+    "links" : [ "IAccessibilityServiceConnection", "android.accessibilityservice.AccessibilityServiceInfo" ]
+  }, {
+    "name" : "public Object getSystemService(@ServiceName @NonNull String name)",
+    "returnType" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void takeScreenshot(int displayId, @NonNull @CallbackExecutor Executor executor, @NonNull TakeScreenshotCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Takes a screenshot of the specified display and returns it via an\n     * {@link AccessibilityService.ScreenshotResult}. You can use {@link Bitmap#wrapHardwareBuffer}\n     * to construct the bitmap from the ScreenshotResult's payload.\n     * <p>\n     * <strong>Note:</strong> In order to take screenshot your service has\n     * to declare the capability to take screenshot by setting the\n     * {@link android.R.styleable#AccessibilityService_canTakeScreenshot}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * </p>\n     *\n     * @param displayId The logic display id, must be {@link Display#DEFAULT_DISPLAY} for\n     *                  default display.\n     * @param executor Executor on which to run the callback.\n     * @param callback The callback invoked when taking screenshot has succeeded or failed.\n     *                 See {@link TakeScreenshotCallback} for details.\n     * @see #takeScreenshotOfWindow\n     ",
+    "links" : [ "#SERVICE_META_DATA", "AccessibilityService.ScreenshotResult", "android.graphics.Bitmap#wrapHardwareBuffer", "android.R.styleable#AccessibilityService_canTakeScreenshot", "TakeScreenshotCallback", "android.view.Display#DEFAULT_DISPLAY" ]
+  }, {
+    "name" : "public void takeScreenshotOfWindow(int accessibilityWindowId, @NonNull @CallbackExecutor Executor executor, @NonNull TakeScreenshotCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Takes a screenshot of the specified window and returns it via an\n     * {@link AccessibilityService.ScreenshotResult}. You can use {@link Bitmap#wrapHardwareBuffer}\n     * to construct the bitmap from the ScreenshotResult's payload.\n     * <p>\n     * <strong>Note:</strong> In order to take screenshots your service has\n     * to declare the capability to take screenshot by setting the\n     * {@link android.R.styleable#AccessibilityService_canTakeScreenshot}\n     * property in its meta-data. For details refer to {@link #SERVICE_META_DATA}.\n     * </p>\n     * <p>\n     * Both this method and {@link #takeScreenshot} can be used for machine learning-based visual\n     * screen understanding. Use <code>takeScreenshotOfWindow</code> if your target window might be\n     * visually underneath an accessibility overlay (from your or another accessibility service) in\n     * order to capture the window contents without the screenshot being covered by the overlay\n     * contents drawn on the screen.\n     * </p>\n     *\n     * @param accessibilityWindowId The window id, from {@link AccessibilityWindowInfo#getId()}.\n     * @param executor Executor on which to run the callback.\n     * @param callback The callback invoked when taking screenshot has succeeded or failed.\n     *                 See {@link TakeScreenshotCallback} for details.\n     * @see #takeScreenshot\n     ",
+    "links" : [ "#SERVICE_META_DATA", "AccessibilityService.ScreenshotResult", "android.view.accessibility.AccessibilityWindowInfo#getId()", "android.graphics.Bitmap#wrapHardwareBuffer", "android.R.styleable#AccessibilityService_canTakeScreenshot", "TakeScreenshotCallback", "#takeScreenshot" ]
+  }, {
+    "name" : "public void setAccessibilityFocusAppearance(int strokeWidth, @ColorInt int color)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the strokeWidth and color of the accessibility focus rectangle.\n     * <p>\n     * <strong>Note:</strong> This setting persists until this or another active\n     * AccessibilityService changes it or the device reboots.\n     * </p>\n     *\n     * @param strokeWidth The stroke width of the rectangle in pixels.\n     *                    Setting this value to zero results in no focus rectangle being drawn.\n     * @param color The color of the rectangle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "\n     * Implement to return the implementation of the internal accessibility\n     * service interface.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void sendScreenshotSuccess(ScreenshotResult screenshot, Executor executor, TakeScreenshotCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void sendScreenshotFailure(@ScreenshotErrorCode int errorCode, Executor executor, TakeScreenshotCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setGestureDetectionPassthroughRegion(int displayId, @NonNull Region region)",
+    "returnType" : "void",
+    "comment" : "\n     * When {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} is enabled, this\n     * function requests that touch interactions starting in the specified region of the screen\n     * bypass the gesture detector. There can only be one gesture detection passthrough region per\n     * display. Requesting a new gesture detection passthrough region clears the existing one. To\n     * disable this passthrough and return to the original behavior, pass in an empty region. When\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} is disabled this\n     * function has no effect.\n     *\n     * @param displayId The display on which to set this region.\n     * @param region the region of the screen.\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE" ]
+  }, {
+    "name" : "public void setTouchExplorationPassthroughRegion(int displayId, @NonNull Region region)",
+    "returnType" : "void",
+    "comment" : "\n     * When {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} is enabled, this\n     * function requests that touch interactions starting in the specified region of the screen\n     * bypass the touch explorer and go straight to the view hierarchy. There can only be one touch\n     * exploration passthrough region per display. Requesting a new touch explorationpassthrough\n     * region clears the existing one. To disable this passthrough and return to the original\n     * behavior, pass in an empty region. When {@link\n     * AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} is disabled this function has\n     * no effect.\n     *\n     * @param displayId The display on which to set this region.\n     * @param region the region of the screen .\n     ",
+    "links" : [ "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE" ]
+  }, {
+    "name" : "public void setAnimationScale(float scale)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the system settings values that control the scaling factor for animations. The scale\n     * controls the animation playback speed for animations that respect these settings. Animations\n     * that do not respect the settings values will not be affected by this function. A lower scale\n     * value results in a faster speed. A value of <code>0</code> disables animations entirely. When\n     * animations are disabled services receive window change events more quickly which can reduce\n     * the potential by confusion by reducing the time during which windows are in transition.\n     *\n     * @see AccessibilityEvent#TYPE_WINDOWS_CHANGED\n     * @see AccessibilityEvent#TYPE_WINDOW_STATE_CHANGED\n     * @see android.provider.Settings.Global#WINDOW_ANIMATION_SCALE\n     * @see android.provider.Settings.Global#TRANSITION_ANIMATION_SCALE\n     * @see android.provider.Settings.Global#ANIMATOR_DURATION_SCALE\n     * @param scale The scaling factor for all animations.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final TouchInteractionController getTouchInteractionController(int displayId)",
+    "returnType" : "TouchInteractionController",
+    "comment" : "\n     * Returns the touch interaction controller for the specified logical display, which may be used\n     * to detect gestures and otherwise control touch interactions. If\n     * {@link AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE} is disabled the\n     * controller's methods will have no effect.\n     *\n     * @param displayId The logical display id, use {@link Display#DEFAULT_DISPLAY} for default\n     *                      display.\n     * @return the TouchExploration controller\n     ",
+    "links" : [ "android.view.Display#DEFAULT_DISPLAY", "android.accessibilityservice.AccessibilityServiceInfo#FLAG_REQUEST_TOUCH_EXPLORATION_MODE" ]
+  }, {
+    "name" : " void sendMotionEventToCallback(MotionEvent event)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void onTouchStateChanged(int displayId, int state)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void attachAccessibilityOverlayToDisplay(int displayId, @NonNull SurfaceControl sc)",
+    "returnType" : "void",
+    "comment" : "\n     * Attaches a {@link android.view.SurfaceControl} containing an accessibility overlay to the\n     * specified display. This type of overlay should be used for content that does not need to\n     * track the location and size of Views in the currently active app e.g. service configuration\n     * or general service UI.\n     *\n     * <p>Generally speaking, an accessibility overlay will be a {@link android.view.View}. To embed\n     * the View into a {@link android.view.SurfaceControl}, create a {@link\n     * android.view.SurfaceControlViewHost} and attach the View using {@link\n     * android.view.SurfaceControlViewHost#setView}. Then obtain the SurfaceControl by calling\n     * <code> viewHost.getSurfacePackage().getSurfaceControl()</code>.\n     *\n     * <p>To remove this overlay and free the associated resources, use <code>\n     *  new SurfaceControl.Transaction().reparent(sc, null).apply();</code>.\n     *\n     * <p>If the specified overlay has already been attached to the specified display this method\n     * does nothing. If the specified overlay has already been attached to a previous display this\n     * function will transfer the overlay to the new display. Services can attach multiple overlays.\n     * Use <code> new SurfaceControl.Transaction().setLayer(sc, layer).apply();</code>. to\n     * coordinate the order of the overlays on screen.\n     *\n     * @param displayId the display to which the SurfaceControl should be attached.\n     * @param sc the SurfaceControl containing the overlay content\n     *\n     ",
+    "links" : [ "android.view.SurfaceControlViewHost#setView", "android.view.SurfaceControl", "android.view.View", "android.view.SurfaceControlViewHost" ]
+  }, {
+    "name" : "public final void attachAccessibilityOverlayToDisplay(int displayId, @NonNull SurfaceControl sc, @NonNull @CallbackExecutor Executor executor, @NonNull IntConsumer callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Attaches a {@link android.view.SurfaceControl} containing an accessibility overlay to the\n     * specified display. This type of overlay should be used for content that does not need to\n     * track the location and size of Views in the currently active app e.g. service configuration\n     * or general service UI.\n     *\n     * <p>Generally speaking, an accessibility overlay will be a {@link android.view.View}. To embed\n     * the View into a {@link android.view.SurfaceControl}, create a {@link\n     * android.view.SurfaceControlViewHost} and attach the View using {@link\n     * android.view.SurfaceControlViewHost#setView}. Then obtain the SurfaceControl by calling\n     * <code> viewHost.getSurfacePackage().getSurfaceControl()</code>.\n     *\n     * <p>To remove this overlay and free the associated resources, use <code>\n     *  new SurfaceControl.Transaction().reparent(sc, null).apply();</code>.\n     *\n     * <p>If the specified overlay has already been attached to the specified display this method\n     * does nothing. If the specified overlay has already been attached to a previous display this\n     * function will transfer the overlay to the new display. Services can attach multiple overlays.\n     * Use <code> new SurfaceControl.Transaction().setLayer(sc, layer).apply();</code>. to\n     * coordinate the order of the overlays on screen.\n     *\n     * @param displayId the display to which the SurfaceControl should be attached.\n     * @param sc the SurfaceControl containing the overlay content\n     * @param executor Executor on which to run the callback.\n     * @param callback The callback invoked when attaching the overlay has succeeded or failed. The\n     *     callback is a {@link java.util.function.IntConsumer} of the result status code.\n     * @see #OVERLAY_RESULT_SUCCESS\n     * @see #OVERLAY_RESULT_INVALID\n     * @see #OVERLAY_RESULT_INTERNAL_ERROR\n     ",
+    "links" : [ "android.view.SurfaceControlViewHost#setView", "android.view.SurfaceControl", "java.util.function.IntConsumer", "android.view.View", "android.view.SurfaceControlViewHost" ]
+  }, {
+    "name" : "public void attachAccessibilityOverlayToWindow(int accessibilityWindowId, @NonNull SurfaceControl sc)",
+    "returnType" : "void",
+    "comment" : "\n     * Attaches an accessibility overlay {@link android.view.SurfaceControl} to the specified\n     * window. This method should be used when you want the overlay to move and resize as the parent\n     * window moves and resizes.\n     *\n     * <p>Generally speaking, an accessibility overlay will be a {@link android.view.View}. To embed\n     * the View into a {@link android.view.SurfaceControl}, create a {@link\n     * android.view.SurfaceControlViewHost} and attach the View using {@link\n     * android.view.SurfaceControlViewHost#setView}. Then obtain the SurfaceControl by calling\n     * <code> viewHost.getSurfacePackage().getSurfaceControl()</code>.\n     *\n     * <p>To remove this overlay and free the associated resources, use <code>\n     *  new SurfaceControl.Transaction().reparent(sc, null).apply();</code>.\n     *\n     * <p>If the specified overlay has already been attached to the specified window this method\n     * does nothing. If the specified overlay has already been attached to a previous window this\n     * function will transfer the overlay to the new window. Services can attach multiple overlays.\n     * Use <code> new SurfaceControl.Transaction().setLayer(sc, layer).apply();</code>. to\n     * coordinate the order of the overlays on screen.\n     *\n     * @param accessibilityWindowId The window id, from {@link AccessibilityWindowInfo#getId()}.\n     * @param sc the SurfaceControl containing the overlay content\n     *\n     ",
+    "links" : [ "android.view.SurfaceControlViewHost#setView", "android.view.accessibility.AccessibilityWindowInfo#getId()", "android.view.SurfaceControl", "android.view.View", "android.view.SurfaceControlViewHost" ]
+  }, {
+    "name" : "public final void attachAccessibilityOverlayToWindow(int accessibilityWindowId, @NonNull SurfaceControl sc, @NonNull @CallbackExecutor Executor executor, @NonNull IntConsumer callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Attaches an accessibility overlay {@link android.view.SurfaceControl} to the specified\n     * window. This method should be used when you want the overlay to move and resize as the parent\n     * window moves and resizes.\n     *\n     * <p>Generally speaking, an accessibility overlay will be a {@link android.view.View}. To embed\n     * the View into a {@link android.view.SurfaceControl}, create a {@link\n     * android.view.SurfaceControlViewHost} and attach the View using {@link\n     * android.view.SurfaceControlViewHost#setView}. Then obtain the SurfaceControl by calling\n     * <code> viewHost.getSurfacePackage().getSurfaceControl()</code>.\n     *\n     * <p>To remove this overlay and free the associated resources, use <code>\n     *  new SurfaceControl.Transaction().reparent(sc, null).apply();</code>.\n     *\n     * <p>If the specified overlay has already been attached to the specified window this method\n     * does nothing. If the specified overlay has already been attached to a previous window this\n     * function will transfer the overlay to the new window. Services can attach multiple overlays.\n     * Use <code> new SurfaceControl.Transaction().setLayer(sc, layer).apply();</code>. to\n     * coordinate the order of the overlays on screen.\n     *\n     * @param accessibilityWindowId The window id, from {@link AccessibilityWindowInfo#getId()}.\n     * @param sc the SurfaceControl containing the overlay content\n     * @param executor Executor on which to run the callback.\n     * @param callback The callback invoked when attaching the overlay has succeeded or failed. The\n     *     callback is a {@link java.util.function.IntConsumer} of the result status code.\n     * @see #OVERLAY_RESULT_SUCCESS\n     * @see #OVERLAY_RESULT_INVALID\n     * @see #OVERLAY_RESULT_INTERNAL_ERROR\n     ",
+    "links" : [ "android.view.SurfaceControlViewHost#setView", "android.view.accessibility.AccessibilityWindowInfo#getId()", "android.view.SurfaceControl", "java.util.function.IntConsumer", "android.view.View", "android.view.SurfaceControlViewHost" ]
+  }, {
+    "name" : "public final BrailleDisplayController getBrailleDisplayController()",
+    "returnType" : "BrailleDisplayController",
+    "comment" : "\n     * Returns the {@link BrailleDisplayController} which may be used to communicate with\n     * refreshable Braille displays that provide USB or Bluetooth Braille display HID support.\n     ",
+    "links" : [ "android.accessibilityservice.BrailleDisplayController" ]
+  } ],
+  "methodNames" : [ "public abstract void onAccessibilityEvent(AccessibilityEvent event)", "public abstract void onInterrupt()", "private void dispatchServiceConnected()", "private void updateInputMethod(AccessibilityServiceInfo info)", "protected void onServiceConnected()", "protected boolean onGesture(int gestureId)", "public boolean onGesture(@NonNull AccessibilityGestureEvent gestureEvent)", "protected boolean onKeyEvent(KeyEvent event)", "public void onMotionEvent(@NonNull MotionEvent event)", "public List<AccessibilityWindowInfo> getWindows()", "public final SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()", "public AccessibilityNodeInfo getRootInActiveWindow()", "public AccessibilityNodeInfo getRootInActiveWindow(@AccessibilityNodeInfo.PrefetchingStrategy int prefetchingStrategy)", "public final void disableSelf()", "public Context createDisplayContext(Display display)", "public Context createWindowContext(int type, @Nullable Bundle options)", "public Context createWindowContext(@NonNull Display display, int type, @Nullable Bundle options)", "public final MagnificationController getMagnificationController()", "public final MagnificationController getMagnificationController(int displayId)", "public final FingerprintGestureController getFingerprintGestureController()", "public final boolean dispatchGesture(@NonNull GestureDescription gesture, @Nullable GestureResultCallback callback, @Nullable Handler handler)", "private int calculateGestureSampleTimeMs(int displayId)", " void onPerformGestureResult(int sequence, final boolean completedSuccessfully)", "private void onMagnificationChanged(int displayId, @NonNull Region region, MagnificationConfig config)", "private void onFingerprintCapturingGesturesChanged(boolean active)", "private void onFingerprintGesture(int gesture)", "public int getConnectionId()", "public final SoftKeyboardController getSoftKeyboardController()", "public InputMethod onCreateInputMethod()", "public final InputMethod getInputMethod()", "private void onSoftKeyboardShowModeChanged(int showMode)", "public final AccessibilityButtonController getAccessibilityButtonController()", "public final AccessibilityButtonController getAccessibilityButtonController(int displayId)", "private void onAccessibilityButtonClicked(int displayId)", "private void onAccessibilityButtonAvailabilityChanged(boolean available)", "public boolean setCacheEnabled(boolean enabled)", "public boolean clearCachedSubtree(@NonNull AccessibilityNodeInfo node)", "public boolean clearCache()", "public boolean isNodeInCache(@NonNull AccessibilityNodeInfo node)", "public boolean isCacheEnabled()", "public void onSystemActionsChanged()", "public final List<AccessibilityAction> getSystemActions()", "public final boolean performGlobalAction(int action)", "public AccessibilityNodeInfo findFocus(int focus)", "public final AccessibilityServiceInfo getServiceInfo()", "public final void setServiceInfo(AccessibilityServiceInfo info)", "private void sendServiceInfo()", "public Object getSystemService(@ServiceName @NonNull String name)", "public void takeScreenshot(int displayId, @NonNull @CallbackExecutor Executor executor, @NonNull TakeScreenshotCallback callback)", "public void takeScreenshotOfWindow(int accessibilityWindowId, @NonNull @CallbackExecutor Executor executor, @NonNull TakeScreenshotCallback callback)", "public void setAccessibilityFocusAppearance(int strokeWidth, @ColorInt int color)", "public final IBinder onBind(Intent intent)", "private void sendScreenshotSuccess(ScreenshotResult screenshot, Executor executor, TakeScreenshotCallback callback)", "private void sendScreenshotFailure(@ScreenshotErrorCode int errorCode, Executor executor, TakeScreenshotCallback callback)", "public void setGestureDetectionPassthroughRegion(int displayId, @NonNull Region region)", "public void setTouchExplorationPassthroughRegion(int displayId, @NonNull Region region)", "public void setAnimationScale(float scale)", "public final TouchInteractionController getTouchInteractionController(int displayId)", " void sendMotionEventToCallback(MotionEvent event)", " void onTouchStateChanged(int displayId, int state)", "public void attachAccessibilityOverlayToDisplay(int displayId, @NonNull SurfaceControl sc)", "public final void attachAccessibilityOverlayToDisplay(int displayId, @NonNull SurfaceControl sc, @NonNull @CallbackExecutor Executor executor, @NonNull IntConsumer callback)", "public void attachAccessibilityOverlayToWindow(int accessibilityWindowId, @NonNull SurfaceControl sc)", "public final void attachAccessibilityOverlayToWindow(int accessibilityWindowId, @NonNull SurfaceControl sc, @NonNull @CallbackExecutor Executor executor, @NonNull IntConsumer callback)", "public final BrailleDisplayController getBrailleDisplayController()" ],
+  "variableNames" : [ "GESTURE_TOUCH_EXPLORATION", "GESTURE_PASSTHROUGH", "GESTURE_UNKNOWN", "GESTURE_SWIPE_UP", "GESTURE_SWIPE_DOWN", "GESTURE_SWIPE_LEFT", "GESTURE_SWIPE_RIGHT", "GESTURE_SWIPE_LEFT_AND_RIGHT", "GESTURE_SWIPE_RIGHT_AND_LEFT", "GESTURE_SWIPE_UP_AND_DOWN", "GESTURE_SWIPE_DOWN_AND_UP", "GESTURE_SWIPE_LEFT_AND_UP", "GESTURE_SWIPE_LEFT_AND_DOWN", "GESTURE_SWIPE_RIGHT_AND_UP", "GESTURE_SWIPE_RIGHT_AND_DOWN", "GESTURE_SWIPE_UP_AND_LEFT", "GESTURE_SWIPE_UP_AND_RIGHT", "GESTURE_SWIPE_DOWN_AND_LEFT", "GESTURE_SWIPE_DOWN_AND_RIGHT", "GESTURE_DOUBLE_TAP", "GESTURE_DOUBLE_TAP_AND_HOLD", "GESTURE_2_FINGER_SINGLE_TAP", "GESTURE_2_FINGER_DOUBLE_TAP", "GESTURE_2_FINGER_TRIPLE_TAP", "GESTURE_3_FINGER_SINGLE_TAP", "GESTURE_3_FINGER_DOUBLE_TAP", "GESTURE_3_FINGER_TRIPLE_TAP", "GESTURE_2_FINGER_SWIPE_UP", "GESTURE_2_FINGER_SWIPE_DOWN", "GESTURE_2_FINGER_SWIPE_LEFT", "GESTURE_2_FINGER_SWIPE_RIGHT", "GESTURE_3_FINGER_SWIPE_UP", "GESTURE_3_FINGER_SWIPE_DOWN", "GESTURE_3_FINGER_SWIPE_LEFT", "GESTURE_3_FINGER_SWIPE_RIGHT", "GESTURE_4_FINGER_SWIPE_UP", "GESTURE_4_FINGER_SWIPE_DOWN", "GESTURE_4_FINGER_SWIPE_LEFT", "GESTURE_4_FINGER_SWIPE_RIGHT", "GESTURE_4_FINGER_SINGLE_TAP", "GESTURE_4_FINGER_DOUBLE_TAP", "GESTURE_4_FINGER_TRIPLE_TAP", "GESTURE_2_FINGER_DOUBLE_TAP_AND_HOLD", "GESTURE_3_FINGER_DOUBLE_TAP_AND_HOLD", "GESTURE_2_FINGER_TRIPLE_TAP_AND_HOLD", "GESTURE_3_FINGER_SINGLE_TAP_AND_HOLD", "GESTURE_3_FINGER_TRIPLE_TAP_AND_HOLD", "GESTURE_4_FINGER_DOUBLE_TAP_AND_HOLD", "SERVICE_INTERFACE", "SERVICE_META_DATA", "GLOBAL_ACTION_BACK", "GLOBAL_ACTION_HOME", "GLOBAL_ACTION_RECENTS", "GLOBAL_ACTION_NOTIFICATIONS", "GLOBAL_ACTION_QUICK_SETTINGS", "GLOBAL_ACTION_POWER_DIALOG", "GLOBAL_ACTION_TOGGLE_SPLIT_SCREEN", "GLOBAL_ACTION_LOCK_SCREEN", "GLOBAL_ACTION_TAKE_SCREENSHOT", "GLOBAL_ACTION_KEYCODE_HEADSETHOOK", "GLOBAL_ACTION_ACCESSIBILITY_BUTTON", "GLOBAL_ACTION_ACCESSIBILITY_BUTTON_CHOOSER", "GLOBAL_ACTION_ACCESSIBILITY_SHORTCUT", "GLOBAL_ACTION_ACCESSIBILITY_ALL_APPS", "GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE", "GLOBAL_ACTION_DPAD_UP", "GLOBAL_ACTION_DPAD_DOWN", "GLOBAL_ACTION_DPAD_LEFT", "GLOBAL_ACTION_DPAD_RIGHT", "GLOBAL_ACTION_DPAD_CENTER", "LOG_TAG", "SHOW_MODE_AUTO", "SHOW_MODE_HIDDEN", "SHOW_MODE_IGNORE_HARD_KEYBOARD", "SHOW_MODE_MASK", "SHOW_MODE_HARD_KEYBOARD_ORIGINAL_VALUE", "SHOW_MODE_HARD_KEYBOARD_OVERRIDDEN", "TAKE_SCREENSHOT_SUCCESS", "ERROR_TAKE_SCREENSHOT_INTERNAL_ERROR", "ERROR_TAKE_SCREENSHOT_NO_ACCESSIBILITY_ACCESS", "ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT", "ERROR_TAKE_SCREENSHOT_INVALID_DISPLAY", "ERROR_TAKE_SCREENSHOT_INVALID_WINDOW", "ERROR_TAKE_SCREENSHOT_SECURE_WINDOW", "ACCESSIBILITY_TAKE_SCREENSHOT_REQUEST_INTERVAL_TIMES_MS", "KEY_ACCESSIBILITY_SCREENSHOT_STATUS", "KEY_ACCESSIBILITY_SCREENSHOT_HARDWAREBUFFER", "KEY_ACCESSIBILITY_SCREENSHOT_COLORSPACE", "KEY_ACCESSIBILITY_SCREENSHOT_TIMESTAMP", "OVERLAY_RESULT_SUCCESS", "OVERLAY_RESULT_INTERNAL_ERROR", "OVERLAY_RESULT_INVALID", "mConnectionId", "mInfo", "mWindowToken", "mWindowManager", "mMagnificationControllers", "mTouchInteractionControllers", "mSoftKeyboardController", "mInputMethod", "mInputMethodInitialized", "mAccessibilityButtonControllers", "mBrailleDisplayController", "mGestureStatusCallbackSequence", "mGestureStatusCallbackInfos", "mLock", "mFingerprintGestureController", "mMotionEventSources" ]
+}

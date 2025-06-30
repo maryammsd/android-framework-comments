@@ -1,0 +1,391 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/apache/xpath/axes/WalkerFactory.java",
+  "packageName" : "org.apache.xpath.axes",
+  "className" : "WalkerFactory",
+  "comment" : "\n * This class is both a factory for XPath location path expressions,\n * which are built from the opcode map output, and an analysis engine\n * for the location path expressions in order to provide optimization hints.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "DEBUG_PATTERN_CREATION",
+    "type" : "boolean",
+    "comment" : " Set to true for diagnostics about walker creation ",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_WALKER_CREATION",
+    "type" : "boolean",
+    "comment" : " Set to true for diagnostics about walker creation ",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG_ITERATOR_CREATION",
+    "type" : "boolean",
+    "comment" : " Set to true for diagnostics about iterator creation ",
+    "links" : [ ]
+  }, {
+    "name" : "BITS_COUNT",
+    "type" : "int",
+    "comment" : "\n   * First 8 bits are the number of top-level location steps.  Hopefully\n   *  there will never be more that 255 location steps!!!\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "BITS_RESERVED",
+    "type" : "int",
+    "comment" : " 4 bits are reserved for future use. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_PREDICATE",
+    "type" : "int",
+    "comment" : " Bit is on if the expression contains a top-level predicate. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_ANCESTOR",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain an ancestor step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_ANCESTOR_OR_SELF",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain an ancestor-or-self step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_ATTRIBUTE",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain an attribute step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_CHILD",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a child step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_DESCENDANT",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a descendant step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_DESCENDANT_OR_SELF",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a descendant-or-self step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_FOLLOWING",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a following step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_FOLLOWING_SIBLING",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a following-sibiling step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_NAMESPACE",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a namespace step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_PARENT",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a parent step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_PRECEDING",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a preceding step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_PRECEDING_SIBLING",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a preceding-sibling step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_SELF",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a self step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_FILTER",
+    "type" : "int",
+    "comment" : "\n   * Bit is on if any of the walkers contain a filter (i.e. id(), extension\n   *  function, etc.) step.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_ROOT",
+    "type" : "int",
+    "comment" : " Bit is on if any of the walkers contain a root step. ",
+    "links" : [ ]
+  }, {
+    "name" : "BITMASK_TRAVERSES_OUTSIDE_SUBTREE",
+    "type" : "int",
+    "comment" : "\n   * If any of these bits are on, the expression may likely traverse outside\n   *  the given subtree.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_BACKWARDS_SELF",
+    "type" : "int",
+    "comment" : "\n   * Bit is on if any of the walkers can go backwards in document\n   *  order from the context node.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_ANY_DESCENDANT_FROM_ROOT",
+    "type" : "int",
+    "comment" : " Found \"//foo\" pattern ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_NODETEST_ANY",
+    "type" : "int",
+    "comment" : "\n   * Bit is on if any of the walkers contain an node() test.  This is\n   *  really only useful if the count is 1.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "BIT_MATCH_PATTERN",
+    "type" : "int",
+    "comment" : " Bit is on if the expression is a match pattern. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static AxesWalker loadOneWalker(WalkingIterator lpi, Compiler compiler, int stepOpCodePos) throws javax.xml.transform.TransformerException",
+    "returnType" : "AxesWalker",
+    "comment" : "\n   * This method is for building an array of possible levels\n   * where the target element(s) could be found for a match.\n   * @param lpi The owning location path iterator.\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   *\n   * @return non-null AxesWalker derivative.\n   *\n   * @throws javax.xml.transform.TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static AxesWalker loadWalkers(WalkingIterator lpi, Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException",
+    "returnType" : "AxesWalker",
+    "comment" : "\n   * This method is for building an array of possible levels\n   * where the target element(s) could be found for a match.\n   * @param lpi The owning location path iterator object.\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   * @param stepIndex The top-level step index withing the iterator.\n   *\n   * @return non-null AxesWalker derivative.\n   *\n   * @throws javax.xml.transform.TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isSet(int analysis, int bits)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void diagnoseIterator(String name, int analysis, Compiler compiler)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static DTMIterator newDTMIterator(Compiler compiler, int opPos, boolean isTopLevel) throws javax.xml.transform.TransformerException",
+    "returnType" : "DTMIterator",
+    "comment" : "\n   * Create a new LocPathIterator iterator.  The exact type of iterator\n   * returned is based on an analysis of the XPath operations.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param opPos The position of the operation code for this itterator.\n   *\n   * @return non-null reference to a LocPathIterator or derivative.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getAxisFromStep(Compiler compiler, int stepOpCodePos) throws javax.xml.transform.TransformerException",
+    "returnType" : "int",
+    "comment" : "\n   * Special purpose function to see if we can optimize the pattern for \n   * a DescendantIterator.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   *\n   * @return 32 bits as an integer that give information about the location\n   * path as a whole.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getAnalysisBitFromAxes(int axis)",
+    "returnType" : "int",
+    "comment" : "\n     * Get a corresponding BIT_XXX from an axis.\n     * @param axis One of Axis.ANCESTOR, etc.\n     * @return One of BIT_ANCESTOR, etc.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean functionProximateOrContainsProximate(Compiler compiler, int opPos)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean isProximateInnerExpr(Compiler compiler, int opPos)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean mightBeProximate(Compiler compiler, int opPos, int stepType) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the predicates need to have proximity knowledge.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isOptimizableForDescendantIterator(Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Special purpose function to see if we can optimize the pattern for \n   * a DescendantIterator.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   * @param stepIndex The top-level step index withing the iterator.\n   *\n   * @return 32 bits as an integer that give information about the location\n   * path as a whole.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int analyze(Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException",
+    "returnType" : "int",
+    "comment" : "\n   * Analyze the location path and return 32 bits that give information about\n   * the location path as a whole.  See the BIT_XXX constants for meaning about\n   * each of the bits.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   * @param stepIndex The top-level step index withing the iterator.\n   *\n   * @return 32 bits as an integer that give information about the location\n   * path as a whole.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isDownwardAxisOfMany(int axis)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the given axis goes downword.  Bogus name, if you can think of \n   * a better one, please do tell.  This really has to do with inverting \n   * attribute axis.\n   * @param axis One of Axis.XXX.\n   * @return true if the axis is not a child axis and does not go up from \n   * the axis root.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static StepPattern loadSteps(MatchPatternIterator mpi, Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException",
+    "returnType" : "StepPattern",
+    "comment" : "\n   * Read a <a href=\"http://www.w3.org/TR/xpath#location-paths\">LocationPath</a>\n   * as a generalized match pattern.  What this means is that the LocationPath\n   * is read backwards, as a test on a given node, to see if it matches the\n   * criteria of the selection, and ends up at the context node.  Essentially,\n   * this is a backwards query from a given node, to find the context node.\n   * <p>So, the selection \"foo/daz[2]\" is, in non-abreviated expanded syntax,\n   * \"self::node()/following-sibling::foo/child::daz[position()=2]\".\n   * Taking this as a match pattern for a probable node, it works out to\n   * \"self::daz/parent::foo[child::daz[position()=2 and isPrevStepNode()]\n   * precedingSibling::node()[isContextNodeOfLocationPath()]\", adding magic\n   * isPrevStepNode and isContextNodeOfLocationPath operations.  Predicates in\n   * the location path have to be executed by the following step,\n   * because they have to know the context of their execution.\n   *\n   * @param mpi The MatchPatternIterator to which the steps will be attached.\n   * @param compiler The compiler that holds the syntax tree/op map to\n   * construct from.\n   * @param stepOpCodePos The current op code position within the opmap.\n   * @param stepIndex The top-level step index withing the iterator.\n   *\n   * @return A StepPattern object, which may contain relative StepPatterns.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static StepPattern createDefaultStepPattern(Compiler compiler, int opPos, MatchPatternIterator mpi, int analysis, StepPattern tail, StepPattern head) throws javax.xml.transform.TransformerException",
+    "returnType" : "StepPattern",
+    "comment" : "\n   * Create a StepPattern that is contained within a LocationPath.\n   *\n   *\n   * @param compiler The compiler that holds the syntax tree/op map to\n   * construct from.\n   * @param stepOpCodePos The current op code position within the opmap.\n   * @param mpi The MatchPatternIterator to which the steps will be attached.\n   * @param analysis 32 bits of analysis, from which the type of AxesWalker\n   *                 may be influenced.\n   * @param tail The step that is the first step analyzed, but the last \n   *                  step in the relative match linked list, i.e. the tail.\n   *                  May be null.\n   * @param head The step that is the current head of the relative \n   *                 match step linked list.\n   *                 May be null.\n   *\n   * @return the head of the list.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean analyzePredicate(Compiler compiler, int opPos, int stepType) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Analyze a step and give information about it's predicates.  Right now this\n   * just returns true or false if the step has a predicate.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param opPos The opcode position for the step.\n   * @param stepType The type of step, one of OP_GROUP, etc.\n   *\n   * @return true if step has a predicate.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static AxesWalker createDefaultWalker(Compiler compiler, int opPos, WalkingIterator lpi, int analysis)",
+    "returnType" : "AxesWalker",
+    "comment" : "\n   * Create the proper Walker from the axes type.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param opPos The opcode position for the step.\n   * @param lpi The owning location path iterator.\n   * @param analysis 32 bits of analysis, from which the type of AxesWalker\n   *                 may be influenced.\n   *\n   * @return non-null reference to AxesWalker derivative.\n   * @throws RuntimeException if the input is bad.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getAnalysisString(int analysis)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean hasPredicate(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isWild(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksAncestors(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksAttributes(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksNamespaces(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksChildren(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksDescendants(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSubtree(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSubtreeOnlyMaybeAbsolute(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSubtreeOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksFilteredList(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSubtreeOnlyFromRootOrContext(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksInDocOrder(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksFollowingOnlyMaybeAbsolute(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksUp(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSideways(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksExtraNodes(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksExtraNodesOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isAbsolute(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksChildrenOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksChildrenAndExtraAndSelfOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksDescendantsAndExtraAndSelfOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksSelfOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksUpOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksDownOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean walksDownExtraOnly(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean canSkipSubtrees(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean canCrissCross(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isNaturalDocOrder(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the pattern can be 'walked' with the iteration steps in natural \n   * document order, without duplicates.\n   *\n   * @param analysis The general analysis of the pattern.\n   *\n   * @return true if the walk can be done in natural order.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isNaturalDocOrder(Compiler compiler, int stepOpCodePos, int stepIndex, int analysis) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the pattern can be 'walked' with the iteration steps in natural \n   * document order, without duplicates.\n   *\n   * @param compiler non-null reference to compiler object that has processed\n   *                 the XPath operations into an opcode map.\n   * @param stepOpCodePos The opcode position for the step.\n   * @param stepIndex The top-level step index withing the iterator.\n   * @param analysis The general analysis of the pattern.\n   *\n   * @return true if the walk can be done in natural order.\n   *\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isOneStep(int analysis)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getStepCount(int analysis)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " static AxesWalker loadOneWalker(WalkingIterator lpi, Compiler compiler, int stepOpCodePos) throws javax.xml.transform.TransformerException", " static AxesWalker loadWalkers(WalkingIterator lpi, Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException", "public static boolean isSet(int analysis, int bits)", "public static void diagnoseIterator(String name, int analysis, Compiler compiler)", "public static DTMIterator newDTMIterator(Compiler compiler, int opPos, boolean isTopLevel) throws javax.xml.transform.TransformerException", "public static int getAxisFromStep(Compiler compiler, int stepOpCodePos) throws javax.xml.transform.TransformerException", "public static int getAnalysisBitFromAxes(int axis)", " static boolean functionProximateOrContainsProximate(Compiler compiler, int opPos)", " static boolean isProximateInnerExpr(Compiler compiler, int opPos)", "public static boolean mightBeProximate(Compiler compiler, int opPos, int stepType) throws javax.xml.transform.TransformerException", "private static boolean isOptimizableForDescendantIterator(Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException", "private static int analyze(Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException", "public static boolean isDownwardAxisOfMany(int axis)", " static StepPattern loadSteps(MatchPatternIterator mpi, Compiler compiler, int stepOpCodePos, int stepIndex) throws javax.xml.transform.TransformerException", "private static StepPattern createDefaultStepPattern(Compiler compiler, int opPos, MatchPatternIterator mpi, int analysis, StepPattern tail, StepPattern head) throws javax.xml.transform.TransformerException", " static boolean analyzePredicate(Compiler compiler, int opPos, int stepType) throws javax.xml.transform.TransformerException", "private static AxesWalker createDefaultWalker(Compiler compiler, int opPos, WalkingIterator lpi, int analysis)", "public static String getAnalysisString(int analysis)", "public static boolean hasPredicate(int analysis)", "public static boolean isWild(int analysis)", "public static boolean walksAncestors(int analysis)", "public static boolean walksAttributes(int analysis)", "public static boolean walksNamespaces(int analysis)", "public static boolean walksChildren(int analysis)", "public static boolean walksDescendants(int analysis)", "public static boolean walksSubtree(int analysis)", "public static boolean walksSubtreeOnlyMaybeAbsolute(int analysis)", "public static boolean walksSubtreeOnly(int analysis)", "public static boolean walksFilteredList(int analysis)", "public static boolean walksSubtreeOnlyFromRootOrContext(int analysis)", "public static boolean walksInDocOrder(int analysis)", "public static boolean walksFollowingOnlyMaybeAbsolute(int analysis)", "public static boolean walksUp(int analysis)", "public static boolean walksSideways(int analysis)", "public static boolean walksExtraNodes(int analysis)", "public static boolean walksExtraNodesOnly(int analysis)", "public static boolean isAbsolute(int analysis)", "public static boolean walksChildrenOnly(int analysis)", "public static boolean walksChildrenAndExtraAndSelfOnly(int analysis)", "public static boolean walksDescendantsAndExtraAndSelfOnly(int analysis)", "public static boolean walksSelfOnly(int analysis)", "public static boolean walksUpOnly(int analysis)", "public static boolean walksDownOnly(int analysis)", "public static boolean walksDownExtraOnly(int analysis)", "public static boolean canSkipSubtrees(int analysis)", "public static boolean canCrissCross(int analysis)", "public static boolean isNaturalDocOrder(int analysis)", "private static boolean isNaturalDocOrder(Compiler compiler, int stepOpCodePos, int stepIndex, int analysis) throws javax.xml.transform.TransformerException", "public static boolean isOneStep(int analysis)", "public static int getStepCount(int analysis)" ],
+  "variableNames" : [ "DEBUG_PATTERN_CREATION", "DEBUG_WALKER_CREATION", "DEBUG_ITERATOR_CREATION", "BITS_COUNT", "BITS_RESERVED", "BIT_PREDICATE", "BIT_ANCESTOR", "BIT_ANCESTOR_OR_SELF", "BIT_ATTRIBUTE", "BIT_CHILD", "BIT_DESCENDANT", "BIT_DESCENDANT_OR_SELF", "BIT_FOLLOWING", "BIT_FOLLOWING_SIBLING", "BIT_NAMESPACE", "BIT_PARENT", "BIT_PRECEDING", "BIT_PRECEDING_SIBLING", "BIT_SELF", "BIT_FILTER", "BIT_ROOT", "BITMASK_TRAVERSES_OUTSIDE_SUBTREE", "BIT_BACKWARDS_SELF", "BIT_ANY_DESCENDANT_FROM_ROOT", "BIT_NODETEST_ANY", "BIT_MATCH_PATTERN" ]
+}

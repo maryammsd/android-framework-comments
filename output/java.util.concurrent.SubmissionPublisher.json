@@ -1,0 +1,176 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/SubmissionPublisher.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "SubmissionPublisher",
+  "comment" : "\n * A {@link Flow.Publisher} that asynchronously issues submitted\n * (non-null) items to current subscribers until it is closed.  Each\n * current subscriber receives newly submitted items in the same order\n * unless drops or exceptions are encountered.  Using a\n * SubmissionPublisher allows item generators to act as compliant <a\n * href=\"http://www.reactive-streams.org/\"> reactive-streams</a>\n * Publishers relying on drop handling and/or blocking for flow\n * control.\n *\n * <p>A SubmissionPublisher uses the {@link Executor} supplied in its\n * constructor for delivery to subscribers. The best choice of\n * Executor depends on expected usage. If the generator(s) of\n * submitted items run in separate threads, and the number of\n * subscribers can be estimated, consider using a {@link\n * Executors#newFixedThreadPool}. Otherwise consider using the\n * default, normally the {@link ForkJoinPool#commonPool}.\n *\n * <p>Buffering allows producers and consumers to transiently operate\n * at different rates.  Each subscriber uses an independent buffer.\n * Buffers are created upon first use and expanded as needed up to the\n * given maximum. (The enforced capacity may be rounded up to the\n * nearest power of two and/or bounded by the largest value supported\n * by this implementation.)  Invocations of {@link\n * Flow.Subscription#request(long) request} do not directly result in\n * buffer expansion, but risk saturation if unfilled requests exceed\n * the maximum capacity.  The default value of {@link\n * Flow#defaultBufferSize()} may provide a useful starting point for\n * choosing a capacity based on expected rates, resources, and usages.\n *\n * <p>A single SubmissionPublisher may be shared among multiple\n * sources. Actions in a source thread prior to publishing an item or\n * issuing a signal <a href=\"package-summary.html#MemoryVisibility\">\n * <i>happen-before</i></a> actions subsequent to the corresponding\n * access by each subscriber. But reported estimates of lag and demand\n * are designed for use in monitoring, not for synchronization\n * control, and may reflect stale or inaccurate views of progress.\n *\n * <p>Publication methods support different policies about what to do\n * when buffers are saturated. Method {@link #submit(Object) submit}\n * blocks until resources are available. This is simplest, but least\n * responsive.  The {@code offer} methods may drop items (either\n * immediately or with bounded timeout), but provide an opportunity to\n * interpose a handler and then retry.\n *\n * <p>If any Subscriber method throws an exception, its subscription\n * is cancelled.  If a handler is supplied as a constructor argument,\n * it is invoked before cancellation upon an exception in method\n * {@link Flow.Subscriber#onNext onNext}, but exceptions in methods\n * {@link Flow.Subscriber#onSubscribe onSubscribe},\n * {@link Flow.Subscriber#onError(Throwable) onError} and\n * {@link Flow.Subscriber#onComplete() onComplete} are not recorded or\n * handled before cancellation.  If the supplied Executor throws\n * {@link RejectedExecutionException} (or any other RuntimeException\n * or Error) when attempting to execute a task, or a drop handler\n * throws an exception when processing a dropped item, then the\n * exception is rethrown. In these cases, not all subscribers will\n * have been issued the published item. It is usually good practice to\n * {@link #closeExceptionally closeExceptionally} in these cases.\n *\n * <p>Method {@link #consume(Consumer)} simplifies support for a\n * common case in which the only action of a subscriber is to request\n * and process all items using a supplied function.\n *\n * <p>This class may also serve as a convenient base for subclasses\n * that generate items, and use the methods in this class to publish\n * them.  For example here is a class that periodically publishes the\n * items generated from a supplier. (In practice you might add methods\n * to independently start and stop generation, to share Executors\n * among publishers, and so on, or use a SubmissionPublisher as a\n * component rather than a superclass.)\n *\n * <pre> {@code\n * class PeriodicPublisher<T> extends SubmissionPublisher<T> {\n *   final ScheduledFuture<?> periodicTask;\n *   final ScheduledExecutorService scheduler;\n *   PeriodicPublisher(Executor executor, int maxBufferCapacity,\n *                     Supplier<? extends T> supplier,\n *                     long period, TimeUnit unit) {\n *     super(executor, maxBufferCapacity);\n *     scheduler = new ScheduledThreadPoolExecutor(1);\n *     periodicTask = scheduler.scheduleAtFixedRate(\n *       () -> submit(supplier.get()), 0, period, unit);\n *   }\n *   public void close() {\n *     periodicTask.cancel(false);\n *     scheduler.shutdown();\n *     super.close();\n *   }\n * }}</pre>\n *\n * <p>Here is an example of a {@link Flow.Processor} implementation.\n * It uses single-step requests to its publisher for simplicity of\n * illustration. A more adaptive version could monitor flow using the\n * lag estimate returned from {@code submit}, along with other utility\n * methods.\n *\n * <pre> {@code\n * class TransformProcessor<S,T> extends SubmissionPublisher<T>\n *   implements Flow.Processor<S,T> {\n *   final Function<? super S, ? extends T> function;\n *   Flow.Subscription subscription;\n *   TransformProcessor(Executor executor, int maxBufferCapacity,\n *                      Function<? super S, ? extends T> function) {\n *     super(executor, maxBufferCapacity);\n *     this.function = function;\n *   }\n *   public void onSubscribe(Flow.Subscription subscription) {\n *     (this.subscription = subscription).request(1);\n *   }\n *   public void onNext(S item) {\n *     subscription.request(1);\n *     submit(function.apply(item));\n *   }\n *   public void onError(Throwable ex) { closeExceptionally(ex); }\n *   public void onComplete() { close(); }\n * }}</pre>\n *\n * @param <T> the published item type\n * @author Doug Lea\n * @since 9\n ",
+  "links" : [ "java.util.concurrent.Executor", "java.util.concurrent.ForkJoinPool#commonPool", "Flow.Subscriber#onComplete()", "java.util.concurrent.Executors#newFixedThreadPool", "java.util.concurrent.Flow#defaultBufferSize()", "#closeExceptionally", "Flow.Subscription#request(long)", "java.util.concurrent.RejectedExecutionException", "Flow.Subscriber#onError(Throwable)", "Flow.Publisher", "Flow.Subscriber#onNext", "Flow.Processor", "#consume(Consumer)", "#submit(Object)", "Flow.Subscriber#onSubscribe" ],
+  "variables" : [ {
+    "name" : "BUFFER_CAPACITY_LIMIT",
+    "type" : "int",
+    "comment" : " The largest possible power of two array size. ",
+    "links" : [ ]
+  }, {
+    "name" : "INITIAL_CAPACITY",
+    "type" : "int",
+    "comment" : "\n     * Initial buffer capacity used when maxBufferCapacity is\n     * greater. Must be a power of two.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ASYNC_POOL",
+    "type" : "Executor",
+    "comment" : "\n     * Default executor -- ForkJoinPool.commonPool() unless it cannot\n     * support parallelism.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "clients",
+    "type" : "BufferedSubscription<T>",
+    "comment" : "\n     * Clients (BufferedSubscriptions) are maintained in a linked list\n     * (via their \"next\" fields). This works well for publish loops.\n     * It requires O(n) traversal to check for duplicate subscribers,\n     * but we expect that subscribing is much less common than\n     * publishing. Unsubscribing occurs only during traversal loops,\n     * when BufferedSubscription methods return negative values\n     * signifying that they have been closed.  To reduce\n     * head-of-line blocking, submit and offer methods first call\n     * BufferedSubscription.offer on each subscriber, and place\n     * saturated ones in retries list (using nextRetry field), and\n     * retry, possibly blocking or dropping.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "lock",
+    "type" : "ReentrantLock",
+    "comment" : " Lock for exclusion across multiple sources ",
+    "links" : [ ]
+  }, {
+    "name" : "closed",
+    "type" : "boolean",
+    "comment" : " Run status, updated only within locks ",
+    "links" : [ ]
+  }, {
+    "name" : "subscribed",
+    "type" : "boolean",
+    "comment" : " Set true on first call to subscribe, to initialize possible owner ",
+    "links" : [ ]
+  }, {
+    "name" : "owner",
+    "type" : "Thread",
+    "comment" : " The first caller thread to subscribe, or null if thread ever changed ",
+    "links" : [ ]
+  }, {
+    "name" : "closedException",
+    "type" : "Throwable",
+    "comment" : " If non-null, the exception in closeExceptionally ",
+    "links" : [ ]
+  }, {
+    "name" : "executor",
+    "type" : "Executor",
+    "comment" : " Parameters for constructing BufferedSubscriptions",
+    "links" : [ ]
+  }, {
+    "name" : "onNextHandler",
+    "type" : "BiConsumer<? super Subscriber<? super T>, ? super Throwable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "maxBufferCapacity",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static final int roundCapacity(int cap)",
+    "returnType" : "int",
+    "comment" : " Round capacity to power of 2, at most limit. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void subscribe(Subscriber<? super T> subscriber)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds the given Subscriber unless already subscribed.  If already\n     * subscribed, the Subscriber's {@link\n     * Flow.Subscriber#onError(Throwable) onError} method is invoked on\n     * the existing subscription with an {@link IllegalStateException}.\n     * Otherwise, upon success, the Subscriber's {@link\n     * Flow.Subscriber#onSubscribe onSubscribe} method is invoked\n     * asynchronously with a new {@link Flow.Subscription}.  If {@link\n     * Flow.Subscriber#onSubscribe onSubscribe} throws an exception, the\n     * subscription is cancelled. Otherwise, if this SubmissionPublisher\n     * was closed exceptionally, then the subscriber's {@link\n     * Flow.Subscriber#onError onError} method is invoked with the\n     * corresponding exception, or if closed without exception, the\n     * subscriber's {@link Flow.Subscriber#onComplete() onComplete}\n     * method is invoked.  Subscribers may enable receiving items by\n     * invoking the {@link Flow.Subscription#request(long) request}\n     * method of the new Subscription, and may unsubscribe by invoking\n     * its {@link Flow.Subscription#cancel() cancel} method.\n     *\n     * @param subscriber the subscriber\n     * @throws NullPointerException if subscriber is null\n     ",
+    "links" : [ "IllegalStateException", "Flow.Subscription#request(long)", "Flow.Subscriber#onError(Throwable)", "Flow.Subscription#cancel()", "Flow.Subscriber#onError", "Flow.Subscription", "Flow.Subscriber#onComplete()", "Flow.Subscriber#onSubscribe" ]
+  }, {
+    "name" : "private int doOffer(T item, long nanos, BiPredicate<Subscriber<? super T>, ? super T> onDrop)",
+    "returnType" : "int",
+    "comment" : "\n     * Common implementation for all three forms of submit and offer.\n     * Acts as submit if nanos == Long.MAX_VALUE, else offer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int retryOffer(T item, long nanos, BiPredicate<Subscriber<? super T>, ? super T> onDrop, BufferedSubscription<T> retries, int lag, boolean cleanMe)",
+    "returnType" : "int",
+    "comment" : "\n     * Helps, (timed) waits for, and/or drops buffers on list; returns\n     * lag or negative drops (for use in offer).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int cleanAndCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns current list count after removing closed subscribers.\n     * Call only while holding lock.  Used mainly by retryOffer for\n     * cleanup.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int submit(T item)",
+    "returnType" : "int",
+    "comment" : "\n     * Publishes the given item to each current subscriber by\n     * asynchronously invoking its {@link Flow.Subscriber#onNext(Object)\n     * onNext} method, blocking uninterruptibly while resources for any\n     * subscriber are unavailable. This method returns an estimate of\n     * the maximum lag (number of items submitted but not yet consumed)\n     * among all current subscribers. This value is at least one\n     * (accounting for this submitted item) if there are any\n     * subscribers, else zero.\n     *\n     * <p>If the Executor for this publisher throws a\n     * RejectedExecutionException (or any other RuntimeException or\n     * Error) when attempting to asynchronously notify subscribers,\n     * then this exception is rethrown, in which case not all\n     * subscribers will have been issued this item.\n     *\n     * @param item the (non-null) item to publish\n     * @return the estimated maximum lag among subscribers\n     * @throws IllegalStateException if closed\n     * @throws NullPointerException if item is null\n     * @throws RejectedExecutionException if thrown by Executor\n     ",
+    "links" : [ "Flow.Subscriber#onNext(Object)" ]
+  }, {
+    "name" : "public int offer(T item, BiPredicate<Subscriber<? super T>, ? super T> onDrop)",
+    "returnType" : "int",
+    "comment" : "\n     * Publishes the given item, if possible, to each current subscriber\n     * by asynchronously invoking its {@link\n     * Flow.Subscriber#onNext(Object) onNext} method. The item may be\n     * dropped by one or more subscribers if resource limits are\n     * exceeded, in which case the given handler (if non-null) is\n     * invoked, and if it returns true, retried once.  Other calls to\n     * methods in this class by other threads are blocked while the\n     * handler is invoked.  Unless recovery is assured, options are\n     * usually limited to logging the error and/or issuing an {@link\n     * Flow.Subscriber#onError(Throwable) onError} signal to the\n     * subscriber.\n     *\n     * <p>This method returns a status indicator: If negative, it\n     * represents the (negative) number of drops (failed attempts to\n     * issue the item to a subscriber). Otherwise it is an estimate of\n     * the maximum lag (number of items submitted but not yet\n     * consumed) among all current subscribers. This value is at least\n     * one (accounting for this submitted item) if there are any\n     * subscribers, else zero.\n     *\n     * <p>If the Executor for this publisher throws a\n     * RejectedExecutionException (or any other RuntimeException or\n     * Error) when attempting to asynchronously notify subscribers, or\n     * the drop handler throws an exception when processing a dropped\n     * item, then this exception is rethrown.\n     *\n     * @param item the (non-null) item to publish\n     * @param onDrop if non-null, the handler invoked upon a drop to a\n     * subscriber, with arguments of the subscriber and item; if it\n     * returns true, an offer is re-attempted (once)\n     * @return if negative, the (negative) number of drops; otherwise\n     * an estimate of maximum lag\n     * @throws IllegalStateException if closed\n     * @throws NullPointerException if item is null\n     * @throws RejectedExecutionException if thrown by Executor\n     ",
+    "links" : [ "Flow.Subscriber#onError(Throwable)", "Flow.Subscriber#onNext(Object)" ]
+  }, {
+    "name" : "public int offer(T item, long timeout, TimeUnit unit, BiPredicate<Subscriber<? super T>, ? super T> onDrop)",
+    "returnType" : "int",
+    "comment" : "\n     * Publishes the given item, if possible, to each current subscriber\n     * by asynchronously invoking its {@link\n     * Flow.Subscriber#onNext(Object) onNext} method, blocking while\n     * resources for any subscription are unavailable, up to the\n     * specified timeout or until the caller thread is interrupted, at\n     * which point the given handler (if non-null) is invoked, and if it\n     * returns true, retried once. (The drop handler may distinguish\n     * timeouts from interrupts by checking whether the current thread\n     * is interrupted.)  Other calls to methods in this class by other\n     * threads are blocked while the handler is invoked.  Unless\n     * recovery is assured, options are usually limited to logging the\n     * error and/or issuing an {@link Flow.Subscriber#onError(Throwable)\n     * onError} signal to the subscriber.\n     *\n     * <p>This method returns a status indicator: If negative, it\n     * represents the (negative) number of drops (failed attempts to\n     * issue the item to a subscriber). Otherwise it is an estimate of\n     * the maximum lag (number of items submitted but not yet\n     * consumed) among all current subscribers. This value is at least\n     * one (accounting for this submitted item) if there are any\n     * subscribers, else zero.\n     *\n     * <p>If the Executor for this publisher throws a\n     * RejectedExecutionException (or any other RuntimeException or\n     * Error) when attempting to asynchronously notify subscribers, or\n     * the drop handler throws an exception when processing a dropped\n     * item, then this exception is rethrown.\n     *\n     * @param item the (non-null) item to publish\n     * @param timeout how long to wait for resources for any subscriber\n     * before giving up, in units of {@code unit}\n     * @param unit a {@code TimeUnit} determining how to interpret the\n     * {@code timeout} parameter\n     * @param onDrop if non-null, the handler invoked upon a drop to a\n     * subscriber, with arguments of the subscriber and item; if it\n     * returns true, an offer is re-attempted (once)\n     * @return if negative, the (negative) number of drops; otherwise\n     * an estimate of maximum lag\n     * @throws IllegalStateException if closed\n     * @throws NullPointerException if item is null\n     * @throws RejectedExecutionException if thrown by Executor\n     ",
+    "links" : [ "Flow.Subscriber#onError(Throwable)", "Flow.Subscriber#onNext(Object)" ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Unless already closed, issues {@link\n     * Flow.Subscriber#onComplete() onComplete} signals to current\n     * subscribers, and disallows subsequent attempts to publish.\n     * Upon return, this method does <em>NOT</em> guarantee that all\n     * subscribers have yet completed.\n     ",
+    "links" : [ "Flow.Subscriber#onComplete()" ]
+  }, {
+    "name" : "public void closeExceptionally(Throwable error)",
+    "returnType" : "void",
+    "comment" : "\n     * Unless already closed, issues {@link\n     * Flow.Subscriber#onError(Throwable) onError} signals to current\n     * subscribers with the given error, and disallows subsequent\n     * attempts to publish.  Future subscribers also receive the given\n     * error. Upon return, this method does <em>NOT</em> guarantee\n     * that all subscribers have yet completed.\n     *\n     * @param error the {@code onError} argument sent to subscribers\n     * @throws NullPointerException if error is null\n     ",
+    "links" : [ "Flow.Subscriber#onError(Throwable)" ]
+  }, {
+    "name" : "public boolean isClosed()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this publisher is not accepting submissions.\n     *\n     * @return true if closed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Throwable getClosedException()",
+    "returnType" : "Throwable",
+    "comment" : "\n     * Returns the exception associated with {@link\n     * #closeExceptionally(Throwable) closeExceptionally}, or null if\n     * not closed or if closed normally.\n     *\n     * @return the exception, or null if none\n     ",
+    "links" : [ "#closeExceptionally(Throwable)" ]
+  }, {
+    "name" : "public boolean hasSubscribers()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this publisher has any subscribers.\n     *\n     * @return true if this publisher has any subscribers\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getNumberOfSubscribers()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of current subscribers.\n     *\n     * @return the number of current subscribers\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Executor getExecutor()",
+    "returnType" : "Executor",
+    "comment" : "\n     * Returns the Executor used for asynchronous delivery.\n     *\n     * @return the Executor used for asynchronous delivery\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMaxBufferCapacity()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the maximum per-subscriber buffer capacity.\n     *\n     * @return the maximum per-subscriber buffer capacity\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<Subscriber<? super T>> getSubscribers()",
+    "returnType" : "List<Subscriber<? super T>>",
+    "comment" : "\n     * Returns a list of current subscribers for monitoring and\n     * tracking purposes, not for invoking {@link Flow.Subscriber}\n     * methods on the subscribers.\n     *\n     * @return list of current subscribers\n     ",
+    "links" : [ "Flow.Subscriber" ]
+  }, {
+    "name" : "public boolean isSubscribed(Subscriber<? super T> subscriber)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the given Subscriber is currently subscribed.\n     *\n     * @param subscriber the subscriber\n     * @return true if currently subscribed\n     * @throws NullPointerException if subscriber is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long estimateMinimumDemand()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns an estimate of the minimum number of items requested\n     * (via {@link Flow.Subscription#request(long) request}) but not\n     * yet produced, among all current subscribers.\n     *\n     * @return the estimate, or zero if no subscribers\n     ",
+    "links" : [ "Flow.Subscription#request(long)" ]
+  }, {
+    "name" : "public int estimateMaximumLag()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns an estimate of the maximum number of items produced but\n     * not yet consumed among all current subscribers.\n     *\n     * @return the estimate\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CompletableFuture<Void> consume(Consumer<? super T> consumer)",
+    "returnType" : "CompletableFuture<Void>",
+    "comment" : "\n     * Processes all published items using the given Consumer function.\n     * Returns a CompletableFuture that is completed normally when this\n     * publisher signals {@link Flow.Subscriber#onComplete()\n     * onComplete}, or completed exceptionally upon any error, or an\n     * exception is thrown by the Consumer, or the returned\n     * CompletableFuture is cancelled, in which case no further items\n     * are processed.\n     *\n     * @param consumer the function applied to each onNext item\n     * @return a CompletableFuture that is completed normally\n     * when the publisher signals onComplete, and exceptionally\n     * upon any error or cancellation\n     * @throws NullPointerException if consumer is null\n     ",
+    "links" : [ "Flow.Subscriber#onComplete()" ]
+  } ],
+  "methodNames" : [ " static final int roundCapacity(int cap)", "public void subscribe(Subscriber<? super T> subscriber)", "private int doOffer(T item, long nanos, BiPredicate<Subscriber<? super T>, ? super T> onDrop)", "private int retryOffer(T item, long nanos, BiPredicate<Subscriber<? super T>, ? super T> onDrop, BufferedSubscription<T> retries, int lag, boolean cleanMe)", "private int cleanAndCount()", "public int submit(T item)", "public int offer(T item, BiPredicate<Subscriber<? super T>, ? super T> onDrop)", "public int offer(T item, long timeout, TimeUnit unit, BiPredicate<Subscriber<? super T>, ? super T> onDrop)", "public void close()", "public void closeExceptionally(Throwable error)", "public boolean isClosed()", "public Throwable getClosedException()", "public boolean hasSubscribers()", "public int getNumberOfSubscribers()", "public Executor getExecutor()", "public int getMaxBufferCapacity()", "public List<Subscriber<? super T>> getSubscribers()", "public boolean isSubscribed(Subscriber<? super T> subscriber)", "public long estimateMinimumDemand()", "public int estimateMaximumLag()", "public CompletableFuture<Void> consume(Consumer<? super T> consumer)" ],
+  "variableNames" : [ "BUFFER_CAPACITY_LIMIT", "INITIAL_CAPACITY", "ASYNC_POOL", "clients", "lock", "closed", "subscribed", "owner", "closedException", "executor", "onNextHandler", "maxBufferCapacity" ]
+}

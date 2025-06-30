@@ -1,0 +1,366 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/prefs/AbstractPreferences.java",
+  "packageName" : "java.util.prefs",
+  "className" : "AbstractPreferences",
+  "comment" : "\n * This class provides a skeletal implementation of the {@link Preferences}\n * class, greatly easing the task of implementing it.\n *\n * <p><strong>This class is for <tt>Preferences</tt> implementers only.\n * Normal users of the <tt>Preferences</tt> facility should have no need to\n * consult this documentation.  The {@link Preferences} documentation\n * should suffice.</strong>\n *\n * <p>Implementors must override the nine abstract service-provider interface\n * (SPI) methods: {@link #getSpi(String)}, {@link #putSpi(String,String)},\n * {@link #removeSpi(String)}, {@link #childSpi(String)}, {@link\n * #removeNodeSpi()}, {@link #keysSpi()}, {@link #childrenNamesSpi()}, {@link\n * #syncSpi()} and {@link #flushSpi()}.  All of the concrete methods specify\n * precisely how they are implemented atop these SPI methods.  The implementor\n * may, at his discretion, override one or more of the concrete methods if the\n * default implementation is unsatisfactory for any reason, such as\n * performance.\n *\n * <p>The SPI methods fall into three groups concerning exception\n * behavior. The <tt>getSpi</tt> method should never throw exceptions, but it\n * doesn't really matter, as any exception thrown by this method will be\n * intercepted by {@link #get(String,String)}, which will return the specified\n * default value to the caller.  The <tt>removeNodeSpi, keysSpi,\n * childrenNamesSpi, syncSpi</tt> and <tt>flushSpi</tt> methods are specified\n * to throw {@link BackingStoreException}, and the implementation is required\n * to throw this checked exception if it is unable to perform the operation.\n * The exception propagates outward, causing the corresponding API method\n * to fail.\n *\n * <p>The remaining SPI methods {@link #putSpi(String,String)}, {@link\n * #removeSpi(String)} and {@link #childSpi(String)} have more complicated\n * exception behavior.  They are not specified to throw\n * <tt>BackingStoreException</tt>, as they can generally obey their contracts\n * even if the backing store is unavailable.  This is true because they return\n * no information and their effects are not required to become permanent until\n * a subsequent call to {@link Preferences#flush()} or\n * {@link Preferences#sync()}. Generally speaking, these SPI methods should not\n * throw exceptions.  In some implementations, there may be circumstances\n * under which these calls cannot even enqueue the requested operation for\n * later processing.  Even under these circumstances it is generally better to\n * simply ignore the invocation and return, rather than throwing an\n * exception.  Under these circumstances, however, all subsequent invocations\n * of <tt>flush()</tt> and <tt>sync</tt> should return <tt>false</tt>, as\n * returning <tt>true</tt> would imply that all previous operations had\n * successfully been made permanent.\n *\n * <p>There is one circumstance under which <tt>putSpi, removeSpi and\n * childSpi</tt> <i>should</i> throw an exception: if the caller lacks\n * sufficient privileges on the underlying operating system to perform the\n * requested operation.  This will, for instance, occur on most systems\n * if a non-privileged user attempts to modify system preferences.\n * (The required privileges will vary from implementation to\n * implementation.  On some implementations, they are the right to modify the\n * contents of some directory in the file system; on others they are the right\n * to modify contents of some key in a registry.)  Under any of these\n * circumstances, it would generally be undesirable to let the program\n * continue executing as if these operations would become permanent at a later\n * time.  While implementations are not required to throw an exception under\n * these circumstances, they are encouraged to do so.  A {@link\n * SecurityException} would be appropriate.\n *\n * <p>Most of the SPI methods require the implementation to read or write\n * information at a preferences node.  The implementor should beware of the\n * fact that another VM may have concurrently deleted this node from the\n * backing store.  It is the implementation's responsibility to recreate the\n * node if it has been deleted.\n *\n * <p>Implementation note: In Sun's default <tt>Preferences</tt>\n * implementations, the user's identity is inherited from the underlying\n * operating system and does not change for the lifetime of the virtual\n * machine.  It is recognized that server-side <tt>Preferences</tt>\n * implementations may have the user identity change from request to request,\n * implicitly passed to <tt>Preferences</tt> methods via the use of a\n * static {@link ThreadLocal} instance.  Authors of such implementations are\n * <i>strongly</i> encouraged to determine the user at the time preferences\n * are accessed (for example by the {@link #get(String,String)} or {@link\n * #put(String,String)} method) rather than permanently associating a user\n * with each <tt>Preferences</tt> instance.  The latter behavior conflicts\n * with normal <tt>Preferences</tt> usage and would lead to great confusion.\n *\n * @author  Josh Bloch\n * @see     Preferences\n * @since   1.4\n ",
+  "links" : [ "#removeNodeSpi()", "#put(String", "#keysSpi()", "java.util.prefs.Preferences#flush()", "#getSpi(String)", "#get(String", "java.util.prefs.BackingStoreException", "SecurityException", "java.util.prefs.Preferences#sync()", "java.util.prefs.Preferences", "ThreadLocal", "#syncSpi()", "#flushSpi()", "#removeSpi(String)", "#childSpi(String)", "#childrenNamesSpi()", "#putSpi(String" ],
+  "variables" : [ {
+    "name" : "name",
+    "type" : "String",
+    "comment" : "\n     * Our name relative to parent.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "absolutePath",
+    "type" : "String",
+    "comment" : "\n     * Our absolute path name.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "parent",
+    "type" : "AbstractPreferences",
+    "comment" : "\n     * Our parent node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "root",
+    "type" : "AbstractPreferences",
+    "comment" : " Relative to this node",
+    "links" : [ ]
+  }, {
+    "name" : "newNode",
+    "type" : "boolean",
+    "comment" : "\n     * This field should be <tt>true</tt> if this node did not exist in the\n     * backing store prior to the creation of this object.  The field\n     * is initialized to false, but may be set to true by a subclass\n     * constructor (and should not be modified thereafter).  This field\n     * indicates whether a node change event should be fired when\n     * creation is complete.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "kidCache",
+    "type" : "Map<String, AbstractPreferences>",
+    "comment" : "\n     * All known unremoved children of this node.  (This \"cache\" is consulted\n     * prior to calling childSpi() or getChild().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "removed",
+    "type" : "boolean",
+    "comment" : "\n     * This field is used to keep track of whether or not this node has\n     * been removed.  Once it's set to true, it will never be reset to false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "prefListeners",
+    "type" : "ArrayList<PreferenceChangeListener>",
+    "comment" : "     new PreferenceChangeListener[0];",
+    "links" : [ ]
+  }, {
+    "name" : "nodeListeners",
+    "type" : "ArrayList<NodeChangeListener>",
+    "comment" : " private NodeChangeListener[] nodeListeners = new NodeChangeListener[0];",
+    "links" : [ ]
+  }, {
+    "name" : "lock",
+    "type" : "Object",
+    "comment" : "\n     * An object whose monitor is used to lock this node.  This object\n     * is used in preference to the node itself to reduce the likelihood of\n     * intentional or unintentional denial of service due to a locked node.\n     * To avoid deadlock, a node is <i>never</i> locked by a thread that\n     * holds a lock on a descendant of that node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY_STRING_ARRAY",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY_ABSTRACT_PREFS_ARRAY",
+    "type" : "AbstractPreferences[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "eventQueue",
+    "type" : "List<EventObject>",
+    "comment" : "\n     * Queue of pending notification events.  When a preference or node\n     * change event for which there are one or more listeners occurs,\n     * it is placed on this queue and the queue is notified.  A background\n     * thread waits on this queue and delivers the events.  This decouples\n     * event delivery from preference activity, greatly simplifying\n     * locking and reducing opportunity for deadlock.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "eventDispatchThread",
+    "type" : "Thread",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void put(String key, String value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>put</tt> method as per the specification in\n     * {@link Preferences#put(String,String)}.\n     *\n     * <p>This implementation checks that the key and value are legal,\n     * obtains this preference node's lock, checks that the node\n     * has not been removed, invokes {@link #putSpi(String,String)}, and if\n     * there are any preference change listeners, enqueues a notification\n     * event for processing by the event dispatch thread.\n     *\n     * @param key key with which the specified value is to be associated.\n     * @param value value to be associated with the specified key.\n     * @throws NullPointerException if key or value is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *       <tt>MAX_KEY_LENGTH</tt> or if <tt>value.length</tt> exceeds\n     *       <tt>MAX_VALUE_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#put(String", "#removeNode()", "#putSpi(String" ]
+  }, {
+    "name" : "public String get(String key, String def)",
+    "returnType" : "String",
+    "comment" : "\n     * Implements the <tt>get</tt> method as per the specification in\n     * {@link Preferences#get(String,String)}.\n     *\n     * <p>This implementation first checks to see if <tt>key</tt> is\n     * <tt>null</tt> throwing a <tt>NullPointerException</tt> if this is\n     * the case.  Then it obtains this preference node's lock,\n     * checks that the node has not been removed, invokes {@link\n     * #getSpi(String)}, and returns the result, unless the <tt>getSpi</tt>\n     * invocation returns <tt>null</tt> or throws an exception, in which case\n     * this invocation returns <tt>def</tt>.\n     *\n     * @param key key whose associated value is to be returned.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>.\n     * @return the value associated with <tt>key</tt>, or <tt>def</tt>\n     *         if no value is associated with <tt>key</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if key is <tt>null</tt>.  (A\n     *         <tt>null</tt> default <i>is</i> permitted.)\n     ",
+    "links" : [ "java.util.prefs.Preferences#get(String", "#getSpi(String)", "#removeNode()" ]
+  }, {
+    "name" : "public void remove(String key)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>remove(String)</tt> method as per the specification\n     * in {@link Preferences#remove(String)}.\n     *\n     * <p>This implementation obtains this preference node's lock,\n     * checks that the node has not been removed, invokes\n     * {@link #removeSpi(String)} and if there are any preference\n     * change listeners, enqueues a notification event for processing by the\n     * event dispatch thread.\n     *\n     * @param key key whose mapping is to be removed from the preference node.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException {@inheritDoc}.\n     ",
+    "links" : [ "#removeSpi(String)", "#removeNode()", "java.util.prefs.Preferences#remove(String)" ]
+  }, {
+    "name" : "public void clear() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>clear</tt> method as per the specification in\n     * {@link Preferences#clear()}.\n     *\n     * <p>This implementation obtains this preference node's lock,\n     * invokes {@link #keys()} to obtain an array of keys, and\n     * iterates over the array invoking {@link #remove(String)} on each key.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "#keys()", "java.util.prefs.Preferences#clear()", "#removeNode()", "#remove(String)" ]
+  }, {
+    "name" : "public void putInt(String key, int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putInt</tt> method as per the specification in\n     * {@link Preferences#putInt(String,int)}.\n     *\n     * <p>This implementation translates <tt>value</tt> to a string with\n     * {@link Integer#toString(int)} and invokes {@link #put(String,String)}\n     * on the result.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *         <tt>MAX_KEY_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#putInt(String", "#put(String", "#removeNode()", "java.lang.Integer#toString(int)" ]
+  }, {
+    "name" : "public int getInt(String key, int def)",
+    "returnType" : "int",
+    "comment" : "\n     * Implements the <tt>getInt</tt> method as per the specification in\n     * {@link Preferences#getInt(String,int)}.\n     *\n     * <p>This implementation invokes {@link #get(String,String) <tt>get(key,\n     * null)</tt>}.  If the return value is non-null, the implementation\n     * attempts to translate it to an <tt>int</tt> with\n     * {@link Integer#parseInt(String)}.  If the attempt succeeds, the return\n     * value is returned by this method.  Otherwise, <tt>def</tt> is returned.\n     *\n     * @param key key whose associated value is to be returned as an int.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as an int.\n     * @return the int value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         an int.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.\n     ",
+    "links" : [ "java.lang.Integer#parseInt(String)", "java.util.prefs.Preferences#getInt(String", "#get(String", "#removeNode()" ]
+  }, {
+    "name" : "public void putLong(String key, long value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putLong</tt> method as per the specification in\n     * {@link Preferences#putLong(String,long)}.\n     *\n     * <p>This implementation translates <tt>value</tt> to a string with\n     * {@link Long#toString(long)} and invokes {@link #put(String,String)}\n     * on the result.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *         <tt>MAX_KEY_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#putLong(String", "#put(String", "java.lang.Long#toString(long)", "#removeNode()" ]
+  }, {
+    "name" : "public long getLong(String key, long def)",
+    "returnType" : "long",
+    "comment" : "\n     * Implements the <tt>getLong</tt> method as per the specification in\n     * {@link Preferences#getLong(String,long)}.\n     *\n     * <p>This implementation invokes {@link #get(String,String) <tt>get(key,\n     * null)</tt>}.  If the return value is non-null, the implementation\n     * attempts to translate it to a <tt>long</tt> with\n     * {@link Long#parseLong(String)}.  If the attempt succeeds, the return\n     * value is returned by this method.  Otherwise, <tt>def</tt> is returned.\n     *\n     * @param key key whose associated value is to be returned as a long.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as a long.\n     * @return the long value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         a long.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.\n     ",
+    "links" : [ "java.util.prefs.Preferences#getLong(String", "java.lang.Long#parseLong(String)", "#get(String", "#removeNode()" ]
+  }, {
+    "name" : "public void putBoolean(String key, boolean value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putBoolean</tt> method as per the specification in\n     * {@link Preferences#putBoolean(String,boolean)}.\n     *\n     * <p>This implementation translates <tt>value</tt> to a string with\n     * {@link String#valueOf(boolean)} and invokes {@link #put(String,String)}\n     * on the result.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *         <tt>MAX_KEY_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "#put(String", "#removeNode()", "java.util.prefs.Preferences#putBoolean(String", "#valueOf(boolean)" ]
+  }, {
+    "name" : "public boolean getBoolean(String key, boolean def)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Implements the <tt>getBoolean</tt> method as per the specification in\n     * {@link Preferences#getBoolean(String,boolean)}.\n     *\n     * <p>This implementation invokes {@link #get(String,String) <tt>get(key,\n     * null)</tt>}.  If the return value is non-null, it is compared with\n     * <tt>\"true\"</tt> using {@link String#equalsIgnoreCase(String)}.  If the\n     * comparison returns <tt>true</tt>, this invocation returns\n     * <tt>true</tt>.  Otherwise, the original return value is compared with\n     * <tt>\"false\"</tt>, again using {@link String#equalsIgnoreCase(String)}.\n     * If the comparison returns <tt>true</tt>, this invocation returns\n     * <tt>false</tt>.  Otherwise, this invocation returns <tt>def</tt>.\n     *\n     * @param key key whose associated value is to be returned as a boolean.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as a boolean.\n     * @return the boolean value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         a boolean.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.\n     ",
+    "links" : [ "#get(String", "java.util.prefs.Preferences#getBoolean(String", "#removeNode()", "#equalsIgnoreCase(String)" ]
+  }, {
+    "name" : "public void putFloat(String key, float value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putFloat</tt> method as per the specification in\n     * {@link Preferences#putFloat(String,float)}.\n     *\n     * <p>This implementation translates <tt>value</tt> to a string with\n     * {@link Float#toString(float)} and invokes {@link #put(String,String)}\n     * on the result.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *         <tt>MAX_KEY_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.lang.Float#toString(float)", "#put(String", "java.util.prefs.Preferences#putFloat(String", "#removeNode()" ]
+  }, {
+    "name" : "public float getFloat(String key, float def)",
+    "returnType" : "float",
+    "comment" : "\n     * Implements the <tt>getFloat</tt> method as per the specification in\n     * {@link Preferences#getFloat(String,float)}.\n     *\n     * <p>This implementation invokes {@link #get(String,String) <tt>get(key,\n     * null)</tt>}.  If the return value is non-null, the implementation\n     * attempts to translate it to an <tt>float</tt> with\n     * {@link Float#parseFloat(String)}.  If the attempt succeeds, the return\n     * value is returned by this method.  Otherwise, <tt>def</tt> is returned.\n     *\n     * @param key key whose associated value is to be returned as a float.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as a float.\n     * @return the float value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         a float.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.\n     ",
+    "links" : [ "#get(String", "java.lang.Float#parseFloat(String)", "#removeNode()", "java.util.prefs.Preferences#getFloat(String" ]
+  }, {
+    "name" : "public void putDouble(String key, double value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putDouble</tt> method as per the specification in\n     * {@link Preferences#putDouble(String,double)}.\n     *\n     * <p>This implementation translates <tt>value</tt> to a string with\n     * {@link Double#toString(double)} and invokes {@link #put(String,String)}\n     * on the result.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key is <tt>null</tt>.\n     * @throws IllegalArgumentException if <tt>key.length()</tt> exceeds\n     *         <tt>MAX_KEY_LENGTH</tt>.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "#put(String", "java.util.prefs.Preferences#putDouble(String", "#removeNode()", "java.lang.Double#toString(double)" ]
+  }, {
+    "name" : "public double getDouble(String key, double def)",
+    "returnType" : "double",
+    "comment" : "\n     * Implements the <tt>getDouble</tt> method as per the specification in\n     * {@link Preferences#getDouble(String,double)}.\n     *\n     * <p>This implementation invokes {@link #get(String,String) <tt>get(key,\n     * null)</tt>}.  If the return value is non-null, the implementation\n     * attempts to translate it to an <tt>double</tt> with\n     * {@link Double#parseDouble(String)}.  If the attempt succeeds, the return\n     * value is returned by this method.  Otherwise, <tt>def</tt> is returned.\n     *\n     * @param key key whose associated value is to be returned as a double.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as a double.\n     * @return the double value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         a double.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.\n     ",
+    "links" : [ "#get(String", "java.util.prefs.Preferences#getDouble(String", "java.lang.Double#parseDouble(String)", "#removeNode()" ]
+  }, {
+    "name" : "public void putByteArray(String key, byte[] value)",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>putByteArray</tt> method as per the specification in\n     * {@link Preferences#putByteArray(String,byte[])}.\n     *\n     * @param key key with which the string form of value is to be associated.\n     * @param value value whose string form is to be associated with key.\n     * @throws NullPointerException if key or value is <tt>null</tt>.\n     * @throws IllegalArgumentException if key.length() exceeds MAX_KEY_LENGTH\n     *         or if value.length exceeds MAX_VALUE_LENGTH*3/4.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#putByteArray(String", "#removeNode()" ]
+  }, {
+    "name" : "public byte[] getByteArray(String key, byte[] def)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Implements the <tt>getByteArray</tt> method as per the specification in\n     * {@link Preferences#getByteArray(String,byte[])}.\n     *\n     * @param key key whose associated value is to be returned as a byte array.\n     * @param def the value to be returned in the event that this\n     *        preference node has no value associated with <tt>key</tt>\n     *        or the associated value cannot be interpreted as a byte array.\n     * @return the byte array value represented by the string associated with\n     *         <tt>key</tt> in this preference node, or <tt>def</tt> if the\n     *         associated value does not exist or cannot be interpreted as\n     *         a byte array.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @throws NullPointerException if <tt>key</tt> is <tt>null</tt>.  (A\n     *         <tt>null</tt> value for <tt>def</tt> <i>is</i> permitted.)\n     ",
+    "links" : [ "java.util.prefs.Preferences#getByteArray(String", "#removeNode()" ]
+  }, {
+    "name" : "public String[] keys() throws BackingStoreException",
+    "returnType" : "String[]",
+    "comment" : "\n     * Implements the <tt>keys</tt> method as per the specification in\n     * {@link Preferences#keys()}.\n     *\n     * <p>This implementation obtains this preference node's lock, checks that\n     * the node has not been removed and invokes {@link #keysSpi()}.\n     *\n     * @return an array of the keys that have an associated value in this\n     *         preference node.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#keys()", "#keysSpi()", "#removeNode()" ]
+  }, {
+    "name" : "public String[] childrenNames() throws BackingStoreException",
+    "returnType" : "String[]",
+    "comment" : "\n     * Implements the <tt>children</tt> method as per the specification in\n     * {@link Preferences#childrenNames()}.\n     *\n     * <p>This implementation obtains this preference node's lock, checks that\n     * the node has not been removed, constructs a <tt>TreeSet</tt> initialized\n     * to the names of children already cached (the children in this node's\n     * \"child-cache\"), invokes {@link #childrenNamesSpi()}, and adds all of the\n     * returned child-names into the set.  The elements of the tree set are\n     * dumped into a <tt>String</tt> array using the <tt>toArray</tt> method,\n     * and this array is returned.\n     *\n     * @return the names of the children of this preference node.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @see #cachedChildren()\n     ",
+    "links" : [ "java.util.prefs.Preferences#childrenNames()", "#removeNode()", "#childrenNamesSpi()" ]
+  }, {
+    "name" : "protected final AbstractPreferences[] cachedChildren()",
+    "returnType" : "AbstractPreferences[]",
+    "comment" : "\n     * Returns all known unremoved children of this node.\n     *\n     * @return all known unremoved children of this node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Preferences parent()",
+    "returnType" : "Preferences",
+    "comment" : "\n     * Implements the <tt>parent</tt> method as per the specification in\n     * {@link Preferences#parent()}.\n     *\n     * <p>This implementation obtains this preference node's lock, checks that\n     * the node has not been removed and returns the parent value that was\n     * passed to this node's constructor.\n     *\n     * @return the parent of this preference node.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#parent()", "#removeNode()" ]
+  }, {
+    "name" : "public Preferences node(String path)",
+    "returnType" : "Preferences",
+    "comment" : "\n     * Implements the <tt>node</tt> method as per the specification in\n     * {@link Preferences#node(String)}.\n     *\n     * <p>This implementation obtains this preference node's lock and checks\n     * that the node has not been removed.  If <tt>path</tt> is <tt>\"\"</tt>,\n     * this node is returned; if <tt>path</tt> is <tt>\"/\"</tt>, this node's\n     * root is returned.  If the first character in <tt>path</tt> is\n     * not <tt>'/'</tt>, the implementation breaks <tt>path</tt> into\n     * tokens and recursively traverses the path from this node to the\n     * named node, \"consuming\" a name and a slash from <tt>path</tt> at\n     * each step of the traversal.  At each step, the current node is locked\n     * and the node's child-cache is checked for the named node.  If it is\n     * not found, the name is checked to make sure its length does not\n     * exceed <tt>MAX_NAME_LENGTH</tt>.  Then the {@link #childSpi(String)}\n     * method is invoked, and the result stored in this node's child-cache.\n     * If the newly created <tt>Preferences</tt> object's {@link #newNode}\n     * field is <tt>true</tt> and there are any node change listeners,\n     * a notification event is enqueued for processing by the event dispatch\n     * thread.\n     *\n     * <p>When there are no more tokens, the last value found in the\n     * child-cache or returned by <tt>childSpi</tt> is returned by this\n     * method.  If during the traversal, two <tt>\"/\"</tt> tokens occur\n     * consecutively, or the final token is <tt>\"/\"</tt> (rather than a name),\n     * an appropriate <tt>IllegalArgumentException</tt> is thrown.\n     *\n     * <p> If the first character of <tt>path</tt> is <tt>'/'</tt>\n     * (indicating an absolute path name) this preference node's\n     * lock is dropped prior to breaking <tt>path</tt> into tokens, and\n     * this method recursively traverses the path starting from the root\n     * (rather than starting from this node).  The traversal is otherwise\n     * identical to the one described for relative path names.  Dropping\n     * the lock on this node prior to commencing the traversal at the root\n     * node is essential to avoid the possibility of deadlock, as per the\n     * {@link #lock locking invariant}.\n     *\n     * @param path the path name of the preference node to return.\n     * @return the specified preference node.\n     * @throws IllegalArgumentException if the path name is invalid (i.e.,\n     *         it contains multiple consecutive slash characters, or ends\n     *         with a slash character and is more than one character long).\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "java.util.prefs.Preferences#node(String)", "#lock", "#childSpi(String)", "#removeNode()", "#newNode" ]
+  }, {
+    "name" : "private Preferences node(StringTokenizer path)",
+    "returnType" : "Preferences",
+    "comment" : "\n     * tokenizer contains <name> {'/' <name>}*\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean nodeExists(String path) throws BackingStoreException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Implements the <tt>nodeExists</tt> method as per the specification in\n     * {@link Preferences#nodeExists(String)}.\n     *\n     * <p>This implementation is very similar to {@link #node(String)},\n     * except that {@link #getChild(String)} is used instead of {@link\n     * #childSpi(String)}.\n     *\n     * @param path the path name of the node whose existence is to be checked.\n     * @return true if the specified node exists.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @throws IllegalArgumentException if the path name is invalid (i.e.,\n     *         it contains multiple consecutive slash characters, or ends\n     *         with a slash character and is more than one character long).\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method and\n     *         <tt>pathname</tt> is not the empty string (<tt>\"\"</tt>).\n     ",
+    "links" : [ "#node(String)", "java.util.prefs.Preferences#nodeExists(String)", "#getChild(String)", "#childSpi(String)", "#removeNode()" ]
+  }, {
+    "name" : "private boolean nodeExists(StringTokenizer path) throws BackingStoreException",
+    "returnType" : "boolean",
+    "comment" : "\n     * tokenizer contains <name> {'/' <name>}*\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeNode() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n\n     * Implements the <tt>removeNode()</tt> method as per the specification in\n     * {@link Preferences#removeNode()}.\n     *\n     * <p>This implementation checks to see that this node is the root; if so,\n     * it throws an appropriate exception.  Then, it locks this node's parent,\n     * and calls a recursive helper method that traverses the subtree rooted at\n     * this node.  The recursive method locks the node on which it was called,\n     * checks that it has not already been removed, and then ensures that all\n     * of its children are cached: The {@link #childrenNamesSpi()} method is\n     * invoked and each returned child name is checked for containment in the\n     * child-cache.  If a child is not already cached, the {@link\n     * #childSpi(String)} method is invoked to create a <tt>Preferences</tt>\n     * instance for it, and this instance is put into the child-cache.  Then\n     * the helper method calls itself recursively on each node contained in its\n     * child-cache.  Next, it invokes {@link #removeNodeSpi()}, marks itself\n     * as removed, and removes itself from its parent's child-cache.  Finally,\n     * if there are any node change listeners, it enqueues a notification\n     * event for processing by the event dispatch thread.\n     *\n     * <p>Note that the helper method is always invoked with all ancestors up\n     * to the \"closest non-removed ancestor\" locked.\n     *\n     * @throws IllegalStateException if this node (or an ancestor) has already\n     *         been removed with the {@link #removeNode()} method.\n     * @throws UnsupportedOperationException if this method is invoked on\n     *         the root node.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#removeNodeSpi()", "java.util.prefs.Preferences#removeNode()", "#childSpi(String)", "#removeNode()", "#childrenNamesSpi()" ]
+  }, {
+    "name" : "private void removeNode2() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Called with locks on all nodes on path from parent of \"removal root\"\n     * to this (including the former but excluding the latter).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String name()",
+    "returnType" : "String",
+    "comment" : "\n     * Implements the <tt>name</tt> method as per the specification in\n     * {@link Preferences#name()}.\n     *\n     * <p>This implementation merely returns the name that was\n     * passed to this node's constructor.\n     *\n     * @return this preference node's name, relative to its parent.\n     ",
+    "links" : [ "java.util.prefs.Preferences#name()" ]
+  }, {
+    "name" : "public String absolutePath()",
+    "returnType" : "String",
+    "comment" : "\n     * Implements the <tt>absolutePath</tt> method as per the specification in\n     * {@link Preferences#absolutePath()}.\n     *\n     * <p>This implementation merely returns the absolute path name that\n     * was computed at the time that this node was constructed (based on\n     * the name that was passed to this node's constructor, and the names\n     * that were passed to this node's ancestors' constructors).\n     *\n     * @return this preference node's absolute path name.\n     ",
+    "links" : [ "java.util.prefs.Preferences#absolutePath()" ]
+  }, {
+    "name" : "public boolean isUserNode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Implements the <tt>isUserNode</tt> method as per the specification in\n     * {@link Preferences#isUserNode()}.\n     *\n     * <p>This implementation compares this node's root node (which is stored\n     * in a private field) with the value returned by\n     * {@link Preferences#userRoot()}.  If the two object references are\n     * identical, this method returns true.\n     *\n     * @return <tt>true</tt> if this preference node is in the user\n     *         preference tree, <tt>false</tt> if it's in the system\n     *         preference tree.\n     ",
+    "links" : [ "java.util.prefs.Preferences#isUserNode()", "java.util.prefs.Preferences#userRoot()" ]
+  }, {
+    "name" : "public void addPreferenceChangeListener(PreferenceChangeListener pcl)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void removePreferenceChangeListener(PreferenceChangeListener pcl)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodeChangeListener(NodeChangeListener ncl)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeNodeChangeListener(NodeChangeListener ncl)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void putSpi(String key, String value)",
+    "returnType" : "void",
+    "comment" : "\n     * Put the given key-value association into this preference node.  It is\n     * guaranteed that <tt>key</tt> and <tt>value</tt> are non-null and of\n     * legal length.  Also, it is guaranteed that this node has not been\n     * removed.  (The implementor needn't check for any of these things.)\n     *\n     * <p>This method is invoked with the lock on this node held.\n     * @param key the key\n     * @param value the value\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract String getSpi(String key)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the value associated with the specified key at this preference\n     * node, or <tt>null</tt> if there is no association for this key, or the\n     * association cannot be determined at this time.  It is guaranteed that\n     * <tt>key</tt> is non-null.  Also, it is guaranteed that this node has\n     * not been removed.  (The implementor needn't check for either of these\n     * things.)\n     *\n     * <p> Generally speaking, this method should not throw an exception\n     * under any circumstances.  If, however, if it does throw an exception,\n     * the exception will be intercepted and treated as a <tt>null</tt>\n     * return value.\n     *\n     * <p>This method is invoked with the lock on this node held.\n     *\n     * @param key the key\n     * @return the value associated with the specified key at this preference\n     *          node, or <tt>null</tt> if there is no association for this\n     *          key, or the association cannot be determined at this time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void removeSpi(String key)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove the association (if any) for the specified key at this\n     * preference node.  It is guaranteed that <tt>key</tt> is non-null.\n     * Also, it is guaranteed that this node has not been removed.\n     * (The implementor needn't check for either of these things.)\n     *\n     * <p>This method is invoked with the lock on this node held.\n     * @param key the key\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void removeNodeSpi() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Removes this preference node, invalidating it and any preferences that\n     * it contains.  The named child will have no descendants at the time this\n     * invocation is made (i.e., the {@link Preferences#removeNode()} method\n     * invokes this method repeatedly in a bottom-up fashion, removing each of\n     * a node's descendants before removing the node itself).\n     *\n     * <p>This method is invoked with the lock held on this node and its\n     * parent (and all ancestors that are being removed as a\n     * result of a single invocation to {@link Preferences#removeNode()}).\n     *\n     * <p>The removal of a node needn't become persistent until the\n     * <tt>flush</tt> method is invoked on this node (or an ancestor).\n     *\n     * <p>If this node throws a <tt>BackingStoreException</tt>, the exception\n     * will propagate out beyond the enclosing {@link #removeNode()}\n     * invocation.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "java.util.prefs.Preferences#removeNode()", "#removeNode()" ]
+  }, {
+    "name" : "protected abstract String[] keysSpi() throws BackingStoreException",
+    "returnType" : "String[]",
+    "comment" : "\n     * Returns all of the keys that have an associated value in this\n     * preference node.  (The returned array will be of size zero if\n     * this node has no preferences.)  It is guaranteed that this node has not\n     * been removed.\n     *\n     * <p>This method is invoked with the lock on this node held.\n     *\n     * <p>If this node throws a <tt>BackingStoreException</tt>, the exception\n     * will propagate out beyond the enclosing {@link #keys()} invocation.\n     *\n     * @return an array of the keys that have an associated value in this\n     *         preference node.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#keys()" ]
+  }, {
+    "name" : "protected abstract String[] childrenNamesSpi() throws BackingStoreException",
+    "returnType" : "String[]",
+    "comment" : "\n     * Returns the names of the children of this preference node.  (The\n     * returned array will be of size zero if this node has no children.)\n     * This method need not return the names of any nodes already cached,\n     * but may do so without harm.\n     *\n     * <p>This method is invoked with the lock on this node held.\n     *\n     * <p>If this node throws a <tt>BackingStoreException</tt>, the exception\n     * will propagate out beyond the enclosing {@link #childrenNames()}\n     * invocation.\n     *\n     * @return an array containing the names of the children of this\n     *         preference node.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#childrenNames()" ]
+  }, {
+    "name" : "protected AbstractPreferences getChild(String nodeName) throws BackingStoreException",
+    "returnType" : "AbstractPreferences",
+    "comment" : "\n     * Returns the named child if it exists, or <tt>null</tt> if it does not.\n     * It is guaranteed that <tt>nodeName</tt> is non-null, non-empty,\n     * does not contain the slash character ('/'), and is no longer than\n     * {@link #MAX_NAME_LENGTH} characters.  Also, it is guaranteed\n     * that this node has not been removed.  (The implementor needn't check\n     * for any of these things if he chooses to override this method.)\n     *\n     * <p>Finally, it is guaranteed that the named node has not been returned\n     * by a previous invocation of this method or {@link #childSpi} after the\n     * last time that it was removed.  In other words, a cached value will\n     * always be used in preference to invoking this method.  (The implementor\n     * needn't maintain his own cache of previously returned children if he\n     * chooses to override this method.)\n     *\n     * <p>This implementation obtains this preference node's lock, invokes\n     * {@link #childrenNames()} to get an array of the names of this node's\n     * children, and iterates over the array comparing the name of each child\n     * with the specified node name.  If a child node has the correct name,\n     * the {@link #childSpi(String)} method is invoked and the resulting\n     * node is returned.  If the iteration completes without finding the\n     * specified name, <tt>null</tt> is returned.\n     *\n     * @param nodeName name of the child to be searched for.\n     * @return the named child if it exists, or null if it does not.\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#childSpi", "#childrenNames()", "#childSpi(String)", "#MAX_NAME_LENGTH" ]
+  }, {
+    "name" : "protected abstract AbstractPreferences childSpi(String name)",
+    "returnType" : "AbstractPreferences",
+    "comment" : "\n     * Returns the named child of this preference node, creating it if it does\n     * not already exist.  It is guaranteed that <tt>name</tt> is non-null,\n     * non-empty, does not contain the slash character ('/'), and is no longer\n     * than {@link #MAX_NAME_LENGTH} characters.  Also, it is guaranteed that\n     * this node has not been removed.  (The implementor needn't check for any\n     * of these things.)\n     *\n     * <p>Finally, it is guaranteed that the named node has not been returned\n     * by a previous invocation of this method or {@link #getChild(String)}\n     * after the last time that it was removed.  In other words, a cached\n     * value will always be used in preference to invoking this method.\n     * Subclasses need not maintain their own cache of previously returned\n     * children.\n     *\n     * <p>The implementer must ensure that the returned node has not been\n     * removed.  If a like-named child of this node was previously removed, the\n     * implementer must return a newly constructed <tt>AbstractPreferences</tt>\n     * node; once removed, an <tt>AbstractPreferences</tt> node\n     * cannot be \"resuscitated.\"\n     *\n     * <p>If this method causes a node to be created, this node is not\n     * guaranteed to be persistent until the <tt>flush</tt> method is\n     * invoked on this node or one of its ancestors (or descendants).\n     *\n     * <p>This method is invoked with the lock on this node held.\n     *\n     * @param name The name of the child node to return, relative to\n     *        this preference node.\n     * @return The named child node.\n     ",
+    "links" : [ "#getChild(String)", "#MAX_NAME_LENGTH" ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the absolute path name of this preferences node.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sync() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>sync</tt> method as per the specification in\n     * {@link Preferences#sync()}.\n     *\n     * <p>This implementation calls a recursive helper method that locks this\n     * node, invokes syncSpi() on it, unlocks this node, and recursively\n     * invokes this method on each \"cached child.\"  A cached child is a child\n     * of this node that has been created in this VM and not subsequently\n     * removed.  In effect, this method does a depth first traversal of the\n     * \"cached subtree\" rooted at this node, calling syncSpi() on each node in\n     * the subTree while only that node is locked. Note that syncSpi() is\n     * invoked top-down.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @throws IllegalStateException if this node (or an ancestor) has been\n     *         removed with the {@link #removeNode()} method.\n     * @see #flush()\n     ",
+    "links" : [ "java.util.prefs.Preferences#sync()", "#removeNode()" ]
+  }, {
+    "name" : "private void sync2() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void syncSpi() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * This method is invoked with this node locked.  The contract of this\n     * method is to synchronize any cached preferences stored at this node\n     * with any stored in the backing store.  (It is perfectly possible that\n     * this node does not exist on the backing store, either because it has\n     * been deleted by another VM, or because it has not yet been created.)\n     * Note that this method should <i>not</i> synchronize the preferences in\n     * any subnodes of this node.  If the backing store naturally syncs an\n     * entire subtree at once, the implementer is encouraged to override\n     * sync(), rather than merely overriding this method.\n     *\n     * <p>If this node throws a <tt>BackingStoreException</tt>, the exception\n     * will propagate out beyond the enclosing {@link #sync()} invocation.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#sync()" ]
+  }, {
+    "name" : "public void flush() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>flush</tt> method as per the specification in\n     * {@link Preferences#flush()}.\n     *\n     * <p>This implementation calls a recursive helper method that locks this\n     * node, invokes flushSpi() on it, unlocks this node, and recursively\n     * invokes this method on each \"cached child.\"  A cached child is a child\n     * of this node that has been created in this VM and not subsequently\n     * removed.  In effect, this method does a depth first traversal of the\n     * \"cached subtree\" rooted at this node, calling flushSpi() on each node in\n     * the subTree while only that node is locked. Note that flushSpi() is\n     * invoked top-down.\n     *\n     * <p> If this method is invoked on a node that has been removed with\n     * the {@link #removeNode()} method, flushSpi() is invoked on this node,\n     * but not on others.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     * @see #flush()\n     ",
+    "links" : [ "java.util.prefs.Preferences#flush()", "#removeNode()" ]
+  }, {
+    "name" : "private void flush2() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void flushSpi() throws BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * This method is invoked with this node locked.  The contract of this\n     * method is to force any cached changes in the contents of this\n     * preference node to the backing store, guaranteeing their persistence.\n     * (It is perfectly possible that this node does not exist on the backing\n     * store, either because it has been deleted by another VM, or because it\n     * has not yet been created.)  Note that this method should <i>not</i>\n     * flush the preferences in any subnodes of this node.  If the backing\n     * store naturally flushes an entire subtree at once, the implementer is\n     * encouraged to override flush(), rather than merely overriding this\n     * method.\n     *\n     * <p>If this node throws a <tt>BackingStoreException</tt>, the exception\n     * will propagate out beyond the enclosing {@link #flush()} invocation.\n     *\n     * @throws BackingStoreException if this operation cannot be completed\n     *         due to a failure in the backing store, or inability to\n     *         communicate with it.\n     ",
+    "links" : [ "#flush()" ]
+  }, {
+    "name" : "protected boolean isRemoved()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns <tt>true</tt> iff this node (or an ancestor) has been\n     * removed with the {@link #removeNode()} method.  This method\n     * locks this node prior to returning the contents of the private\n     * field used to track this state.\n     *\n     * @return <tt>true</tt> iff this node (or an ancestor) has been\n     *       removed with the {@link #removeNode()} method.\n     ",
+    "links" : [ "#removeNode()" ]
+  }, {
+    "name" : "private static synchronized void startEventDispatchThreadIfNecessary()",
+    "returnType" : "void",
+    "comment" : "\n     * This method starts the event dispatch thread the first time it\n     * is called.  The event dispatch thread will be started only\n     * if someone registers a listener.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " PreferenceChangeListener[] prefListeners()",
+    "returnType" : "PreferenceChangeListener[]",
+    "comment" : " END Android-changed: Copy-on-read List of listeners, not copy-on-write array.",
+    "links" : [ ]
+  }, {
+    "name" : " NodeChangeListener[] nodeListeners()",
+    "returnType" : "NodeChangeListener[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void enqueuePreferenceChangeEvent(String key, String newValue)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a preference change event for delivery to registered\n     * preference change listeners unless there are no registered\n     * listeners.  Invoked with this.lock held.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void enqueueNodeAddedEvent(Preferences child)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a \"node added\" event for delivery to registered node change\n     * listeners unless there are no registered listeners.  Invoked with\n     * this.lock held.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void enqueueNodeRemovedEvent(Preferences child)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a \"node removed\" event for delivery to registered node change\n     * listeners unless there are no registered listeners.  Invoked with\n     * this.lock held.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void exportNode(OutputStream os) throws IOException, BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>exportNode</tt> method as per the specification in\n     * {@link Preferences#exportNode(OutputStream)}.\n     *\n     * @param os the output stream on which to emit the XML document.\n     * @throws IOException if writing to the specified output stream\n     *         results in an <tt>IOException</tt>.\n     * @throws BackingStoreException if preference data cannot be read from\n     *         backing store.\n     ",
+    "links" : [ "java.util.prefs.Preferences#exportNode(OutputStream)" ]
+  }, {
+    "name" : "public void exportSubtree(OutputStream os) throws IOException, BackingStoreException",
+    "returnType" : "void",
+    "comment" : "\n     * Implements the <tt>exportSubtree</tt> method as per the specification in\n     * {@link Preferences#exportSubtree(OutputStream)}.\n     *\n     * @param os the output stream on which to emit the XML document.\n     * @throws IOException if writing to the specified output stream\n     *         results in an <tt>IOException</tt>.\n     * @throws BackingStoreException if preference data cannot be read from\n     *         backing store.\n     ",
+    "links" : [ "java.util.prefs.Preferences#exportSubtree(OutputStream)" ]
+  } ],
+  "methodNames" : [ "public void put(String key, String value)", "public String get(String key, String def)", "public void remove(String key)", "public void clear() throws BackingStoreException", "public void putInt(String key, int value)", "public int getInt(String key, int def)", "public void putLong(String key, long value)", "public long getLong(String key, long def)", "public void putBoolean(String key, boolean value)", "public boolean getBoolean(String key, boolean def)", "public void putFloat(String key, float value)", "public float getFloat(String key, float def)", "public void putDouble(String key, double value)", "public double getDouble(String key, double def)", "public void putByteArray(String key, byte[] value)", "public byte[] getByteArray(String key, byte[] def)", "public String[] keys() throws BackingStoreException", "public String[] childrenNames() throws BackingStoreException", "protected final AbstractPreferences[] cachedChildren()", "public Preferences parent()", "public Preferences node(String path)", "private Preferences node(StringTokenizer path)", "public boolean nodeExists(String path) throws BackingStoreException", "private boolean nodeExists(StringTokenizer path) throws BackingStoreException", "public void removeNode() throws BackingStoreException", "private void removeNode2() throws BackingStoreException", "public String name()", "public String absolutePath()", "public boolean isUserNode()", "public void addPreferenceChangeListener(PreferenceChangeListener pcl)", "public void removePreferenceChangeListener(PreferenceChangeListener pcl)", "public void addNodeChangeListener(NodeChangeListener ncl)", "public void removeNodeChangeListener(NodeChangeListener ncl)", "protected abstract void putSpi(String key, String value)", "protected abstract String getSpi(String key)", "protected abstract void removeSpi(String key)", "protected abstract void removeNodeSpi() throws BackingStoreException", "protected abstract String[] keysSpi() throws BackingStoreException", "protected abstract String[] childrenNamesSpi() throws BackingStoreException", "protected AbstractPreferences getChild(String nodeName) throws BackingStoreException", "protected abstract AbstractPreferences childSpi(String name)", "public String toString()", "public void sync() throws BackingStoreException", "private void sync2() throws BackingStoreException", "protected abstract void syncSpi() throws BackingStoreException", "public void flush() throws BackingStoreException", "private void flush2() throws BackingStoreException", "protected abstract void flushSpi() throws BackingStoreException", "protected boolean isRemoved()", "private static synchronized void startEventDispatchThreadIfNecessary()", " PreferenceChangeListener[] prefListeners()", " NodeChangeListener[] nodeListeners()", "private void enqueuePreferenceChangeEvent(String key, String newValue)", "private void enqueueNodeAddedEvent(Preferences child)", "private void enqueueNodeRemovedEvent(Preferences child)", "public void exportNode(OutputStream os) throws IOException, BackingStoreException", "public void exportSubtree(OutputStream os) throws IOException, BackingStoreException" ],
+  "variableNames" : [ "name", "absolutePath", "parent", "root", "newNode", "kidCache", "removed", "prefListeners", "nodeListeners", "lock", "EMPTY_STRING_ARRAY", "EMPTY_ABSTRACT_PREFS_ARRAY", "eventQueue", "eventDispatchThread" ]
+}

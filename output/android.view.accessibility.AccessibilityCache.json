@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/view/accessibility/AccessibilityCache.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/view/accessibility/AccessibilityCache.java",
   "packageName" : "android.view.accessibility",
   "className" : "AccessibilityCache",
   "comment" : "\n * Cache for AccessibilityWindowInfos and AccessibilityNodeInfos.\n * It is updated when windows change or nodes change.\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "LOG_TAG",
     "type" : "String",
@@ -24,6 +25,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mEnabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "CACHE_CRITICAL_EVENTS_MASK",
     "type" : "int",
     "comment" : "\n     * {@link AccessibilityEvent} types that are critical for the cache to stay up to date\n     *\n     * When adding new event types in {@link #onAccessibilityEvent}, please add it here also, to\n     * make sure that the events are delivered to cache regardless of\n     * {@link android.accessibilityservice.AccessibilityServiceInfo#eventTypes}\n     ",
@@ -39,6 +45,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mOnNodeAddedListener",
+    "type" : "OnNodeAddedListener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mAccessibilityFocus",
     "type" : "long",
     "comment" : "",
@@ -49,7 +60,17 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mValidWindowCacheTimeStamp",
+    "type" : "long",
+    "comment" : "\n     * The event time of the {@link AccessibilityEvent} which presents the populated windows cache\n     * before it is stale.\n     ",
+    "links" : [ "android.view.accessibility.AccessibilityEvent" ]
+  }, {
     "name" : "mAccessibilityFocusedWindow",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mInputFocusWindow",
     "type" : "int",
     "comment" : "",
     "links" : [ ]
@@ -75,10 +96,20 @@
     "links" : [ ]
   } ],
   "methods" : [ {
-    "name" : "public void setWindowsOnAllDisplays(SparseArray<List<AccessibilityWindowInfo>> windowsOnAllDisplays)",
+    "name" : "public boolean isEnabled()",
+    "returnType" : "boolean",
+    "comment" : " Returns if the cache is enabled. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEnabled(boolean enabled)",
     "returnType" : "void",
-    "comment" : "\n     * Sets all {@link AccessibilityWindowInfo}s of all displays into the cache.\n     * The key of SparseArray is display ID.\n     *\n     * @param windowsOnAllDisplays The accessibility windows of all displays.\n     ",
-    "links" : [ "android.view.accessibility.AccessibilityWindowInfo" ]
+    "comment" : " Sets enabled status. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWindowsOnAllDisplays(SparseArray<List<AccessibilityWindowInfo>> windowsOnAllDisplays, long populationTimeStamp)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets all {@link AccessibilityWindowInfo}s of all displays into the cache.\n     * The key of SparseArray is display ID.\n     *\n     * @param windowsOnAllDisplays The accessibility windows of all displays.\n     * @param populationTimeStamp The timestamp from {@link SystemClock#uptimeMillis()} when the\n     *                            client requests the data.\n     ",
+    "links" : [ "android.os.SystemClock#uptimeMillis()", "android.view.accessibility.AccessibilityWindowInfo" ]
   }, {
     "name" : "public void addWindow(AccessibilityWindowInfo window)",
     "returnType" : "void",
@@ -95,13 +126,8 @@
     "comment" : "\n     * Notifies the cache that the something in the UI changed. As a result\n     * the cache will either refresh some nodes or evict some nodes.\n     *\n     * Note: any event that ends up affecting the cache should also be present in\n     * {@link #CACHE_CRITICAL_EVENTS_MASK}\n     *\n     * @param event An event.\n     ",
     "links" : [ "#CACHE_CRITICAL_EVENTS_MASK" ]
   }, {
-    "name" : "private void refreshCachedNodeLocked(int windowId, long sourceId)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void refreshCachedWindowLocked(int windowId)",
-    "returnType" : "void",
+    "name" : "private AccessibilityNodeInfo removeCachedNodeLocked(int windowId, long sourceId)",
+    "returnType" : "AccessibilityNodeInfo",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -109,6 +135,11 @@
     "returnType" : "AccessibilityNodeInfo",
     "comment" : "\n     * Gets a cached {@link AccessibilityNodeInfo} given the id of the hosting\n     * window and the accessibility id of the node.\n     *\n     * @param windowId The id of the window hosting the node.\n     * @param accessibilityNodeId The info accessibility node id.\n     * @return The cached {@link AccessibilityNodeInfo} or null if such not found.\n     ",
     "links" : [ "android.view.accessibility.AccessibilityNodeInfo" ]
+  }, {
+    "name" : "public boolean isNodeInCache(AccessibilityNodeInfo info)",
+    "returnType" : "boolean",
+    "comment" : " Returns {@code true} if {@code info} is in the cache. ",
+    "links" : [ ]
   }, {
     "name" : "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()",
     "returnType" : "SparseArray<List<AccessibilityWindowInfo>>",
@@ -135,9 +166,24 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "public AccessibilityNodeInfo getFocus(int focusType, long initialNodeId, int windowId)",
+    "returnType" : "AccessibilityNodeInfo",
+    "comment" : "\n     * Gets a cached {@link AccessibilityNodeInfo} with focus according to focus type.\n     *\n     * Note: {@link android.view.accessibility.AccessibilityWindowInfo#ACTIVE_WINDOW_ID} will return\n     * null.\n     *\n     * @param focusType The focus type.\n     * @param windowId A unique window id.\n     * @param initialNodeId A unique view id or virtual descendant id from where to start the\n     *                      search.\n     * @return The cached {@link AccessibilityNodeInfo} if it has a11y focus or null if such not\n     * found.\n     ",
+    "links" : [ "android.view.accessibility.AccessibilityNodeInfo", "android.view.accessibility.AccessibilityWindowInfo#ACTIVE_WINDOW_ID" ]
+  }, {
+    "name" : "private boolean isCachedNodeOrDescendantLocked(long nodeId, long ancestorId, LongSparseArray<AccessibilityNodeInfo> nodes)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private void clearNodesForWindowLocked(int windowId)",
     "returnType" : "void",
     "comment" : "\n     * Clears nodes for the window with the given id\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean clearSubTree(AccessibilityNodeInfo info)",
+    "returnType" : "boolean",
+    "comment" : " Clears a subtree rooted at {@code info}. ",
     "links" : [ ]
   }, {
     "name" : "private void clearSubTreeLocked(int windowId, long rootNodeId)",
@@ -154,7 +200,17 @@
     "returnType" : "void",
     "comment" : "\n     * Check the integrity of the cache which is nodes from different windows\n     * are not mixed, there is a single active window, there is a single focused\n     * window, for every window there are no duplicates nodes, all nodes for a\n     * window are connected, for every window there is a single input focused\n     * node, and for every window there is a single accessibility focused node.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public void registerOnNodeAddedListener(OnNodeAddedListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a listener to receive callbacks whenever nodes are added to cache.\n     *\n     * @param listener the listener to be registered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearOnNodeAddedListener()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the current reference to an OnNodeAddedListener, if one exists.\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "LOG_TAG", "DEBUG", "VERBOSE", "CHECK_INTEGRITY", "CACHE_CRITICAL_EVENTS_MASK", "mLock", "mAccessibilityNodeRefresher", "mAccessibilityFocus", "mInputFocus", "mAccessibilityFocusedWindow", "mIsAllWindowsCached", "mWindowCacheByDisplay", "mNodeCache", "mTempWindowArray" ],
-  "methodNames" : [ "public void setWindowsOnAllDisplays(SparseArray<List<AccessibilityWindowInfo>> windowsOnAllDisplays)", "public void addWindow(AccessibilityWindowInfo window)", "private void addWindowByDisplayLocked(int displayId, AccessibilityWindowInfo window)", "public void onAccessibilityEvent(AccessibilityEvent event)", "private void refreshCachedNodeLocked(int windowId, long sourceId)", "private void refreshCachedWindowLocked(int windowId)", "public AccessibilityNodeInfo getNode(int windowId, long accessibilityNodeId)", "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()", "public AccessibilityWindowInfo getWindow(int windowId)", "public void add(AccessibilityNodeInfo info)", "public void clear()", "private void clearWindowCacheLocked()", "private void clearNodesForWindowLocked(int windowId)", "private void clearSubTreeLocked(int windowId, long rootNodeId)", "private boolean clearSubTreeRecursiveLocked(LongSparseArray<AccessibilityNodeInfo> nodes, long rootNodeId)", "public void checkIntegrity()" ]
+  "methodNames" : [ "public boolean isEnabled()", "public void setEnabled(boolean enabled)", "public void setWindowsOnAllDisplays(SparseArray<List<AccessibilityWindowInfo>> windowsOnAllDisplays, long populationTimeStamp)", "public void addWindow(AccessibilityWindowInfo window)", "private void addWindowByDisplayLocked(int displayId, AccessibilityWindowInfo window)", "public void onAccessibilityEvent(AccessibilityEvent event)", "private AccessibilityNodeInfo removeCachedNodeLocked(int windowId, long sourceId)", "public AccessibilityNodeInfo getNode(int windowId, long accessibilityNodeId)", "public boolean isNodeInCache(AccessibilityNodeInfo info)", "public SparseArray<List<AccessibilityWindowInfo>> getWindowsOnAllDisplays()", "public AccessibilityWindowInfo getWindow(int windowId)", "public void add(AccessibilityNodeInfo info)", "public void clear()", "private void clearWindowCacheLocked()", "public AccessibilityNodeInfo getFocus(int focusType, long initialNodeId, int windowId)", "private boolean isCachedNodeOrDescendantLocked(long nodeId, long ancestorId, LongSparseArray<AccessibilityNodeInfo> nodes)", "private void clearNodesForWindowLocked(int windowId)", "public boolean clearSubTree(AccessibilityNodeInfo info)", "private void clearSubTreeLocked(int windowId, long rootNodeId)", "private boolean clearSubTreeRecursiveLocked(LongSparseArray<AccessibilityNodeInfo> nodes, long rootNodeId)", "public void checkIntegrity()", "public void registerOnNodeAddedListener(OnNodeAddedListener listener)", "public void clearOnNodeAddedListener()" ],
+  "variableNames" : [ "LOG_TAG", "DEBUG", "VERBOSE", "CHECK_INTEGRITY", "mEnabled", "CACHE_CRITICAL_EVENTS_MASK", "mLock", "mAccessibilityNodeRefresher", "mOnNodeAddedListener", "mAccessibilityFocus", "mInputFocus", "mValidWindowCacheTimeStamp", "mAccessibilityFocusedWindow", "mInputFocusWindow", "mIsAllWindowsCached", "mWindowCacheByDisplay", "mNodeCache", "mTempWindowArray" ]
 }

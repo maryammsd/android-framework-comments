@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/security/FileIntegrityManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/security/FileIntegrityManager.java",
   "packageName" : "android.security",
   "className" : "FileIntegrityManager",
   "comment" : "\n * This class provides access to file integrity related operations.\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "mService",
     "type" : "IFileIntegrityService",
@@ -17,14 +18,24 @@
   "methods" : [ {
     "name" : "public boolean isApkVeritySupported()",
     "returnType" : "boolean",
-    "comment" : "\n     * Returns true if APK Verity is supported on the device. When supported, an APK can be\n     * installed with a fs-verity signature (if verified with trusted App Source Certificate) for\n     * continuous on-access verification.\n     ",
+    "comment" : "\n     * Returns whether fs-verity is supported on the device. fs-verity provides on-access\n     * verification, although the app APIs are only made available to apps in a later SDK version.\n     * Only when this method returns true, the other fs-verity APIs in the same class can succeed.\n     *\n     * <p>The app may not need this method and just call the other APIs normally and handle any\n     * failure. If some app feature really depends on fs-verity (e.g. protecting integrity of a\n     * large file download), an early check of support status may avoid any cost if it is to fail\n     * late.\n     *\n     * <p>Note: for historical reasons this is named {@code isApkVeritySupported()} instead of\n     * {@code isFsVeritySupported()}. It has also been available since API level 30, predating the\n     * other fs-verity APIs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setupFsVerity(@NonNull File file) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Enables fs-verity to the owned file under the calling app's private directory. It always uses\n     * the common configuration, i.e. SHA-256 digest algorithm, 4K block size, and without salt.\n     *\n     * <p>For enabling fs-verity to succeed, the device must support fs-verity, the file must be\n     * writable by the app and not already have fs-verity enabled, and the file must not currently\n     * be open for writing by any process. To check whether the device supports fs-verity, use\n     * {@link #isApkVeritySupported()}.\n     *\n     * <p>It takes O(file size) time to build the underlying data structure for continuous\n     * verification. The operation is atomic, i.e. it's either enabled or not, even in case of\n     * power failure during or after the call.\n     *\n     * <p>Note for the API users: When the file's authenticity is crucial, the app typical needs to\n     * perform a signature check by itself before using the file. The signature is often delivered\n     * as a separate file and stored next to the targeting file in the filesystem. The public key of\n     * the signer (normally the same app developer) can be put in the APK, and the app can use the\n     * public key to verify the signature to the file's actual fs-verity digest (from {@link\n     * #getFsVerityDigest(File)}) before using the file. The exact format is not prescribed by the\n     * framework. App developers may choose to use common practices like JCA for the signing and\n     * verification, or their own preferred approach.\n     *\n     * @param file The file to enable fs-verity. It must represent an absolute path.\n     * @throws IllegalArgumentException If the provided file is not an absolute path.\n     * @throws IOException If the operation failed.\n     *\n     * @see <a href=\"https://www.kernel.org/doc/html/next/filesystems/fsverity.html\">Kernel doc</a>\n     * @hide\n     ",
+    "links" : [ "#getFsVerityDigest(File)", "#isApkVeritySupported()" ]
+  }, {
+    "name" : "public byte[] getFsVerityDigest(@NonNull File file) throws IOException",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Returns the fs-verity digest for the owned file under the calling app's private directory, or\n     * null when the file does not have fs-verity enabled (including when fs-verity is not supported\n     * on older devices).\n     *\n     * @param file The file to measure the fs-verity digest.\n     * @return The fs-verity digest in byte[], null if none.\n     * @see <a href=\"https://www.kernel.org/doc/html/next/filesystems/fsverity.html\">Kernel doc</a>\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean isAppSourceCertificateTrusted(@NonNull X509Certificate certificate) throws CertificateEncodingException",
     "returnType" : "boolean",
-    "comment" : "\n     * Returns whether the given certificate can be used to prove app's install source. Always\n     * return false if the feature is not supported.\n     *\n     * <p>A store can use this API to decide if a signature file needs to be downloaded. Also, if a\n     * store has shipped different certificates before (e.g. with stronger and weaker key), it can\n     * also use this API to download the best signature on the running device.\n     *\n     * @return whether the certificate is trusted in the system\n     ",
+    "comment" : "\n     * Returns whether the given certificate can be used to prove app's install source. Always\n     * return false if the feature is not supported.\n     *\n     * <p>A store can use this API to decide if a signature file needs to be downloaded. Also, if a\n     * store has shipped different certificates before (e.g. with stronger and weaker key), it can\n     * also use this API to download the best signature on the running device.\n     *\n     * @return whether the certificate is trusted in the system\n     * @deprecated The feature is no longer supported, and this API now always returns false.\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "mService", "mContext" ],
-  "methodNames" : [ "public boolean isApkVeritySupported()", "public boolean isAppSourceCertificateTrusted(@NonNull X509Certificate certificate) throws CertificateEncodingException" ]
+  "methodNames" : [ "public boolean isApkVeritySupported()", "public void setupFsVerity(@NonNull File file) throws IOException", "public byte[] getFsVerityDigest(@NonNull File file) throws IOException", "public boolean isAppSourceCertificateTrusted(@NonNull X509Certificate certificate) throws CertificateEncodingException" ],
+  "variableNames" : [ "mService", "mContext" ]
 }

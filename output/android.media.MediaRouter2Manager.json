@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/MediaRouter2Manager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/MediaRouter2Manager.java",
   "packageName" : "android.media",
   "className" : "MediaRouter2Manager",
-  "comment" : "\n * A class that monitors and controls media routing of other apps.\n * @hide\n ",
+  "comment" : "\n * A class that monitors and controls media routing of other apps.\n * {@link android.Manifest.permission#MEDIA_CONTENT_CONTROL} is required to use this class,\n * or {@link SecurityException} will be thrown.\n * @hide\n ",
+  "links" : [ "android.Manifest.permission#MEDIA_CONTENT_CONTROL", "SecurityException" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -29,18 +30,13 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mMediaSessionManager",
-    "type" : "MediaSessionManager",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mPackageName",
-    "type" : "String",
-    "comment" : "",
-    "links" : [ ]
-  }, {
     "name" : "mContext",
     "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMediaSessionManager",
+    "type" : "MediaSessionManager",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -51,6 +47,11 @@
   }, {
     "name" : "mMediaRouterService",
     "type" : "IMediaRouterService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mScanRequestCount",
+    "type" : "AtomicInteger",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -74,9 +75,14 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mPreferredFeaturesMap",
-    "type" : "ConcurrentMap<String, List<String>>",
+    "name" : "mDiscoveryPreferenceMap",
+    "type" : "ConcurrentMap<String, RouteDiscoveryPreference>",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPackageToRouteListingPreferenceMap",
+    "type" : "ConcurrentMap<String, RouteListingPreference>",
+    "comment" : "     a single record object maintained by a single package-to-record map.",
     "links" : [ ]
   }, {
     "name" : "mNextRequestId",
@@ -105,6 +111,16 @@
     "comment" : "\n     * Unregisters the specified callback.\n     *\n     * @param callback the callback to unregister\n     ",
     "links" : [ ]
   }, {
+    "name" : "public void registerScanRequest()",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a request to scan for remote routes.\n     *\n     * <p>Increases the count of active scanning requests. When the count transitions from zero to\n     * one, sends a request to the system server to start scanning.\n     *\n     * <p>Clients must {@link #unregisterScanRequest() unregister their scan requests} when scanning\n     * is no longer needed, to avoid unnecessary resource usage.\n     ",
+    "links" : [ "#unregisterScanRequest()" ]
+  }, {
+    "name" : "public void unregisterScanRequest()",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters a scan request made by {@link #registerScanRequest()}.\n     *\n     * <p>Decreases the count of active scanning requests. When the count transitions from one to\n     * zero, sends a request to the system server to stop scanning.\n     *\n     * @throws IllegalStateException If called while there are no active scan requests.\n     ",
+    "links" : [ "#registerScanRequest()" ]
+  }, {
     "name" : "public MediaController getMediaControllerForRoutingSession(@NonNull RoutingSessionInfo sessionInfo)",
     "returnType" : "MediaController",
     "comment" : "\n     * Gets a {@link android.media.session.MediaController} associated with the\n     * given routing session.\n     * If there is no matching media session, {@code null} is returned.\n     ",
@@ -115,14 +131,44 @@
     "comment" : "\n     * Gets available routes for an application.\n     *\n     * @param packageName the package name of the application\n     ",
     "links" : [ ]
   }, {
-    "name" : "public List<MediaRoute2Info> getAvailableRoutesForRoutingSession(@NonNull RoutingSessionInfo sessionInfo)",
+    "name" : "public List<MediaRoute2Info> getTransferableRoutes(@NonNull String packageName)",
+    "returnType" : "List<MediaRoute2Info>",
+    "comment" : "\n     * Gets routes that can be transferable seamlessly for an application.\n     *\n     * @param packageName the package name of the application\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<MediaRoute2Info> getAvailableRoutes(@NonNull RoutingSessionInfo sessionInfo)",
     "returnType" : "List<MediaRoute2Info>",
     "comment" : "\n     * Gets available routes for the given routing session.\n     * The returned routes can be passed to\n     * {@link #transfer(RoutingSessionInfo, MediaRoute2Info)} for transferring the routing session.\n     *\n     * @param sessionInfo the routing session that would be transferred\n     ",
     "links" : [ "#transfer(RoutingSessionInfo" ]
   }, {
-    "name" : "public RoutingSessionInfo getSystemRoutingSession()",
+    "name" : "public List<MediaRoute2Info> getTransferableRoutes(@NonNull RoutingSessionInfo sessionInfo)",
+    "returnType" : "List<MediaRoute2Info>",
+    "comment" : "\n     * Gets routes that can be transferable seamlessly for the given routing session.\n     * The returned routes can be passed to\n     * {@link #transfer(RoutingSessionInfo, MediaRoute2Info)} for transferring the routing session.\n     * <p>\n     * This includes routes that are {@link RoutingSessionInfo#getTransferableRoutes() transferable}\n     * by provider itself and routes that are different playback type (e.g. local/remote)\n     * from the given routing session.\n     *\n     * @param sessionInfo the routing session that would be transferred\n     ",
+    "links" : [ "android.media.RoutingSessionInfo#getTransferableRoutes()", "#transfer(RoutingSessionInfo" ]
+  }, {
+    "name" : "private List<MediaRoute2Info> getSortedRoutes(RouteDiscoveryPreference preference)",
+    "returnType" : "List<MediaRoute2Info>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private List<MediaRoute2Info> getFilteredRoutes(@NonNull RoutingSessionInfo sessionInfo, boolean includeSelectedRoutes, @Nullable Predicate<MediaRoute2Info> additionalFilter)",
+    "returnType" : "List<MediaRoute2Info>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public RouteDiscoveryPreference getDiscoveryPreference(@NonNull String packageName)",
+    "returnType" : "RouteDiscoveryPreference",
+    "comment" : "\n     * Returns the preferred features of the specified package name.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RouteListingPreference getRouteListingPreference(@NonNull String packageName)",
+    "returnType" : "RouteListingPreference",
+    "comment" : "\n     * Returns the {@link RouteListingPreference} of the app with the given {@code packageName}, or\n     * null if the app has not set any.\n     ",
+    "links" : [ "android.media.RouteListingPreference" ]
+  }, {
+    "name" : "public RoutingSessionInfo getSystemRoutingSession(@Nullable String targetPackageName)",
     "returnType" : "RoutingSessionInfo",
-    "comment" : "\n     * Gets the system routing session associated with no specific application.\n     ",
+    "comment" : "\n     * Gets the system routing session for the given {@code targetPackageName}. Apps can select a\n     * route that is not the global route. (e.g. an app can select the device route while BT route\n     * is available.)\n     *\n     * @param targetPackageName the package name of the application.\n     ",
     "links" : [ ]
   }, {
     "name" : "public RoutingSessionInfo getRoutingSessionForMediaController(MediaController mediaController)",
@@ -132,27 +178,27 @@
   }, {
     "name" : "public List<RoutingSessionInfo> getRoutingSessions(@NonNull String packageName)",
     "returnType" : "List<RoutingSessionInfo>",
-    "comment" : "\n     * Gets routing sessions of an application with the given package name.\n     * The first element of the returned list is the system routing session.\n     *\n     * @param packageName the package name of the application that is routing.\n     * @see #getSystemRoutingSession()\n     ",
+    "comment" : "\n     * Gets routing sessions of an application with the given package name.\n     * The first element of the returned list is the system routing session.\n     *\n     * @param packageName the package name of the application that is routing.\n     * @see #getSystemRoutingSession(String)\n     ",
     "links" : [ ]
   }, {
-    "name" : "public List<RoutingSessionInfo> getActiveSessions()",
+    "name" : "public List<RoutingSessionInfo> getRemoteSessions()",
     "returnType" : "List<RoutingSessionInfo>",
-    "comment" : "\n     * Gets the list of all active routing sessions.\n     * <p>\n     * The first element of the list is the system routing session containing\n     * phone speakers, wired headset, Bluetooth devices.\n     * The system routing session is shared by apps such that controlling it will affect\n     * all apps.\n     * If you want to transfer media of an application, use {@link #getRoutingSessions(String)}.\n     *\n     * @see #getRoutingSessions(String)\n     * @see #getSystemRoutingSession()\n     ",
-    "links" : [ "#getRoutingSessions(String)" ]
+    "comment" : "\n     * Gets the list of all routing sessions except the system routing session.\n     * <p>\n     * If you want to transfer media of an application, use {@link #getRoutingSessions(String)}.\n     * If you want to get only the system routing session, use\n     * {@link #getSystemRoutingSession(String)}.\n     *\n     * @see #getRoutingSessions(String)\n     * @see #getSystemRoutingSession(String)\n     ",
+    "links" : [ "#getRoutingSessions(String)", "#getSystemRoutingSession(String)" ]
   }, {
     "name" : "public List<MediaRoute2Info> getAllRoutes()",
     "returnType" : "List<MediaRoute2Info>",
     "comment" : "\n     * Gets the list of all discovered routes.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void selectRoute(@NonNull String packageName, @NonNull MediaRoute2Info route)",
+    "name" : "public void transfer(@NonNull String packageName, @NonNull MediaRoute2Info route, @NonNull UserHandle userHandle)",
     "returnType" : "void",
-    "comment" : "\n     * Selects media route for the specified package name.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Transfers a {@link RoutingSessionInfo routing session} belonging to a specified package name\n     * to a {@link MediaRoute2Info media route}.\n     *\n     * <p>Same as {@link #transfer(RoutingSessionInfo, MediaRoute2Info)}, but resolves the routing\n     * session based on the provided package name.\n     ",
+    "links" : [ "android.media.MediaRoute2Info", "android.media.RoutingSessionInfo", "#transfer(RoutingSessionInfo" ]
   }, {
-    "name" : "public void transfer(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)",
+    "name" : "public void transfer(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiatorPackageName)",
     "returnType" : "void",
-    "comment" : "\n     * Transfers a routing session to a media route.\n     * <p>{@link Callback#onTransferred} or {@link Callback#onTransferFailed} will be called\n     * depending on the result.\n     *\n     * @param sessionInfo the routing session info to transfer\n     * @param route the route transfer to\n     *\n     * @see Callback#onTransferred(RoutingSessionInfo, RoutingSessionInfo)\n     * @see Callback#onTransferFailed(RoutingSessionInfo, MediaRoute2Info)\n     ",
+    "comment" : "\n     * Transfers a routing session to a media route.\n     *\n     * <p>{@link Callback#onTransferred} or {@link Callback#onTransferFailed} will be called\n     * depending on the result.\n     *\n     * @param sessionInfo the routing session info to transfer\n     * @param route the route transfer to\n     * @param transferInitiatorUserHandle the user handle of an app initiated the transfer\n     * @param transferInitiatorPackageName the package name of an app initiated the transfer\n     * @see Callback#onTransferred(RoutingSessionInfo, RoutingSessionInfo)\n     * @see Callback#onTransferFailed(RoutingSessionInfo, MediaRoute2Info)\n     ",
     "links" : [ "#onTransferred", "#onTransferFailed" ]
   }, {
     "name" : "public void setRouteVolume(@NonNull MediaRoute2Info route, int volume)",
@@ -165,17 +211,7 @@
     "comment" : "\n     * Requests a volume change for a routing session asynchronously.\n     *\n     * @param volume The new volume value between 0 and {@link RoutingSessionInfo#getVolumeMax}\n     *               (inclusive).\n     ",
     "links" : [ "android.media.RoutingSessionInfo#getVolumeMax" ]
   }, {
-    "name" : " void addRoutesOnHandler(List<MediaRoute2Info> routes)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : " void removeRoutesOnHandler(List<MediaRoute2Info> routes)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : " void changeRoutesOnHandler(List<MediaRoute2Info> routes)",
+    "name" : " void updateRoutesOnHandler(@NonNull List<MediaRoute2Info> routes)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -195,17 +231,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private void notifyRoutesAdded(List<MediaRoute2Info> routes)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void notifyRoutesRemoved(List<MediaRoute2Info> routes)",
-    "returnType" : "void",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "private void notifyRoutesChanged(List<MediaRoute2Info> routes)",
+    "name" : "private void notifyRoutesUpdated()",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -235,7 +261,12 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : " void updatePreferredFeatures(String packageName, List<String> preferredFeatures)",
+    "name" : " void updateDiscoveryPreference(String packageName, RouteDiscoveryPreference preference)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateRouteListingPreference(@NonNull String packageName, @Nullable RouteListingPreference routeListingPreference)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -267,15 +298,15 @@
   }, {
     "name" : "public void releaseSession(@NonNull RoutingSessionInfo sessionInfo)",
     "returnType" : "void",
-    "comment" : "\n     * Requests releasing a session.\n     * <p>\n     * If a session is released, any operation on the session will be ignored.\n     * {@link Callback#onTransferred(RoutingSessionInfo, RoutingSessionInfo)} with {@code null}\n     * session will be called when the session is released.\n     * </p>\n     *\n     * @see Callback#onTransferred(RoutingSessionInfo, RoutingSessionInfo)\n     ",
-    "links" : [ "#onTransferred(RoutingSessionInfo" ]
+    "comment" : "\n     * Requests releasing a session.\n     * <p>\n     * If a session is released, any operation on the session will be ignored.\n     * {@link Callback#onSessionReleased(RoutingSessionInfo)} will be called\n     * when the session is released.\n     * </p>\n     *\n     * @see Callback#onTransferred(RoutingSessionInfo, RoutingSessionInfo)\n     ",
+    "links" : [ "#onSessionReleased(RoutingSessionInfo)" ]
   }, {
-    "name" : "private void transferToRoute(@NonNull RoutingSessionInfo session, @NonNull MediaRoute2Info route)",
+    "name" : "private void transferToRoute(@NonNull RoutingSessionInfo session, @NonNull MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiatorPackageName)",
     "returnType" : "void",
     "comment" : "\n     * Transfers the remote session to the given route.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "private void requestCreateSession(RoutingSessionInfo oldSession, MediaRoute2Info route)",
+    "name" : "private void requestCreateSession(RoutingSessionInfo oldSession, MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiationPackageName)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -294,12 +325,7 @@
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
-  }, {
-    "name" : "private Client getOrCreateClient()",
-    "returnType" : "Client",
-    "comment" : "",
-    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "sLock", "REQUEST_ID_NONE", "TRANSFER_TIMEOUT_MS", "sInstance", "mMediaSessionManager", "mPackageName", "mContext", "mClient", "mMediaRouterService", "mHandler", "mCallbackRecords", "mRoutesLock", "mRoutes", "mPreferredFeaturesMap", "mNextRequestId", "mTransferRequests" ],
-  "methodNames" : [ "public static MediaRouter2Manager getInstance(@NonNull Context context)", "public void registerCallback(@NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)", "public void unregisterCallback(@NonNull Callback callback)", "public MediaController getMediaControllerForRoutingSession(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getAvailableRoutes(@NonNull String packageName)", "public List<MediaRoute2Info> getAvailableRoutesForRoutingSession(@NonNull RoutingSessionInfo sessionInfo)", "public RoutingSessionInfo getSystemRoutingSession()", "public RoutingSessionInfo getRoutingSessionForMediaController(MediaController mediaController)", "public List<RoutingSessionInfo> getRoutingSessions(@NonNull String packageName)", "public List<RoutingSessionInfo> getActiveSessions()", "public List<MediaRoute2Info> getAllRoutes()", "public void selectRoute(@NonNull String packageName, @NonNull MediaRoute2Info route)", "public void transfer(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)", "public void setRouteVolume(@NonNull MediaRoute2Info route, int volume)", "public void setSessionVolume(@NonNull RoutingSessionInfo sessionInfo, int volume)", " void addRoutesOnHandler(List<MediaRoute2Info> routes)", " void removeRoutesOnHandler(List<MediaRoute2Info> routes)", " void changeRoutesOnHandler(List<MediaRoute2Info> routes)", " void createSessionOnHandler(int requestId, RoutingSessionInfo sessionInfo)", " void handleFailureOnHandler(int requestId, int reason)", " void handleSessionsUpdatedOnHandler(RoutingSessionInfo sessionInfo)", "private void notifyRoutesAdded(List<MediaRoute2Info> routes)", "private void notifyRoutesRemoved(List<MediaRoute2Info> routes)", "private void notifyRoutesChanged(List<MediaRoute2Info> routes)", " void notifySessionUpdated(RoutingSessionInfo sessionInfo)", " void notifySessionReleased(RoutingSessionInfo session)", " void notifyRequestFailed(int reason)", " void notifyTransferred(RoutingSessionInfo oldSession, RoutingSessionInfo newSession)", " void notifyTransferFailed(RoutingSessionInfo sessionInfo, MediaRoute2Info route)", " void updatePreferredFeatures(String packageName, List<String> preferredFeatures)", "public List<MediaRoute2Info> getSelectedRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getSelectableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getDeselectableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public void selectRoute(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)", "public void deselectRoute(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)", "public void releaseSession(@NonNull RoutingSessionInfo sessionInfo)", "private void transferToRoute(@NonNull RoutingSessionInfo session, @NonNull MediaRoute2Info route)", "private void requestCreateSession(RoutingSessionInfo oldSession, MediaRoute2Info route)", "private int createTransferRequest(RoutingSessionInfo session, MediaRoute2Info route)", "private void handleTransferTimeout(TransferRequest request)", "private boolean areSessionsMatched(MediaController mediaController, RoutingSessionInfo sessionInfo)", "private Client getOrCreateClient()" ]
+  "methodNames" : [ "public static MediaRouter2Manager getInstance(@NonNull Context context)", "public void registerCallback(@NonNull @CallbackExecutor Executor executor, @NonNull Callback callback)", "public void unregisterCallback(@NonNull Callback callback)", "public void registerScanRequest()", "public void unregisterScanRequest()", "public MediaController getMediaControllerForRoutingSession(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getAvailableRoutes(@NonNull String packageName)", "public List<MediaRoute2Info> getTransferableRoutes(@NonNull String packageName)", "public List<MediaRoute2Info> getAvailableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getTransferableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "private List<MediaRoute2Info> getSortedRoutes(RouteDiscoveryPreference preference)", "private List<MediaRoute2Info> getFilteredRoutes(@NonNull RoutingSessionInfo sessionInfo, boolean includeSelectedRoutes, @Nullable Predicate<MediaRoute2Info> additionalFilter)", "public RouteDiscoveryPreference getDiscoveryPreference(@NonNull String packageName)", "public RouteListingPreference getRouteListingPreference(@NonNull String packageName)", "public RoutingSessionInfo getSystemRoutingSession(@Nullable String targetPackageName)", "public RoutingSessionInfo getRoutingSessionForMediaController(MediaController mediaController)", "public List<RoutingSessionInfo> getRoutingSessions(@NonNull String packageName)", "public List<RoutingSessionInfo> getRemoteSessions()", "public List<MediaRoute2Info> getAllRoutes()", "public void transfer(@NonNull String packageName, @NonNull MediaRoute2Info route, @NonNull UserHandle userHandle)", "public void transfer(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiatorPackageName)", "public void setRouteVolume(@NonNull MediaRoute2Info route, int volume)", "public void setSessionVolume(@NonNull RoutingSessionInfo sessionInfo, int volume)", " void updateRoutesOnHandler(@NonNull List<MediaRoute2Info> routes)", " void createSessionOnHandler(int requestId, RoutingSessionInfo sessionInfo)", " void handleFailureOnHandler(int requestId, int reason)", " void handleSessionsUpdatedOnHandler(RoutingSessionInfo sessionInfo)", "private void notifyRoutesUpdated()", " void notifySessionUpdated(RoutingSessionInfo sessionInfo)", " void notifySessionReleased(RoutingSessionInfo session)", " void notifyRequestFailed(int reason)", " void notifyTransferred(RoutingSessionInfo oldSession, RoutingSessionInfo newSession)", " void notifyTransferFailed(RoutingSessionInfo sessionInfo, MediaRoute2Info route)", " void updateDiscoveryPreference(String packageName, RouteDiscoveryPreference preference)", "private void updateRouteListingPreference(@NonNull String packageName, @Nullable RouteListingPreference routeListingPreference)", "public List<MediaRoute2Info> getSelectedRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getSelectableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public List<MediaRoute2Info> getDeselectableRoutes(@NonNull RoutingSessionInfo sessionInfo)", "public void selectRoute(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)", "public void deselectRoute(@NonNull RoutingSessionInfo sessionInfo, @NonNull MediaRoute2Info route)", "public void releaseSession(@NonNull RoutingSessionInfo sessionInfo)", "private void transferToRoute(@NonNull RoutingSessionInfo session, @NonNull MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiatorPackageName)", "private void requestCreateSession(RoutingSessionInfo oldSession, MediaRoute2Info route, @NonNull UserHandle transferInitiatorUserHandle, @NonNull String transferInitiationPackageName)", "private int createTransferRequest(RoutingSessionInfo session, MediaRoute2Info route)", "private void handleTransferTimeout(TransferRequest request)", "private boolean areSessionsMatched(MediaController mediaController, RoutingSessionInfo sessionInfo)" ],
+  "variableNames" : [ "TAG", "sLock", "REQUEST_ID_NONE", "TRANSFER_TIMEOUT_MS", "sInstance", "mContext", "mMediaSessionManager", "mClient", "mMediaRouterService", "mScanRequestCount", "mHandler", "mCallbackRecords", "mRoutesLock", "mRoutes", "mDiscoveryPreferenceMap", "mPackageToRouteListingPreferenceMap", "mNextRequestId", "mTransferRequests" ]
 }

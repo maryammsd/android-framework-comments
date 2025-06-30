@@ -1,0 +1,741 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/apache/xalan/transformer/TransformerImpl.java",
+  "packageName" : "org.apache.xalan.transformer",
+  "className" : "TransformerImpl",
+  "comment" : "\n * This class implements the\n * {@link javax.xml.transform.Transformer} interface, and is the core\n * representation of the transformation execution.</p>\n * @xsl.usage advanced\n ",
+  "links" : [ "javax.xml.transform.Transformer" ],
+  "variables" : [ {
+    "name" : "m_reentryGuard",
+    "type" : "Boolean",
+    "comment" : " NEEDSDOC Field m_reentryGuard          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_outputStream",
+    "type" : "java.io.FileOutputStream",
+    "comment" : "\n   * This is null unless we own the stream.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_transformThread",
+    "type" : "Thread",
+    "comment" : " The thread that the transformer is running on. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_urlOfSource",
+    "type" : "String",
+    "comment" : " The base URL of the source tree. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_outputTarget",
+    "type" : "Result",
+    "comment" : " The Result object at the start of the transform, if any. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_outputFormat",
+    "type" : "OutputProperties",
+    "comment" : "\n   * The output format object set by the user.  May be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_inputContentHandler",
+    "type" : "ContentHandler",
+    "comment" : "\n   * The content handler for the source input tree.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_outputContentHandler",
+    "type" : "ContentHandler",
+    "comment" : "\n   * The content handler for the result tree.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_textResultHandlerObjectPool",
+    "type" : "ObjectPool",
+    "comment" : "\n   * A pool of ResultTreeHandlers, for serialization of a subtree to text.\n   *  Please note that each of these also holds onto a Text Serializer.  \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_stringWriterObjectPool",
+    "type" : "ObjectPool",
+    "comment" : "\n   * Related to m_textResultHandlerObjectPool, this is a pool of\n   * StringWriters, which are passed to the Text Serializers.\n   * (I'm not sure if this is really needed any more.  -sb)      \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_textformat",
+    "type" : "OutputProperties",
+    "comment" : "\n   * A static text format object, which can be used over and\n   * over to create the text serializers.    \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentTemplateElements",
+    "type" : "ObjectStack",
+    "comment" : "\n   * A node vector used as a stack to track the current\n   * ElemTemplateElement.  Needed for the\n   * org.apache.xalan.transformer.TransformState interface,\n   * so a tool can discover the calling template. Note the use of an array \n   * for this limits the recursion depth to 4K.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentMatchTemplates",
+    "type" : "Stack",
+    "comment" : "\n   * A node vector used as a stack to track the current\n   * ElemTemplate that was matched.\n   * Needed for the\n   * org.apache.xalan.transformer.TransformState interface,\n   * so a tool can discover the matched template\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentMatchedNodes",
+    "type" : "NodeVector",
+    "comment" : "\n   * A node vector used as a stack to track the current\n   * node that was matched.\n   * Needed for the\n   * org.apache.xalan.transformer.TransformState interface,\n   * so a tool can discover the matched\n   * node. \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_stylesheetRoot",
+    "type" : "StylesheetRoot",
+    "comment" : "\n   * The root of a linked set of stylesheets.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_quietConflictWarnings",
+    "type" : "boolean",
+    "comment" : "\n   * If this is set to true, do not warn about pattern\n   * match conflicts.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_xcontext",
+    "type" : "XPathContext",
+    "comment" : "\n   * The liason to the XML parser, so the XSL processor\n   * can handle included files, and the like, and do the\n   * initial parse of the XSL document.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_serializationHandler",
+    "type" : "SerializationHandler",
+    "comment" : "\n   * Output handler to bottleneck SAX events.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_keyManager",
+    "type" : "KeyManager",
+    "comment" : " The key manager, which manages xsl:keys. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_attrSetStack",
+    "type" : "Stack",
+    "comment" : "\n   * Stack for the purposes of flagging infinite recursion with\n   * attribute sets.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_countersTable",
+    "type" : "CountersTable",
+    "comment" : "\n   * The table of counters for xsl:number support.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentTemplateRuleIsNull",
+    "type" : "BoolStack",
+    "comment" : "\n   * Is > 0 when we're processing a for-each.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_currentFuncResult",
+    "type" : "ObjectStack",
+    "comment" : "\n   * Keeps track of the result delivered by any EXSLT <code>func:result</code>\n   * instruction that has been executed for the currently active EXSLT\n   * <code>func:function</code>\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_msgMgr",
+    "type" : "MsgMgr",
+    "comment" : "\n   * The message manager, which manages error messages, warning\n   * messages, and other types of message events.   \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_optimizer",
+    "type" : "boolean",
+    "comment" : "\n   * The flag for the setting of the optimize feature;\n   * This flag should have the same value as the FEATURE_OPTIMIZE feature\n   * which is set by the TransformerFactory.setAttribut() method before a\n   * Transformer is created\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_incremental",
+    "type" : "boolean",
+    "comment" : "\n   * The flag for the setting of the incremental feature;\n   * This flag should have the same value as the FEATURE_INCREMENTAL feature\n   * which is set by the TransformerFactory.setAttribut() method before a\n   * Transformer is created\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_source_location",
+    "type" : "boolean",
+    "comment" : "\n   * The flag for the setting of the source_location feature;\n   * This flag should have the same value as the FEATURE_SOURCE_LOCATION feature\n   * which is set by the TransformerFactory.setAttribut() method before a\n   * Transformer is created\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_errorHandler",
+    "type" : "ErrorListener",
+    "comment" : "\n   * The SAX error handler, where errors and warnings are sent.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_exceptionThrown",
+    "type" : "Exception",
+    "comment" : "\n   * If the transform thread throws an exception, the exception needs to\n   * be stashed away so that the main thread can pass it on to the\n   * client. \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_doc",
+    "type" : "int",
+    "comment" : "\n   * This is needed for support of setSourceTreeDocForThread(Node doc),\n   * which must be called in order for the transform thread's run\n   * method to obtain the root of the source tree to be transformed.     \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_hasBeenReset",
+    "type" : "boolean",
+    "comment" : " Flag to to tell if the tranformer needs to be reset. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_shouldReset",
+    "type" : "boolean",
+    "comment" : " NEEDSDOC Field m_shouldReset          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_modes",
+    "type" : "Stack",
+    "comment" : "\n   * A stack of current template modes.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_extensionsTable",
+    "type" : "ExtensionsTable",
+    "comment" : "\n   * The table of ExtensionHandlers.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_hasTransformThreadErrorCatcher",
+    "type" : "boolean",
+    "comment" : " NEEDSDOC Field m_hasTransformThreadErrorCatcher          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_userParams",
+    "type" : "Vector",
+    "comment" : " NEEDSDOC Field m_userParams          ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public ExtensionsTable getExtensionsTable()",
+    "returnType" : "ExtensionsTable",
+    "comment" : "\n   * Get the extensions table object. \n   *\n   * @return The extensions table.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " void setExtensionsTable(StylesheetRoot sroot) throws javax.xml.transform.TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * If the stylesheet contains extensions, set the extensions table object.\n   *\n   *\n   * @param sroot The stylesheet.\n   * @throws javax.xml.transform.TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean functionAvailable(String ns, String funcName) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean elementAvailable(String ns, String elemName) throws javax.xml.transform.TransformerException",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Object extFunction(String ns, String funcName, Vector argVec, Object methodKey) throws javax.xml.transform.TransformerException",
+    "returnType" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Object extFunction(FuncExtFunction extFunction, Vector argVec) throws javax.xml.transform.TransformerException",
+    "returnType" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : "\n   * Reset the state.  This needs to be called after a process() call\n   * is invoked, if the processor is to be used again.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Thread getTransformThread()",
+    "returnType" : "Thread",
+    "comment" : "\n   * Get the thread that the transform process is on.\n   *\n   * @return The thread that the transform process is on, or null.\n   * @xsl.usage internal\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTransformThread(Thread t)",
+    "returnType" : "void",
+    "comment" : "\n   * Get the thread that the transform process is on.\n   *\n   * @param t The transform thread, may be null.\n   * @xsl.usage internal\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasTransformThreadErrorCatcher()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Return true if the transform was initiated from the transform method,\n   * otherwise it was probably done from a pure parse events.\n   *\n   * NEEDSDOC ($objectName$) @return\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transform(Source source) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source tree to SAX parse events.\n   * @param source  The input for the source tree.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transform(Source source, boolean shouldRelease) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source tree to SAX parse events.\n   * @param source  The input for the source tree.\n   * @param shouldRelease  Flag indicating whether to release DTMManager.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void fatalError(Throwable throwable) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setBaseURLOfSource(String base)",
+    "returnType" : "void",
+    "comment" : "\n   * Get the base URL of the source.\n   *\n   *\n   * NEEDSDOC @param base\n   * @return The base URL of the source tree, or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getOutputProperty(String qnameString) throws IllegalArgumentException",
+    "returnType" : "String",
+    "comment" : "\n   * Get an output property that is in effect for the\n   * transformation.  The property specified may be a property\n   * that was set with setOutputProperty, or it may be a\n   * property specified in the stylesheet.\n   *\n   * NEEDSDOC @param qnameString\n   *\n   * @return The string value of the output property, or null\n   * if no property was found.\n   *\n   * @throws IllegalArgumentException If the property is not supported.\n   *\n   * @see javax.xml.transform.OutputKeys\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getOutputPropertyNoDefault(String qnameString) throws IllegalArgumentException",
+    "returnType" : "String",
+    "comment" : "\n   * Get the value of a property, without using the default properties.  This\n   * can be used to test if a property has been explicitly set by the stylesheet\n   * or user.\n   *\n   * NEEDSDOC @param qnameString\n   *\n   * @return The value of the property, or null if not found.\n   *\n   * @throws IllegalArgumentException If the property is not supported,\n   * and is not namespaced.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOutputProperty(String name, String value) throws IllegalArgumentException",
+    "returnType" : "void",
+    "comment" : "\n   * This method is used to set or override the value\n   * of the effective xsl:output attribute values\n   * specified in the stylesheet.\n   * <p>\n   * The recognized standard output properties are:\n   * <ul>\n   * <li>cdata-section-elements\n   * <li>doctype-system\n   * <li>doctype-public\n   * <li>indent\n   * <li>media-type\n   * <li>method\n   * <li>omit-xml-declaration\n   * <li>standalone\n   * <li>version\n   * </ul>\n   * <p>\n   * For example:\n   * <pre>\n   *   tran.setOutputProperty(\"standalone\", \"yes\");\n   * </pre>\n   * <p>\n   * In the case of the cdata-section-elements property,\n   * the value should be a whitespace separated list of\n   * element names.  The element name is the local name\n   * of the element, if it is in no namespace, or, the URI\n   * in braces followed immediately by the local name\n   * if the element is in that namespace. For example: \n   * <pre>\n   * tran.setOutputProperty(\n   *   \"cdata-section-elements\", \n   *   \"elem1 {http://example.uri}elem2 elem3\");\n   * </pre>\n   * <p>\n   * The recognized Xalan extension elements are: \n   * <ul>\n   * <li>content-handler\n   * <li>entities\n   * <li>indent-amount\n   * <li>line-separator\n   * <li>omit-meta-tag\n   * <li>use-url-escaping\n   * </ul>\n   * <p>\n   * These must be in the extension namespace of\n   * \"http://xml.apache.org/xalan\".  This is accomplished\n   * by putting the namespace URI in braces before the \n   * property name, for example:\n   * <pre>\n   *   tran.setOutputProperty(\n   *     \"{http://xml.apache.org/xalan}line-separator\" ,\n   *     \"\\n\");\n   * </pre> \n   *\n   * @param name The property name.\n   * @param value The requested value for the property.\n   * @throws IllegalArgumentException if the property name is not legal.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOutputProperties(Properties oformat) throws IllegalArgumentException",
+    "returnType" : "void",
+    "comment" : "\n   * Set the output properties for the transformation.  These\n   * properties will override properties set in the templates\n   * with xsl:output.\n   *\n   * <p>If argument to this function is null, any properties\n   * previously set will be removed.</p>\n   *\n   * @param oformat A set of output properties that will be\n   * used to override any of the same properties in effect\n   * for the transformation.\n   *\n   * @see javax.xml.transform.OutputKeys\n   * @see java.util.Properties\n   *\n   * @throws IllegalArgumentException if any of the argument keys are not\n   * recognized and are not namespace qualified.   \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Properties getOutputProperties()",
+    "returnType" : "Properties",
+    "comment" : "\n   * Get a copy of the output properties for the transformation.  These\n   * properties will override properties set in the templates\n   * with xsl:output.\n   *\n   * <p>Note that mutation of the Properties object returned will not\n   * effect the properties that the transformation contains.</p>\n   *\n   * @return  A copy of the set of output properties in effect\n   * for the next transformation.\n   *\n   * NEEDSDOC ($objectName$) @return\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public SerializationHandler createSerializationHandler(Result outputTarget) throws TransformerException",
+    "returnType" : "SerializationHandler",
+    "comment" : "\n     * Create a result ContentHandler from a Result object, based\n     * on the current OutputProperties.\n     *\n     * @param outputTarget Where the transform result should go,\n     * should not be null.\n     *\n     * @return A valid ContentHandler that will create the\n     * result tree when it is fed SAX events.\n     *\n     * @throws TransformerException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public SerializationHandler createSerializationHandler(Result outputTarget, OutputProperties format) throws TransformerException",
+    "returnType" : "SerializationHandler",
+    "comment" : "\n     * Create a ContentHandler from a Result object and an OutputProperties.\n     *\n     * @param outputTarget Where the transform result should go,\n     * should not be null.\n     * @param format The OutputProperties object that will contain\n     * instructions on how to serialize the output.\n     *\n     * @return A valid ContentHandler that will create the\n     * result tree when it is fed SAX events.\n     *\n     * @throws TransformerException\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transform(Source xmlSource, Result outputTarget) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source tree to the output result.\n   * @param xmlSource  The input for the source tree.\n   * @param outputTarget The output source target.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transform(Source xmlSource, Result outputTarget, boolean shouldRelease) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source tree to the output result.\n   * @param xmlSource  The input for the source tree.\n   * @param outputTarget The output source target.\n   * @param shouldRelease  Flag indicating whether to release DTMManager. \n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transformNode(int node, Result outputTarget) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source node to the output result, if the\n   * processor supports the \"http://xml.org/trax/features/dom/input\"\n   * feature.\n   * %REVIEW% Do we need a Node version of this?\n   * @param node  The input source node, which can be any valid DTM node.\n   * @param outputTarget The output source target.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void transformNode(int node) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Process the source node to the output result, if the\n   * processor supports the \"http://xml.org/trax/features/dom/input\"\n   * feature.\n   * %REVIEW% Do we need a Node version of this?\n   * @param node  The input source node, which can be any valid DTM node.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ContentHandler getInputContentHandler()",
+    "returnType" : "ContentHandler",
+    "comment" : "\n   * Get a SAX2 ContentHandler for the input.\n   *\n   * @return A valid ContentHandler, which should never be null, as\n   * long as getFeature(\"http://xml.org/trax/features/sax/input\")\n   * returns true.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ContentHandler getInputContentHandler(boolean doDocFrag)",
+    "returnType" : "ContentHandler",
+    "comment" : "\n   * Get a SAX2 ContentHandler for the input.\n   *\n   * @param doDocFrag true if a DocumentFragment should be created as\n   * the root, rather than a Document.\n   *\n   * @return A valid ContentHandler, which should never be null, as\n   * long as getFeature(\"http://xml.org/trax/features/sax/input\")\n   * returns true.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOutputFormat(OutputProperties oformat)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the output properties for the transformation.  These\n   * properties will override properties set in the templates\n   * with xsl:output.\n   *\n   * @param oformat A valid OutputProperties object (which will\n   * not be mutated), or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public OutputProperties getOutputFormat()",
+    "returnType" : "OutputProperties",
+    "comment" : "\n   * Get the output properties used for the transformation.\n   *\n   * @return the output format that was set by the user,\n   * otherwise the output format from the stylesheet.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setParameter(String name, String namespace, Object value)",
+    "returnType" : "void",
+    "comment" : "\n   * Set a parameter for the templates.\n   * \n   * @param name The name of the parameter.\n   * @param namespace The namespace of the parameter.\n   * @param value The value object.  This can be any valid Java object\n   * -- it's up to the processor to provide the proper\n   * coersion to the object, or simply pass it on for use\n   * in extensions.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setParameter(String name, Object value)",
+    "returnType" : "void",
+    "comment" : "\n   * Set a parameter for the transformation.\n   *\n   * @param name The name of the parameter,\n   *             which may have a namespace URI.\n   * @param value The value object.  This can be any valid Java object\n   * -- it's up to the processor to provide the proper\n   * coersion to the object, or simply pass it on for use\n   * in extensions.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void replaceOrPushUserParam(QName qname, XObject xval)",
+    "returnType" : "void",
+    "comment" : "\n   * NEEDSDOC Method replaceOrPushUserParam \n   *\n   *\n   * NEEDSDOC @param qname\n   * NEEDSDOC @param xval\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object getParameter(String name)",
+    "returnType" : "Object",
+    "comment" : "\n   * Get a parameter that was explicitly set with setParameter\n   * or setParameters.\n   *\n   *\n   * NEEDSDOC @param name\n   * @return A parameter that has been set with setParameter\n   * or setParameters,\n   * *not* all the xsl:params on the stylesheet (which require\n   * a transformation Source to be evaluated).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void resetUserParameters()",
+    "returnType" : "void",
+    "comment" : "\n   * Reset parameters that the user specified for the transformation.\n   * Called during transformer.reset() after we have cleared the \n   * variable stack. We need to make sure that user params are\n   * reset so that the transformer object can be reused. \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setParameters(Properties params)",
+    "returnType" : "void",
+    "comment" : "\n   * Set a bag of parameters for the transformation. Note that\n   * these will not be additive, they will replace the existing\n   * set of parameters.\n   *\n   * NEEDSDOC @param params\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearParameters()",
+    "returnType" : "void",
+    "comment" : "\n   * Reset the parameters to a null list.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void pushGlobalVars(int contextNode) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Internal -- push the global variables from the Stylesheet onto\n   * the context's runtime variable stack.\n   * <p>If we encounter a variable\n   * that is already defined in the variable stack, we ignore it.  This\n   * is because the second variable definition will be at a lower import\n   * precedence.  Presumably, global\"variables at the same import precedence\n   * with the same name will have been caught during the recompose process.\n   * <p>However, if we encounter a parameter that is already defined in the\n   * variable stack, we need to see if this is a parameter whose value was\n   * supplied by a setParameter call.  If so, we need to \"receive\" the one\n   * already in the stack, ignoring this one.  If it is just an earlier\n   * xsl:param or xsl:variable definition, we ignore it using the same\n   * reasoning as explained above for the variable.\n   *\n   * @param contextNode The root of the source tree, can't be null.\n   *\n   * @throws TransformerException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setURIResolver(URIResolver resolver)",
+    "returnType" : "void",
+    "comment" : "\n   * Set an object that will be used to resolve URIs used in\n   * document(), etc.\n   * @param resolver An object that implements the URIResolver interface,\n   * or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public URIResolver getURIResolver()",
+    "returnType" : "URIResolver",
+    "comment" : "\n   * Get an object that will be used to resolve URIs used in\n   * document(), etc.\n   *\n   * @return An object that implements the URIResolver interface,\n   * or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContentHandler(ContentHandler handler)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the content event handler.\n   *\n   * NEEDSDOC @param handler\n   * @throws java.lang.NullPointerException If the handler\n   *            is null.\n   * @see org.xml.sax.XMLReader#setContentHandler\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ContentHandler getContentHandler()",
+    "returnType" : "ContentHandler",
+    "comment" : "\n   * Get the content event handler.\n   *\n   * @return The current content handler, or null if none was set.\n   * @see org.xml.sax.XMLReader#getContentHandler\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int transformToRTF(ElemTemplateElement templateParent) throws TransformerException",
+    "returnType" : "int",
+    "comment" : "\n   * Given a stylesheet element, create a result tree fragment from it's\n   * contents. The fragment will be built within the shared RTF DTM system\n   * used as a variable stack.\n   * @param templateParent The template element that holds the fragment.\n   * @return the NodeHandle for the root node of the resulting RTF.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int transformToGlobalRTF(ElemTemplateElement templateParent) throws TransformerException",
+    "returnType" : "int",
+    "comment" : "\n   * Given a stylesheet element, create a result tree fragment from it's\n   * contents. The fragment will also use the shared DTM system, but will\n   * obtain its space from the global variable pool rather than the dynamic\n   * variable stack. This allows late binding of XUnresolvedVariables without\n   * the risk that their content will be discarded when the variable stack\n   * is popped.\n   * \n   * @param templateParent The template element that holds the fragment.\n   * @return the NodeHandle for the root node of the resulting RTF.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private int transformToRTF(ElemTemplateElement templateParent, DTM dtmFrag) throws TransformerException",
+    "returnType" : "int",
+    "comment" : "\n   * Given a stylesheet element, create a result tree fragment from it's\n   * contents.\n   * @param templateParent The template element that holds the fragment.\n   * @param dtmFrag The DTM to write the RTF into\n   * @return the NodeHandle for the root node of the resulting RTF.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String transformToString(ElemTemplateElement elem) throws TransformerException",
+    "returnType" : "String",
+    "comment" : "\n   * Take the contents of a template element, process it, and\n   * convert it to a string.\n   *\n   * @param elem The parent element whose children will be output\n   * as a string.\n   *\n   * @return The stringized result of executing the elements children.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean applyTemplateToNode(ElemTemplateElement xslInstruction, ElemTemplate template, int child) throws TransformerException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Given an element and mode, find the corresponding\n   * template and process the contents.\n   *\n   * @param xslInstruction The calling element.\n   * @param template The template to use if xsl:for-each, current template for apply-imports, or null.\n   * @param child The source context node.\n   * @throws TransformerException\n   * @return true if applied a template, false if not.\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void executeChildTemplates(ElemTemplateElement elem, org.w3c.dom.Node context, QName mode, ContentHandler handler) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Execute each of the children of a template element.  This method\n   * is only for extension use.\n   *\n   * @param elem The ElemTemplateElement that contains the children\n   * that should execute.\n   * NEEDSDOC @param context\n   * @param mode The current mode.\n   * @param handler The ContentHandler to where the result events\n   * should be fed.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void executeChildTemplates(ElemTemplateElement elem, boolean shouldAddAttrs) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n   * Execute each of the children of a template element.\n   *\n   * @param elem The ElemTemplateElement that contains the children\n   * that should execute.\n   * @param shouldAddAttrs true if xsl:attributes should be executed.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void executeChildTemplates(ElemTemplateElement elem, ContentHandler handler) throws TransformerException",
+    "returnType" : "void",
+    "comment" : "\n      * Execute each of the children of a template element.\n      *\n      * @param elem The ElemTemplateElement that contains the children\n      * that should execute.\n      * @param handler The ContentHandler to where the result events\n      * should be fed.\n      *\n      * @throws TransformerException\n      * @xsl.usage advanced\n      ",
+    "links" : [ ]
+  }, {
+    "name" : "public Vector processSortKeys(ElemForEach foreach, int sourceNodeContext) throws TransformerException",
+    "returnType" : "Vector",
+    "comment" : "\n   * Get the keys for the xsl:sort elements.\n   * Note: Should this go into ElemForEach?\n   *\n   * @param foreach Valid ElemForEach element, not null.\n   * @param sourceNodeContext The current node context in the source tree,\n   * needed to evaluate the Attribute Value Templates.\n   *\n   * @return A Vector of NodeSortKeys, or null.\n   *\n   * @throws TransformerException\n   * @xsl.usage advanced\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCurrentTemplateElementsCount()",
+    "returnType" : "int",
+    "comment" : "\n   * Get the count of how many elements are \n   * active.\n   * @return The number of active elements on \n   * the currentTemplateElements stack.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ObjectStack getCurrentTemplateElements()",
+    "returnType" : "ObjectStack",
+    "comment" : "\n   * Get the count of how many elements are \n   * active.\n   * @return The number of active elements on \n   * the currentTemplateElements stack.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushElemTemplateElement(ElemTemplateElement elem)",
+    "returnType" : "void",
+    "comment" : "\n   * Push the current template element.\n   *\n   * @param elem The current ElemTemplateElement (may be null, and then\n   * set via setCurrentElement).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void popElemTemplateElement()",
+    "returnType" : "void",
+    "comment" : "\n   * Pop the current template element.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCurrentElement(ElemTemplateElement e)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the top of the current template elements\n   * stack.\n   *\n   * @param e The current ElemTemplateElement about to\n   * be executed.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ElemTemplateElement getCurrentElement()",
+    "returnType" : "ElemTemplateElement",
+    "comment" : "\n   * Retrieves the current ElemTemplateElement that is\n   * being executed.\n   *\n   * @return The current ElemTemplateElement that is executing,\n   * should not normally be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCurrentNode()",
+    "returnType" : "int",
+    "comment" : "\n   * This method retrieves the current context node\n   * in the source tree.\n   *\n   * @return The current context node (should never be null?).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ElemTemplate getCurrentTemplate()",
+    "returnType" : "ElemTemplate",
+    "comment" : "\n   * This method retrieves the xsl:template\n   * that is in effect, which may be a matched template\n   * or a named template.\n   *\n   * <p>Please note that the ElemTemplate returned may\n   * be a default template, and thus may not have a template\n   * defined in the stylesheet.</p>\n   *\n   * @return The current xsl:template, should not be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushPairCurrentMatched(ElemTemplateElement template, int child)",
+    "returnType" : "void",
+    "comment" : "\n   * Push both the current xsl:template or xsl:for-each onto the\n   * stack, along with the child node that was matched.\n   * (Note: should this only be used for xsl:templates?? -sb)\n   *\n   * @param template xsl:template or xsl:for-each.\n   * @param child The child that was matched.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void popCurrentMatched()",
+    "returnType" : "void",
+    "comment" : "\n   * Pop the elements that were pushed via pushPairCurrentMatched.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ElemTemplate getMatchedTemplate()",
+    "returnType" : "ElemTemplate",
+    "comment" : "\n   * This method retrieves the xsl:template\n   * that was matched.  Note that this may not be\n   * the same thing as the current template (which\n   * may be from getCurrentElement()), since a named\n   * template may be in effect.\n   *\n   * @return The pushed template that was pushed via pushPairCurrentMatched.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMatchedNode()",
+    "returnType" : "int",
+    "comment" : "\n   * Retrieves the node in the source tree that matched\n   * the template obtained via getMatchedTemplate().\n   *\n   * @return The matched node that corresponds to the\n   * match attribute of the current xsl:template.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public DTMIterator getContextNodeList()",
+    "returnType" : "DTMIterator",
+    "comment" : "\n   * Get the current context node list.\n   *\n   * @return A reset clone of the context node list.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Transformer getTransformer()",
+    "returnType" : "Transformer",
+    "comment" : "\n   * Get the TrAX Transformer object in effect.\n   *\n   * @return This object.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setStylesheet(StylesheetRoot stylesheetRoot)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the stylesheet for this processor.  If this is set, then the\n   * process calls that take only the input .xml will use\n   * this instead of looking for a stylesheet PI.  Also,\n   * setting the stylesheet is needed if you are going\n   * to use the processor as a SAX ContentHandler.\n   *\n   * @param stylesheetRoot A non-null StylesheetRoot object,\n   * or null if you wish to clear the stylesheet reference.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final StylesheetRoot getStylesheet()",
+    "returnType" : "StylesheetRoot",
+    "comment" : "\n   * Get the current stylesheet for this processor.\n   *\n   * @return The stylesheet that is associated with this\n   * transformer.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getQuietConflictWarnings()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Get quietConflictWarnings property. If the quietConflictWarnings\n   * property is set to true, warnings about pattern conflicts won't be\n   * printed to the diagnostics stream.\n   *\n   * @return True if this transformer should not report\n   * template match conflicts.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setXPathContext(XPathContext xcontext)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the execution context for XPath.\n   *\n   * @param xcontext A non-null reference to the XPathContext\n   * associated with this transformer.\n   * @xsl.usage internal\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final XPathContext getXPathContext()",
+    "returnType" : "XPathContext",
+    "comment" : "\n   * Get the XPath context associated with this transformer.\n   *\n   * @return The XPathContext reference, never null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public SerializationHandler getResultTreeHandler()",
+    "returnType" : "SerializationHandler",
+    "comment" : "\n   * Get the SerializationHandler object.\n   *\n   * @return The current SerializationHandler, which may not\n   * be the main result tree manager.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public SerializationHandler getSerializationHandler()",
+    "returnType" : "SerializationHandler",
+    "comment" : "\n   * Get the SerializationHandler object.\n   *\n   * @return The current SerializationHandler, which may not\n   * be the main result tree manager.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public KeyManager getKeyManager()",
+    "returnType" : "KeyManager",
+    "comment" : "\n   * Get the KeyManager object.\n   *\n   * @return A reference to the KeyManager object, which should\n   * never be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isRecursiveAttrSet(ElemAttributeSet attrSet)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Check to see if this is a recursive attribute definition.\n   *\n   * @param attrSet A non-null ElemAttributeSet reference.\n   *\n   * @return true if the attribute set is recursive.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushElemAttributeSet(ElemAttributeSet attrSet)",
+    "returnType" : "void",
+    "comment" : "\n   * Push an executing attribute set, so we can check for\n   * recursive attribute definitions.\n   *\n   * @param attrSet A non-null ElemAttributeSet reference.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void popElemAttributeSet()",
+    "returnType" : "void",
+    "comment" : "\n   * Pop the current executing attribute set.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public CountersTable getCountersTable()",
+    "returnType" : "CountersTable",
+    "comment" : "\n   * Get the table of counters, for optimized xsl:number support.\n   *\n   * @return The CountersTable, never null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean currentTemplateRuleIsNull()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the current template rule is null, i.e. if we are\n   * directly within an apply-templates.  Used for xsl:apply-imports.\n   *\n   * @return True if the current template rule is null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushCurrentTemplateRuleIsNull(boolean b)",
+    "returnType" : "void",
+    "comment" : "\n   * Push true if the current template rule is null, false\n   * otherwise.\n   *\n   * @param b True if the we are executing an xsl:for-each\n   * (or xsl:call-template?).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void popCurrentTemplateRuleIsNull()",
+    "returnType" : "void",
+    "comment" : "\n   * Push true if the current template rule is null, false\n   * otherwise.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushCurrentFuncResult(Object val)",
+    "returnType" : "void",
+    "comment" : "\n   * Push a funcion result for the currently active EXSLT\n   * <code>func:function</code>.\n   * \n   * @param val the result of executing an EXSLT\n   * <code>func:result</code> instruction for the current\n   * <code>func:function</code>.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object popCurrentFuncResult()",
+    "returnType" : "Object",
+    "comment" : "\n   * Pops the result of the currently active EXSLT <code>func:function</code>.\n   * \n   * @return the value of the <code>func:function</code>\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean currentFuncResultSeen()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Determines whether an EXSLT <code>func:result</code> instruction has been\n   * executed for the currently active EXSLT <code>func:function</code>.\n   * \n   * @return <code>true</code> if and only if a <code>func:result</code>\n   * instruction has been executed\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public MsgMgr getMsgMgr()",
+    "returnType" : "MsgMgr",
+    "comment" : "\n   * Return the message manager.\n   *\n   * @return The message manager, never null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setErrorListener(ErrorListener listener) throws IllegalArgumentException",
+    "returnType" : "void",
+    "comment" : "\n   * Set the error event listener.\n   *\n   * @param listener The new error listener.\n   * @throws IllegalArgumentException if\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ErrorListener getErrorListener()",
+    "returnType" : "ErrorListener",
+    "comment" : "\n   * Get the current error event handler.\n   *\n   * @return The current error handler, which should never be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getFeature(String name) throws SAXNotRecognizedException, SAXNotSupportedException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Look up the value of a feature.\n   *\n   * <p>The feature name is any fully-qualified URI.  It is\n   * possible for an TransformerFactory to recognize a feature name but\n   * to be unable to return its value; this is especially true\n   * in the case of an adapter for a SAX1 Parser, which has\n   * no way of knowing whether the underlying parser is\n   * validating, for example.</p>\n   *\n   * <h3>Open issues:</h3>\n   * <dl>\n   *    <dt><h4>Should getFeature be changed to hasFeature?</h4></dt>\n   *    <dd>Keith Visco writes: Should getFeature be changed to hasFeature?\n   *        It returns a boolean which indicated whether the \"state\"\n   *        of feature is \"true or false\". I assume this means whether\n   *        or not a feature is supported? I know SAX is using \"getFeature\",\n   *        but to me \"hasFeature\" is cleaner.</dd>\n   * </dl>\n   *\n   * @param name The feature name, which is a fully-qualified\n   *        URI.\n   * @return The current state of the feature (true or false).\n   * @throws org.xml.sax.SAXNotRecognizedException When the\n   *            TransformerFactory does not recognize the feature name.\n   * @throws org.xml.sax.SAXNotSupportedException When the\n   *            TransformerFactory recognizes the feature name but\n   *            cannot determine its value at this time.\n   *\n   * @throws SAXNotRecognizedException\n   * @throws SAXNotSupportedException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public QName getMode()",
+    "returnType" : "QName",
+    "comment" : "\n   * NEEDSDOC Method getMode \n   *\n   *\n   * NEEDSDOC (getMode) @return\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void pushMode(QName mode)",
+    "returnType" : "void",
+    "comment" : "\n   * NEEDSDOC Method pushMode \n   *\n   *\n   * NEEDSDOC @param mode\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void popMode()",
+    "returnType" : "void",
+    "comment" : "\n   * NEEDSDOC Method popMode \n   *\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void runTransformThread(int priority)",
+    "returnType" : "void",
+    "comment" : "\n   * Called by SourceTreeHandler to start the transformation\n   *  in a separate thread\n   *\n   * NEEDSDOC @param priority\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void runTransformThread()",
+    "returnType" : "void",
+    "comment" : "\n   * Called by this.transform() if isParserEventsOnMain()==false.\n   *  Similar with runTransformThread(), but no priority is set\n   *  and setTransformThread is not set.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void runTransformThread(Runnable runnable)",
+    "returnType" : "void",
+    "comment" : "\n   * Called by CoRoutineSAXParser. Launches the CoroutineSAXParser\n   * in a thread, and prepares it to invoke the parser from that thread\n   * upon request. \n   *  \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void waitTransformThread() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Used by SourceTreeHandler to wait until the transform\n   *   completes\n   *\n   * @throws SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Exception getExceptionThrown()",
+    "returnType" : "Exception",
+    "comment" : "\n   * Get the exception thrown by the secondary thread (normally\n   * the transform thread).\n   *\n   * @return The thrown exception, or null if no exception was\n   * thrown.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setExceptionThrown(Exception e)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the exception thrown by the secondary thread (normally\n   * the transform thread).\n   *\n   * @param e The thrown exception, or null if no exception was\n   * thrown.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSourceTreeDocForThread(int doc)",
+    "returnType" : "void",
+    "comment" : "\n   * This is just a way to set the document for run().\n   *\n   * @param doc A non-null reference to the root of the\n   * tree to be transformed.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " void postExceptionFromThread(Exception e)",
+    "returnType" : "void",
+    "comment" : "\n   * From a secondary thread, post the exception, so that\n   * it can be picked up from the main thread.\n   *\n   * @param e The exception that was thrown.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void run()",
+    "returnType" : "void",
+    "comment" : "\n   * Run the transform thread.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public short getShouldStripSpace(int elementHandle, DTM dtm)",
+    "returnType" : "short",
+    "comment" : "\n   * Test whether whitespace-only text nodes are visible in the logical\n   * view of <code>DTM</code>. Normally, this function\n   * will be called by the implementation of <code>DTM</code>;\n   * it is not normally called directly from\n   * user code.\n   *\n   * @param elementHandle int Handle of the element.\n   * @return one of NOTSTRIP, STRIP, or INHERIT.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void init(ToXMLSAXHandler h, Transformer transformer, ContentHandler realHandler)",
+    "returnType" : "void",
+    "comment" : "\n   * Initializer method.\n   *\n   * @param transformer non-null transformer instance\n   * @param realHandler Content Handler instance\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSerializationHandler(SerializationHandler xoh)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void fireGenerateEvent(int eventType, char[] ch, int start, int length)",
+    "returnType" : "void",
+    "comment" : "\n\t * Fire off characters, cdate events.\n\t * @see org.apache.xml.serializer.SerializerTrace#fireGenerateEvent(int, char[], int, int)\n\t ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fireGenerateEvent(int eventType, String name, Attributes atts)",
+    "returnType" : "void",
+    "comment" : "\n\t * Fire off startElement, endElement events.\n\t * @see org.apache.xml.serializer.SerializerTrace#fireGenerateEvent(int, String, Attributes)\n\t ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fireGenerateEvent(int eventType, String name, String data)",
+    "returnType" : "void",
+    "comment" : "\n\t * Fire off processingInstruction events.\n\t ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fireGenerateEvent(int eventType, String data)",
+    "returnType" : "void",
+    "comment" : "\n\t * Fire off comment and entity ref events.\n\t * @see org.apache.xml.serializer.SerializerTrace#fireGenerateEvent(int, String)\n\t ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fireGenerateEvent(int eventType)",
+    "returnType" : "void",
+    "comment" : "\n\t * Fire off startDocument, endDocument events.\n\t * @see org.apache.xml.serializer.SerializerTrace#fireGenerateEvent(int)\n\t ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasTraceListeners()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @see org.apache.xml.serializer.SerializerTrace#hasTraceListeners()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getIncremental()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return Incremental flag\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getOptimize()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return Optimization flag\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getSource_location()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return Source location flag\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public ExtensionsTable getExtensionsTable()", " void setExtensionsTable(StylesheetRoot sroot) throws javax.xml.transform.TransformerException", "public boolean functionAvailable(String ns, String funcName) throws javax.xml.transform.TransformerException", "public boolean elementAvailable(String ns, String elemName) throws javax.xml.transform.TransformerException", "public Object extFunction(String ns, String funcName, Vector argVec, Object methodKey) throws javax.xml.transform.TransformerException", "public Object extFunction(FuncExtFunction extFunction, Vector argVec) throws javax.xml.transform.TransformerException", "public void reset()", "public Thread getTransformThread()", "public void setTransformThread(Thread t)", "public boolean hasTransformThreadErrorCatcher()", "public void transform(Source source) throws TransformerException", "public void transform(Source source, boolean shouldRelease) throws TransformerException", "private void fatalError(Throwable throwable) throws TransformerException", "public void setBaseURLOfSource(String base)", "public String getOutputProperty(String qnameString) throws IllegalArgumentException", "public String getOutputPropertyNoDefault(String qnameString) throws IllegalArgumentException", "public void setOutputProperty(String name, String value) throws IllegalArgumentException", "public void setOutputProperties(Properties oformat) throws IllegalArgumentException", "public Properties getOutputProperties()", "public SerializationHandler createSerializationHandler(Result outputTarget) throws TransformerException", "public SerializationHandler createSerializationHandler(Result outputTarget, OutputProperties format) throws TransformerException", "public void transform(Source xmlSource, Result outputTarget) throws TransformerException", "public void transform(Source xmlSource, Result outputTarget, boolean shouldRelease) throws TransformerException", "public void transformNode(int node, Result outputTarget) throws TransformerException", "public void transformNode(int node) throws TransformerException", "public ContentHandler getInputContentHandler()", "public ContentHandler getInputContentHandler(boolean doDocFrag)", "public void setOutputFormat(OutputProperties oformat)", "public OutputProperties getOutputFormat()", "public void setParameter(String name, String namespace, Object value)", "public void setParameter(String name, Object value)", "private void replaceOrPushUserParam(QName qname, XObject xval)", "public Object getParameter(String name)", "private void resetUserParameters()", "public void setParameters(Properties params)", "public void clearParameters()", "protected void pushGlobalVars(int contextNode) throws TransformerException", "public void setURIResolver(URIResolver resolver)", "public URIResolver getURIResolver()", "public void setContentHandler(ContentHandler handler)", "public ContentHandler getContentHandler()", "public int transformToRTF(ElemTemplateElement templateParent) throws TransformerException", "public int transformToGlobalRTF(ElemTemplateElement templateParent) throws TransformerException", "private int transformToRTF(ElemTemplateElement templateParent, DTM dtmFrag) throws TransformerException", "public String transformToString(ElemTemplateElement elem) throws TransformerException", "public boolean applyTemplateToNode(ElemTemplateElement xslInstruction, ElemTemplate template, int child) throws TransformerException", "public void executeChildTemplates(ElemTemplateElement elem, org.w3c.dom.Node context, QName mode, ContentHandler handler) throws TransformerException", "public void executeChildTemplates(ElemTemplateElement elem, boolean shouldAddAttrs) throws TransformerException", "public void executeChildTemplates(ElemTemplateElement elem, ContentHandler handler) throws TransformerException", "public Vector processSortKeys(ElemForEach foreach, int sourceNodeContext) throws TransformerException", "public int getCurrentTemplateElementsCount()", "public ObjectStack getCurrentTemplateElements()", "public void pushElemTemplateElement(ElemTemplateElement elem)", "public void popElemTemplateElement()", "public void setCurrentElement(ElemTemplateElement e)", "public ElemTemplateElement getCurrentElement()", "public int getCurrentNode()", "public ElemTemplate getCurrentTemplate()", "public void pushPairCurrentMatched(ElemTemplateElement template, int child)", "public void popCurrentMatched()", "public ElemTemplate getMatchedTemplate()", "public int getMatchedNode()", "public DTMIterator getContextNodeList()", "public Transformer getTransformer()", "public void setStylesheet(StylesheetRoot stylesheetRoot)", "public final StylesheetRoot getStylesheet()", "public boolean getQuietConflictWarnings()", "public void setXPathContext(XPathContext xcontext)", "public final XPathContext getXPathContext()", "public SerializationHandler getResultTreeHandler()", "public SerializationHandler getSerializationHandler()", "public KeyManager getKeyManager()", "public boolean isRecursiveAttrSet(ElemAttributeSet attrSet)", "public void pushElemAttributeSet(ElemAttributeSet attrSet)", "public void popElemAttributeSet()", "public CountersTable getCountersTable()", "public boolean currentTemplateRuleIsNull()", "public void pushCurrentTemplateRuleIsNull(boolean b)", "public void popCurrentTemplateRuleIsNull()", "public void pushCurrentFuncResult(Object val)", "public Object popCurrentFuncResult()", "public boolean currentFuncResultSeen()", "public MsgMgr getMsgMgr()", "public void setErrorListener(ErrorListener listener) throws IllegalArgumentException", "public ErrorListener getErrorListener()", "public boolean getFeature(String name) throws SAXNotRecognizedException, SAXNotSupportedException", "public QName getMode()", "public void pushMode(QName mode)", "public void popMode()", "public void runTransformThread(int priority)", "public void runTransformThread()", "public static void runTransformThread(Runnable runnable)", "public void waitTransformThread() throws SAXException", "public Exception getExceptionThrown()", "public void setExceptionThrown(Exception e)", "public void setSourceTreeDocForThread(int doc)", " void postExceptionFromThread(Exception e)", "public void run()", "public short getShouldStripSpace(int elementHandle, DTM dtm)", "public void init(ToXMLSAXHandler h, Transformer transformer, ContentHandler realHandler)", "public void setSerializationHandler(SerializationHandler xoh)", "public void fireGenerateEvent(int eventType, char[] ch, int start, int length)", "public void fireGenerateEvent(int eventType, String name, Attributes atts)", "public void fireGenerateEvent(int eventType, String name, String data)", "public void fireGenerateEvent(int eventType, String data)", "public void fireGenerateEvent(int eventType)", "public boolean hasTraceListeners()", "public boolean getIncremental()", "public boolean getOptimize()", "public boolean getSource_location()" ],
+  "variableNames" : [ "m_reentryGuard", "m_outputStream", "m_transformThread", "m_urlOfSource", "m_outputTarget", "m_outputFormat", "m_inputContentHandler", "m_outputContentHandler", "m_textResultHandlerObjectPool", "m_stringWriterObjectPool", "m_textformat", "m_currentTemplateElements", "m_currentMatchTemplates", "m_currentMatchedNodes", "m_stylesheetRoot", "m_quietConflictWarnings", "m_xcontext", "m_serializationHandler", "m_keyManager", "m_attrSetStack", "m_countersTable", "m_currentTemplateRuleIsNull", "m_currentFuncResult", "m_msgMgr", "m_optimizer", "m_incremental", "m_source_location", "m_errorHandler", "m_exceptionThrown", "m_doc", "m_hasBeenReset", "m_shouldReset", "m_modes", "m_extensionsTable", "m_hasTransformThreadErrorCatcher", "m_userParams" ]
+}

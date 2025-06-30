@@ -1,0 +1,381 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/locks/StampedLock.java",
+  "packageName" : "java.util.concurrent.locks",
+  "className" : "StampedLock",
+  "comment" : "\n * A capability-based lock with three modes for controlling read/write\n * access.  The state of a StampedLock consists of a version and mode.\n * Lock acquisition methods return a stamp that represents and\n * controls access with respect to a lock state; \"try\" versions of\n * these methods may instead return the special value zero to\n * represent failure to acquire access. Lock release and conversion\n * methods require stamps as arguments, and fail if they do not match\n * the state of the lock. The three modes are:\n *\n * <ul>\n *\n *  <li><b>Writing.</b> Method {@link #writeLock} possibly blocks\n *   waiting for exclusive access, returning a stamp that can be used\n *   in method {@link #unlockWrite} to release the lock. Untimed and\n *   timed versions of {@code tryWriteLock} are also provided. When\n *   the lock is held in write mode, no read locks may be obtained,\n *   and all optimistic read validations will fail.\n *\n *  <li><b>Reading.</b> Method {@link #readLock} possibly blocks\n *   waiting for non-exclusive access, returning a stamp that can be\n *   used in method {@link #unlockRead} to release the lock. Untimed\n *   and timed versions of {@code tryReadLock} are also provided.\n *\n *  <li><b>Optimistic Reading.</b> Method {@link #tryOptimisticRead}\n *   returns a non-zero stamp only if the lock is not currently held in\n *   write mode.  Method {@link #validate} returns true if the lock has not\n *   been acquired in write mode since obtaining a given stamp, in which\n *   case all actions prior to the most recent write lock release\n *   happen-before actions following the call to {@code tryOptimisticRead}.\n *   This mode can be thought of as an extremely weak version of a\n *   read-lock, that can be broken by a writer at any time.  The use of\n *   optimistic read mode for short read-only code segments often reduces\n *   contention and improves throughput.  However, its use is inherently\n *   fragile.  Optimistic read sections should only read fields and hold\n *   them in local variables for later use after validation. Fields read\n *   while in optimistic read mode may be wildly inconsistent, so usage\n *   applies only when you are familiar enough with data representations to\n *   check consistency and/or repeatedly invoke method {@code validate()}.\n *   For example, such steps are typically required when first reading an\n *   object or array reference, and then accessing one of its fields,\n *   elements or methods.\n *\n * </ul>\n *\n * <p>This class also supports methods that conditionally provide\n * conversions across the three modes. For example, method {@link\n * #tryConvertToWriteLock} attempts to \"upgrade\" a mode, returning\n * a valid write stamp if (1) already in writing mode (2) in reading\n * mode and there are no other readers or (3) in optimistic read mode\n * and the lock is available. The forms of these methods are designed to\n * help reduce some of the code bloat that otherwise occurs in\n * retry-based designs.\n *\n * <p>StampedLocks are designed for use as internal utilities in the\n * development of thread-safe components. Their use relies on\n * knowledge of the internal properties of the data, objects, and\n * methods they are protecting.  They are not reentrant, so locked\n * bodies should not call other unknown methods that may try to\n * re-acquire locks (although you may pass a stamp to other methods\n * that can use or convert it).  The use of read lock modes relies on\n * the associated code sections being side-effect-free.  Unvalidated\n * optimistic read sections cannot call methods that are not known to\n * tolerate potential inconsistencies.  Stamps use finite\n * representations, and are not cryptographically secure (i.e., a\n * valid stamp may be guessable). Stamp values may recycle after (no\n * sooner than) one year of continuous operation. A stamp held without\n * use or validation for longer than this period may fail to validate\n * correctly.  StampedLocks are serializable, but always deserialize\n * into initial unlocked state, so they are not useful for remote\n * locking.\n *\n * <p>Like {@link java.util.concurrent.Semaphore Semaphore}, but unlike most\n * {@link Lock} implementations, StampedLocks have no notion of ownership.\n * Locks acquired in one thread can be released or converted in another.\n *\n * <p>The scheduling policy of StampedLock does not consistently\n * prefer readers over writers or vice versa.  All \"try\" methods are\n * best-effort and do not necessarily conform to any scheduling or\n * fairness policy. A zero return from any \"try\" method for acquiring\n * or converting locks does not carry any information about the state\n * of the lock; a subsequent invocation may succeed.\n *\n * <p>Because it supports coordinated usage across multiple lock\n * modes, this class does not directly implement the {@link Lock} or\n * {@link ReadWriteLock} interfaces. However, a StampedLock may be\n * viewed {@link #asReadLock()}, {@link #asWriteLock()}, or {@link\n * #asReadWriteLock()} in applications requiring only the associated\n * set of functionality.\n *\n * <p><b>Memory Synchronization.</b> Methods with the effect of\n * successfully locking in any mode have the same memory\n * synchronization effects as a <em>Lock</em> action, as described in\n * Chapter 17 of <cite>The Java Language Specification</cite>.\n * Methods successfully unlocking in write mode have the same memory\n * synchronization effects as an <em>Unlock</em> action.  In optimistic\n * read usages, actions prior to the most recent write mode unlock action\n * are guaranteed to happen-before those following a tryOptimisticRead\n * only if a later validate returns true; otherwise there is no guarantee\n * that the reads between tryOptimisticRead and validate obtain a\n * consistent snapshot.\n *\n * <p><b>Sample Usage.</b> The following illustrates some usage idioms\n * in a class that maintains simple two-dimensional points. The sample\n * code illustrates some try/catch conventions even though they are\n * not strictly needed here because no exceptions can occur in their\n * bodies.\n *\n * <pre> {@code\n * class Point {\n *   private double x, y;\n *   private final StampedLock sl = new StampedLock();\n *\n *   // an exclusively locked method\n *   void move(double deltaX, double deltaY) {\n *     long stamp = sl.writeLock();\n *     try {\n *       x += deltaX;\n *       y += deltaY;\n *     } finally {\n *       sl.unlockWrite(stamp);\n *     }\n *   }\n *\n *   // a read-only method\n *   // upgrade from optimistic read to read lock\n *   double distanceFromOrigin() {\n *     long stamp = sl.tryOptimisticRead();\n *     try {\n *       retryHoldingLock: for (;; stamp = sl.readLock()) {\n *         if (stamp == 0L)\n *           continue retryHoldingLock;\n *         // possibly racy reads\n *         double currentX = x;\n *         double currentY = y;\n *         if (!sl.validate(stamp))\n *           continue retryHoldingLock;\n *         return Math.hypot(currentX, currentY);\n *       }\n *     } finally {\n *       if (StampedLock.isReadLockStamp(stamp))\n *         sl.unlockRead(stamp);\n *     }\n *   }\n *\n *   // upgrade from optimistic read to write lock\n *   void moveIfAtOrigin(double newX, double newY) {\n *     long stamp = sl.tryOptimisticRead();\n *     try {\n *       retryHoldingLock: for (;; stamp = sl.writeLock()) {\n *         if (stamp == 0L)\n *           continue retryHoldingLock;\n *         // possibly racy reads\n *         double currentX = x;\n *         double currentY = y;\n *         if (!sl.validate(stamp))\n *           continue retryHoldingLock;\n *         if (currentX != 0.0 || currentY != 0.0)\n *           break;\n *         stamp = sl.tryConvertToWriteLock(stamp);\n *         if (stamp == 0L)\n *           continue retryHoldingLock;\n *         // exclusive access\n *         x = newX;\n *         y = newY;\n *         return;\n *       }\n *     } finally {\n *       if (StampedLock.isWriteLockStamp(stamp))\n *         sl.unlockWrite(stamp);\n *     }\n *   }\n *\n *   // upgrade read lock to write lock\n *   void moveIfAtOrigin2(double newX, double newY) {\n *     long stamp = sl.readLock();\n *     try {\n *       while (x == 0.0 && y == 0.0) {\n *         long ws = sl.tryConvertToWriteLock(stamp);\n *         if (ws != 0L) {\n *           stamp = ws;\n *           x = newX;\n *           y = newY;\n *           break;\n *         }\n *         else {\n *           sl.unlockRead(stamp);\n *           stamp = sl.writeLock();\n *         }\n *       }\n *     } finally {\n *       sl.unlock(stamp);\n *     }\n *   }\n * }}</pre>\n *\n * @jls 17.4 Memory Model\n * @since 1.8\n * @author Doug Lea\n ",
+  "links" : [ "#unlockWrite", "#readLock", "java.util.concurrent.Semaphore", "#tryOptimisticRead", "#asWriteLock()", "#asReadLock()", "java.util.concurrent.locks.Lock", "#writeLock", "#unlockRead", "#tryConvertToWriteLock", "#validate", "java.util.concurrent.locks.ReadWriteLock", "#asReadWriteLock()" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LG_READERS",
+    "type" : "int",
+    "comment" : " 127 readers",
+    "links" : [ ]
+  }, {
+    "name" : "RUNIT",
+    "type" : "long",
+    "comment" : " Values for lock state and stamp operations",
+    "links" : [ ]
+  }, {
+    "name" : "WBIT",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "RBITS",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "RFULL",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ABITS",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SBITS",
+    "type" : "long",
+    "comment" : " note overlap with ABITS",
+    "links" : [ ]
+  }, {
+    "name" : "RSAFE",
+    "type" : "long",
+    "comment" : " not writing and conservatively non-overflowing",
+    "links" : [ ]
+  }, {
+    "name" : "ORIGIN",
+    "type" : "long",
+    "comment" : " Initial value for lock state; avoids failure value zero. ",
+    "links" : [ ]
+  }, {
+    "name" : "INTERRUPTED",
+    "type" : "long",
+    "comment" : " Special value from cancelled acquire methods so caller can throw IE",
+    "links" : [ ]
+  }, {
+    "name" : "WAITING",
+    "type" : "int",
+    "comment" : " Bits for Node.status",
+    "links" : [ ]
+  }, {
+    "name" : "CANCELLED",
+    "type" : "int",
+    "comment" : " must be negative",
+    "links" : [ ]
+  }, {
+    "name" : "head",
+    "type" : "Node",
+    "comment" : " Head of CLH queue ",
+    "links" : [ ]
+  }, {
+    "name" : "tail",
+    "type" : "Node",
+    "comment" : " Tail (last) of CLH queue ",
+    "links" : [ ]
+  }, {
+    "name" : "readLockView",
+    "type" : "ReadLockView",
+    "comment" : " views",
+    "links" : [ ]
+  }, {
+    "name" : "writeLockView",
+    "type" : "WriteLockView",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "readWriteLockView",
+    "type" : "ReadWriteLockView",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "state",
+    "type" : "long",
+    "comment" : " Lock sequence/state ",
+    "links" : [ ]
+  }, {
+    "name" : "readerOverflow",
+    "type" : "int",
+    "comment" : " extra reader count when state read count saturated ",
+    "links" : [ ]
+  }, {
+    "name" : "U",
+    "type" : "Unsafe",
+    "comment" : " Unsafe",
+    "links" : [ ]
+  }, {
+    "name" : "STATE",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "HEAD",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAIL",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private boolean casState(long expect, long update)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private long tryAcquireWrite()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private long tryAcquireRead()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static long unlockWriteState(long s)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns an unlocked state, incrementing the version and\n     * avoiding special failure value 0L.\n     *\n     * @param s a write-locked state (or stamp)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long releaseWrite(long s)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public long writeLock()",
+    "returnType" : "long",
+    "comment" : "\n     * Exclusively acquires the lock, blocking if necessary\n     * until available.\n     *\n     * @return a write stamp that can be used to unlock or convert mode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryWriteLock()",
+    "returnType" : "long",
+    "comment" : "\n     * Exclusively acquires the lock if it is immediately available.\n     *\n     * @return a write stamp that can be used to unlock or convert mode,\n     * or zero if the lock is not available\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryWriteLock(long time, TimeUnit unit) throws InterruptedException",
+    "returnType" : "long",
+    "comment" : "\n     * Exclusively acquires the lock if it is available within the\n     * given time and the current thread has not been interrupted.\n     * Behavior under timeout and interruption matches that specified\n     * for method {@link Lock#tryLock(long,TimeUnit)}.\n     *\n     * @param time the maximum time to wait for the lock\n     * @param unit the time unit of the {@code time} argument\n     * @return a write stamp that can be used to unlock or convert mode,\n     * or zero if the lock is not available\n     * @throws InterruptedException if the current thread is interrupted\n     * before acquiring the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock#tryLock(long" ]
+  }, {
+    "name" : "public long writeLockInterruptibly() throws InterruptedException",
+    "returnType" : "long",
+    "comment" : "\n     * Exclusively acquires the lock, blocking if necessary\n     * until available or the current thread is interrupted.\n     * Behavior under interruption matches that specified\n     * for method {@link Lock#lockInterruptibly()}.\n     *\n     * @return a write stamp that can be used to unlock or convert mode\n     * @throws InterruptedException if the current thread is interrupted\n     * before acquiring the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock#lockInterruptibly()" ]
+  }, {
+    "name" : "public long readLock()",
+    "returnType" : "long",
+    "comment" : "\n     * Non-exclusively acquires the lock, blocking if necessary\n     * until available.\n     *\n     * @return a read stamp that can be used to unlock or convert mode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryReadLock()",
+    "returnType" : "long",
+    "comment" : "\n     * Non-exclusively acquires the lock if it is immediately available.\n     *\n     * @return a read stamp that can be used to unlock or convert mode,\n     * or zero if the lock is not available\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryReadLock(long time, TimeUnit unit) throws InterruptedException",
+    "returnType" : "long",
+    "comment" : "\n     * Non-exclusively acquires the lock if it is available within the\n     * given time and the current thread has not been interrupted.\n     * Behavior under timeout and interruption matches that specified\n     * for method {@link Lock#tryLock(long,TimeUnit)}.\n     *\n     * @param time the maximum time to wait for the lock\n     * @param unit the time unit of the {@code time} argument\n     * @return a read stamp that can be used to unlock or convert mode,\n     * or zero if the lock is not available\n     * @throws InterruptedException if the current thread is interrupted\n     * before acquiring the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock#tryLock(long" ]
+  }, {
+    "name" : "public long readLockInterruptibly() throws InterruptedException",
+    "returnType" : "long",
+    "comment" : "\n     * Non-exclusively acquires the lock, blocking if necessary\n     * until available or the current thread is interrupted.\n     * Behavior under interruption matches that specified\n     * for method {@link Lock#lockInterruptibly()}.\n     *\n     * @return a read stamp that can be used to unlock or convert mode\n     * @throws InterruptedException if the current thread is interrupted\n     * before acquiring the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock#lockInterruptibly()" ]
+  }, {
+    "name" : "public long tryOptimisticRead()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns a stamp that can later be validated, or zero\n     * if exclusively locked.\n     *\n     * @return a valid optimistic read stamp, or zero if exclusively locked\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean validate(long stamp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the lock has not been exclusively acquired\n     * since issuance of the given stamp. Always returns false if the\n     * stamp is zero. Always returns true if the stamp represents a\n     * currently held lock. Invoking this method with a value not\n     * obtained from {@link #tryOptimisticRead} or a locking method\n     * for this lock has no defined effect or result.\n     *\n     * @param stamp a stamp\n     * @return {@code true} if the lock has not been exclusively acquired\n     * since issuance of the given stamp; else false\n     ",
+    "links" : [ "#tryOptimisticRead" ]
+  }, {
+    "name" : "public void unlockWrite(long stamp)",
+    "returnType" : "void",
+    "comment" : "\n     * If the lock state matches the given stamp, releases the\n     * exclusive lock.\n     *\n     * @param stamp a stamp returned by a write-lock operation\n     * @throws IllegalMonitorStateException if the stamp does\n     * not match the current state of this lock\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unlockRead(long stamp)",
+    "returnType" : "void",
+    "comment" : "\n     * If the lock state matches the given stamp, releases the\n     * non-exclusive lock.\n     *\n     * @param stamp a stamp returned by a read-lock operation\n     * @throws IllegalMonitorStateException if the stamp does\n     * not match the current state of this lock\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unlock(long stamp)",
+    "returnType" : "void",
+    "comment" : "\n     * If the lock state matches the given stamp, releases the\n     * corresponding mode of the lock.\n     *\n     * @param stamp a stamp returned by a lock operation\n     * @throws IllegalMonitorStateException if the stamp does\n     * not match the current state of this lock\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryConvertToWriteLock(long stamp)",
+    "returnType" : "long",
+    "comment" : "\n     * If the lock state matches the given stamp, atomically performs one of\n     * the following actions. If the stamp represents holding a write\n     * lock, returns it.  Or, if a read lock, if the write lock is\n     * available, releases the read lock and returns a write stamp.\n     * Or, if an optimistic read, returns a write stamp only if\n     * immediately available. This method returns zero in all other\n     * cases.\n     *\n     * @param stamp a stamp\n     * @return a valid write stamp, or zero on failure\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryConvertToReadLock(long stamp)",
+    "returnType" : "long",
+    "comment" : "\n     * If the lock state matches the given stamp, atomically performs one of\n     * the following actions. If the stamp represents holding a write\n     * lock, releases it and obtains a read lock.  Or, if a read lock,\n     * returns it. Or, if an optimistic read, acquires a read lock and\n     * returns a read stamp only if immediately available. This method\n     * returns zero in all other cases.\n     *\n     * @param stamp a stamp\n     * @return a valid read stamp, or zero on failure\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long tryConvertToOptimisticRead(long stamp)",
+    "returnType" : "long",
+    "comment" : "\n     * If the lock state matches the given stamp then, atomically, if the stamp\n     * represents holding a lock, releases it and returns an\n     * observation stamp.  Or, if an optimistic read, returns it if\n     * validated. This method returns zero in all other cases, and so\n     * may be useful as a form of \"tryUnlock\".\n     *\n     * @param stamp a stamp\n     * @return a valid optimistic read stamp, or zero on failure\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean tryUnlockWrite()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Releases the write lock if it is held, without requiring a\n     * stamp value. This method may be useful for recovery after\n     * errors.\n     *\n     * @return {@code true} if the lock was held, else false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean tryUnlockRead()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Releases one hold of the read lock if it is held, without\n     * requiring a stamp value. This method may be useful for recovery\n     * after errors.\n     *\n     * @return {@code true} if the read lock was held, else false\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getReadLockCount(long s)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns combined state-held and overflow read count for given\n     * state s.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWriteLocked()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if the lock is currently held exclusively.\n     *\n     * @return {@code true} if the lock is currently held exclusively\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isReadLocked()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if the lock is currently held non-exclusively.\n     *\n     * @return {@code true} if the lock is currently held non-exclusively\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean isWriteLockStamp(long stamp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tells whether a stamp represents holding a lock exclusively.\n     * This method may be useful in conjunction with\n     * {@link #tryConvertToWriteLock}, for example: <pre> {@code\n     * long stamp = sl.tryOptimisticRead();\n     * try {\n     *   ...\n     *   stamp = sl.tryConvertToWriteLock(stamp);\n     *   ...\n     * } finally {\n     *   if (StampedLock.isWriteLockStamp(stamp))\n     *     sl.unlockWrite(stamp);\n     * }}</pre>\n     *\n     * @param stamp a stamp returned by a previous StampedLock operation\n     * @return {@code true} if the stamp was returned by a successful\n     *   write-lock operation\n     * @since 10\n     ",
+    "links" : [ "#tryConvertToWriteLock" ]
+  }, {
+    "name" : "public static boolean isReadLockStamp(long stamp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tells whether a stamp represents holding a lock non-exclusively.\n     * This method may be useful in conjunction with\n     * {@link #tryConvertToReadLock}, for example: <pre> {@code\n     * long stamp = sl.tryOptimisticRead();\n     * try {\n     *   ...\n     *   stamp = sl.tryConvertToReadLock(stamp);\n     *   ...\n     * } finally {\n     *   if (StampedLock.isReadLockStamp(stamp))\n     *     sl.unlockRead(stamp);\n     * }}</pre>\n     *\n     * @param stamp a stamp returned by a previous StampedLock operation\n     * @return {@code true} if the stamp was returned by a successful\n     *   read-lock operation\n     * @since 10\n     ",
+    "links" : [ "#tryConvertToReadLock" ]
+  }, {
+    "name" : "public static boolean isLockStamp(long stamp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tells whether a stamp represents holding a lock.\n     * This method may be useful in conjunction with\n     * {@link #tryConvertToReadLock} and {@link #tryConvertToWriteLock},\n     * for example: <pre> {@code\n     * long stamp = sl.tryOptimisticRead();\n     * try {\n     *   ...\n     *   stamp = sl.tryConvertToReadLock(stamp);\n     *   ...\n     *   stamp = sl.tryConvertToWriteLock(stamp);\n     *   ...\n     * } finally {\n     *   if (StampedLock.isLockStamp(stamp))\n     *     sl.unlock(stamp);\n     * }}</pre>\n     *\n     * @param stamp a stamp returned by a previous StampedLock operation\n     * @return {@code true} if the stamp was returned by a successful\n     *   read-lock or write-lock operation\n     * @since 10\n     ",
+    "links" : [ "#tryConvertToWriteLock", "#tryConvertToReadLock" ]
+  }, {
+    "name" : "public static boolean isOptimisticReadStamp(long stamp)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tells whether a stamp represents a successful optimistic read.\n     *\n     * @param stamp a stamp returned by a previous StampedLock operation\n     * @return {@code true} if the stamp was returned by a successful\n     *   optimistic read operation, that is, a non-zero return from\n     *   {@link #tryOptimisticRead()} or\n     *   {@link #tryConvertToOptimisticRead(long)}\n     * @since 10\n     ",
+    "links" : [ "#tryConvertToOptimisticRead(long)", "#tryOptimisticRead()" ]
+  }, {
+    "name" : "public int getReadLockCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Queries the number of read locks held for this lock. This\n     * method is designed for use in monitoring system state, not for\n     * synchronization control.\n     * @return the number of read locks held\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string identifying this lock, as well as its lock\n     * state.  The state, in brackets, includes the String {@code\n     * \"Unlocked\"} or the String {@code \"Write-locked\"} or the String\n     * {@code \"Read-locks:\"} followed by the current number of\n     * read-locks held.\n     *\n     * @return a string identifying this lock, as well as its lock state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Lock asReadLock()",
+    "returnType" : "Lock",
+    "comment" : "\n     * Returns a plain {@link Lock} view of this StampedLock in which\n     * the {@link Lock#lock} method is mapped to {@link #readLock},\n     * and similarly for other methods. The returned Lock does not\n     * support a {@link Condition}; method {@link Lock#newCondition()}\n     * throws {@code UnsupportedOperationException}.\n     *\n     * @return the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock", "java.util.concurrent.locks.Lock#lock", "java.util.concurrent.locks.Condition", "#readLock", "java.util.concurrent.locks.Lock#newCondition()" ]
+  }, {
+    "name" : "public Lock asWriteLock()",
+    "returnType" : "Lock",
+    "comment" : "\n     * Returns a plain {@link Lock} view of this StampedLock in which\n     * the {@link Lock#lock} method is mapped to {@link #writeLock},\n     * and similarly for other methods. The returned Lock does not\n     * support a {@link Condition}; method {@link Lock#newCondition()}\n     * throws {@code UnsupportedOperationException}.\n     *\n     * @return the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.Lock", "java.util.concurrent.locks.Lock#lock", "java.util.concurrent.locks.Condition", "#writeLock", "java.util.concurrent.locks.Lock#newCondition()" ]
+  }, {
+    "name" : "public ReadWriteLock asReadWriteLock()",
+    "returnType" : "ReadWriteLock",
+    "comment" : "\n     * Returns a {@link ReadWriteLock} view of this StampedLock in\n     * which the {@link ReadWriteLock#readLock()} method is mapped to\n     * {@link #asReadLock()}, and {@link ReadWriteLock#writeLock()} to\n     * {@link #asWriteLock()}.\n     *\n     * @return the lock\n     ",
+    "links" : [ "java.util.concurrent.locks.ReadWriteLock#writeLock()", "#asWriteLock()", "java.util.concurrent.locks.ReadWriteLock#readLock()", "java.util.concurrent.locks.ReadWriteLock", "#asReadLock()" ]
+  }, {
+    "name" : " final void unstampedUnlockWrite()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final void unstampedUnlockRead()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private long tryIncReaderOverflow(long s)",
+    "returnType" : "long",
+    "comment" : "\n     * Tries to increment readerOverflow by first setting state\n     * access bits value to RBITS, indicating hold of spinlock,\n     * then updating, then releasing.\n     *\n     * @param s a reader overflow stamp: (s & ABITS) >= RFULL\n     * @return new stamp on success, else zero\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long tryDecReaderOverflow(long s)",
+    "returnType" : "long",
+    "comment" : "\n     * Tries to decrement readerOverflow.\n     *\n     * @param s a reader overflow stamp: (s & ABITS) >= RFULL\n     * @return new stamp on success, else zero\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static final void signalNext(Node h)",
+    "returnType" : "void",
+    "comment" : "\n     * Wakes up the successor of given node, if one exists, and unsets its\n     * WAITING status to avoid park race. This may fail to wake up an\n     * eligible thread when one or more have been cancelled, but\n     * cancelAcquire ensures liveness.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void signalCowaiters(ReaderNode node)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes and unparks all cowaiters of node, if it exists.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean casTail(Node c, Node v)",
+    "returnType" : "boolean",
+    "comment" : " queue link methods",
+    "links" : [ ]
+  }, {
+    "name" : "private void tryInitializeHead()",
+    "returnType" : "void",
+    "comment" : " tries once to CAS a new dummy node for head ",
+    "links" : [ ]
+  }, {
+    "name" : "private long acquireWrite(boolean interruptible, boolean timed, long time)",
+    "returnType" : "long",
+    "comment" : "\n     * For explanation, see above and AbstractQueuedSynchronizer\n     * internal documentation.\n     *\n     * @param interruptible true if should check interrupts and if so\n     * return INTERRUPTED\n     * @param timed if true use timed waits\n     * @param time the System.nanoTime value to timeout at (and return zero)\n     * @return next state, or INTERRUPTED\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long acquireRead(boolean interruptible, boolean timed, long time)",
+    "returnType" : "long",
+    "comment" : "\n     * See above for explanation.\n     *\n     * @param interruptible true if should check interrupts and if so\n     * return INTERRUPTED\n     * @param timed if true use timed waits\n     * @param time the System.nanoTime value to timeout at (and return zero)\n     * @return next state, or INTERRUPTED\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void cleanQueue()",
+    "returnType" : "void",
+    "comment" : "\n     * Possibly repeatedly traverses from tail, unsplicing cancelled\n     * nodes until none are found. Unparks nodes that may have been\n     * relinked to be next eligible acquirer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void unlinkCowaiter(ReaderNode node, ReaderNode leader)",
+    "returnType" : "void",
+    "comment" : "\n     * If leader exists, possibly repeatedly traverses cowaiters,\n     * unsplicing the given cancelled node until not found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long cancelAcquire(Node node, boolean interrupted)",
+    "returnType" : "long",
+    "comment" : "\n     * If node non-null, forces cancel status and unsplices it from\n     * queue, wakes up any cowaiters, and possibly wakes up successor\n     * to recheck status.\n     *\n     * @param node the waiter (may be null if not yet enqueued)\n     * @param interrupted if already interrupted\n     * @return INTERRUPTED if interrupted or Thread.interrupted, else zero\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private long cancelCowaiter(ReaderNode node, ReaderNode leader, boolean interrupted)",
+    "returnType" : "long",
+    "comment" : "\n     * If node non-null, forces cancel status and unsplices from\n     * leader's cowaiters list unless/until it is also cancelled.\n     *\n     * @param node if non-null, the waiter\n     * @param leader if non-null, the node heading cowaiters list\n     * @param interrupted if already interrupted\n     * @return INTERRUPTED if interrupted or Thread.interrupted, else zero\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private boolean casState(long expect, long update)", "private long tryAcquireWrite()", "private long tryAcquireRead()", "private static long unlockWriteState(long s)", "private long releaseWrite(long s)", "public long writeLock()", "public long tryWriteLock()", "public long tryWriteLock(long time, TimeUnit unit) throws InterruptedException", "public long writeLockInterruptibly() throws InterruptedException", "public long readLock()", "public long tryReadLock()", "public long tryReadLock(long time, TimeUnit unit) throws InterruptedException", "public long readLockInterruptibly() throws InterruptedException", "public long tryOptimisticRead()", "public boolean validate(long stamp)", "public void unlockWrite(long stamp)", "public void unlockRead(long stamp)", "public void unlock(long stamp)", "public long tryConvertToWriteLock(long stamp)", "public long tryConvertToReadLock(long stamp)", "public long tryConvertToOptimisticRead(long stamp)", "public boolean tryUnlockWrite()", "public boolean tryUnlockRead()", "private int getReadLockCount(long s)", "public boolean isWriteLocked()", "public boolean isReadLocked()", "public static boolean isWriteLockStamp(long stamp)", "public static boolean isReadLockStamp(long stamp)", "public static boolean isLockStamp(long stamp)", "public static boolean isOptimisticReadStamp(long stamp)", "public int getReadLockCount()", "public String toString()", "public Lock asReadLock()", "public Lock asWriteLock()", "public ReadWriteLock asReadWriteLock()", " final void unstampedUnlockWrite()", " final void unstampedUnlockRead()", "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException", "private long tryIncReaderOverflow(long s)", "private long tryDecReaderOverflow(long s)", " static final void signalNext(Node h)", "private static void signalCowaiters(ReaderNode node)", "private boolean casTail(Node c, Node v)", "private void tryInitializeHead()", "private long acquireWrite(boolean interruptible, boolean timed, long time)", "private long acquireRead(boolean interruptible, boolean timed, long time)", "private void cleanQueue()", "private void unlinkCowaiter(ReaderNode node, ReaderNode leader)", "private long cancelAcquire(Node node, boolean interrupted)", "private long cancelCowaiter(ReaderNode node, ReaderNode leader, boolean interrupted)" ],
+  "variableNames" : [ "serialVersionUID", "LG_READERS", "RUNIT", "WBIT", "RBITS", "RFULL", "ABITS", "SBITS", "RSAFE", "ORIGIN", "INTERRUPTED", "WAITING", "CANCELLED", "head", "tail", "readLockView", "writeLockView", "readWriteLockView", "state", "readerOverflow", "U", "STATE", "HEAD", "TAIL" ]
+}

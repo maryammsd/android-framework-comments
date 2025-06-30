@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/tv/tunerresourcemanager/TunerResourceManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/tv/tunerresourcemanager/TunerResourceManager.java",
   "packageName" : "android.media.tv.tunerresourcemanager",
   "className" : "TunerResourceManager",
   "comment" : "\n * Interface of the Tuner Resource Manager(TRM). It manages resources used by TV Tuners.\n * <p>Resources include:\n * <ul>\n * <li>TunerFrontend {@link android.media.tv.tuner.frontend}.\n * <li>TunerLnb {@link android.media.tv.tuner.Lnb}.\n * <li>MediaCas {@link android.media.MediaCas}.\n * <ul>\n *\n * <p>Expected workflow is:\n * <ul>\n * <li>Tuner Java/MediaCas/TIF update resources of the current device with TRM.\n * <li>Client registers its profile through {@link #registerClientProfile(ResourceClientProfile,\n * Executor, ResourcesReclaimListener, int[])}.\n * <li>Client requests resources through request APIs.\n * <li>If the resource needs to be handed to a higher priority client from a lower priority\n * one, TRM calls IResourcesReclaimListener registered by the lower priority client to release\n * the resource.\n * <ul>\n *\n * <p>TRM also exposes its priority comparison algorithm as a helping method to other services.\n * {@see #isHigherPriority(ResourceClientProfile, ResourceClientProfile)}.\n *\n * @hide\n ",
+  "links" : [ "android.media.MediaCas", "#registerClientProfile(ResourceClientProfile", "android.media.tv.tuner.Lnb", "android.media.tv.tuner.frontend" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -49,6 +50,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "TUNER_RESOURCE_TYPE_FRONTEND_CICAM",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "TUNER_RESOURCE_TYPE_MAX",
     "type" : "int",
     "comment" : "",
@@ -80,10 +86,40 @@
     "comment" : "\n     * This API is used by client to update its registered {@link ResourceClientProfile}.\n     *\n     * <p>We recommend creating a new tuner instance for different use cases instead of using this\n     * API since different use cases may need different resources.\n     *\n     * <p>If TIS updates use case, it needs to ensure underneath resources are exchangeable between\n     * two different use cases.\n     *\n     * <p>Only the arbitrary priority and niceValue are allowed to be updated.\n     *\n     * @param clientId the id of the client that is updating its profile.\n     * @param priority the priority that the client would like to update to.\n     * @param niceValue the nice value that the client would like to update to.\n     *\n     * @return true if the update is successful.\n     ",
     "links" : [ "android.media.tv.tunerresourcemanager.ResourceClientProfile" ]
   }, {
+    "name" : "public boolean hasUnusedFrontend(int frontendType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if there is an unused frontend resource available.\n     *\n     * @param frontendType The frontend type for the query to be done for.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLowestPriority(int clientId, int frontendType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the client has the lowest priority among the clients that are holding\n     * the frontend resource of the specified type.\n     *\n     * <p> When this function returns false, it means that there is at least one client with the\n     * strictly lower priority (than clientId) that is reclaimable by the system.\n     *\n     * @param clientId The client ID to be checked the priority for.\n     * @param frontendType The specific frontend type to be checked for.\n     *\n     * @return false if there is another client holding the frontend resource of the specified type\n     * that can be reclaimed. Otherwise true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void storeResourceMap(int resourceType)",
+    "returnType" : "void",
+    "comment" : "\n     * Stores the frontend resource map if it was stored before.\n     *\n     * <p>This API is only for testing purpose and should be used in pair with\n     * restoreResourceMap(), which allows testing of {@link Tuner} APIs\n     * that behave differently based on different sets of resource map.\n     *\n     * @param resourceType The resource type to store the map for.\n     ",
+    "links" : [ "Tuner" ]
+  }, {
+    "name" : "public void clearResourceMap(int resourceType)",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the frontend resource map.\n     *\n     * <p>This API is only for testing purpose and should be called right after\n     * storeResourceMap(), so TRMService#removeFrontendResource() does not\n     * get called in TRMService#setFrontendInfoListInternal() for custom frontend\n     * resource map creation.\n     *\n     * @param resourceType The resource type to clear the map for.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void restoreResourceMap(int resourceType)",
+    "returnType" : "void",
+    "comment" : "\n     * Restores Frontend resource map for the later restore.\n     *\n     * <p>This API is only for testing purpose and should be used in pair with\n     * storeResourceMap(), which allows testing of {@link Tuner} APIs\n     * that behave differently based on different sets of resource map.\n     *\n     * @param resourceType The resource type to restore the map for.\n     ",
+    "links" : [ "Tuner" ]
+  }, {
     "name" : "public void setFrontendInfoList(@NonNull TunerFrontendInfo[] infos)",
     "returnType" : "void",
     "comment" : "\n     * Updates the current TRM of the TunerHAL Frontend information.\n     *\n     * <p><strong>Note:</strong> This update must happen before the first\n     * {@link #requestFrontend(TunerFrontendRequest, int[])} and\n     * {@link #releaseFrontend(int, int)} call.\n     *\n     * @param infos an array of the available {@link TunerFrontendInfo} information.\n     ",
     "links" : [ "#releaseFrontend(int", "android.media.tv.tunerresourcemanager.TunerFrontendInfo", "#requestFrontend(TunerFrontendRequest" ]
+  }, {
+    "name" : "public void setDemuxInfoList(@NonNull TunerDemuxInfo[] infos)",
+    "returnType" : "void",
+    "comment" : "\n     * Updates the current TRM of the TunerHAL Demux information.\n     *\n     * <p><strong>Note:</strong> This update must happen before the first\n     * {@link #requestDemux(TunerDemuxRequest, int[])} and\n     * {@link #releaseDemux(int, int)} call.\n     *\n     * @param infos an array of the available {@link TunerDemuxInfo} information.\n     ",
+    "links" : [ "android.media.tv.tunerresourcemanager.TunerDemuxInfo", "#requestDemux(TunerDemuxRequest", "#releaseDemux(int" ]
   }, {
     "name" : "public void updateCasInfo(int casSystemId, int maxSessionNum)",
     "returnType" : "void",
@@ -95,35 +131,65 @@
     "comment" : "\n     * Updates the TRM of the current Lnb information.\n     *\n     * <p><strong>Note:</strong> This update must happen before the first\n     * {@link #requestLnb(TunerLnbRequest, int[])} and {@link #releaseLnb(int, int)} call.\n     *\n     * @param lnbIds ids of the updating lnbs.\n     ",
     "links" : [ "#releaseLnb(int", "#requestLnb(TunerLnbRequest" ]
   }, {
+    "name" : "public boolean acquireLock(int clientId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Grants the lock to the caller for public {@link Tuner} APIs\n     *\n     * <p>{@link Tuner} functions that call both [@link TunerResourceManager} APIs and\n     * grabs lock that are also used in {@link IResourcesReclaimListener#onReclaimResources()}\n     * must call this API before acquiring lock used in onReclaimResources().\n     *\n     * <p>This API will block until it releases the lock or fails\n     *\n     * @param clientId The ID of the caller.\n     *\n     * @return true if the lock is granted. If false is returned, calling this API again is not\n     * guaranteed to work and may be unrecoverrable. (This should not happen.)\n     ",
+    "links" : [ "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "Tuner", "android.media.tv.tunerresourcemanager.TunerResourceManager" ]
+  }, {
+    "name" : "public boolean releaseLock(int clientId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Releases the lock to the caller for public {@link Tuner} APIs\n     *\n     * <p>This API must be called in pair with {@link #acquireLock(int, int)}\n     *\n     * <p>This API will block until it releases the lock or fails\n     *\n     * @param clientId The ID of the caller.\n     *\n     * @return true if the lock is granted. If false is returned, calling this API again is not\n     * guaranteed to work and may be unrecoverrable. (This should not happen.)\n     ",
+    "links" : [ "#acquireLock(int", "Tuner" ]
+  }, {
     "name" : "public boolean requestFrontend(@NonNull TunerFrontendRequest request, @Nullable int[] frontendHandle)",
     "returnType" : "boolean",
     "comment" : "\n     * Requests a frontend resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is frontend available, the API would send the id back.\n     *\n     * <li>If no Frontend is available but the current request info can show higher priority than\n     * other uses of Frontend, the API will send\n     * {@link IResourcesReclaimListener#onReclaimResources()} to the {@link Tuner}. Tuner would\n     * handle the resource reclaim on the holder of lower priority and notify the holder of its\n     * resource loss.\n     *\n     * <li>If no frontend can be granted, the API would return false.\n     * <ul>\n     *\n     * <p><strong>Note:</strong> {@link #setFrontendInfoList(TunerFrontendInfo[])} must be called\n     * before this request.\n     *\n     * @param request {@link TunerFrontendRequest} information of the current request.\n     * @param frontendHandle a one-element array to return the granted frontendHandle. If\n     *                       no frontend granted, this will return {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is frontend granted.\n     ",
-    "links" : [ "#onReclaimResources()", "#INVALID_RESOURCE_HANDLE", "Tuner", "android.media.tv.tunerresourcemanager.TunerFrontendRequest", "#setFrontendInfoList(TunerFrontendInfo" ]
+    "links" : [ "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "#INVALID_RESOURCE_HANDLE", "Tuner", "android.media.tv.tunerresourcemanager.TunerFrontendRequest", "#setFrontendInfoList(TunerFrontendInfo" ]
+  }, {
+    "name" : "public boolean setMaxNumberOfFrontends(int frontendType, int maxNum)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the maximum usable frontends number of a given frontend type. It is used to enable or\n     * disable frontends when cable connection status is changed by user.\n     *\n     * @param frontendType the frontendType which the maximum usable number will be set for.\n     * @param maxNum the new maximum usable number.\n     *\n     * @return true if  successful and false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMaxNumberOfFrontends(int frontendType)",
+    "returnType" : "int",
+    "comment" : "\n     * Get the maximum usable frontends number of a given frontend type.\n     *\n     * @param frontendType the frontendType which the maximum usable number will be queried for.\n     *\n     * @return the maximum usable number of the queried frontend type. Returns -1 when the\n     *         frontendType is invalid\n     ",
+    "links" : [ ]
   }, {
     "name" : "public void shareFrontend(int selfClientId, int targetClientId)",
     "returnType" : "void",
     "comment" : "\n     * Requests from the client to share frontend with an existing client.\n     *\n     * <p><strong>Note:</strong> {@link #setFrontendInfoList(TunerFrontendInfo[])} must be called\n     * before this request.\n     *\n     * @param selfClientId the id of the client that sends the request.\n     * @param targetClientId the id of the client to share the frontend with.\n     ",
     "links" : [ "#setFrontendInfoList(TunerFrontendInfo" ]
   }, {
+    "name" : "public boolean transferOwner(int resourceType, int currentOwnerId, int newOwnerId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Transfers the ownership of shared resource.\n     *\n     * <p><strong>Note:</strong> Only the existing frontend sharee can be the new owner.\n     *\n     * @param resourceType the type of the resource to transfer the ownership for.\n     * @param currentOwnerId the id of the current owner client.\n     * @param newOwnerId the id of the new owner client.\n     *\n     * @return true if successful and false otherwise.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public boolean requestDemux(@NonNull TunerDemuxRequest request, @NonNull int[] demuxHandle)",
     "returnType" : "boolean",
     "comment" : "\n     * Requests a Tuner Demux resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is Demux available, the API would send the handle back.\n     *\n     * <li>If no Demux is available but the current request has a higher priority than other uses of\n     * demuxes, the API will send {@link IResourcesReclaimListener#onReclaimResources()} to the\n     * {@link Tuner}. Tuner would handle the resource reclaim on the holder of lower priority and\n     * notify the holder of its resource loss.\n     *\n     * <li>If no Demux system can be granted, the API would return false.\n     * <ul>\n     *\n     * @param request {@link TunerDemuxRequest} information of the current request.\n     * @param demuxHandle a one-element array to return the granted Demux handle.\n     *                    If no Demux granted, this will return {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is Demux granted.\n     ",
-    "links" : [ "#onReclaimResources()", "android.media.tv.tunerresourcemanager.TunerDemuxRequest", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
+    "links" : [ "android.media.tv.tunerresourcemanager.TunerDemuxRequest", "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
   }, {
     "name" : "public boolean requestDescrambler(@NonNull TunerDescramblerRequest request, @NonNull int[] descramblerHandle)",
     "returnType" : "boolean",
     "comment" : "\n     * Requests a Tuner Descrambler resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is Descrambler available, the API would send the handle back.\n     *\n     * <li>If no Descrambler is available but the current request has a higher priority than other\n     * uses of descramblers, the API will send\n     * {@link IResourcesReclaimListener#onReclaimResources()} to the {@link Tuner}. Tuner would\n     * handle the resource reclaim on the holder of lower priority and notify the holder of its\n     * resource loss.\n     *\n     * <li>If no Descrambler system can be granted, the API would return false.\n     * <ul>\n     *\n     * @param request {@link TunerDescramblerRequest} information of the current request.\n     * @param descramblerHandle a one-element array to return the granted Descrambler handle.\n     *                          If no Descrambler granted, this will return\n     *                          {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is Descrambler granted.\n     ",
-    "links" : [ "#onReclaimResources()", "android.media.tv.tunerresourcemanager.TunerDescramblerRequest", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
+    "links" : [ "android.media.tv.tunerresourcemanager.TunerDescramblerRequest", "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
   }, {
     "name" : "public boolean requestCasSession(@NonNull CasSessionRequest request, @NonNull int[] casSessionHandle)",
     "returnType" : "boolean",
     "comment" : "\n     * Requests a CAS session resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is Cas session available, the API would send the id back.\n     *\n     * <li>If no Cas system is available but the current request info can show higher priority than\n     * other uses of the cas sessions under the requested cas system, the API will send\n     * {@link IResourcesReclaimListener#onReclaimResources()} to the {@link Tuner}. Tuner would\n     * handle the resource reclaim on the holder of lower priority and notify the holder of its\n     * resource loss.\n     *\n     * <p><strong>Note:</strong> {@link #updateCasInfo(int, int)} must be called before this\n     * request.\n     *\n     * @param request {@link CasSessionRequest} information of the current request.\n     * @param casSessionHandle a one-element array to return the granted cas session handel.\n     *                         If no CAS granted, this will return {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is CAS session granted.\n     ",
-    "links" : [ "#onReclaimResources()", "android.media.tv.tunerresourcemanager.CasSessionRequest", "#updateCasInfo(int", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
+    "links" : [ "android.media.tv.tunerresourcemanager.CasSessionRequest", "#updateCasInfo(int", "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
+  }, {
+    "name" : "public boolean requestCiCam(TunerCiCamRequest request, int[] ciCamHandle)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Requests a CiCam resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is CiCam available, the API would send the id back.\n     *\n     * <li>If no CiCam is available but the current request info can show higher priority than\n     * other uses of the CiCam, the API will send\n     * {@link IResourcesReclaimListener#onReclaimResources()} to the {@link Tuner}. Tuner would\n     * handle the resource reclaim on the holder of lower priority and notify the holder of its\n     * resource loss.\n     *\n     * <p><strong>Note:</strong> {@link #updateCasInfo(int, int)} must be called before this\n     * request.\n     *\n     * @param request {@link TunerCiCamRequest} information of the current request.\n     * @param ciCamHandle a one-element array to return the granted ciCam handle.\n     *                    If no ciCam granted, this will return {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is ciCam granted.\n     ",
+    "links" : [ "#updateCasInfo(int", "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "android.media.tv.tunerresourcemanager.TunerCiCamRequest", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
   }, {
     "name" : "public boolean requestLnb(@NonNull TunerLnbRequest request, @NonNull int[] lnbHandle)",
     "returnType" : "boolean",
     "comment" : "\n     * Requests a Tuner Lnb resource.\n     *\n     * <p>There are three possible scenarios:\n     * <ul>\n     * <li>If there is Lnb available, the API would send the id back.\n     *\n     * <li>If no Lnb is available but the current request has a higher priority than other uses of\n     * lnbs, the API will send {@link IResourcesReclaimListener#onReclaimResources()} to the\n     * {@link Tuner}. Tuner would handle the resource reclaim on the holder of lower priority and\n     * notify the holder of its resource loss.\n     *\n     * <li>If no Lnb system can be granted, the API would return false.\n     * <ul>\n     *\n     * <p><strong>Note:</strong> {@link #setLnbInfoList(int[])} must be called before this request.\n     *\n     * @param request {@link TunerLnbRequest} information of the current request.\n     * @param lnbHandle a one-element array to return the granted Lnb handle.\n     *                  If no Lnb granted, this will return {@link #INVALID_RESOURCE_HANDLE}.\n     *\n     * @return true if there is Lnb granted.\n     ",
-    "links" : [ "#onReclaimResources()", "#setLnbInfoList(int", "android.media.tv.tunerresourcemanager.TunerLnbRequest", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
+    "links" : [ "#setLnbInfoList(int", "android.media.tv.tunerresourcemanager.IResourcesReclaimListener#onReclaimResources()", "android.media.tv.tunerresourcemanager.TunerLnbRequest", "#INVALID_RESOURCE_HANDLE", "Tuner" ]
   }, {
     "name" : "public void releaseFrontend(int frontendHandle, int clientId)",
     "returnType" : "void",
@@ -145,6 +211,11 @@
     "comment" : "\n     * Notifies the TRM that the given Cas session has been released.\n     *\n     * <p>Client must call this whenever it releases a Cas session.\n     *\n     * <p><strong>Note:</strong> {@link #updateCasInfo(int, int)} must be called before this\n     * release.\n     *\n     * @param casSessionHandle the handle of the released CAS session.\n     * @param clientId the id of the client that is releasing the cas session.\n     ",
     "links" : [ "#updateCasInfo(int" ]
   }, {
+    "name" : "public void releaseCiCam(int ciCamHandle, int clientId)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies the TRM that the given CiCam has been released.\n     *\n     * <p>Client must call this whenever it releases a CiCam.\n     *\n     * <p><strong>Note:</strong> {@link #updateCasInfo(int, int)} must be called before this\n     * release.\n     *\n     * @param ciCamHandle the handle of the releasing CiCam.\n     * @param clientId the id of the client that is releasing the CiCam.\n     ",
+    "links" : [ "#updateCasInfo(int" ]
+  }, {
     "name" : "public void releaseLnb(int lnbHandle, int clientId)",
     "returnType" : "void",
     "comment" : "\n     * Notifies the TRM that the Lnb with the given id has been released.\n     *\n     * <p>Client must call this whenever it releases an Lnb.\n     *\n     * <p><strong>Note:</strong> {@link #setLnbInfoList(int[])} must be called before this release.\n     *\n     * @param lnbHandle the handle of the released Tuner Lnb.\n     * @param clientId the id of the client that is releasing the lnb.\n     ",
@@ -154,7 +225,17 @@
     "returnType" : "boolean",
     "comment" : "\n     * Compare two clients' priority.\n     *\n     * @param challengerProfile the {@link ResourceClientProfile} of the challenger.\n     * @param holderProfile the {@link ResourceClientProfile} of the holder of the resource.\n     *\n     * @return true if the challenger has higher priority than the holder.\n     ",
     "links" : [ "android.media.tv.tunerresourcemanager.ResourceClientProfile" ]
+  }, {
+    "name" : "public int getClientPriority(@TvInputService.PriorityHintUseCaseType int useCase, int pid)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a priority for the given use case type and the client's foreground or background\n     * status.\n     *\n     * @param useCase the use case type of the client. When the given use case type is invalid,\n     *        the default use case type will be used. {@see TvInputService#PriorityHintUseCaseType}.\n     * @param pid the pid of the client. When the pid is invalid, background status will be used as\n     *        a client's status. Otherwise, client's app corresponding to the given session id will\n     *        be used as a client. {@see TvInputService#onCreateSession(String, String)}.\n     *\n     * @return the client priority..\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getConfigPriority(@TvInputService.PriorityHintUseCaseType int useCase, boolean isForeground)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a config priority for the given use case type and the foreground or background\n     * status.\n     *\n     * @param useCase the use case type of the client. When the given use case type is invalid,\n     *        the default use case type will be used. {@see TvInputService#PriorityHintUseCaseType}.\n     * @param isForeground {@code true} if foreground, {@code false} otherwise.\n     *\n     * @return the config priority.\n     *\n     * @hide\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "INVALID_RESOURCE_HANDLE", "INVALID_OWNER_ID", "TUNER_RESOURCE_TYPE_FRONTEND", "TUNER_RESOURCE_TYPE_DEMUX", "TUNER_RESOURCE_TYPE_DESCRAMBLER", "TUNER_RESOURCE_TYPE_LNB", "TUNER_RESOURCE_TYPE_CAS_SESSION", "TUNER_RESOURCE_TYPE_MAX", "mService", "mUserId" ],
-  "methodNames" : [ "public void registerClientProfile(@NonNull ResourceClientProfile profile, @NonNull @CallbackExecutor Executor executor, @NonNull ResourcesReclaimListener listener, @NonNull int[] clientId)", "public void unregisterClientProfile(int clientId)", "public boolean updateClientPriority(int clientId, int priority, int niceValue)", "public void setFrontendInfoList(@NonNull TunerFrontendInfo[] infos)", "public void updateCasInfo(int casSystemId, int maxSessionNum)", "public void setLnbInfoList(int[] lnbIds)", "public boolean requestFrontend(@NonNull TunerFrontendRequest request, @Nullable int[] frontendHandle)", "public void shareFrontend(int selfClientId, int targetClientId)", "public boolean requestDemux(@NonNull TunerDemuxRequest request, @NonNull int[] demuxHandle)", "public boolean requestDescrambler(@NonNull TunerDescramblerRequest request, @NonNull int[] descramblerHandle)", "public boolean requestCasSession(@NonNull CasSessionRequest request, @NonNull int[] casSessionHandle)", "public boolean requestLnb(@NonNull TunerLnbRequest request, @NonNull int[] lnbHandle)", "public void releaseFrontend(int frontendHandle, int clientId)", "public void releaseDemux(int demuxHandle, int clientId)", "public void releaseDescrambler(int descramblerHandle, int clientId)", "public void releaseCasSession(int casSessionHandle, int clientId)", "public void releaseLnb(int lnbHandle, int clientId)", "public boolean isHigherPriority(ResourceClientProfile challengerProfile, ResourceClientProfile holderProfile)" ]
+  "methodNames" : [ "public void registerClientProfile(@NonNull ResourceClientProfile profile, @NonNull @CallbackExecutor Executor executor, @NonNull ResourcesReclaimListener listener, @NonNull int[] clientId)", "public void unregisterClientProfile(int clientId)", "public boolean updateClientPriority(int clientId, int priority, int niceValue)", "public boolean hasUnusedFrontend(int frontendType)", "public boolean isLowestPriority(int clientId, int frontendType)", "public void storeResourceMap(int resourceType)", "public void clearResourceMap(int resourceType)", "public void restoreResourceMap(int resourceType)", "public void setFrontendInfoList(@NonNull TunerFrontendInfo[] infos)", "public void setDemuxInfoList(@NonNull TunerDemuxInfo[] infos)", "public void updateCasInfo(int casSystemId, int maxSessionNum)", "public void setLnbInfoList(int[] lnbIds)", "public boolean acquireLock(int clientId)", "public boolean releaseLock(int clientId)", "public boolean requestFrontend(@NonNull TunerFrontendRequest request, @Nullable int[] frontendHandle)", "public boolean setMaxNumberOfFrontends(int frontendType, int maxNum)", "public int getMaxNumberOfFrontends(int frontendType)", "public void shareFrontend(int selfClientId, int targetClientId)", "public boolean transferOwner(int resourceType, int currentOwnerId, int newOwnerId)", "public boolean requestDemux(@NonNull TunerDemuxRequest request, @NonNull int[] demuxHandle)", "public boolean requestDescrambler(@NonNull TunerDescramblerRequest request, @NonNull int[] descramblerHandle)", "public boolean requestCasSession(@NonNull CasSessionRequest request, @NonNull int[] casSessionHandle)", "public boolean requestCiCam(TunerCiCamRequest request, int[] ciCamHandle)", "public boolean requestLnb(@NonNull TunerLnbRequest request, @NonNull int[] lnbHandle)", "public void releaseFrontend(int frontendHandle, int clientId)", "public void releaseDemux(int demuxHandle, int clientId)", "public void releaseDescrambler(int descramblerHandle, int clientId)", "public void releaseCasSession(int casSessionHandle, int clientId)", "public void releaseCiCam(int ciCamHandle, int clientId)", "public void releaseLnb(int lnbHandle, int clientId)", "public boolean isHigherPriority(ResourceClientProfile challengerProfile, ResourceClientProfile holderProfile)", "public int getClientPriority(@TvInputService.PriorityHintUseCaseType int useCase, int pid)", "public int getConfigPriority(@TvInputService.PriorityHintUseCaseType int useCase, boolean isForeground)" ],
+  "variableNames" : [ "TAG", "DEBUG", "INVALID_RESOURCE_HANDLE", "INVALID_OWNER_ID", "TUNER_RESOURCE_TYPE_FRONTEND", "TUNER_RESOURCE_TYPE_DEMUX", "TUNER_RESOURCE_TYPE_DESCRAMBLER", "TUNER_RESOURCE_TYPE_LNB", "TUNER_RESOURCE_TYPE_CAS_SESSION", "TUNER_RESOURCE_TYPE_FRONTEND_CICAM", "TUNER_RESOURCE_TYPE_MAX", "mService", "mUserId" ]
 }

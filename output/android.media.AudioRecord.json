@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/AudioRecord.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/AudioRecord.java",
   "packageName" : "android.media",
   "className" : "AudioRecord",
-  "comment" : "\n * The AudioRecord class manages the audio resources for Java applications\n * to record audio from the audio input hardware of the platform. This is\n * achieved by \"pulling\" (reading) the data from the AudioRecord object. The\n * application is responsible for polling the AudioRecord object in time using one of\n * the following three methods:  {@link #read(byte[],int, int)}, {@link #read(short[], int, int)}\n * or {@link #read(ByteBuffer, int)}. The choice of which method to use will be based\n * on the audio data storage format that is the most convenient for the user of AudioRecord.\n * <p>Upon creation, an AudioRecord object initializes its associated audio buffer that it will\n * fill with the new audio data. The size of this buffer, specified during the construction,\n * determines how long an AudioRecord can record before \"over-running\" data that has not\n * been read yet. Data should be read from the audio hardware in chunks of sizes inferior to\n * the total recording buffer size.\n ",
+  "comment" : "\n * The AudioRecord class manages the audio resources for Java applications\n * to record audio from the audio input hardware of the platform. This is\n * achieved by \"pulling\" (reading) the data from the AudioRecord object. The\n * application is responsible for polling the AudioRecord object in time using one of\n * the following three methods:  {@link #read(byte[],int, int)}, {@link #read(short[], int, int)}\n * or {@link #read(ByteBuffer, int)}. The choice of which method to use will be based\n * on the audio data storage format that is the most convenient for the user of AudioRecord.\n * <p>Upon creation, an AudioRecord object initializes its associated audio buffer that it will\n * fill with the new audio data. The size of this buffer, specified during the construction,\n * determines how long an AudioRecord can record before \"over-running\" data that has not\n * been read yet. Data should be read from the audio hardware in chunks of sizes inferior to\n * the total recording buffer size.</p>\n * <p>\n * Applications creating an AudioRecord instance need\n * {@link android.Manifest.permission#RECORD_AUDIO} or the Builder will throw\n * {@link java.lang.UnsupportedOperationException} on\n * {@link android.media.AudioRecord.Builder#build build()},\n * and the constructor will return an instance in state\n * {@link #STATE_UNINITIALIZED}.</p>\n ",
+  "links" : [ "java.lang.UnsupportedOperationException", "#read(ByteBuffer", "#STATE_UNINITIALIZED", "android.media.AudioRecord.Builder#build", "#read(byte", "#read(short", "android.Manifest.permission#RECORD_AUDIO" ],
   "variables" : [ {
     "name" : "STATE_UNINITIALIZED",
     "type" : "int",
@@ -104,19 +105,14 @@
     "comment" : "\n     * The read mode indicating the read operation will return immediately after\n     * reading as much audio data as possible without blocking.\n     ",
     "links" : [ ]
   }, {
-    "name" : "mNativeRecorderInJavaObj",
+    "name" : "mNativeAudioRecordHandle",
     "type" : "long",
-    "comment" : "\n     * Accessed by native methods: provides access to C++ AudioRecord object\n     ",
+    "comment" : "\n     * Accessed by native methods: provides access to C++ AudioRecord object\n     * Is 0 after release()\n     ",
     "links" : [ ]
   }, {
-    "name" : "mNativeCallbackCookie",
+    "name" : "mNativeJNIDataHandle",
     "type" : "long",
     "comment" : "\n     * Accessed by native methods: provides access to the callback data.\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "mNativeDeviceCallback",
-    "type" : "long",
-    "comment" : "\n     * Accessed by native methods: provides access to the JNIDeviceCallback instance.\n     ",
     "links" : [ ]
   }, {
     "name" : "mAudioCapturePolicy",
@@ -199,6 +195,11 @@
     "comment" : "\n     * Audio session ID\n     ",
     "links" : [ ]
   }, {
+    "name" : "mHalInputFlags",
+    "type" : "int",
+    "comment" : "\n     * Audio HAL Input Flags as bitfield.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "mAudioAttributes",
     "type" : "AudioAttributes",
     "comment" : "\n     * AudioAttributes\n     ",
@@ -209,9 +210,19 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mLogSessionId",
+    "type" : "LogSessionId",
+    "comment" : "\n     * The log session id used for metrics.\n     * {@link LogSessionId#LOG_SESSION_ID_NONE} here means it is not set.\n     ",
+    "links" : [ "android.media.metrics.LogSessionId#LOG_SESSION_ID_NONE" ]
+  }, {
     "name" : "mICallBack",
     "type" : "IBinder",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_SHARED_AUDIO_HISTORY_MS",
+    "type" : "long",
+    "comment" : "\n     * Must match the native definition in frameworks/av/service/audioflinger/Audioflinger.h.\n     ",
     "links" : [ ]
   }, {
     "name" : "mRoutingChangeListeners",
@@ -230,11 +241,6 @@
     "links" : [ ]
   } ],
   "methods" : [ {
-    "name" : "private String getCurrentOpPackageName()",
-    "returnType" : "String",
-    "comment" : "",
-    "links" : [ ]
-  }, {
     "name" : "private void unregisterAudioPolicyOnRelease(AudioPolicy audioPolicy)",
     "returnType" : "void",
     "comment" : "\n     * Sets an {@link AudioPolicy} to automatically unregister when the record is released.\n     *\n     * <p>This is to prevent users of the audio capture API from having to manually unregister the\n     * policy that was used to create the record.\n     ",
@@ -244,6 +250,16 @@
     "returnType" : "void",
     "comment" : " package ",
     "links" : [ ]
+  }, {
+    "name" : "public AudioAttributes getAudioAttributes()",
+    "returnType" : "AudioAttributes",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int resolveSessionId(@Nullable Context context, int requestedSessionId)",
+    "returnType" : "int",
+    "comment" : "\n     * Helper method to resolve session id to be used for AudioRecord initialization.\n     *\n     * This method will assign session id in following way:\n     * 1. Explicitly requested session id has the highest priority, if there is one,\n     *    it will be used.\n     * 2. If there's device-specific session id asociated with the provided context,\n     *    it will be used.\n     * 3. Otherwise {@link AUDIO_SESSION_ID_GENERATE} is returned.\n     *\n     * @param context {@link Context} to use for extraction of device specific session id.\n     * @param requestedSessionId explicitly requested session id or AUDIO_SESSION_ID_GENERATE.\n     * @return session id to be passed to AudioService for the {@link AudioRecord} instance given\n     *   provided {@link Context} instance and explicitly requested session id.\n     ",
+    "links" : [ "android.content.Context", "android.media.AudioRecord", "android.media.AudioManager.AUDIO_SESSION_ID_GENERATE" ]
   }, {
     "name" : "private static int getChannelMaskFromLegacyConfig(int inChannelConfig, boolean allowLegacyConfig)",
     "returnType" : "int",
@@ -345,6 +361,16 @@
     "comment" : "\n     * Returns whether this AudioRecord is marked as privacy sensitive or not.\n     * <p>\n     * See {@link Builder#setPrivacySensitive(boolean)}\n     * <p>\n     * @return true if privacy sensitive, false otherwise\n     ",
     "links" : [ "#setPrivacySensitive(boolean)" ]
   }, {
+    "name" : "public boolean isHotwordStream()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     * Returns whether the AudioRecord object produces the same type of audio content that\n     * the hotword recognition model consumes.\n     * <br> If {@link isHotwordLookbackStream(boolean)} is true, this will return false\n     * <br> See {@link Builder#setRequestHotwordStream(boolean)}\n     * @return true if AudioRecord produces hotword content, false otherwise\n     *",
+    "links" : [ "isHotwordLookbackStream(boolean)", "#setRequestHotwordStream(boolean)" ]
+  }, {
+    "name" : "public boolean isHotwordLookbackStream()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     * Returns whether the AudioRecord object produces the same type of audio content that\n     * the hotword recognition model consumes, and includes capture content from prior to\n     * stream open.\n     * <br> See {@link Builder#setRequestHotwordLookbackStream(boolean)}\n     * @return true if AudioRecord produces hotword capture content from\n     * prior to stream open, false otherwise\n     *",
+    "links" : [ "#setRequestHotwordLookbackStream(boolean)" ]
+  }, {
     "name" : "public void startRecording() throws IllegalStateException",
     "returnType" : "void",
     "comment" : "\n     * Starts recording from the AudioRecord instance.\n     * @throws IllegalStateException\n     ",
@@ -429,6 +455,16 @@
     "returnType" : "AudioDeviceInfo",
     "comment" : "\n     * Returns an {@link AudioDeviceInfo} identifying the current routing of this AudioRecord.\n     * Note: The query is only valid if the AudioRecord is currently recording. If it is not,\n     * <code>getRoutedDevice()</code> will return null.\n     ",
     "links" : [ "android.media.AudioDeviceInfo" ]
+  }, {
+    "name" : "public static long getMaxSharedAudioHistoryMillis()",
+    "returnType" : "long",
+    "comment" : "\n     * @hide\n     * returns the maximum duration in milliseconds of the audio history that can be requested\n     * to be made available to other clients using the same session with\n     * {@Link Builder#setMaxSharedAudioHistory(long)}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MediaSyncEvent shareAudioHistory(@NonNull String sharedPackage, @IntRange(from = 0) long startFromMillis)",
+    "returnType" : "MediaSyncEvent",
+    "comment" : "\n     * @hide\n     *\n     * A privileged app with permission CAPTURE_AUDIO_HOTWORD can share part of its recent\n     * capture history on a given AudioRecord with the following steps:\n     * 1) Specify the maximum time in the past that will be available for other apps by calling\n     * {@link Builder#setMaxSharedAudioHistoryMillis(long)} when creating the AudioRecord.\n     * 2) Start recording and determine where the other app should start capturing in the past.\n     * 3) Call this method with the package name of the app the history will be shared with and\n     * the intended start time for this app's capture relative to this AudioRecord's start time.\n     * 4) Communicate the {@link MediaSyncEvent} returned by this method to the other app.\n     * 5) The other app will use the MediaSyncEvent when creating its AudioRecord with\n     * {@link Builder#setSharedAudioEvent(MediaSyncEvent).\n     * 6) Only after the other app has started capturing can this app stop capturing and\n     * release its AudioRecord.\n     * This method is intended to be called only once: if called multiple times, only the last\n     * request will be honored.\n     * The implementation is \"best effort\": if the specified start time if too far in the past\n     * compared to the max available history specified, the start time will be adjusted to the\n     * start of the available history.\n     * @param sharedPackage the package the history will be shared with\n     * @param startFromMillis the start time, relative to the initial start time of this\n     *        AudioRecord, at which the other AudioRecord will start.\n     * @return a {@link MediaSyncEvent} to be communicated to the app this AudioRecord's audio\n     *         history will be shared with.\n     * @throws IllegalArgumentException\n     * @throws SecurityException\n     ",
+    "links" : [ "android.media.MediaSyncEvent", "#setSharedAudioEvent(MediaSyncEvent).", "#setMaxSharedAudioHistoryMillis(long)" ]
   }, {
     "name" : "private void testEnableNativeRoutingCallbacksLocked()",
     "returnType" : "void",
@@ -515,17 +551,32 @@
     "comment" : "\n     * Specifies the zoom factor (i.e. the field dimension) for the selected microphone\n     * (for processing). The selected microphone is determined by the use-case for the stream.\n     *\n     * @param zoom the desired field dimension of microphone capture. Range is from -1 (wide angle),\n     * though 0 (no zoom) to 1 (maximum zoom).\n     * @return true if sucessful.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public void setLogSessionId(@NonNull LogSessionId logSessionId)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets a {@link LogSessionId} instance to this AudioRecord for metrics collection.\n     *\n     * @param logSessionId a {@link LogSessionId} instance which is used to\n     *        identify this object to the metrics service. Proper generated\n     *        Ids must be obtained from the Java metrics service and should\n     *        be considered opaque. Use\n     *        {@link LogSessionId#LOG_SESSION_ID_NONE} to remove the\n     *        logSessionId association.\n     * @throws IllegalStateException if AudioRecord not initialized.\n     ",
+    "links" : [ "android.media.metrics.LogSessionId", "android.media.metrics.LogSessionId#LOG_SESSION_ID_NONE" ]
+  }, {
+    "name" : "public LogSessionId getLogSessionId()",
+    "returnType" : "LogSessionId",
+    "comment" : "\n     * Returns the {@link LogSessionId}.\n     ",
+    "links" : [ "android.media.metrics.LogSessionId" ]
+  }, {
     "name" : "private static void postEventFromNative(Object audiorecord_ref, int what, int arg1, int arg2, Object obj)",
     "returnType" : "void",
     "comment" : "--------------------",
     "links" : [ ]
   }, {
-    "name" : "private final native int native_setup(Object audiorecord_this, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, String opPackageName, long nativeRecordInJavaObj)",
+    "name" : "private int native_setup(Object audiorecordThis, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, String opPackageName, long nativeRecordInJavaObj, int halInputFlags)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated Use native_setup that takes an {@link AttributionSource} object\n     * @return\n     ",
+    "links" : [ "android.content.AttributionSource" ]
+  }, {
+    "name" : "private native int native_setup(Object audiorecordThis, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, @NonNull Parcel attributionSource, long nativeRecordInJavaObj, int maxSharedAudioHistoryMs, int halInputFlags)",
     "returnType" : "int",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private final native void native_finalize()",
+    "name" : "private native void native_finalize()",
     "returnType" : "void",
     "comment" : " TODO remove: implementation calls directly into implementation of native_release()",
     "links" : [ ]
@@ -627,7 +678,7 @@
   }, {
     "name" : "private native int native_getPortId()",
     "returnType" : "int",
-    "comment" : "",
+    "comment" : "\n     * @throws IllegalStateException\n     ",
     "links" : [ ]
   }, {
     "name" : "private native int native_set_preferred_microphone_direction(int direction)",
@@ -636,6 +687,16 @@
     "links" : [ ]
   }, {
     "name" : "private native int native_set_preferred_microphone_field_dimension(float zoom)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native void native_setLogSessionId(@Nullable String logSessionId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int native_shareAudioHistory(@NonNull String sharedPackage, long startFromMs)",
     "returnType" : "int",
     "comment" : "",
     "links" : [ ]
@@ -650,6 +711,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "STATE_UNINITIALIZED", "STATE_INITIALIZED", "RECORDSTATE_STOPPED", "RECORDSTATE_RECORDING", "SUCCESS", "ERROR", "ERROR_BAD_VALUE", "ERROR_INVALID_OPERATION", "ERROR_DEAD_OBJECT", "AUDIORECORD_ERROR_SETUP_ZEROFRAMECOUNT", "AUDIORECORD_ERROR_SETUP_INVALIDCHANNELMASK", "AUDIORECORD_ERROR_SETUP_INVALIDFORMAT", "AUDIORECORD_ERROR_SETUP_INVALIDSOURCE", "AUDIORECORD_ERROR_SETUP_NATIVEINITFAILED", "NATIVE_EVENT_MARKER", "NATIVE_EVENT_NEW_POS", "TAG", "SUBMIX_FIXED_VOLUME", "READ_BLOCKING", "READ_NON_BLOCKING", "mNativeRecorderInJavaObj", "mNativeCallbackCookie", "mNativeDeviceCallback", "mAudioCapturePolicy", "mSampleRate", "mChannelCount", "mChannelMask", "mChannelIndexMask", "mAudioFormat", "mRecordSource", "mState", "mRecordingState", "mRecordingStateLock", "mPositionListener", "mPositionListenerLock", "mEventHandler", "mInitializationLooper", "mNativeBufferSizeInBytes", "mSessionId", "mAudioAttributes", "mIsSubmixFullVolume", "mICallBack", "mRoutingChangeListeners", "mPreferredDevice", "mRecordingInfoImpl" ],
-  "methodNames" : [ "private String getCurrentOpPackageName()", "private void unregisterAudioPolicyOnRelease(AudioPolicy audioPolicy)", " void deferred_connect(long nativeRecordInJavaObj)", "private static int getChannelMaskFromLegacyConfig(int inChannelConfig, boolean allowLegacyConfig)", "private void audioParamCheck(int audioSource, int sampleRateInHz, int audioFormat) throws IllegalArgumentException", "private void audioBuffSizeCheck(int audioBufferSize) throws IllegalArgumentException", "public void release()", "protected void finalize()", "public int getSampleRate()", "public int getAudioSource()", "public int getAudioFormat()", "public int getChannelConfiguration()", "public AudioFormat getFormat()", "public int getChannelCount()", "public int getState()", "public int getRecordingState()", "public int getBufferSizeInFrames()", "public int getNotificationMarkerPosition()", "public int getPositionNotificationPeriod()", "public int getTimestamp(@NonNull AudioTimestamp outTimestamp, @AudioTimestamp.Timebase int timebase)", "public static int getMinBufferSize(int sampleRateInHz, int channelConfig, int audioFormat)", "public int getAudioSessionId()", "public boolean isPrivacySensitive()", "public void startRecording() throws IllegalStateException", "public void startRecording(MediaSyncEvent syncEvent) throws IllegalStateException", "public void stop() throws IllegalStateException", "private void handleFullVolumeRec(boolean starting)", "public int read(@NonNull byte[] audioData, int offsetInBytes, int sizeInBytes)", "public int read(@NonNull byte[] audioData, int offsetInBytes, int sizeInBytes, @ReadMode int readMode)", "public int read(@NonNull short[] audioData, int offsetInShorts, int sizeInShorts)", "public int read(@NonNull short[] audioData, int offsetInShorts, int sizeInShorts, @ReadMode int readMode)", "public int read(@NonNull float[] audioData, int offsetInFloats, int sizeInFloats, @ReadMode int readMode)", "public int read(@NonNull ByteBuffer audioBuffer, int sizeInBytes)", "public int read(@NonNull ByteBuffer audioBuffer, int sizeInBytes, @ReadMode int readMode)", "public PersistableBundle getMetrics()", "private native PersistableBundle native_getMetrics()", "public void setRecordPositionUpdateListener(OnRecordPositionUpdateListener listener)", "public void setRecordPositionUpdateListener(OnRecordPositionUpdateListener listener, Handler handler)", "public int setNotificationMarkerPosition(int markerInFrames)", "public AudioDeviceInfo getRoutedDevice()", "private void testEnableNativeRoutingCallbacksLocked()", "private void testDisableNativeRoutingCallbacksLocked()", "public void addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener, android.os.Handler handler)", "public void removeOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener)", "public void addOnRoutingChangedListener(OnRoutingChangedListener listener, android.os.Handler handler)", "public void removeOnRoutingChangedListener(OnRoutingChangedListener listener)", "private void broadcastRoutingChange()", "public int setPositionNotificationPeriod(int periodInFrames)", "public boolean setPreferredDevice(AudioDeviceInfo deviceInfo)", "public AudioDeviceInfo getPreferredDevice()", "public List<MicrophoneInfo> getActiveMicrophones() throws IOException", "public void registerAudioRecordingCallback(@NonNull @CallbackExecutor Executor executor, @NonNull AudioManager.AudioRecordingCallback cb)", "public void unregisterAudioRecordingCallback(@NonNull AudioManager.AudioRecordingCallback cb)", "public AudioRecordingConfiguration getActiveRecordingConfiguration()", "public int getPortId()", "public boolean setPreferredMicrophoneDirection(@DirectionMode int direction)", "public boolean setPreferredMicrophoneFieldDimension(@FloatRange(from = -1.0, to = 1.0) float zoom)", "private static void postEventFromNative(Object audiorecord_ref, int what, int arg1, int arg2, Object obj)", "private final native int native_setup(Object audiorecord_this, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, String opPackageName, long nativeRecordInJavaObj)", "private final native void native_finalize()", "public final native void native_release()", "private final native int native_start(int syncEvent, int sessionId)", "private final native void native_stop()", "private final native int native_read_in_byte_array(byte[] audioData, int offsetInBytes, int sizeInBytes, boolean isBlocking)", "private final native int native_read_in_short_array(short[] audioData, int offsetInShorts, int sizeInShorts, boolean isBlocking)", "private final native int native_read_in_float_array(float[] audioData, int offsetInFloats, int sizeInFloats, boolean isBlocking)", "private final native int native_read_in_direct_buffer(Object jBuffer, int sizeInBytes, boolean isBlocking)", "private final native int native_get_buffer_size_in_frames()", "private final native int native_set_marker_pos(int marker)", "private final native int native_get_marker_pos()", "private final native int native_set_pos_update_period(int updatePeriod)", "private final native int native_get_pos_update_period()", "private static final native int native_get_min_buff_size(int sampleRateInHz, int channelCount, int audioFormat)", "private final native boolean native_setInputDevice(int deviceId)", "private final native int native_getRoutedDeviceId()", "private final native void native_enableDeviceCallback()", "private final native void native_disableDeviceCallback()", "private final native int native_get_timestamp(@NonNull AudioTimestamp outTimestamp, @AudioTimestamp.Timebase int timebase)", "private final native int native_get_active_microphones(ArrayList<MicrophoneInfo> activeMicrophones)", "private native int native_getPortId()", "private native int native_set_preferred_microphone_direction(int direction)", "private native int native_set_preferred_microphone_field_dimension(float zoom)", "private static void logd(String msg)", "private static void loge(String msg)" ]
+  "methodNames" : [ "private void unregisterAudioPolicyOnRelease(AudioPolicy audioPolicy)", " void deferred_connect(long nativeRecordInJavaObj)", "public AudioAttributes getAudioAttributes()", "private static int resolveSessionId(@Nullable Context context, int requestedSessionId)", "private static int getChannelMaskFromLegacyConfig(int inChannelConfig, boolean allowLegacyConfig)", "private void audioParamCheck(int audioSource, int sampleRateInHz, int audioFormat) throws IllegalArgumentException", "private void audioBuffSizeCheck(int audioBufferSize) throws IllegalArgumentException", "public void release()", "protected void finalize()", "public int getSampleRate()", "public int getAudioSource()", "public int getAudioFormat()", "public int getChannelConfiguration()", "public AudioFormat getFormat()", "public int getChannelCount()", "public int getState()", "public int getRecordingState()", "public int getBufferSizeInFrames()", "public int getNotificationMarkerPosition()", "public int getPositionNotificationPeriod()", "public int getTimestamp(@NonNull AudioTimestamp outTimestamp, @AudioTimestamp.Timebase int timebase)", "public static int getMinBufferSize(int sampleRateInHz, int channelConfig, int audioFormat)", "public int getAudioSessionId()", "public boolean isPrivacySensitive()", "public boolean isHotwordStream()", "public boolean isHotwordLookbackStream()", "public void startRecording() throws IllegalStateException", "public void startRecording(MediaSyncEvent syncEvent) throws IllegalStateException", "public void stop() throws IllegalStateException", "private void handleFullVolumeRec(boolean starting)", "public int read(@NonNull byte[] audioData, int offsetInBytes, int sizeInBytes)", "public int read(@NonNull byte[] audioData, int offsetInBytes, int sizeInBytes, @ReadMode int readMode)", "public int read(@NonNull short[] audioData, int offsetInShorts, int sizeInShorts)", "public int read(@NonNull short[] audioData, int offsetInShorts, int sizeInShorts, @ReadMode int readMode)", "public int read(@NonNull float[] audioData, int offsetInFloats, int sizeInFloats, @ReadMode int readMode)", "public int read(@NonNull ByteBuffer audioBuffer, int sizeInBytes)", "public int read(@NonNull ByteBuffer audioBuffer, int sizeInBytes, @ReadMode int readMode)", "public PersistableBundle getMetrics()", "private native PersistableBundle native_getMetrics()", "public void setRecordPositionUpdateListener(OnRecordPositionUpdateListener listener)", "public void setRecordPositionUpdateListener(OnRecordPositionUpdateListener listener, Handler handler)", "public int setNotificationMarkerPosition(int markerInFrames)", "public AudioDeviceInfo getRoutedDevice()", "public static long getMaxSharedAudioHistoryMillis()", "public MediaSyncEvent shareAudioHistory(@NonNull String sharedPackage, @IntRange(from = 0) long startFromMillis)", "private void testEnableNativeRoutingCallbacksLocked()", "private void testDisableNativeRoutingCallbacksLocked()", "public void addOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener, android.os.Handler handler)", "public void removeOnRoutingChangedListener(AudioRouting.OnRoutingChangedListener listener)", "public void addOnRoutingChangedListener(OnRoutingChangedListener listener, android.os.Handler handler)", "public void removeOnRoutingChangedListener(OnRoutingChangedListener listener)", "private void broadcastRoutingChange()", "public int setPositionNotificationPeriod(int periodInFrames)", "public boolean setPreferredDevice(AudioDeviceInfo deviceInfo)", "public AudioDeviceInfo getPreferredDevice()", "public List<MicrophoneInfo> getActiveMicrophones() throws IOException", "public void registerAudioRecordingCallback(@NonNull @CallbackExecutor Executor executor, @NonNull AudioManager.AudioRecordingCallback cb)", "public void unregisterAudioRecordingCallback(@NonNull AudioManager.AudioRecordingCallback cb)", "public AudioRecordingConfiguration getActiveRecordingConfiguration()", "public int getPortId()", "public boolean setPreferredMicrophoneDirection(@DirectionMode int direction)", "public boolean setPreferredMicrophoneFieldDimension(@FloatRange(from = -1.0, to = 1.0) float zoom)", "public void setLogSessionId(@NonNull LogSessionId logSessionId)", "public LogSessionId getLogSessionId()", "private static void postEventFromNative(Object audiorecord_ref, int what, int arg1, int arg2, Object obj)", "private int native_setup(Object audiorecordThis, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, String opPackageName, long nativeRecordInJavaObj, int halInputFlags)", "private native int native_setup(Object audiorecordThis, Object attributes, int[] sampleRate, int channelMask, int channelIndexMask, int audioFormat, int buffSizeInBytes, int[] sessionId, @NonNull Parcel attributionSource, long nativeRecordInJavaObj, int maxSharedAudioHistoryMs, int halInputFlags)", "private native void native_finalize()", "public final native void native_release()", "private final native int native_start(int syncEvent, int sessionId)", "private final native void native_stop()", "private final native int native_read_in_byte_array(byte[] audioData, int offsetInBytes, int sizeInBytes, boolean isBlocking)", "private final native int native_read_in_short_array(short[] audioData, int offsetInShorts, int sizeInShorts, boolean isBlocking)", "private final native int native_read_in_float_array(float[] audioData, int offsetInFloats, int sizeInFloats, boolean isBlocking)", "private final native int native_read_in_direct_buffer(Object jBuffer, int sizeInBytes, boolean isBlocking)", "private final native int native_get_buffer_size_in_frames()", "private final native int native_set_marker_pos(int marker)", "private final native int native_get_marker_pos()", "private final native int native_set_pos_update_period(int updatePeriod)", "private final native int native_get_pos_update_period()", "private static final native int native_get_min_buff_size(int sampleRateInHz, int channelCount, int audioFormat)", "private final native boolean native_setInputDevice(int deviceId)", "private final native int native_getRoutedDeviceId()", "private final native void native_enableDeviceCallback()", "private final native void native_disableDeviceCallback()", "private final native int native_get_timestamp(@NonNull AudioTimestamp outTimestamp, @AudioTimestamp.Timebase int timebase)", "private final native int native_get_active_microphones(ArrayList<MicrophoneInfo> activeMicrophones)", "private native int native_getPortId()", "private native int native_set_preferred_microphone_direction(int direction)", "private native int native_set_preferred_microphone_field_dimension(float zoom)", "private native void native_setLogSessionId(@Nullable String logSessionId)", "private native int native_shareAudioHistory(@NonNull String sharedPackage, long startFromMs)", "private static void logd(String msg)", "private static void loge(String msg)" ],
+  "variableNames" : [ "STATE_UNINITIALIZED", "STATE_INITIALIZED", "RECORDSTATE_STOPPED", "RECORDSTATE_RECORDING", "SUCCESS", "ERROR", "ERROR_BAD_VALUE", "ERROR_INVALID_OPERATION", "ERROR_DEAD_OBJECT", "AUDIORECORD_ERROR_SETUP_ZEROFRAMECOUNT", "AUDIORECORD_ERROR_SETUP_INVALIDCHANNELMASK", "AUDIORECORD_ERROR_SETUP_INVALIDFORMAT", "AUDIORECORD_ERROR_SETUP_INVALIDSOURCE", "AUDIORECORD_ERROR_SETUP_NATIVEINITFAILED", "NATIVE_EVENT_MARKER", "NATIVE_EVENT_NEW_POS", "TAG", "SUBMIX_FIXED_VOLUME", "READ_BLOCKING", "READ_NON_BLOCKING", "mNativeAudioRecordHandle", "mNativeJNIDataHandle", "mAudioCapturePolicy", "mSampleRate", "mChannelCount", "mChannelMask", "mChannelIndexMask", "mAudioFormat", "mRecordSource", "mState", "mRecordingState", "mRecordingStateLock", "mPositionListener", "mPositionListenerLock", "mEventHandler", "mInitializationLooper", "mNativeBufferSizeInBytes", "mSessionId", "mHalInputFlags", "mAudioAttributes", "mIsSubmixFullVolume", "mLogSessionId", "mICallBack", "MAX_SHARED_AUDIO_HISTORY_MS", "mRoutingChangeListeners", "mPreferredDevice", "mRecordingInfoImpl" ]
 }

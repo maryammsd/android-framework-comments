@@ -1,0 +1,176 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/net/vcn/VcnManager.java",
+  "packageName" : "android.net.vcn",
+  "className" : "VcnManager",
+  "comment" : "\n * VcnManager publishes APIs for applications to configure and manage Virtual Carrier Networks.\n *\n * <p>A VCN creates a virtualization layer to allow carriers to aggregate heterogeneous physical\n * networks, unifying them as a single carrier network. This enables infrastructure flexibility on\n * the part of carriers without impacting user connectivity, abstracting the physical network\n * technologies as an implementation detail of their public network.\n *\n * <p>Each VCN virtualizes a carrier's network by building tunnels to a carrier's core network over\n * carrier-managed physical links and supports a IP mobility layer to ensure seamless transitions\n * between the underlying networks. Each VCN is configured based on a Subscription Group (see {@link\n * android.telephony.SubscriptionManager}) and aggregates all networks that are brought up based on\n * a profile or suggestion in the specified Subscription Group.\n *\n * <p>The VCN can be configured to expose one or more {@link android.net.Network}(s), each with\n * different capabilities, allowing for APN virtualization.\n *\n * <p>If a tunnel fails to connect, or otherwise encounters a fatal error, the VCN will attempt to\n * reestablish the connection. If the tunnel still has not reconnected after a system-determined\n * timeout, the VCN Safe Mode (see below) will be entered.\n *\n * <p>The VCN Safe Mode ensures that users (and carriers) have a fallback to restore system\n * connectivity to update profiles, diagnose issues, contact support, or perform other remediation\n * tasks. In Safe Mode, the system will allow underlying cellular networks to be used as default.\n * Additionally, during Safe Mode, the VCN will continue to retry the connections, and will\n * automatically exit Safe Mode if all active tunnels connect successfully.\n *\n * <p>Apps targeting Android 15 or newer should check the existence of {@link\n * PackageManager#FEATURE_TELEPHONY_SUBSCRIPTION} before querying the service. If the feature is\n * absent, {@link Context#getSystemService} may return null.\n ",
+  "links" : [ "android.content.pm.PackageManager#FEATURE_TELEPHONY_SUBSCRIPTION", "android.telephony.SubscriptionManager", "android.content.Context#getSystemService", "android.net.Network" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_WIFI_ENTRY_RSSI_THRESHOLD_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for WiFi entry RSSI thresholds\n     *\n     * <p>The VCN will only migrate to a Carrier WiFi network that has a signal strength greater\n     * than, or equal to this threshold.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_WIFI_EXIT_RSSI_THRESHOLD_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for WiFi entry RSSI thresholds\n     *\n     * <p>If the VCN's selected Carrier WiFi network has a signal strength less than this threshold,\n     * the VCN will attempt to migrate away from the Carrier WiFi network.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_POLL_IPSEC_STATE_INTERVAL_SECONDS_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for the interval to poll IpSecTransformState for packet loss monitoring\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_IPSEC_PACKET_LOSS_PERCENT_THRESHOLD_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for the threshold of IPSec packet loss rate\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_MAX_SEQ_NUM_INCREASE_PER_SECOND_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for detecting unusually large increases in IPsec packet sequence numbers.\n     *\n     * <p>If the sequence number increases by more than this value within a second, it may indicate\n     * an intentional leap on the server's downlink. To avoid false positives, the packet loss\n     * detector will suppress loss reporting.\n     *\n     * <p>By default, there's no maximum limit enforced, prioritizing detection of lossy networks.\n     * To reduce false positives, consider setting an appropriate maximum threshold.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_NETWORK_SELECTION_PENALTY_TIMEOUT_MINUTES_LIST_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for the list of timeouts in minute to stop penalizing an underlying network candidate\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_RESTRICTED_TRANSPORTS_INT_ARRAY_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for transports that need to be marked as restricted by the VCN\n     *\n     * <p>Defaults to TRANSPORT_WIFI if the config does not exist\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_SAFE_MODE_TIMEOUT_SECONDS_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for number of seconds to wait before entering safe mode\n     *\n     * <p>A VcnGatewayConnection will enter safe mode when it takes over the configured timeout to\n     * enter {@link ConnectedState}.\n     *\n     * <p>Defaults to 30, unless overridden by carrier config\n     *\n     * @hide\n     ",
+    "links" : [ "ConnectedState" ]
+  }, {
+    "name" : "VCN_TUNNEL_AGGREGATION_SA_COUNT_MAX_KEY",
+    "type" : "String",
+    "comment" : "\n     * Key for maximum number of parallel SAs for tunnel aggregation\n     *\n     * <p>If set to a value > 1, multiple tunnels will be set up, and inbound traffic will be\n     * aggregated over the various tunnels.\n     *\n     * <p>Defaults to 1, unless overridden by carrier config\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_RELATED_CARRIER_CONFIG_KEYS",
+    "type" : "String[]",
+    "comment" : " List of Carrier Config options to extract from Carrier Config bundles. @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "REGISTERED_POLICY_LISTENERS",
+    "type" : "Map<VcnNetworkPolicyChangeListener, VcnUnderlyingNetworkPolicyListenerBinder>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mService",
+    "type" : "IVcnManagementService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_STATUS_CODE_NOT_CONFIGURED",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that the VCN for the subscription group is not configured, or that the\n     * callback is not privileged for the subscription group.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_STATUS_CODE_INACTIVE",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that the VCN for the subscription group is inactive.\n     *\n     * <p>A VCN is inactive if a {@link VcnConfig} is present for the subscription group, but the\n     * provisioning package is not privileged.\n     ",
+    "links" : [ "android.net.vcn.VcnConfig" ]
+  }, {
+    "name" : "VCN_STATUS_CODE_ACTIVE",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that the VCN for the subscription group is active.\n     *\n     * <p>A VCN is active if a {@link VcnConfig} is present for the subscription, the provisioning\n     * package is privileged, and the VCN is not in Safe Mode. In other words, a VCN is considered\n     * active while it is connecting, fully connected, and disconnecting.\n     ",
+    "links" : [ "android.net.vcn.VcnConfig" ]
+  }, {
+    "name" : "VCN_STATUS_CODE_SAFE_MODE",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that the VCN for the subscription group is in Safe Mode.\n     *\n     * <p>A VCN will be put into Safe Mode if any of the gateway connections were unable to\n     * establish a connection within a system-determined timeout (while underlying networks were\n     * available).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_ERROR_CODE_INTERNAL_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that an internal failure occurred in this Gateway Connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_ERROR_CODE_CONFIG_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that an error with this Gateway Connection's configuration occurred.\n     *\n     * <p>For example, this error code will be returned after authentication failures.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VCN_ERROR_CODE_NETWORK_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Value indicating that a Network error occurred with this Gateway Connection.\n     *\n     * <p>For example, this error code will be returned if an underlying {@link android.net.Network}\n     * for this Gateway Connection is lost, or if an error occurs while resolving the connection\n     * endpoint address.\n     ",
+    "links" : [ "android.net.Network" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static Map<VcnNetworkPolicyChangeListener, VcnUnderlyingNetworkPolicyListenerBinder> getAllPolicyListeners()",
+    "returnType" : "Map<VcnNetworkPolicyChangeListener, VcnUnderlyingNetworkPolicyListenerBinder>",
+    "comment" : "\n     * Get all currently registered VcnNetworkPolicyChangeListeners for testing purposes.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setVcnConfig(@NonNull ParcelUuid subscriptionGroup, @NonNull VcnConfig config) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the VCN configuration for a given subscription group.\n     *\n     * <p>An app that has carrier privileges for any of the subscriptions in the given group may set\n     * a VCN configuration. If a configuration already exists for the given subscription group, it\n     * will be overridden. Any active VCN(s) may be forced to restart to use the new configuration.\n     *\n     * <p>This API is ONLY permitted for callers running as the primary user.\n     *\n     * @param subscriptionGroup the subscription group that the configuration should be applied to\n     * @param config the configuration parameters for the VCN\n     * @throws SecurityException if the caller does not have carrier privileges for the provided\n     *     subscriptionGroup, or is not running as the primary user\n     * @throws IOException if the configuration failed to be saved and persisted to disk. This may\n     *     occur due to temporary disk errors, or more permanent conditions such as a full disk.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearVcnConfig(@NonNull ParcelUuid subscriptionGroup) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the VCN configuration for a given subscription group.\n     *\n     * <p>An app that has carrier privileges for any of the subscriptions in the given group may\n     * clear a VCN configuration. This API is ONLY permitted for callers running as the primary\n     * user. Any active VCN associated with this configuration will be torn down.\n     *\n     * @param subscriptionGroup the subscription group that the configuration should be applied to\n     * @throws SecurityException if the caller does not have carrier privileges, is not the owner of\n     *     the associated configuration, or is not running as the primary user\n     * @throws IOException if the configuration failed to be cleared from disk. This may occur due\n     *     to temporary disk errors, or more permanent conditions such as a full disk.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<ParcelUuid> getConfiguredSubscriptionGroups()",
+    "returnType" : "List<ParcelUuid>",
+    "comment" : "\n     * Retrieves the list of Subscription Groups for which a VCN Configuration has been set.\n     *\n     * <p>The returned list will include only subscription groups for which an associated {@link\n     * VcnConfig} exists, and the app is either:\n     *\n     * <ul>\n     *   <li>Carrier privileged for that subscription group, or\n     *   <li>Is the provisioning package of the config\n     * </ul>\n     *\n     * @throws SecurityException if the caller is not running as the primary user\n     ",
+    "links" : [ "android.net.vcn.VcnConfig" ]
+  }, {
+    "name" : "public void addVcnUnderlyingNetworkPolicyListener(@NonNull Executor executor, @NonNull VcnUnderlyingNetworkPolicyListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a listener for VCN-underlying network policy updates.\n     *\n     * @param executor the Executor that will be used for invoking all calls to the specified\n     *     Listener\n     * @param listener the VcnUnderlyingNetworkPolicyListener to be added\n     * @throws SecurityException if the caller does not have permission NETWORK_FACTORY\n     * @throws IllegalStateException if the specified VcnUnderlyingNetworkPolicyListener is already\n     *     registered\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeVcnUnderlyingNetworkPolicyListener(@NonNull VcnUnderlyingNetworkPolicyListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove the specified VcnUnderlyingNetworkPolicyListener from VcnManager.\n     *\n     * <p>If the specified listener is not currently registered, this is a no-op.\n     *\n     * @param listener the VcnUnderlyingNetworkPolicyListener that will be removed\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VcnUnderlyingNetworkPolicy getUnderlyingNetworkPolicy(@NonNull NetworkCapabilities networkCapabilities, @NonNull LinkProperties linkProperties)",
+    "returnType" : "VcnUnderlyingNetworkPolicy",
+    "comment" : "\n     * Queries the underlying network policy for a network with the given parameters.\n     *\n     * <p>Prior to a new NetworkAgent being registered, or upon notification that Carrier VCN policy\n     * may have changed via {@link VcnUnderlyingNetworkPolicyListener#onPolicyChanged()}, a Network\n     * Provider MUST poll for the updated Network policy based on that Network's capabilities and\n     * properties.\n     *\n     * @param networkCapabilities the NetworkCapabilities to be used in determining the Network\n     *     policy for this Network.\n     * @param linkProperties the LinkProperties to be used in determining the Network policy for\n     *     this Network.\n     * @throws SecurityException if the caller does not have permission NETWORK_FACTORY\n     * @return the VcnUnderlyingNetworkPolicy to be used for this Network.\n     * @hide\n     ",
+    "links" : [ "#onPolicyChanged()" ]
+  }, {
+    "name" : "public void addVcnNetworkPolicyChangeListener(@NonNull Executor executor, @NonNull VcnNetworkPolicyChangeListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a listener for VCN-underlying Network policy updates.\n     *\n     * <p>A {@link VcnNetworkPolicyChangeListener} is eligible to begin receiving callbacks once it\n     * is registered. No callbacks are guaranteed upon registration.\n     *\n     * @param executor the Executor that will be used for invoking all calls to the specified\n     *     Listener\n     * @param listener the VcnNetworkPolicyChangeListener to be added\n     * @throws SecurityException if the caller does not have permission NETWORK_FACTORY\n     * @throws IllegalStateException if the specified VcnNetworkPolicyChangeListener is already\n     *     registered\n     * @hide\n     ",
+    "links" : [ "VcnNetworkPolicyChangeListener" ]
+  }, {
+    "name" : "public void removeVcnNetworkPolicyChangeListener(@NonNull VcnNetworkPolicyChangeListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove the specified VcnNetworkPolicyChangeListener from VcnManager.\n     *\n     * <p>If the specified listener is not currently registered, this is a no-op.\n     *\n     * @param listener the VcnNetworkPolicyChangeListener that will be removed\n     * @throws SecurityException if the caller does not have permission NETWORK_FACTORY\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VcnNetworkPolicyResult applyVcnNetworkPolicy(@NonNull NetworkCapabilities networkCapabilities, @NonNull LinkProperties linkProperties)",
+    "returnType" : "VcnNetworkPolicyResult",
+    "comment" : "\n     * Applies the network policy for a {@link android.net.Network} with the given parameters.\n     *\n     * <p>Prior to a new NetworkAgent being registered, or upon notification that Carrier VCN policy\n     * may have changed via {@link VcnNetworkPolicyChangeListener#onPolicyChanged()}, a Network\n     * Provider MUST poll for the updated Network policy based on that Network's capabilities and\n     * properties.\n     *\n     * @param networkCapabilities the NetworkCapabilities to be used in determining the Network\n     *     policy result for this Network.\n     * @param linkProperties the LinkProperties to be used in determining the Network policy result\n     *     for this Network.\n     * @throws SecurityException if the caller does not have permission NETWORK_FACTORY\n     * @return the {@link VcnNetworkPolicyResult} to be used for this Network.\n     * @hide\n     ",
+    "links" : [ "android.net.vcn.VcnNetworkPolicyResult", "android.net.Network", "#onPolicyChanged()" ]
+  }, {
+    "name" : "public void registerVcnStatusCallback(@NonNull ParcelUuid subscriptionGroup, @NonNull Executor executor, @NonNull VcnStatusCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers the given callback to receive status updates for the specified subscription.\n     *\n     * <p>Callbacks can be registered for a subscription before {@link VcnConfig}s are set for it.\n     *\n     * <p>A {@link VcnStatusCallback} may only be registered for one subscription at a time. {@link\n     * VcnStatusCallback}s may be reused once unregistered.\n     *\n     * <p>A {@link VcnStatusCallback} will only be invoked if the registering package has carrier\n     * privileges for the specified subscription at the time of invocation.\n     *\n     * <p>A {@link VcnStatusCallback} is eligible to begin receiving callbacks once it is registered\n     * and there is a VCN active for its specified subscription group (this may happen after the\n     * callback is registered).\n     *\n     * <p>{@link VcnStatusCallback#onStatusChanged(int)} will be invoked on registration with the\n     * current status for the specified subscription group's VCN. If the registrant is not\n     * privileged for this subscription group, {@link #VCN_STATUS_CODE_NOT_CONFIGURED} will be\n     * returned.\n     *\n     * @param subscriptionGroup The subscription group to match for callbacks\n     * @param executor The {@link Executor} to be used for invoking callbacks\n     * @param callback The VcnStatusCallback to be registered\n     * @throws IllegalStateException if callback is currently registered with VcnManager\n     ",
+    "links" : [ "java.util.concurrent.Executor", "android.net.vcn.VcnConfig", "VcnStatusCallback", "#onStatusChanged(int)", "#VCN_STATUS_CODE_NOT_CONFIGURED" ]
+  }, {
+    "name" : "public void unregisterVcnStatusCallback(@NonNull VcnStatusCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters the given callback.\n     *\n     * <p>Once unregistered, the callback will stop receiving status updates for the subscription it\n     * was registered with.\n     *\n     * @param callback The callback to be unregistered\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static Map<VcnNetworkPolicyChangeListener, VcnUnderlyingNetworkPolicyListenerBinder> getAllPolicyListeners()", "public void setVcnConfig(@NonNull ParcelUuid subscriptionGroup, @NonNull VcnConfig config) throws IOException", "public void clearVcnConfig(@NonNull ParcelUuid subscriptionGroup) throws IOException", "public List<ParcelUuid> getConfiguredSubscriptionGroups()", "public void addVcnUnderlyingNetworkPolicyListener(@NonNull Executor executor, @NonNull VcnUnderlyingNetworkPolicyListener listener)", "public void removeVcnUnderlyingNetworkPolicyListener(@NonNull VcnUnderlyingNetworkPolicyListener listener)", "public VcnUnderlyingNetworkPolicy getUnderlyingNetworkPolicy(@NonNull NetworkCapabilities networkCapabilities, @NonNull LinkProperties linkProperties)", "public void addVcnNetworkPolicyChangeListener(@NonNull Executor executor, @NonNull VcnNetworkPolicyChangeListener listener)", "public void removeVcnNetworkPolicyChangeListener(@NonNull VcnNetworkPolicyChangeListener listener)", "public VcnNetworkPolicyResult applyVcnNetworkPolicy(@NonNull NetworkCapabilities networkCapabilities, @NonNull LinkProperties linkProperties)", "public void registerVcnStatusCallback(@NonNull ParcelUuid subscriptionGroup, @NonNull Executor executor, @NonNull VcnStatusCallback callback)", "public void unregisterVcnStatusCallback(@NonNull VcnStatusCallback callback)" ],
+  "variableNames" : [ "TAG", "VCN_NETWORK_SELECTION_WIFI_ENTRY_RSSI_THRESHOLD_KEY", "VCN_NETWORK_SELECTION_WIFI_EXIT_RSSI_THRESHOLD_KEY", "VCN_NETWORK_SELECTION_POLL_IPSEC_STATE_INTERVAL_SECONDS_KEY", "VCN_NETWORK_SELECTION_IPSEC_PACKET_LOSS_PERCENT_THRESHOLD_KEY", "VCN_NETWORK_SELECTION_MAX_SEQ_NUM_INCREASE_PER_SECOND_KEY", "VCN_NETWORK_SELECTION_PENALTY_TIMEOUT_MINUTES_LIST_KEY", "VCN_RESTRICTED_TRANSPORTS_INT_ARRAY_KEY", "VCN_SAFE_MODE_TIMEOUT_SECONDS_KEY", "VCN_TUNNEL_AGGREGATION_SA_COUNT_MAX_KEY", "VCN_RELATED_CARRIER_CONFIG_KEYS", "REGISTERED_POLICY_LISTENERS", "mContext", "mService", "VCN_STATUS_CODE_NOT_CONFIGURED", "VCN_STATUS_CODE_INACTIVE", "VCN_STATUS_CODE_ACTIVE", "VCN_STATUS_CODE_SAFE_MODE", "VCN_ERROR_CODE_INTERNAL_ERROR", "VCN_ERROR_CODE_CONFIG_ERROR", "VCN_ERROR_CODE_NETWORK_ERROR" ]
+}

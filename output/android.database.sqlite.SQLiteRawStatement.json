@@ -1,0 +1,346 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/database/sqlite/SQLiteRawStatement.java",
+  "packageName" : "android.database.sqlite",
+  "className" : "SQLiteRawStatement",
+  "comment" : "\n * A {@link SQLiteRawStatement} represents a SQLite prepared statement. The methods correspond very\n * closely to SQLite APIs that operate on a sqlite_stmt object.  In general, each API in this class\n * corresponds to a single SQLite API.\n\n * <p>\n * A {@link SQLiteRawStatement} must be created through a database, and there must be a\n * transaction open at the time. Statements are implicitly closed when the outermost transaction\n * ends, or if the current transaction is marked successful. Statements may be explicitly\n * closed at any time with {@link #close}.  The {@link #close} operation is idempotent and may be\n * called multiple times without harm.\n * <p>\n * Multiple {@link SQLiteRawStatement}s may be open simultaneously.  They are independent of each\n * other.  Closing one statement does not affect any other statement nor does it have any effect\n * on the enclosing transaction.\n * <p>\n * Once a {@link SQLiteRawStatement} has been closed, no further database operations are\n * permitted on that statement. An {@link IllegalStateException} will be thrown if a database\n * operation is attempted on a closed statement.\n * <p>\n * All operations on a {@link SQLiteRawStatement} must be invoked from the thread that created\n * it. A {@link IllegalStateException} will be thrown if cross-thread use is detected.\n * <p>\n * A common pattern for statements is try-with-resources.\n * <code><pre>\n * // Begin a transaction.\n * database.beginTransaction();\n * try (SQLiteRawStatement statement = database.createRawStatement(\"SELECT * FROM ...\")) {\n *     while (statement.step()) {\n *         // Fetch columns from the result rows.\n *     }\n *     database.setTransactionSuccessful();\n * } finally {\n *     database.endTransaction();\n * }\n * </pre></code>\n * Note that {@link SQLiteRawStatement} is unrelated to {@link SQLiteStatement}.\n *\n * @see <a href=\"http://sqlite.org/c3ref/stmt.html\">sqlite3_stmt</a>\n ",
+  "links" : [ "android.database.sqlite.SQLiteRawStatement", "IllegalStateException", "#close", "android.database.sqlite.SQLiteStatement" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDatabase",
+    "type" : "SQLiteDatabase",
+    "comment" : "\n     * The database for this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSession",
+    "type" : "SQLiteSession",
+    "comment" : "\n     * The session for this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPreparedStatement",
+    "type" : "SQLiteConnection.PreparedStatement",
+    "comment" : "\n     * The PreparedStatement associated with this object. This is returned to\n     * {@link SQLiteSession} when the object is closed.  This also retains immutable attributes of\n     * the statement, like the parameter count.\n     ",
+    "links" : [ "android.database.sqlite.SQLiteSession" ]
+  }, {
+    "name" : "mStatement",
+    "type" : "long",
+    "comment" : "\n     * The native statement associated with this object.  This is pulled from the\n     * PreparedStatement for faster access.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSql",
+    "type" : "String",
+    "comment" : "\n     * The SQL string, for logging.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mThread",
+    "type" : "Thread",
+    "comment" : "\n     * The thread that created this object.  The object is tied to a connection, which is tied to\n     * its session, which is tied to the thread.  (The lifetime of this object is bounded by the\n     * lifetime of the enclosing transaction, so there are more rules than just the relationships\n     * in the second sentence.)  This variable is set to null when the statement is closed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SQLITE_DATA_TYPE_INTEGER",
+    "type" : "int",
+    "comment" : "\n     * The constant returned by {@link #getColumnType} when the column value is SQLITE_INTEGER.\n     ",
+    "links" : [ "#getColumnType" ]
+  }, {
+    "name" : "SQLITE_DATA_TYPE_FLOAT",
+    "type" : "int",
+    "comment" : "\n     * The constant returned by {@link #getColumnType} when the column value is SQLITE_FLOAT.\n     ",
+    "links" : [ "#getColumnType" ]
+  }, {
+    "name" : "SQLITE_DATA_TYPE_TEXT",
+    "type" : "int",
+    "comment" : "\n     * The constant returned by {@link #getColumnType} when the column value is SQLITE_TEXT.\n     ",
+    "links" : [ "#getColumnType" ]
+  }, {
+    "name" : "SQLITE_DATA_TYPE_BLOB",
+    "type" : "int",
+    "comment" : "\n     * The constant returned by {@link #getColumnType} when the column value is SQLITE_BLOB.\n     ",
+    "links" : [ "#getColumnType" ]
+  }, {
+    "name" : "SQLITE_DATA_TYPE_NULL",
+    "type" : "int",
+    "comment" : "\n     * The constant returned by {@link #getColumnType} when the column value is SQLITE_NULL.\n     ",
+    "links" : [ "#getColumnType" ]
+  }, {
+    "name" : "SQLITE_BUSY",
+    "type" : "int",
+    "comment" : "\n     * SQLite error codes that are used by this class.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SQLITE_LOCKED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SQLITE_ROW",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SQLITE_DONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void throwIfInvalid()",
+    "returnType" : "void",
+    "comment" : "\n     * Throw if the current session is not the session under which the object was created. Throw\n     * if the object has been closed.  The actual check is that the current thread is not equal to\n     * the creation thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void throwIfInvalidBounds(int arrayLength, int offset, int length)",
+    "returnType" : "void",
+    "comment" : "\n     * Throw {@link IllegalArgumentException} if the length + offset are invalid with respect to\n     * the array length.\n     ",
+    "links" : [ "IllegalArgumentException" ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Close the object and release any native resources. It is not an error to call this on an\n     * already-closed object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isOpen()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the statement is still open and false otherwise.\n     *\n     * @return True if the statement is open.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean step()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Step to the next result row. This returns true if the statement stepped to a new row, and\n     * false if the statement is done.  The method throws on any other result, including a busy or\n     * locked database.  If WAL is enabled then the database should never be locked or busy.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/step.html\">sqlite3_step</a>\n     *\n     * @return True if a row is available and false otherwise.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteDatabaseLockedException if the database is locked or busy.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int stepNoThrow()",
+    "returnType" : "int",
+    "comment" : "\n     * Step to the next result. This returns the raw result code code from the native method.  The\n     * expected values are SQLITE_ROW and SQLITE_DONE.  For other return values, clients must\n     * decode the error and handle it themselves.  http://sqlite.org/rescode.html for the current\n     * list of result codes.\n     *\n     * @return The native result code from the sqlite3_step() operation.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : "\n     * Reset the statement.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/reset.html\">sqlite3_reset</a>\n     *\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearBindings()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear all parameter bindings.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/clear_bindings.html\">sqlite3_clear_bindings</a>\n     *\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getParameterCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of parameters in the statement.\n     *\n     * @see\n     * <a href=\"http://sqlite.org/c3ref/bind_parameter_count.html\">sqlite3_bind_parameter_count</a>\n     *\n     * @return The number of parameters in the statement.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getParameterIndex(@NonNull String name)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the index of the parameter with specified name.  If the name does not match any\n     * parameter, 0 is returned.\n     *\n     * @see\n     * <a href=\"http://sqlite.org/c3ref/bind_parameter_index.html\">sqlite3_bind_parameter_index</a>\n     *\n     * @param name The name of a parameter.\n     * @return The index of the parameter or 0 if the name does not identify a parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getParameterName(int parameterIndex)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the name of the parameter at the specified index.  Null is returned if there is no\n     * such parameter or if the parameter does not have a name.\n     *\n     * @see\n     * <a href=\"http://sqlite.org/c3ref/bind_parameter_name.html\">sqlite3_bind_parameter_name</a>\n     *\n     * @param parameterIndex The index of the parameter.\n     * @return The name of the parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindBlob(int parameterIndex, @NonNull byte[] value)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a blob to a parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_blob</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @param value The value to be bound to the parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindBlob(int parameterIndex, @NonNull byte[] value, int offset, int length)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a blob to a parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.  The sub-array value[offset] to value[offset+length-1] is\n     * bound.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_blob</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @param value The value to be bound to the parameter.\n     * @param offset An offset into the value array\n     * @param length The number of bytes to bind from the value array.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws IllegalArgumentException if the sub-array exceeds the bounds of the value array.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindDouble(int parameterIndex, double value)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a double to a parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_double</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @param value The value to be bound to the parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindInt(int parameterIndex, int value)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind an int to a parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_int</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindLong(int parameterIndex, long value)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a long to the parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_int64</a>\n     *\n     * @param value The value to be bound to the parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindNull(int parameterIndex)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a null to the parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_null</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void bindText(int parameterIndex, @NonNull String value)",
+    "returnType" : "void",
+    "comment" : "\n     * Bind a string to the parameter. Parameter indices start at 1. The function throws if the\n     * parameter index is out of bounds. The string may not be null.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/bind_blob.html\">sqlite3_bind_text16</a>\n     *\n     * @param parameterIndex The index of the parameter in the query. It is one-based.\n     * @param value The value to be bound to the parameter.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the parameter is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getResultColumnCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of columns in the current result row.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_count.html\">sqlite3_column_count</a>\n     *\n     * @return The number of columns in the result row.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getColumnType(int columnIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the type of the column in the result row. Column indices start at 0.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_type</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The type of the value in the column of the result row.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getColumnName(int columnIndex)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the name of the column in the result row. Column indices start at 0. This throws\n     * an exception if column is not in the result.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_name.html\">sqlite3_column_name</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The name of the column in the result row.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteOutOfMemoryException if the database cannot allocate memory for the name.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getColumnLength(int columnIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the length of the column value in the result row. Column indices start at 0. This\n     * returns 0 for a null and number of bytes for text or blob. Numeric values are converted to a\n     * string and the length of the string is returned.  See the sqlite documentation for\n     * details. Note that this cannot be used to distinguish a null value from an empty text or\n     * blob.  Note that this returns the number of bytes in the text value, not the number of\n     * characters.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_bytes</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The length, in bytes, of the value in the column.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public byte[] getColumnBlob(int columnIndex)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * Return the column value of the result row as a blob. Column indices start at 0. This\n     * throws an exception if column is not in the result.  This returns null if the column value\n     * is null.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_BLOB}; see\n     * the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_blob</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The value of the column as a blob, or null if the column is NULL.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_BLOB" ]
+  }, {
+    "name" : "public int readColumnBlob(int columnIndex, @NonNull byte[] buffer, int offset, int length, int srcOffset)",
+    "returnType" : "int",
+    "comment" : "\n     * Copy the column value of the result row, interpreted as a blob, into the buffer. Column\n     * indices start at 0. This throws an exception if column is not in the result row. Bytes are\n     * copied into the buffer starting at the offset. Bytes are copied from the blob starting at\n     * srcOffset.  Length bytes are copied unless the column value has fewer bytes available. The\n     * function returns the number of bytes copied.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_BLOB}; see\n     * the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_blob</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @param buffer A pre-allocated array to be filled with the value of the column.\n     * @param offset An offset into the buffer: copying starts here.\n     * @param length The number of bytes to copy.\n     * @param srcOffset The offset into the blob from which to start copying.\n     * @return the number of bytes that were copied.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws IllegalArgumentException if the buffer is too small for offset+length.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_BLOB" ]
+  }, {
+    "name" : "public double getColumnDouble(int columnIndex)",
+    "returnType" : "double",
+    "comment" : "\n     * Return the column value as a double. Column indices start at 0. This throws an exception\n     * if column is not in the result.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_FLOAT}; see\n     * the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_double</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The value of a column as a double.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_FLOAT" ]
+  }, {
+    "name" : "public int getColumnInt(int columnIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Return the column value as a int. Column indices start at 0. This throws an exception if\n     * column is not in the result.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_INTEGER};\n     * see the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_int</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The value of the column as an int.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_INTEGER" ]
+  }, {
+    "name" : "public long getColumnLong(int columnIndex)",
+    "returnType" : "long",
+    "comment" : "\n     * Return the column value as a long. Column indices start at 0. This throws an exception if\n     * column is not in the result.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_INTEGER};\n     * see the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_long</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The value of the column as an long.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_INTEGER" ]
+  }, {
+    "name" : "public String getColumnText(int columnIndex)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the column value as a text. Column indices start at 0. This throws an exception if\n     * column is not in the result.\n     *\n     * The column value will be converted if it is not of type {@link #SQLITE_DATA_TYPE_TEXT}; see\n     * the sqlite documentation for details.\n     *\n     * @see <a href=\"http://sqlite.org/c3ref/column_blob.html\">sqlite3_column_text16</a>\n     *\n     * @param columnIndex The index of a column in the result row. It is zero-based.\n     * @return The value of the column as a string.\n     * @throws IllegalStateException if the statement is closed or this is a foreign thread.\n     * @throws SQLiteBindOrColumnIndexOutOfRangeException if the column is out of range.\n     * @throws SQLiteException if a native error occurs.\n     ",
+    "links" : [ "#SQLITE_DATA_TYPE_TEXT" ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeBindParameterCount(long stmt)",
+    "returnType" : "int",
+    "comment" : "\n     * Metadata about the prepared statement.  The results are a property of the statement itself\n     * and not of any data in the database.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeBindParameterIndex(long stmt, String name)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeBindParameterName(long stmt, int param)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeColumnCount(long stmt)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeStep(long stmt, boolean throwOnError)",
+    "returnType" : "int",
+    "comment" : "\n     * Operations on the statement\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeReset(long stmt, boolean clear)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeClearBindings(long stmt)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindBlob(long stmt, int param, byte[] val, int off, int len)",
+    "returnType" : "void",
+    "comment" : "\n     * Methods that bind values to parameters.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindDouble(long stmt, int param, double val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindInt(long stmt, int param, int val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindLong(long stmt, int param, long val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindNull(long stmt, int param)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void nativeBindText(long stmt, int param, String val)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeColumnType(long stmt, int col)",
+    "returnType" : "int",
+    "comment" : "\n     * Methods that return information about the columns int the current result row.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeColumnName(long stmt, int col)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeColumnBytes(long stmt, int col)",
+    "returnType" : "int",
+    "comment" : "\n     * Methods that return information about the value columns in the current result row.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native byte[] nativeColumnBlob(long stmt, int col)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeColumnBuffer(long stmt, int col, byte[] val, int off, int len, int srcOffset)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native double nativeColumnDouble(long stmt, int col)",
+    "returnType" : "double",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native int nativeColumnInt(long stmt, int col)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native long nativeColumnLong(long stmt, int col)",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static native String nativeColumnText(long stmt, int col)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void throwIfInvalid()", "private void throwIfInvalidBounds(int arrayLength, int offset, int length)", "public void close()", "public boolean isOpen()", "public boolean step()", "public int stepNoThrow()", "public void reset()", "public void clearBindings()", "public int getParameterCount()", "public int getParameterIndex(@NonNull String name)", "public String getParameterName(int parameterIndex)", "public void bindBlob(int parameterIndex, @NonNull byte[] value)", "public void bindBlob(int parameterIndex, @NonNull byte[] value, int offset, int length)", "public void bindDouble(int parameterIndex, double value)", "public void bindInt(int parameterIndex, int value)", "public void bindLong(int parameterIndex, long value)", "public void bindNull(int parameterIndex)", "public void bindText(int parameterIndex, @NonNull String value)", "public int getResultColumnCount()", "public int getColumnType(int columnIndex)", "public String getColumnName(int columnIndex)", "public int getColumnLength(int columnIndex)", "public byte[] getColumnBlob(int columnIndex)", "public int readColumnBlob(int columnIndex, @NonNull byte[] buffer, int offset, int length, int srcOffset)", "public double getColumnDouble(int columnIndex)", "public int getColumnInt(int columnIndex)", "public long getColumnLong(int columnIndex)", "public String getColumnText(int columnIndex)", "public String toString()", "private static native int nativeBindParameterCount(long stmt)", "private static native int nativeBindParameterIndex(long stmt, String name)", "private static native String nativeBindParameterName(long stmt, int param)", "private static native int nativeColumnCount(long stmt)", "private static native int nativeStep(long stmt, boolean throwOnError)", "private static native void nativeReset(long stmt, boolean clear)", "private static native void nativeClearBindings(long stmt)", "private static native void nativeBindBlob(long stmt, int param, byte[] val, int off, int len)", "private static native void nativeBindDouble(long stmt, int param, double val)", "private static native void nativeBindInt(long stmt, int param, int val)", "private static native void nativeBindLong(long stmt, int param, long val)", "private static native void nativeBindNull(long stmt, int param)", "private static native void nativeBindText(long stmt, int param, String val)", "private static native int nativeColumnType(long stmt, int col)", "private static native String nativeColumnName(long stmt, int col)", "private static native int nativeColumnBytes(long stmt, int col)", "private static native byte[] nativeColumnBlob(long stmt, int col)", "private static native int nativeColumnBuffer(long stmt, int col, byte[] val, int off, int len, int srcOffset)", "private static native double nativeColumnDouble(long stmt, int col)", "private static native int nativeColumnInt(long stmt, int col)", "private static native long nativeColumnLong(long stmt, int col)", "private static native String nativeColumnText(long stmt, int col)" ],
+  "variableNames" : [ "TAG", "mDatabase", "mSession", "mPreparedStatement", "mStatement", "mSql", "mThread", "SQLITE_DATA_TYPE_INTEGER", "SQLITE_DATA_TYPE_FLOAT", "SQLITE_DATA_TYPE_TEXT", "SQLITE_DATA_TYPE_BLOB", "SQLITE_DATA_TYPE_NULL", "SQLITE_BUSY", "SQLITE_LOCKED", "SQLITE_ROW", "SQLITE_DONE" ]
+}

@@ -86,57 +86,34 @@ public class JavaSourceAnalyzer {
                                     NUM_OF_INTERFACES++;
                                 } else {
                                     NUM_OF_CLASSES++;
-                                    int[] num_of_fields = {0};
-                                    int[] num_of_methods = {0};
-                                      // Extract class name and package
-                                        String className = cls.getNameAsString();
-                                        String packageName = cu.getPackageDeclaration()
-                                                .map(pd -> pd.getNameAsString())
-                                                .orElse("default");
-                                    ClassInfo classInfo = new ClassInfo(cls.getNameAsString(), 
+                                }
+                                int[] num_of_fields = {0};
+                                int[] num_of_methods = {0};
+                                // Extract class name and package
+                                String className = cls.getNameAsString();
+                                String packageName = cu.getPackageDeclaration()
+                                        .map(pd -> pd.getNameAsString())
+                                        .orElse("default");
+                                ClassInfo classInfo = new ClassInfo(cls.getNameAsString(), 
                                         packageName, 
                                         file.toString(), 
                                         cls.getComment().map(Comment::getContent).orElse(""));
-                                    
-                                    List<String> imports = getImportList(cu);
+                                List<String> imports = getImportList(cu);
+                                List<String> classComments = extractLinkReferences(classInfo.getComment(),imports,packageName);
+                                if(classComments.size() > 0)
+                                    classInfo.setLinks(classComments);
                                     NUM_OF_LINKS_CLASS += extractLinkReferences(classInfo.getComment(),imports,packageName).size();
-                                    // Extract fields in the class
-                                    cls.getFields().forEach(field -> {
-                                        printFieldDetails(field);
-                                        field.getVariables().forEach(variable -> {
-                                            num_of_fields[0]++;
-                                            String variableName = variable.getNameAsString();
-                                            Type variableType = variable.getType();
-                                            Optional<Comment> comment = field.getComment();
-                                            String commentText = comment.isPresent() ? comment.get().getContent() : "";
-                                            List<String> variableLinks = extractLinkReferences(commentText,imports,packageName);
-                                            NUMBER_OF_LINKS_VARS += variableLinks.size();
-                                            classInfo.addVariable(variableName, variableType.toString(), commentText, variableLinks);
-                                        });
-                                    });
-
-                                    // Extract Methods int the class
-                                    cls.getMethods().forEach(method -> {
-                                        num_of_methods[0]++;
-                                        String methodSignature = method.getDeclarationAsString();
-                                        Type methodReturnType = method.getType();
-                                        Optional<Comment> comment = method.getComment();
-                                        String commentText = comment.isPresent() ? comment.get().getContent() : "";             
-                                        
-                                        List<String> methodLinks = extractLinkReferences(commentText,imports,packageName);
-                                        NUM_OF_LINKS_METHOD += methodLinks.size();
-                                        classInfo.addMethod(methodSignature, methodReturnType.toString(), commentText, methodLinks);
-                                    });
-                                    System.out.println("-------------------------------------------");
-                                    System.out.println("Class Name: " + className);
-                                    System.out.println("Package Name: " + packageName);
-                                    System.out.println("Number of Methods: " + num_of_methods[0]);
-                                    System.out.println("Number of Fields: " + num_of_fields[0]);
-                                    classInfoList.add(classInfo);
-                                    // Save class information to JSON
-                                    String outputFilePath = "./output/" + packageName+"."+className + ".json";
-                                    saveClassInfoToJson(classInfo, outputFilePath);
-                                }
+                                add_class_info(classInfo,cls,num_of_fields,num_of_methods,packageName,imports);
+                                System.out.println("-------------------------------------------");
+                                System.out.println("Class Name: " + className);
+                                System.out.println("Package Name: " + packageName);
+                                System.out.println("Number of Methods: " + num_of_methods[0]);
+                                System.out.println("Number of Fields: " + num_of_fields[0]);
+                                classInfoList.add(classInfo);
+                                // Save class information to JSON
+                                String outputFilePath = "./output/" + packageName+"."+className + ".json";                                    saveClassInfoToJson(classInfo, outputFilePath);
+                                saveClassInfoToJson(classInfo, outputFilePath);
+                                classInfoList.addAll(processInnerClasses(file,className,cls,num_of_fields,num_of_methods,packageName,imports));
 
                             }
                         } else {
@@ -156,6 +133,62 @@ public class JavaSourceAnalyzer {
         System.out.println("Total Variables with @link: " + NUMBER_OF_LINKS_VARS);
         System.out.println("Total Classes with @link: " + NUM_OF_LINKS_CLASS);
         System.out.println("Analysis completed in: " + period + " ms");
+    }
+
+    public static List<ClassInfo> processInnerClasses(Path file, String className, ClassOrInterfaceDeclaration cls,int[] num_of_fields, int[] num_of_methods, String packageName, List<String> imports) {
+        // Find all inner classes within the current class
+        List<ClassOrInterfaceDeclaration> innerClasses = cls.findAll(ClassOrInterfaceDeclaration.class, innerCls -> !innerCls.equals(cls));
+        List<ClassInfo> innerClassesList = new ArrayList<>();
+        if (!innerClasses.isEmpty()) {
+            for (ClassOrInterfaceDeclaration innerClass : innerClasses) {
+                System.out.println("Found inner classes in: " + innerClass.getNameAsString());
+                ClassInfo classInfo = new ClassInfo(innerClass.getNameAsString(),
+                    packageName, 
+                file.toString(), 
+                innerClass.getComment().map(Comment::getContent).orElse(""));
+                List<String> classComments = extractLinkReferences(classInfo.getComment(),imports,packageName);
+                if(classComments.size() > 0)
+                    classInfo.setLinks(classComments);
+                    NUM_OF_LINKS_CLASS += extractLinkReferences(classInfo.getComment(),imports,packageName).size();
+                add_class_info(classInfo,innerClass,num_of_fields,num_of_methods,packageName,imports);
+                innerClassesList.add(classInfo);
+                String outputFilePath = "./output/" + packageName+"."+className +"$"+innerClass.getNameAsString() + ".json";                                    saveClassInfoToJson(classInfo, outputFilePath);
+                saveClassInfoToJson(classInfo, outputFilePath);
+            }
+        } else {
+            System.out.println("No inner classes found in: " + cls.getNameAsString());
+        }
+        return innerClassesList;
+    }
+
+    public static void add_class_info(ClassInfo classInfo, ClassOrInterfaceDeclaration cls, int[] num_of_fields, int[] num_of_methods, String packageName, List<String> imports){
+        // Extract fields in the class
+        cls.getFields().forEach(field -> {
+            printFieldDetails(field);
+            field.getVariables().forEach(variable -> {
+                num_of_fields[0]++;
+                String variableName = variable.getNameAsString();
+                Type variableType = variable.getType();
+                Optional<Comment> comment = field.getComment();
+                String commentText = comment.isPresent() ? comment.get().getContent() : "";
+                List<String> variableLinks = extractLinkReferences(commentText,imports,packageName);
+                NUMBER_OF_LINKS_VARS += variableLinks.size();
+                classInfo.addVariable(variableName, variableType.toString(), commentText, variableLinks);
+            });
+        });
+        
+        // Extract Methods int the class
+        cls.getMethods().forEach(method -> {
+            num_of_methods[0]++;
+            String methodSignature = method.getDeclarationAsString();
+            Type methodReturnType = method.getType();
+            Optional<Comment> comment = method.getComment();
+            String commentText = comment.isPresent() ? comment.get().getContent() : "";             
+                
+            List<String> methodLinks = extractLinkReferences(commentText,imports,packageName);
+            NUM_OF_LINKS_METHOD += methodLinks.size();
+            classInfo.addMethod(methodSignature, methodReturnType.toString(), commentText, methodLinks);
+        });
     }
 
     private static void saveClassInfoToJson(ClassInfo classInfo, String outputFilePath) {

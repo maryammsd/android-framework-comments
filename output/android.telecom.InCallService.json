@@ -1,0 +1,241 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/telecom/InCallService.java",
+  "packageName" : "android.telecom",
+  "className" : "InCallService",
+  "comment" : "\n * This service is implemented by an app that wishes to provide functionality for managing\n * phone calls.\n * <h2>Becoming the Default Phone App</h2>\n * The default dialer/phone app is one which provides the in-call user interface while the device is\n * in a call.  It also provides the user with a means to initiate calls and see a history of calls\n * on their device.  A device is bundled with a system provided default dialer/phone app.  The user\n * may choose a single app to take over this role from the system app.  An app which wishes to\n * fulfill this role uses the {@link android.app.role.RoleManager} to request that they fill the\n * {@link android.app.role.RoleManager#ROLE_DIALER} role.\n * <p>\n * The default phone app provides a user interface while the device is in a call, and the device is\n * not in car mode (i.e. {@link UiModeManager#getCurrentModeType()} is not\n * {@link android.content.res.Configuration#UI_MODE_TYPE_CAR}).\n * <p>\n * In order to fill the {@link android.app.role.RoleManager#ROLE_DIALER} role, an app must meet a\n * number of requirements:\n * <ul>\n *     <li>It must handle the {@link Intent#ACTION_DIAL} intent.  This means the app must provide\n *     a dial pad UI for the user to initiate outgoing calls.</li>\n *     <li>It must fully implement the {@link InCallService} API and provide both an incoming call\n *     UI, as well as an ongoing call UI.</li>\n * </ul>\n * <p>\n * Note: If the app filling the {@link android.app.role.RoleManager#ROLE_DIALER} returns a\n * {@code null} {@link InCallService} during binding, the Telecom framework will automatically fall\n * back to using the dialer app preloaded on the device.  The system will display a notification to\n * the user to let them know that their call was continued using the preloaded dialer app.  Your\n * app should never return a {@code null} binding; doing so means it does not fulfil the\n * requirements of {@link android.app.role.RoleManager#ROLE_DIALER}.\n * <p>\n * Note: If your app fills {@link android.app.role.RoleManager#ROLE_DIALER} and makes changes at\n * runtime which cause it to no longer fulfil the requirements of this role,\n * {@link android.app.role.RoleManager} will automatically remove your app from the role and close\n * your app.  For example, if you use\n * {@link android.content.pm.PackageManager#setComponentEnabledSetting(ComponentName, int, int)} to\n * programmatically disable the {@link InCallService} your app declares in its manifest, your app\n * will no longer fulfil the requirements expected of\n * {@link android.app.role.RoleManager#ROLE_DIALER}.\n * <p>\n * The preloaded dialer will ALWAYS be used when the user places an emergency call, even if your\n * app fills the {@link android.app.role.RoleManager#ROLE_DIALER} role.  To ensure an optimal\n * experience when placing an emergency call, the default dialer should ALWAYS use\n * {@link android.telecom.TelecomManager#placeCall(Uri, Bundle)} to place calls (including\n * emergency calls).  This ensures that the platform is able to verify that the request came from\n * the default dialer.  If a non-preloaded dialer app uses {@link Intent#ACTION_CALL} to place an\n * emergency call, it will be raised to the preloaded dialer app using {@link Intent#ACTION_DIAL}\n * for confirmation; this is a suboptimal user experience.\n * <p>\n * Below is an example manifest registration for an {@code InCallService}. The meta-data\n * {@link TelecomManager#METADATA_IN_CALL_SERVICE_UI} indicates that this particular\n * {@code InCallService} implementation intends to replace the built-in in-call UI.\n * The meta-data {@link TelecomManager#METADATA_IN_CALL_SERVICE_RINGING} indicates that this\n * {@link InCallService} will play the ringtone for incoming calls.  See\n * <a href=\"#incomingCallNotification\">below</a> for more information on showing the incoming call\n * UI and playing the ringtone in your app.\n * <pre>\n * {@code\n * <service android:name=\"your.package.YourInCallServiceImplementation\"\n *          android:permission=\"android.permission.BIND_INCALL_SERVICE\"\n *          android:exported=\"true\">\n *      <meta-data android:name=\"android.telecom.IN_CALL_SERVICE_UI\" android:value=\"true\" />\n *      <meta-data android:name=\"android.telecom.IN_CALL_SERVICE_RINGING\"\n *          android:value=\"true\" />\n *      <intent-filter>\n *          <action android:name=\"android.telecom.InCallService\"/>\n *      </intent-filter>\n * </service>\n * }\n * </pre>\n *\n * <em>Note: You should NOT mark your {@link InCallService} with the attribute\n * {@code android:exported=\"false\"}; doing so can result in a failure to bind to your implementation\n * during calls.</em>\n * <p>\n * In addition to implementing the {@link InCallService} API, you must also declare an activity in\n * your manifest which handles the {@link Intent#ACTION_DIAL} intent.  The example below illustrates\n * how this is done:\n * <pre>\n * {@code\n * <activity android:name=\"your.package.YourDialerActivity\"\n *           android:label=\"@string/yourDialerActivityLabel\">\n *      <intent-filter>\n *           <action android:name=\"android.intent.action.DIAL\" />\n *           <category android:name=\"android.intent.category.DEFAULT\" />\n *      </intent-filter>\n *      <intent-filter>\n *           <action android:name=\"android.intent.action.DIAL\" />\n *           <category android:name=\"android.intent.category.DEFAULT\" />\n *           <data android:scheme=\"tel\" />\n *      </intent-filter>\n * </activity>\n * }\n * </pre>\n * <p>\n * When a user installs your application and runs it for the first time, you should use the\n * {@link android.app.role.RoleManager} to prompt the user to see if they would like your app to\n * be the new default phone app.\n * <p id=\"requestRole\">\n * The code below shows how your app can request to become the default phone/dialer app:\n * <pre>\n * {@code\n * private static final int REQUEST_ID = 1;\n *\n * public void requestRole() {\n *     RoleManager roleManager = (RoleManager) getSystemService(ROLE_SERVICE);\n *     Intent intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_DIALER);\n *     startActivityForResult(intent, REQUEST_ID);\n * }\n *\n * &#64;Override\n * public void onActivityResult(int requestCode, int resultCode, Intent data) {\n *     if (requestCode == REQUEST_ID) {\n *         if (resultCode == android.app.Activity.RESULT_OK) {\n *             // Your app is now the default dialer app\n *         } else {\n *             // Your app is not the default dialer app\n *         }\n *     }\n * }\n * }\n *\n * </pre>\n * <p id=\"companionInCallService\">\n * <h3>Access to InCallService for Wearable Devices</h3>\n * <ol>\n * If your app is a third-party companion app and wants to access InCallService APIs, what your\n * app could do are:\n * <p>\n *   <ol>\n *     <li> Declare MANAGE_ONGOING_CALLS permission in your manifest\n *     <li> Associate with a physical wearable device via the\n *          {@link android.companion.CompanionDeviceManager} API as a companion app. See:\n *          https://developer.android.com/guide/topics/connectivity/companion-device-pairing\n *     <li> Implement this InCallService with BIND_INCALL_SERVICE permission\n *   </ol>\n * </ol>\n * <p>\n *\n * </pre>\n * <p id=\"incomingCallNotification\">\n * <h3>Showing the Incoming Call Notification</h3>\n * When your app receives a new incoming call via {@link InCallService#onCallAdded(Call)}, it is\n * responsible for displaying an incoming call UI for the incoming call.  It should do this using\n * {@link android.app.NotificationManager} APIs to post a new incoming call notification.\n * <p>\n * Where your app declares the meta-data {@link TelecomManager#METADATA_IN_CALL_SERVICE_RINGING}, it\n * is responsible for playing the ringtone for incoming calls.  Your app should create a\n * {@link android.app.NotificationChannel} which specifies the desired ringtone.  For example:\n * <pre><code>\n * NotificationChannel channel = new NotificationChannel(YOUR_CHANNEL_ID, \"Incoming Calls\",\n *          NotificationManager.IMPORTANCE_MAX);\n * // other channel setup stuff goes here.\n *\n * // We'll use the default system ringtone for our incoming call notification channel.  You can\n * // use your own audio resource here.\n * Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);\n * channel.setSound(ringtoneUri, new AudioAttributes.Builder()\n *          // Setting the AudioAttributes is important as it identifies the purpose of your\n *          // notification sound.\n *          .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)\n *          .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)\n *      .build());\n *\n * NotificationManager mgr = getSystemService(NotificationManager.class);\n * mgr.createNotificationChannel(channel);\n * </code></pre>\n * <p>\n * When your app receives a new incoming call, it creates a {@link android.app.Notification} for the\n * incoming call and associates it with your incoming call notification channel. You can specify a\n * {@link android.app.PendingIntent} on the notification which will launch your full screen\n * incoming call UI.  The notification manager framework will display your notification as a\n * heads-up notification if the user is actively using the phone.  When the user is not using the\n * phone, your full-screen incoming call UI is used instead.\n * For example:\n * <pre><code>{@code\n * // Create an intent which triggers your fullscreen incoming call user interface.\n * Intent intent = new Intent(Intent.ACTION_MAIN, null);\n * intent.setFlags(Intent.FLAG_ACTIVITY_NO_USER_ACTION | Intent.FLAG_ACTIVITY_NEW_TASK);\n * intent.setClass(context, YourIncomingCallActivity.class);\n * PendingIntent pendingIntent = PendingIntent.getActivity(context, 1, intent, PendingIntent.FLAG_MUTABLE_UNAUDITED);\n *\n * // Build the notification as an ongoing high priority item; this ensures it will show as\n * // a heads up notification which slides down over top of the current content.\n * final Notification.Builder builder = new Notification.Builder(context);\n * builder.setOngoing(true);\n * builder.setPriority(Notification.PRIORITY_HIGH);\n *\n * // Set notification content intent to take user to the fullscreen UI if user taps on the\n * // notification body.\n * builder.setContentIntent(pendingIntent);\n * // Set full screen intent to trigger display of the fullscreen UI when the notification\n * // manager deems it appropriate.\n * builder.setFullScreenIntent(pendingIntent, true);\n *\n * // Setup notification content.\n * builder.setSmallIcon( yourIconResourceId );\n * builder.setContentTitle(\"Your notification title\");\n * builder.setContentText(\"Your notification content.\");\n *\n * // Use builder.addAction(..) to add buttons to answer or reject the call.\n *\n * NotificationManager notificationManager = mContext.getSystemService(\n *     NotificationManager.class);\n * notificationManager.notify(YOUR_CHANNEL_ID, YOUR_TAG, YOUR_ID, builder.build());\n * }</pre>\n * <p>\n ",
+  "links" : [ "android.companion.CompanionDeviceManager", "com.android.internal.telecom.IInCallService#onCallAdded(Call)", "android.app.NotificationManager", "android.content.Intent#ACTION_CALL", "android.telecom.TelecomManager#METADATA_IN_CALL_SERVICE_RINGING", "android.app.role.RoleManager#ROLE_DIALER", "android.app.PendingIntent", "android.app.UiModeManager#getCurrentModeType()", "android.content.res.Configuration#UI_MODE_TYPE_CAR", "android.content.pm.PackageManager#setComponentEnabledSetting(ComponentName", "android.app.role.RoleManager", "android.content.Intent#ACTION_DIAL", "android.app.NotificationChannel", "android.app.Notification", "com.android.internal.telecom.IInCallService", "android.telecom.TelecomManager#placeCall(Uri", "android.telecom.TelecomManager#METADATA_IN_CALL_SERVICE_UI" ],
+  "variables" : [ {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} that must be declared as handled by the service.\n     ",
+    "links" : [ "android.content.Intent" ]
+  }, {
+    "name" : "MSG_SET_IN_CALL_ADAPTER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ADD_CALL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_UPDATE_CALL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SET_POST_DIAL_WAIT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CALL_AUDIO_STATE_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_BRING_TO_FOREGROUND",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CAN_ADD_CALL_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SILENCE_RINGER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CONNECTION_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_RTT_UPGRADE_REQUEST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_RTT_INITIATION_FAILURE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_HANDOVER_FAILED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_HANDOVER_COMPLETE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CALL_ENDPOINT_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_AVAILABLE_CALL_ENDPOINTS_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_MUTE_STATE_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallEndpoint",
+    "type" : "CallEndpoint",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : " Default Handler used to consolidate binder method calls onto a single thread. ",
+    "links" : [ ]
+  }, {
+    "name" : "mPhoneListener",
+    "type" : "Phone.Listener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPhone",
+    "type" : "Phone",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean onUnbind(Intent intent)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Phone getPhone()",
+    "returnType" : "Phone",
+    "comment" : "\n     * Obtain the {@code Phone} associated with this {@code InCallService}.\n     *\n     * @return The {@code Phone} object associated with this {@code InCallService}, or {@code null}\n     *         if the {@code InCallService} is not in a state where it has an associated\n     *         {@code Phone}.\n     * @hide\n     * @deprecated Use direct methods on InCallService instead of {@link Phone}.\n     ",
+    "links" : [ "android.telecom.Phone" ]
+  }, {
+    "name" : "public final List<Call> getCalls()",
+    "returnType" : "List<Call>",
+    "comment" : "\n     * Obtains the current list of {@code Call}s to be displayed by this in-call service.\n     *\n     * @return A list of the relevant {@code Call}s.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean canAddCall()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns if the device can support additional calls.\n     *\n     * @return Whether the phone supports adding more calls.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AudioState getAudioState()",
+    "returnType" : "AudioState",
+    "comment" : "\n     * Obtains the current phone call audio state.\n     *\n     * @return An object encapsulating the audio state. Returns null if the service is not\n     *         fully initialized.\n     * @deprecated Use {@link #getCallAudioState()} instead.\n     * @hide\n     ",
+    "links" : [ "#getCallAudioState()" ]
+  }, {
+    "name" : "public final CallAudioState getCallAudioState()",
+    "returnType" : "CallAudioState",
+    "comment" : "\n     * Obtains the current phone call audio state.\n     *\n     * @return An object encapsulating the audio state. Returns null if the service is not\n     *         fully initialized.\n     * @deprecated Use {@link #getCurrentCallEndpoint()},\n     * {@link #onAvailableCallEndpointsChanged(List)} and\n     * {@link #onMuteStateChanged(boolean)} instead.\n     ",
+    "links" : [ "#getCurrentCallEndpoint()", "#onMuteStateChanged(boolean)", "#onAvailableCallEndpointsChanged(List)" ]
+  }, {
+    "name" : "public final void setMuted(boolean state)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the microphone mute state. When this request is honored, there will be change to\n     * the {@link #getCallAudioState()}.\n     *\n     * @param state {@code true} if the microphone should be muted; {@code false} otherwise.\n     ",
+    "links" : [ "#getCallAudioState()" ]
+  }, {
+    "name" : "public final void setAudioRoute(int route)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the audio route (speaker, bluetooth, etc...).  When this request is honored, there will\n     * be change to the {@link #getCallAudioState()}.\n     *\n     * @param route The audio route to use.\n     * @deprecated Use {@link #requestCallEndpointChange(CallEndpoint, Executor, OutcomeReceiver)}\n     * instead.\n     ",
+    "links" : [ "#requestCallEndpointChange(CallEndpoint", "#getCallAudioState()" ]
+  }, {
+    "name" : "public final void requestBluetoothAudio(@NonNull BluetoothDevice bluetoothDevice)",
+    "returnType" : "void",
+    "comment" : "\n     * Request audio routing to a specific bluetooth device. Calling this method may result in\n     * the device routing audio to a different bluetooth device than the one specified if the\n     * bluetooth stack is unable to route audio to the requested device.\n     * A list of available devices can be obtained via\n     * {@link CallAudioState#getSupportedBluetoothDevices()}\n     *\n     * @param bluetoothDevice The bluetooth device to connect to.\n     * @deprecated Use {@link #requestCallEndpointChange(CallEndpoint, Executor, OutcomeReceiver)}\n     * instead.\n     ",
+    "links" : [ "android.telecom.CallAudioState#getSupportedBluetoothDevices()", "#requestCallEndpointChange(CallEndpoint" ]
+  }, {
+    "name" : "public final void requestCallEndpointChange(@NonNull CallEndpoint endpoint, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Void, CallEndpointException> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Request audio routing to a specific CallEndpoint. Clients should not define their own\n     * CallEndpoint when requesting a change. Instead, the new endpoint should be one of the valid\n     * endpoints provided by {@link #onAvailableCallEndpointsChanged(List)}.\n     * When this request is honored, there will be change to the {@link #getCurrentCallEndpoint()}.\n     *\n     * @param endpoint The call endpoint to use.\n     * @param executor The executor of where the callback will execute.\n     * @param callback The callback to notify the result of the endpoint change.\n     ",
+    "links" : [ "#getCurrentCallEndpoint()", "#onAvailableCallEndpointsChanged(List)" ]
+  }, {
+    "name" : "public final CallEndpoint getCurrentCallEndpoint()",
+    "returnType" : "CallEndpoint",
+    "comment" : "\n     * Obtains the current CallEndpoint.\n     *\n     * @return An object encapsulating the CallEndpoint.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onPhoneCreated(Phone phone)",
+    "returnType" : "void",
+    "comment" : "\n     * Invoked when the {@code Phone} has been created. This is a signal to the in-call experience\n     * to start displaying in-call information to the user. Each instance of {@code InCallService}\n     * will have only one {@code Phone}, and this method will be called exactly once in the lifetime\n     * of the {@code InCallService}.\n     *\n     * @param phone The {@code Phone} object associated with this {@code InCallService}.\n     * @hide\n     * @deprecated Use direct methods on InCallService instead of {@link Phone}.\n     ",
+    "links" : [ "android.telecom.Phone" ]
+  }, {
+    "name" : "public void onPhoneDestroyed(Phone phone)",
+    "returnType" : "void",
+    "comment" : "\n     * Invoked when a {@code Phone} has been destroyed. This is a signal to the in-call experience\n     * to stop displaying in-call information to the user. This method will be called exactly once\n     * in the lifetime of the {@code InCallService}, and it will always be called after a previous\n     * call to {@link #onPhoneCreated(Phone)}.\n     *\n     * @param phone The {@code Phone} object associated with this {@code InCallService}.\n     * @hide\n     * @deprecated Use direct methods on InCallService instead of {@link Phone}.\n     ",
+    "links" : [ "#onPhoneCreated(Phone)", "android.telecom.Phone" ]
+  }, {
+    "name" : "public void onAudioStateChanged(AudioState audioState)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the audio state changes.\n     *\n     * @param audioState The new {@link AudioState}.\n     * @deprecated Use {@link #onCallAudioStateChanged(CallAudioState) instead}.\n     * @hide\n     ",
+    "links" : [ "android.telecom.AudioState", "#onCallAudioStateChanged(CallAudioState)" ]
+  }, {
+    "name" : "public void onCallAudioStateChanged(CallAudioState audioState)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the audio state changes.\n     *\n     * @param audioState The new {@link CallAudioState}.\n     * @deprecated Use {@link #onCallEndpointChanged(CallEndpoint)},\n     * {@link #onAvailableCallEndpointsChanged(List)} and\n     * {@link #onMuteStateChanged(boolean)} instead.\n     ",
+    "links" : [ "#onCallEndpointChanged(CallEndpoint)", "android.telecom.CallAudioState", "#onMuteStateChanged(boolean)", "#onAvailableCallEndpointsChanged(List)" ]
+  }, {
+    "name" : "public void onCallEndpointChanged(@NonNull CallEndpoint callEndpoint)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the current CallEndpoint changes.\n     *\n     * @param callEndpoint The current CallEndpoint {@link CallEndpoint}.\n     ",
+    "links" : [ "android.telecom.CallEndpoint" ]
+  }, {
+    "name" : "public void onAvailableCallEndpointsChanged(@NonNull List<CallEndpoint> availableEndpoints)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the available CallEndpoint changes.\n     *\n     * @param availableEndpoints The set of available CallEndpoint {@link CallEndpoint}.\n     ",
+    "links" : [ "android.telecom.CallEndpoint" ]
+  }, {
+    "name" : "public void onMuteStateChanged(boolean isMuted)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the mute state changes.\n     *\n     * @param isMuted The current mute state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onBringToForeground(boolean showDialpad)",
+    "returnType" : "void",
+    "comment" : "\n     * Called to bring the in-call screen to the foreground. The in-call experience should\n     * respond immediately by coming to the foreground to inform the user of the state of\n     * ongoing {@code Call}s.\n     *\n     * @param showDialpad If true, put up the dialpad when the screen is shown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onCallAdded(Call call)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a {@code Call} has been added to this in-call session. The in-call user\n     * experience should add necessary state listeners to the specified {@code Call} and\n     * immediately start to show the user information about the existence\n     * and nature of this {@code Call}. Subsequent invocations of {@link #getCalls()} will\n     * include this {@code Call}.\n     *\n     * @param call A newly added {@code Call}.\n     ",
+    "links" : [ "#getCalls()" ]
+  }, {
+    "name" : "public void onCallRemoved(Call call)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a {@code Call} has been removed from this in-call session. The in-call user\n     * experience should remove any state listeners from the specified {@code Call} and\n     * immediately stop displaying any information about this {@code Call}.\n     * Subsequent invocations of {@link #getCalls()} will no longer include this {@code Call}.\n     *\n     * @param call A newly removed {@code Call}.\n     ",
+    "links" : [ "#getCalls()" ]
+  }, {
+    "name" : "public void onCanAddCallChanged(boolean canAddCall)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the ability to add more calls changes.  If the phone cannot\n     * support more calls then {@code canAddCall} is set to {@code false}.  If it can, then it\n     * is set to {@code true}. This can be used to control the visibility of UI to add more calls.\n     *\n     * @param canAddCall Indicates whether an additional call can be added.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onSilenceRinger()",
+    "returnType" : "void",
+    "comment" : "\n     * Called to silence the ringer if a ringing call exists.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConnectionEvent(Call call, String event, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Unused; to handle connection events issued by a {@link ConnectionService}, implement the\n     * {@link android.telecom.Call.Callback#onConnectionEvent(Call, String, Bundle)} callback.\n     * <p>\n     * See {@link Connection#sendConnectionEvent(String, Bundle)}.\n     *\n     * @param call The call the event is associated with.\n     * @param event The event.\n     * @param extras Any associated extras.\n     ",
+    "links" : [ "android.telecom.Connection#sendConnectionEvent(String", "android.telecom.ConnectionService", "android.telecom.Call.Callback#onConnectionEvent(Call" ]
+  } ],
+  "methodNames" : [ "public IBinder onBind(Intent intent)", "public boolean onUnbind(Intent intent)", "public Phone getPhone()", "public final List<Call> getCalls()", "public final boolean canAddCall()", "public final AudioState getAudioState()", "public final CallAudioState getCallAudioState()", "public final void setMuted(boolean state)", "public final void setAudioRoute(int route)", "public final void requestBluetoothAudio(@NonNull BluetoothDevice bluetoothDevice)", "public final void requestCallEndpointChange(@NonNull CallEndpoint endpoint, @NonNull @CallbackExecutor Executor executor, @NonNull OutcomeReceiver<Void, CallEndpointException> callback)", "public final CallEndpoint getCurrentCallEndpoint()", "public void onPhoneCreated(Phone phone)", "public void onPhoneDestroyed(Phone phone)", "public void onAudioStateChanged(AudioState audioState)", "public void onCallAudioStateChanged(CallAudioState audioState)", "public void onCallEndpointChanged(@NonNull CallEndpoint callEndpoint)", "public void onAvailableCallEndpointsChanged(@NonNull List<CallEndpoint> availableEndpoints)", "public void onMuteStateChanged(boolean isMuted)", "public void onBringToForeground(boolean showDialpad)", "public void onCallAdded(Call call)", "public void onCallRemoved(Call call)", "public void onCanAddCallChanged(boolean canAddCall)", "public void onSilenceRinger()", "public void onConnectionEvent(Call call, String event, Bundle extras)" ],
+  "variableNames" : [ "SERVICE_INTERFACE", "MSG_SET_IN_CALL_ADAPTER", "MSG_ADD_CALL", "MSG_UPDATE_CALL", "MSG_SET_POST_DIAL_WAIT", "MSG_ON_CALL_AUDIO_STATE_CHANGED", "MSG_BRING_TO_FOREGROUND", "MSG_ON_CAN_ADD_CALL_CHANGED", "MSG_SILENCE_RINGER", "MSG_ON_CONNECTION_EVENT", "MSG_ON_RTT_UPGRADE_REQUEST", "MSG_ON_RTT_INITIATION_FAILURE", "MSG_ON_HANDOVER_FAILED", "MSG_ON_HANDOVER_COMPLETE", "MSG_ON_CALL_ENDPOINT_CHANGED", "MSG_ON_AVAILABLE_CALL_ENDPOINTS_CHANGED", "MSG_ON_MUTE_STATE_CHANGED", "mCallEndpoint", "mHandler", "mPhoneListener", "mPhone" ]
+}

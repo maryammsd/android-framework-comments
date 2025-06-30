@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/os/UserHandle.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/UserHandle.java",
   "packageName" : "android.os",
   "className" : "UserHandle",
   "comment" : "\n * Representation of a user on the device.\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "PER_USER_RANGE",
     "type" : "int",
@@ -84,15 +85,30 @@
     "comment" : " @hide ",
     "links" : [ ]
   }, {
+    "name" : "MAX_SECONDARY_USER_ID",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
     "name" : "NUM_CACHED_USERS",
     "type" : "int",
-    "comment" : "\n     * Arbitrary user handle cache size. We use the cache even when {@link #MU_ENABLED} is false\n     * anyway, so we can always assume in CTS that UserHandle.of(10) returns a cached instance\n     * even on non-multiuser devices.\n     ",
-    "links" : [ "#MU_ENABLED" ]
+    "comment" : "\n     * (Arbitrary) user handle cache size.\n     * {@link #CACHED_USER_HANDLES} caches user handles in the range of\n     * [{@link #MIN_SECONDARY_USER_ID}, {@link #MIN_SECONDARY_USER_ID} + {@link #NUM_CACHED_USERS}).\n     *\n     * For other users, we cache UserHandles in {link #sExtraUserHandleCache}.\n     *\n     * Normally, {@link #CACHED_USER_HANDLES} should cover all existing users, but use\n     * {link #sExtraUserHandleCache} to ensure {@link UserHandle#of} will not cause too many\n     * object allocations even if the device happens to have a secondary user with a large number\n     * (e.g. the user kept creating and removing the guest user?).\n     ",
+    "links" : [ "android.os.UserHandle#of", "#MIN_SECONDARY_USER_ID", "#CACHED_USER_HANDLES", "#NUM_CACHED_USERS" ]
   }, {
-    "name" : "CACHED_USER_INFOS",
+    "name" : "CACHED_USER_HANDLES",
     "type" : "UserHandle[]",
-    "comment" : "",
+    "comment" : " @see #NUM_CACHED_USERS} ",
     "links" : [ ]
+  }, {
+    "name" : "sExtraUserHandleCache",
+    "type" : "SparseArray<UserHandle>",
+    "comment" : "\n     * Extra cache for users beyond CACHED_USER_HANDLES.\n     *\n     * @see #NUM_CACHED_USERS\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_EXTRA_USER_HANDLE_CACHE_SIZE",
+    "type" : "int",
+    "comment" : "\n     * Max size of {@link #sExtraUserHandleCache}. Once it reaches this size, we select\n     * an element to remove at random.\n     *\n     * @hide\n     ",
+    "links" : [ "#sExtraUserHandleCache" ]
   }, {
     "name" : "ERR_GID",
     "type" : "int",
@@ -160,6 +176,11 @@
     "comment" : "\n     * Whether a UID belongs to a system core component or not.\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public static boolean isSharedAppGid(int uid)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Whether a UID belongs to a shared app gid.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public static UserHandle getUserHandleForUid(int uid)",
     "returnType" : "UserHandle",
     "comment" : "\n     * Returns the user for a given uid.\n     * @param uid A uid for an application running in a particular user.\n     * @return A {@link UserHandle} for that user.\n     ",
@@ -180,7 +201,22 @@
     "comment" : " @hide ",
     "links" : [ ]
   }, {
+    "name" : "public static int[] fromUserHandles(@NonNull List<UserHandle> users)",
+    "returnType" : "int[]",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static List<UserHandle> toUserHandles(@NonNull int[] userIds)",
+    "returnType" : "List<UserHandle>",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
     "name" : "public static UserHandle of(@UserIdInt int userId)",
+    "returnType" : "UserHandle",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public static UserHandle getUserHandleFromExtraCache(@UserIdInt int userId)",
     "returnType" : "UserHandle",
     "comment" : " @hide ",
     "links" : [ ]
@@ -188,6 +224,11 @@
     "name" : "public static int getUid(@UserIdInt int userId, @AppIdInt int appId)",
     "returnType" : "int",
     "comment" : "\n     * Returns the uid that is composed from the userId and the appId.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getUid(@AppIdInt int appId)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the uid representing the given appId for this UserHandle.\n     *\n     * @param appId the AppId to compose the uid\n     * @return the uid representing the given appId for this UserHandle\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public static int getAppId(int uid)",
@@ -202,7 +243,7 @@
   }, {
     "name" : "public static int getSharedAppGid(int uid)",
     "returnType" : "int",
-    "comment" : " @hide ",
+    "comment" : "\n     * Returns the gid shared between all users with the app that this uid represents, or -1 if the\n     * uid is invalid.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public static int getSharedAppGid(@UserIdInt int userId, @AppIdInt int appId)",
@@ -270,7 +311,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean equals(Object obj)",
+    "name" : "public boolean equals(@Nullable Object obj)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
@@ -300,6 +341,6 @@
     "comment" : "\n     * Read a UserHandle from a Parcel that was previously written\n     * with {@link #writeToParcel(UserHandle, Parcel)}, returning either\n     * a null or new object as appropriate.\n     *\n     * @param in The Parcel from which to read the UserHandle\n     * @return Returns a new UserHandle matching the previously written\n     * object, or null if a null had been written.\n     *\n     * @see #writeToParcel(UserHandle, Parcel)\n     ",
     "links" : [ "#writeToParcel(UserHandle" ]
   } ],
-  "variableNames" : [ "PER_USER_RANGE", "USER_ALL", "ALL", "USER_CURRENT", "CURRENT", "USER_CURRENT_OR_SELF", "CURRENT_OR_SELF", "USER_NULL", "NULL", "USER_OWNER", "OWNER", "USER_SYSTEM", "USER_SERIAL_SYSTEM", "SYSTEM", "MU_ENABLED", "MIN_SECONDARY_USER_ID", "NUM_CACHED_USERS", "CACHED_USER_INFOS", "ERR_GID", "AID_ROOT", "AID_APP_START", "AID_APP_END", "AID_SHARED_GID_START", "AID_CACHE_GID_START", "mHandle", "CREATOR" ],
-  "methodNames" : [ "public static boolean isSameUser(int uid1, int uid2)", "public static boolean isSameApp(int uid1, int uid2)", "public static boolean isIsolated(int uid)", "public static boolean isApp(int uid)", "public static boolean isCore(int uid)", "public static UserHandle getUserHandleForUid(int uid)", "public static int getUserId(int uid)", "public static int getCallingUserId()", "public static int getCallingAppId()", "public static UserHandle of(@UserIdInt int userId)", "public static int getUid(@UserIdInt int userId, @AppIdInt int appId)", "public static int getAppId(int uid)", "public static int getUserGid(@UserIdInt int userId)", "public static int getSharedAppGid(int uid)", "public static int getSharedAppGid(@UserIdInt int userId, @AppIdInt int appId)", "public static int getAppIdFromSharedAppGid(int gid)", "public static int getCacheAppGid(int uid)", "public static int getCacheAppGid(@UserIdInt int userId, @AppIdInt int appId)", "public static void formatUid(StringBuilder sb, int uid)", "public static String formatUid(int uid)", "public static void formatUid(PrintWriter pw, int uid)", "public static int parseUserArg(String arg)", "public static int myUserId()", "public boolean isOwner()", "public boolean isSystem()", "public int getIdentifier()", "public String toString()", "public boolean equals(Object obj)", "public int hashCode()", "public int describeContents()", "public void writeToParcel(Parcel out, int flags)", "public static void writeToParcel(UserHandle h, Parcel out)", "public static UserHandle readFromParcel(Parcel in)" ]
+  "methodNames" : [ "public static boolean isSameUser(int uid1, int uid2)", "public static boolean isSameApp(int uid1, int uid2)", "public static boolean isIsolated(int uid)", "public static boolean isApp(int uid)", "public static boolean isCore(int uid)", "public static boolean isSharedAppGid(int uid)", "public static UserHandle getUserHandleForUid(int uid)", "public static int getUserId(int uid)", "public static int getCallingUserId()", "public static int getCallingAppId()", "public static int[] fromUserHandles(@NonNull List<UserHandle> users)", "public static List<UserHandle> toUserHandles(@NonNull int[] userIds)", "public static UserHandle of(@UserIdInt int userId)", "public static UserHandle getUserHandleFromExtraCache(@UserIdInt int userId)", "public static int getUid(@UserIdInt int userId, @AppIdInt int appId)", "public int getUid(@AppIdInt int appId)", "public static int getAppId(int uid)", "public static int getUserGid(@UserIdInt int userId)", "public static int getSharedAppGid(int uid)", "public static int getSharedAppGid(@UserIdInt int userId, @AppIdInt int appId)", "public static int getAppIdFromSharedAppGid(int gid)", "public static int getCacheAppGid(int uid)", "public static int getCacheAppGid(@UserIdInt int userId, @AppIdInt int appId)", "public static void formatUid(StringBuilder sb, int uid)", "public static String formatUid(int uid)", "public static void formatUid(PrintWriter pw, int uid)", "public static int parseUserArg(String arg)", "public static int myUserId()", "public boolean isOwner()", "public boolean isSystem()", "public int getIdentifier()", "public String toString()", "public boolean equals(@Nullable Object obj)", "public int hashCode()", "public int describeContents()", "public void writeToParcel(Parcel out, int flags)", "public static void writeToParcel(UserHandle h, Parcel out)", "public static UserHandle readFromParcel(Parcel in)" ],
+  "variableNames" : [ "PER_USER_RANGE", "USER_ALL", "ALL", "USER_CURRENT", "CURRENT", "USER_CURRENT_OR_SELF", "CURRENT_OR_SELF", "USER_NULL", "NULL", "USER_OWNER", "OWNER", "USER_SYSTEM", "USER_SERIAL_SYSTEM", "SYSTEM", "MU_ENABLED", "MIN_SECONDARY_USER_ID", "MAX_SECONDARY_USER_ID", "NUM_CACHED_USERS", "CACHED_USER_HANDLES", "sExtraUserHandleCache", "MAX_EXTRA_USER_HANDLE_CACHE_SIZE", "ERR_GID", "AID_ROOT", "AID_APP_START", "AID_APP_END", "AID_SHARED_GID_START", "AID_CACHE_GID_START", "mHandle", "CREATOR" ]
 }

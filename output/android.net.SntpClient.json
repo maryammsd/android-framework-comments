@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/net/SntpClient.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/net/SntpClient.java",
   "packageName" : "android.net",
   "className" : "SntpClient",
-  "comment" : "\n * {@hide}\n *\n * Simple SNTP client class for retrieving network time.\n *\n * Sample usage:\n * <pre>SntpClient client = new SntpClient();\n * if (client.requestTime(\"time.foo.com\")) {\n *     long now = client.getNtpTime() + SystemClock.elapsedRealtime() - client.getNtpTimeReference();\n * }\n * </pre>\n ",
+  "comment" : "\n * Simple, single-use SNTP client class for retrieving network time.\n *\n * Sample usage:\n * <pre>SntpClient client = new SntpClient();\n * if (client.requestTime(\"time.foo.com\")) {\n *     long now = client.getNtpTime() + SystemClock.elapsedRealtime() - client.getNtpTimeReference();\n * }\n * </pre>\n *\n * <p>This class is not thread-safe.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -39,7 +40,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "NTP_PORT",
+    "name" : "STANDARD_NTP_PORT",
     "type" : "int",
     "comment" : "",
     "links" : [ ]
@@ -79,30 +80,45 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "OFFSET_1900_TO_1970",
+    "name" : "mSystemTimeSupplier",
+    "type" : "Supplier<Instant>",
+    "comment" : " The source of the current system clock time, replaceable for testing.",
+    "links" : [ ]
+  }, {
+    "name" : "mRandom",
+    "type" : "Random",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClockOffset",
     "type" : "long",
-    "comment" : " 70 years plus 17 leap days",
+    "comment" : " The last offset calculated from an NTP server response",
     "links" : [ ]
   }, {
     "name" : "mNtpTime",
     "type" : "long",
-    "comment" : " system time computed from NTP server response",
+    "comment" : " The last system time computed from an NTP server response",
     "links" : [ ]
   }, {
     "name" : "mNtpTimeReference",
     "type" : "long",
-    "comment" : " value of SystemClock.elapsedRealtime() corresponding to mNtpTime",
+    "comment" : " The value of SystemClock.elapsedRealtime() corresponding to mNtpTime / mClockOffset",
     "links" : [ ]
   }, {
     "name" : "mRoundTripTime",
     "type" : "long",
-    "comment" : " round trip time in milliseconds",
+    "comment" : " The round trip (network) time in milliseconds",
+    "links" : [ ]
+  }, {
+    "name" : "mServerSocketAddress",
+    "type" : "InetSocketAddress",
+    "comment" : " Details of the NTP server used to obtain the time last.",
     "links" : [ ]
   } ],
   "methods" : [ {
-    "name" : "public boolean requestTime(String host, int timeout, Network network)",
+    "name" : "public boolean requestTime(String host, int port, int timeout, Network network)",
     "returnType" : "boolean",
-    "comment" : "\n     * Sends an SNTP request to the given host and processes the response.\n     *\n     * @param host host name of the server.\n     * @param timeout network timeout in milliseconds.\n     * @param network network over which to send the request.\n     * @return true if the transaction was successful.\n     ",
+    "comment" : "\n     * Sends an SNTP request to the given host and processes the response.\n     *\n     * @param host host name of the server.\n     * @param port port of the server.\n     * @param timeout network timeout in milliseconds. the timeout doesn't include the DNS lookup\n     *                time, and it applies to each individual query to the resolved addresses of\n     *                the NTP server.\n     * @param network network over which to send the request.\n     * @return true if the transaction was successful.\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean requestTime(InetAddress address, int port, int timeout, Network network)",
@@ -110,10 +126,20 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "public static Duration calculateClockOffset(Timestamp64 clientRequestTimestamp, Timestamp64 serverReceiveTimestamp, Timestamp64 serverTransmitTimestamp, Timestamp64 clientResponseTimestamp)",
+    "returnType" : "Duration",
+    "comment" : " Performs the NTP clock offset calculation. ",
+    "links" : [ ]
+  }, {
     "name" : "public boolean requestTime(String host, int timeout)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "public long getClockOffset()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the offset calculated to apply to the client clock to arrive at {@link #getNtpTime()}\n     ",
+    "links" : [ "#getNtpTime()" ]
   }, {
     "name" : "public long getNtpTime()",
     "returnType" : "long",
@@ -130,26 +156,36 @@
     "comment" : "\n     * Returns the round trip time of the NTP transaction\n     *\n     * @return round trip time in milliseconds.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private static void checkValidServerReply(byte leap, byte mode, int stratum, long transmitTime) throws InvalidServerReplyException",
+    "name" : "public InetSocketAddress getServerSocketAddress()",
+    "returnType" : "InetSocketAddress",
+    "comment" : "\n     * Returns the address of the NTP server used in the NTP transaction\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkValidServerReply(byte leap, byte mode, int stratum, Timestamp64 transmitTimestamp, Timestamp64 referenceTimestamp, Timestamp64 randomizedRequestTimestamp, Timestamp64 originateTimestamp) throws InvalidServerReplyException",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private long read32(byte[] buffer, int offset)",
+    "name" : "private long readUnsigned32(byte[] buffer, int offset)",
     "returnType" : "long",
     "comment" : "\n     * Reads an unsigned 32 bit big endian number from the given offset in the buffer.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private long readTimeStamp(byte[] buffer, int offset)",
-    "returnType" : "long",
-    "comment" : "\n     * Reads the NTP time stamp at the given offset in the buffer and returns\n     * it as a system time (milliseconds since January 1, 1970).\n     ",
+    "name" : "private Timestamp64 readTimeStamp(byte[] buffer, int offset)",
+    "returnType" : "Timestamp64",
+    "comment" : "\n     * Reads the NTP time stamp from the given offset in the buffer.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private void writeTimeStamp(byte[] buffer, int offset, long time)",
+    "name" : "private void writeTimeStamp(byte[] buffer, int offset, Timestamp64 timestamp)",
     "returnType" : "void",
-    "comment" : "\n     * Writes system time (milliseconds since January 1, 1970) as an NTP time stamp\n     * at the given offset in the buffer.\n     ",
+    "comment" : "\n     * Writes the NTP time stamp at the given offset in the buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Random defaultRandom()",
+    "returnType" : "Random",
+    "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DBG", "REFERENCE_TIME_OFFSET", "ORIGINATE_TIME_OFFSET", "RECEIVE_TIME_OFFSET", "TRANSMIT_TIME_OFFSET", "NTP_PACKET_SIZE", "NTP_PORT", "NTP_MODE_CLIENT", "NTP_MODE_SERVER", "NTP_MODE_BROADCAST", "NTP_VERSION", "NTP_LEAP_NOSYNC", "NTP_STRATUM_DEATH", "NTP_STRATUM_MAX", "OFFSET_1900_TO_1970", "mNtpTime", "mNtpTimeReference", "mRoundTripTime" ],
-  "methodNames" : [ "public boolean requestTime(String host, int timeout, Network network)", "public boolean requestTime(InetAddress address, int port, int timeout, Network network)", "public boolean requestTime(String host, int timeout)", "public long getNtpTime()", "public long getNtpTimeReference()", "public long getRoundTripTime()", "private static void checkValidServerReply(byte leap, byte mode, int stratum, long transmitTime) throws InvalidServerReplyException", "private long read32(byte[] buffer, int offset)", "private long readTimeStamp(byte[] buffer, int offset)", "private void writeTimeStamp(byte[] buffer, int offset, long time)" ]
+  "methodNames" : [ "public boolean requestTime(String host, int port, int timeout, Network network)", "public boolean requestTime(InetAddress address, int port, int timeout, Network network)", "public static Duration calculateClockOffset(Timestamp64 clientRequestTimestamp, Timestamp64 serverReceiveTimestamp, Timestamp64 serverTransmitTimestamp, Timestamp64 clientResponseTimestamp)", "public boolean requestTime(String host, int timeout)", "public long getClockOffset()", "public long getNtpTime()", "public long getNtpTimeReference()", "public long getRoundTripTime()", "public InetSocketAddress getServerSocketAddress()", "private static void checkValidServerReply(byte leap, byte mode, int stratum, Timestamp64 transmitTimestamp, Timestamp64 referenceTimestamp, Timestamp64 randomizedRequestTimestamp, Timestamp64 originateTimestamp) throws InvalidServerReplyException", "private long readUnsigned32(byte[] buffer, int offset)", "private Timestamp64 readTimeStamp(byte[] buffer, int offset)", "private void writeTimeStamp(byte[] buffer, int offset, Timestamp64 timestamp)", "private static Random defaultRandom()" ],
+  "variableNames" : [ "TAG", "DBG", "REFERENCE_TIME_OFFSET", "ORIGINATE_TIME_OFFSET", "RECEIVE_TIME_OFFSET", "TRANSMIT_TIME_OFFSET", "NTP_PACKET_SIZE", "STANDARD_NTP_PORT", "NTP_MODE_CLIENT", "NTP_MODE_SERVER", "NTP_MODE_BROADCAST", "NTP_VERSION", "NTP_LEAP_NOSYNC", "NTP_STRATUM_DEATH", "NTP_STRATUM_MAX", "mSystemTimeSupplier", "mRandom", "mClockOffset", "mNtpTime", "mNtpTimeReference", "mRoundTripTime", "mServerSocketAddress" ]
 }

@@ -1,0 +1,406 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/RuleBasedNumberFormat.java",
+  "packageName" : "android.icu.text",
+  "className" : "RuleBasedNumberFormat",
+  "comment" : "\n * <p>A class that formats numbers according to a set of rules. This number formatter is\n * typically used for spelling out numeric values in words (e.g., 25,3476 as\n * &quot;twenty-five thousand three hundred seventy-six&quot; or &quot;vingt-cinq mille trois\n * cents soixante-seize&quot; or\n * &quot;funfundzwanzigtausenddreihundertsechsundsiebzig&quot;), but can also be used for\n * other complicated formatting tasks, such as formatting a number of seconds as hours,\n * minutes and seconds (e.g., 3,730 as &quot;1:02:10&quot;).</p>\n *\n * <p>The resources contain three predefined formatters for each locale: spellout, which\n * spells out a value in words (123 is &quot;one hundred twenty-three&quot;); ordinal, which\n * appends an ordinal suffix to the end of a numeral (123 is &quot;123rd&quot;); and\n * duration, which shows a duration in seconds as hours, minutes, and seconds (123 is\n * &quot;2:03&quot;).&nbsp; The client can also define more specialized <tt>RuleBasedNumberFormat</tt>s\n * by supplying programmer-defined rule sets.</p>\n *\n * <p>The behavior of a <tt>RuleBasedNumberFormat</tt> is specified by a textual description\n * that is either passed to the constructor as a <tt>String</tt> or loaded from a resource\n * bundle. In its simplest form, the description consists of a semicolon-delimited list of <em>rules.</em>\n * Each rule has a string of output text and a value or range of values it is applicable to.\n * In a typical spellout rule set, the first twenty rules are the words for the numbers from\n * 0 to 19:</p>\n *\n * <pre>zero; one; two; three; four; five; six; seven; eight; nine;\n * ten; eleven; twelve; thirteen; fourteen; fifteen; sixteen; seventeen; eighteen; nineteen;</pre>\n *\n * <p>For larger numbers, we can use the preceding set of rules to format the ones place, and\n * we only have to supply the words for the multiples of 10:</p>\n *\n * <pre>20: twenty[-&gt;&gt;];\n * 30: thirty{-&gt;&gt;];\n * 40: forty[-&gt;&gt;];\n * 50: fifty[-&gt;&gt;];\n * 60: sixty[-&gt;&gt;];\n * 70: seventy[-&gt;&gt;];\n * 80: eighty[-&gt;&gt;];\n * 90: ninety[-&gt;&gt;];</pre>\n *\n * <p>In these rules, the <em>base value</em> is spelled out explicitly and set off from the\n * rule's output text with a colon. The rules are in a sorted list, and a rule is applicable\n * to all numbers from its own base value to one less than the next rule's base value. The\n * &quot;&gt;&gt;&quot; token is called a <em>substitution</em> and tells the formatter to\n * isolate the number's ones digit, format it using this same set of rules, and place the\n * result at the position of the &quot;&gt;&gt;&quot; token. Text in brackets is omitted if\n * the number being formatted is an even multiple of 10 (the hyphen is a literal hyphen; 24\n * is &quot;twenty-four,&quot; not &quot;twenty four&quot;).</p>\n *\n * <p>For even larger numbers, we can actually look up several parts of the number in the\n * list:</p>\n *\n * <pre>100: &lt;&lt; hundred[ &gt;&gt;];</pre>\n *\n * <p>The &quot;&lt;&lt;&quot; represents a new kind of substitution. The &lt;&lt; isolates\n * the hundreds digit (and any digits to its left), formats it using this same rule set, and\n * places the result where the &quot;&lt;&lt;&quot; was. Notice also that the meaning of\n * &gt;&gt; has changed: it now refers to both the tens and the ones digits. The meaning of\n * both substitutions depends on the rule's base value. The base value determines the rule's <em>divisor,</em>\n * which is the highest power of 10 that is less than or equal to the base value (the user\n * can change this). To fill in the substitutions, the formatter divides the number being\n * formatted by the divisor. The integral quotient is used to fill in the &lt;&lt;\n * substitution, and the remainder is used to fill in the &gt;&gt; substitution. The meaning\n * of the brackets changes similarly: text in brackets is omitted if the value being\n * formatted is an even multiple of the rule's divisor. The rules are applied recursively, so\n * if a substitution is filled in with text that includes another substitution, that\n * substitution is also filled in.</p>\n *\n * <p>This rule covers values up to 999, at which point we add another rule:</p>\n *\n * <pre>1000: &lt;&lt; thousand[ &gt;&gt;];</pre>\n *\n * <p>Again, the meanings of the brackets and substitution tokens shift because the rule's\n * base value is a higher power of 10, changing the rule's divisor. This rule can actually be\n * used all the way up to 999,999. This allows us to finish out the rules as follows:</p>\n *\n * <pre>1,000,000: &lt;&lt; million[ &gt;&gt;];\n * 1,000,000,000: &lt;&lt; billion[ &gt;&gt;];\n * 1,000,000,000,000: &lt;&lt; trillion[ &gt;&gt;];\n * 1,000,000,000,000,000: OUT OF RANGE!;</pre>\n *\n * <p>Commas, periods, and spaces can be used in the base values to improve legibility and\n * are ignored by the rule parser. The last rule in the list is customarily treated as an\n * &quot;overflow rule,&quot; applying to everything from its base value on up, and often (as\n * in this example) being used to print out an error message or default representation.\n * Notice also that the size of the major groupings in large numbers is controlled by the\n * spacing of the rules: because in English we group numbers by thousand, the higher rules\n * are separated from each other by a factor of 1,000.</p>\n *\n * <p>To see how these rules actually work in practice, consider the following example:\n * Formatting 25,430 with this rule set would work like this:</p>\n *\n * <table border=\"0\" width=\"630\">\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\"><strong>&lt;&lt; thousand &gt;&gt;</strong></td>\n *     <td style=\"width: 340; vertical-align: top;\">[the rule whose base value is 1,000 is applicable to 25,340]</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\"><strong>twenty-&gt;&gt;</strong> thousand &gt;&gt;</td>\n *     <td style=\"width: 340; vertical-align: top;\">[25,340 over 1,000 is 25. The rule for 20 applies.]</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\">twenty-<strong>five</strong> thousand &gt;&gt;</td>\n *     <td style=\"width: 340; vertical-align: top;\">[25 mod 10 is 5. The rule for 5 is &quot;five.&quot;</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\">twenty-five thousand <strong>&lt;&lt; hundred &gt;&gt;</strong></td>\n *     <td style=\"width: 340; vertical-align: top;\">[25,340 mod 1,000 is 340. The rule for 100 applies.]</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\">twenty-five thousand <strong>three</strong> hundred &gt;&gt;</td>\n *     <td style=\"width: 340; vertical-align: top;\">[340 over 100 is 3. The rule for 3 is &quot;three.&quot;]</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 21;\"></td>\n *     <td style=\"width: 257; vertical-align: top;\">twenty-five thousand three hundred <strong>forty</strong></td>\n *     <td style=\"width: 340; vertical-align: top;\">[340 mod 100 is 40. The rule for 40 applies. Since 40 divides\n *     evenly by 10, the hyphen and substitution in the brackets are omitted.]</td>\n *   </tr>\n * </table>\n *\n * <p>The above syntax suffices only to format positive integers. To format negative numbers,\n * we add a special rule:</p>\n *\n * <pre>-x: minus &gt;&gt;;</pre>\n *\n * <p>This is called a <em>negative-number rule,</em> and is identified by &quot;-x&quot;\n * where the base value would be. This rule is used to format all negative numbers. the\n * &gt;&gt; token here means &quot;find the number's absolute value, format it with these\n * rules, and put the result here.&quot;</p>\n *\n * <p>We also add a special rule called a <em>fraction rule </em>for numbers with fractional\n * parts:</p>\n *\n * <pre>x.x: &lt;&lt; point &gt;&gt;;</pre>\n *\n * <p>This rule is used for all positive non-integers (negative non-integers pass through the\n * negative-number rule first and then through this rule). Here, the &lt;&lt; token refers to\n * the number's integral part, and the &gt;&gt; to the number's fractional part. The\n * fractional part is formatted as a series of single-digit numbers (e.g., 123.456 would be\n * formatted as &quot;one hundred twenty-three point four five six&quot;).</p>\n *\n * <p>To see how this rule syntax is applied to various languages, examine the resource data.</p>\n *\n * <p>There is actually much more flexibility built into the rule language than the\n * description above shows. A formatter may own multiple rule sets, which can be selected by\n * the caller, and which can use each other to fill in their substitutions. Substitutions can\n * also be filled in with digits, using a DecimalFormat object. There is syntax that can be\n * used to alter a rule's divisor in various ways. And there is provision for much more\n * flexible fraction handling. A complete description of the rule syntax follows:</p>\n *\n * <hr>\n *\n * <p>The description of a <tt>RuleBasedNumberFormat</tt>'s behavior consists of one or more <em>rule\n * sets.</em> Each rule set consists of a name, a colon, and a list of <em>rules.</em> A rule\n * set name must begin with a % sign. Rule sets with names that begin with a single % sign\n * are <em>public:</em> the caller can specify that they be used to format and parse numbers.\n * Rule sets with names that begin with %% are <em>private:</em> they exist only for the use\n * of other rule sets. If a formatter only has one rule set, the name may be omitted.</p>\n *\n * <p>The user can also specify a special &quot;rule set&quot; named <tt>%%lenient-parse</tt>.\n * The body of <tt>%%lenient-parse</tt> isn't a set of number-formatting rules, but a <tt>RuleBasedCollator</tt>\n * description which is used to define equivalences for lenient parsing. For more information\n * on the syntax, see <tt>RuleBasedCollator</tt>. For more information on lenient parsing,\n * see <tt>setLenientParse()</tt>. <em>Note:</em> symbols that have syntactic meaning\n * in collation rules, such as '&amp;', have no particular meaning when appearing outside\n * of the <tt>lenient-parse</tt> rule set.</p>\n *\n * <p>The body of a rule set consists of an ordered, semicolon-delimited list of <em>rules.</em>\n * Internally, every rule has a base value, a divisor, rule text, and zero, one, or two <em>substitutions.</em>\n * These parameters are controlled by the description syntax, which consists of a <em>rule\n * descriptor,</em> a colon, and a <em>rule body.</em></p>\n *\n * <p>A rule descriptor can take one of the following forms (text in <em>italics</em> is the\n * name of a token):</p>\n *\n * <table border=\"0\" width=\"100%\">\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\"><em>bv</em>:</td>\n *     <td valign=\"top\"><em>bv</em> specifies the rule's base value. <em>bv</em> is a decimal\n *     number expressed using ASCII digits. <em>bv</em> may contain spaces, period, and commas,\n *     which are ignored. The rule's divisor is the highest power of 10 less than or equal to\n *     the base value.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\"><em>bv</em>/<em>rad</em>:</td>\n *     <td valign=\"top\"><em>bv</em> specifies the rule's base value. The rule's divisor is the\n *     highest power of <em>rad</em> less than or equal to the base value.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\"><em>bv</em>&gt;:</td>\n *     <td valign=\"top\"><em>bv</em> specifies the rule's base value. To calculate the divisor,\n *     let the radix be 10, and the exponent be the highest exponent of the radix that yields a\n *     result less than or equal to the base value. Every &gt; character after the base value\n *     decreases the exponent by 1. If the exponent is positive or 0, the divisor is the radix\n *     raised to the power of the exponent; otherwise, the divisor is 1.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\"><em>bv</em>/<em>rad</em>&gt;:</td>\n *     <td valign=\"top\"><em>bv</em> specifies the rule's base value. To calculate the divisor,\n *     let the radix be <em>rad</em>, and the exponent be the highest exponent of the radix that\n *     yields a result less than or equal to the base value. Every &gt; character after the radix\n *     decreases the exponent by 1. If the exponent is positive or 0, the divisor is the radix\n *     raised to the power of the exponent; otherwise, the divisor is 1.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">-x:</td>\n *     <td valign=\"top\">The rule is a negative-number rule.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">x.x:</td>\n *     <td valign=\"top\">The rule is an <em>improper fraction rule</em>. If the full stop in\n *     the middle of the rule name is replaced with the decimal point\n *     that is used in the language or DecimalFormatSymbols, then that rule will\n *     have precedence when formatting and parsing this rule. For example, some\n *     languages use the comma, and can thus be written as x,x instead. For example,\n *     you can use \"x.x: &lt;&lt; point &gt;&gt;;x,x: &lt;&lt; comma &gt;&gt;;\" to\n *     handle the decimal point that matches the language's natural spelling of\n *     the punctuation of either the full stop or comma.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">0.x:</td>\n *     <td valign=\"top\">The rule is a <em>proper fraction rule</em>. If the full stop in\n *     the middle of the rule name is replaced with the decimal point\n *     that is used in the language or DecimalFormatSymbols, then that rule will\n *     have precedence when formatting and parsing this rule. For example, some\n *     languages use the comma, and can thus be written as 0,x instead. For example,\n *     you can use \"0.x: point &gt;&gt;;0,x: comma &gt;&gt;;\" to\n *     handle the decimal point that matches the language's natural spelling of\n *     the punctuation of either the full stop or comma</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">x.0:</td>\n *     <td valign=\"top\">The rule is a <em>default rule</em>. If the full stop in\n *     the middle of the rule name is replaced with the decimal point\n *     that is used in the language or DecimalFormatSymbols, then that rule will\n *     have precedence when formatting and parsing this rule. For example, some\n *     languages use the comma, and can thus be written as x,0 instead. For example,\n *     you can use \"x.0: &lt;&lt; point;x,0: &lt;&lt; comma;\" to\n *     handle the decimal point that matches the language's natural spelling of\n *     the punctuation of either the full stop or comma</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">Inf:</td>\n *     <td style=\"vertical-align: top;\">The rule for infinity.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\">NaN:</td>\n *     <td style=\"vertical-align: top;\">The rule for an IEEE 754 NaN (not a number).</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 5%; vertical-align: top;\"></td>\n *     <td style=\"width: 8%; vertical-align: top;\"><em>nothing</em></td>\n *     <td style=\"vertical-align: top;\">If the rule's rule descriptor is left out, the base value is one plus the\n *     preceding rule's base value (or zero if this is the first rule in the list) in a normal\n *     rule set.&nbsp; In a fraction rule set, the base value is the same as the preceding rule's\n *     base value.</td>\n *   </tr>\n * </table>\n *\n * <p>A rule set may be either a regular rule set or a <em>fraction rule set,</em> depending\n * on whether it is used to format a number's integral part (or the whole number) or a\n * number's fractional part. Using a rule set to format a rule's fractional part makes it a\n * fraction rule set.</p>\n *\n * <p>Which rule is used to format a number is defined according to one of the following\n * algorithms: If the rule set is a regular rule set, do the following:\n *\n * <ul>\n *   <li>If the rule set includes a default rule (and the number was passed in as a <tt>double</tt>),\n *     use the default rule.&nbsp; (If the number being formatted was passed in as a <tt>long</tt>,\n *     the default rule is ignored.)</li>\n *   <li>If the number is negative, use the negative-number rule.</li>\n *   <li>If the number has a fractional part and is greater than 1, use the improper fraction\n *     rule.</li>\n *   <li>If the number has a fractional part and is between 0 and 1, use the proper fraction\n *     rule.</li>\n *   <li>Binary-search the rule list for the rule with the highest base value less than or equal\n *     to the number. If that rule has two substitutions, its base value is not an even multiple\n *     of its divisor, and the number <em>is</em> an even multiple of the rule's divisor, use the\n *     rule that precedes it in the rule list. Otherwise, use the rule itself.</li>\n * </ul>\n *\n * <p>If the rule set is a fraction rule set, do the following:\n *\n * <ul>\n *   <li>Ignore negative-number and fraction rules.</li>\n *   <li>For each rule in the list, multiply the number being formatted (which will always be\n *     between 0 and 1) by the rule's base value. Keep track of the distance between the result\n *     the nearest integer.</li>\n *   <li>Use the rule that produced the result closest to zero in the above calculation. In the\n *     event of a tie or a direct hit, use the first matching rule encountered. (The idea here is\n *     to try each rule's base value as a possible denominator of a fraction. Whichever\n *     denominator produces the fraction closest in value to the number being formatted wins.) If\n *     the rule following the matching rule has the same base value, use it if the numerator of\n *     the fraction is anything other than 1; if the numerator is 1, use the original matching\n *     rule. (This is to allow singular and plural forms of the rule text without a lot of extra\n *     hassle.)</li>\n * </ul>\n *\n * <p>A rule's body consists of a string of characters terminated by a semicolon. The rule\n * may include zero, one, or two <em>substitution tokens,</em> and a range of text in\n * brackets. The brackets denote optional text (and may also include one or both\n * substitutions). The exact meanings of the substitution tokens, and under what conditions\n * optional text is omitted, depend on the syntax of the substitution token and the context.\n * The rest of the text in a rule body is literal text that is output when the rule matches\n * the number being formatted.</p>\n *\n * <p>A substitution token begins and ends with a <em>token character.</em> The token\n * character and the context together specify a mathematical operation to be performed on the\n * number being formatted. An optional <em>substitution descriptor </em>specifies how the\n * value resulting from that operation is used to fill in the substitution. The position of\n * the substitution token in the rule body specifies the location of the resultant text in\n * the original rule text.</p>\n *\n * <p>The meanings of the substitution token characters are as follows:</p>\n *\n * <table border=\"0\" width=\"100%\">\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\">&gt;&gt;</td>\n *     <td style=\"width: 165; vertical-align: top;\">in normal rule</td>\n *     <td>Divide the number by the rule's divisor and format the remainder</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in negative-number rule</td>\n *     <td>Find the absolute value of the number and format the result</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in fraction or default rule</td>\n *     <td>Isolate the number's fractional part and format it.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in rule in fraction rule set</td>\n *     <td>Not allowed.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\">&gt;&gt;&gt;</td>\n *     <td style=\"width: 165; vertical-align: top;\">in normal rule</td>\n *     <td>Divide the number by the rule's divisor and format the remainder,\n *       but bypass the normal rule-selection process and just use the\n *       rule that precedes this one in this rule list.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in all other rules</td>\n *     <td>Not allowed.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\">&lt;&lt;</td>\n *     <td style=\"width: 165; vertical-align: top;\">in normal rule</td>\n *     <td>Divide the number by the rule's divisor, perform floor() on the quotient,\n *         and format the resulting value.<br>\n *         If there is a DecimalFormat pattern between the &lt; characters and the\n *         rule does NOT also contain a &gt;&gt; substitution, we DON'T perform\n *         floor() on the quotient-- the quotient is passed through to the DecimalFormat\n *         intact.  That is, for the value 1,900:<br>\n *         - \"1/1000: &lt;&lt; thousand;\" will produce \"one thousand\"<br>\n *         - \"1/1000: &lt;0&lt; thousand;\" will produce \"2 thousand\" (NOT \"1 thousand\")<br>\n *         - \"1/1000: &lt;0&lt; seconds &gt;0&gt; milliseconds;\" will produce \"1 second 900 milliseconds\"\n *     </td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in negative-number rule</td>\n *     <td>Not allowed.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in fraction or default rule</td>\n *     <td>Isolate the number's integral part and format it.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in rule in fraction rule set</td>\n *     <td>Multiply the number by the rule's base value and format the result.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\">==</td>\n *     <td style=\"width: 165; vertical-align: top;\">in all rule sets</td>\n *     <td>Format the number unchanged</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\">[]</td>\n *     <td style=\"width: 165; vertical-align: top;\">in normal rule</td>\n *     <td>Omit the optional text if the number is an even multiple of the rule's divisor</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in negative-number rule</td>\n *     <td>Not allowed.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in improper-fraction rule</td>\n *     <td>Omit the optional text if the number is between 0 and 1 (same as specifying both an\n *     x.x rule and a 0.x rule)</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in default rule</td>\n *     <td>Omit the optional text if the number is an integer (same as specifying both an x.x\n *     rule and an x.0 rule)</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in proper-fraction rule</td>\n *     <td>Not allowed.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\"></td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in rule in fraction rule set</td>\n *     <td>Omit the optional text if multiplying the number by the rule's base value yields 1.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\">$(cardinal,<i>plural syntax</i>)$</td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in all rule sets</td>\n *     <td>This provides the ability to choose a word based on the number divided by the radix to the power of the\n *     exponent of the base value for the specified locale, which is normally equivalent to the &lt;&lt; value.\n *     This uses the cardinal plural rules from PluralFormat. All strings used in the plural format are treated\n *     as the same base value for parsing.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 37;\">$(ordinal,<i>plural syntax</i>)$</td>\n *     <td style=\"width: 23;\"></td>\n *     <td style=\"width: 165; vertical-align: top;\">in all rule sets</td>\n *     <td>This provides the ability to choose a word based on the number divided by the radix to the power of the\n *     exponent of the base value for the specified locale, which is normally equivalent to the &lt;&lt; value.\n *     This uses the ordinal plural rules from PluralFormat. All strings used in the plural format are treated\n *     as the same base value for parsing.</td>\n *   </tr>\n * </table>\n *\n * <p>The substitution descriptor (i.e., the text between the token characters) may take one\n * of three forms:</p>\n *\n * <table border=\"0\" width=\"100%\">\n *   <tr>\n *     <td style=\"width: 42;\"></td>\n *     <td style=\"width: 166; vertical-align: top;\">a rule set name</td>\n *     <td>Perform the mathematical operation on the number, and format the result using the\n *     named rule set.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 42;\"></td>\n *     <td style=\"width: 166; vertical-align: top;\">a DecimalFormat pattern</td>\n *     <td>Perform the mathematical operation on the number, and format the result using a\n *     DecimalFormat with the specified pattern.&nbsp; The pattern must begin with 0 or #.</td>\n *   </tr>\n *   <tr>\n *     <td style=\"width: 42;\"></td>\n *     <td style=\"width: 166; vertical-align: top;\">nothing</td>\n *     <td>Perform the mathematical operation on the number, and format the result using the rule\n *     set containing the current rule, except:<ul>\n *       <li>You can't have an empty substitution descriptor with a == substitution.</li>\n *       <li>If you omit the substitution descriptor in a &gt;&gt; substitution in a fraction rule,\n *         format the result one digit at a time using the rule set containing the current rule.</li>\n *       <li>If you omit the substitution descriptor in a &lt;&lt; substitution in a rule in a\n *         fraction rule set, format the result using the default rule set for this formatter.</li>\n *     </ul>\n *     </td>\n *   </tr>\n * </table>\n *\n * <p>Whitespace is ignored between a rule set name and a rule set body, between a rule\n * descriptor and a rule body, or between rules. If a rule body begins with an apostrophe,\n * the apostrophe is ignored, but all text after it becomes significant (this is how you can\n * have a rule's rule text begin with whitespace). There is no escape function: the semicolon\n * is not allowed in rule set names or in rule text, and the colon is not allowed in rule set\n * names. The characters beginning a substitution token are always treated as the beginning\n * of a substitution token.</p>\n *\n * <p>See the resource data and the demo program for annotated examples of real rule sets\n * using these features.</p>\n *\n * @author Richard Gillam\n * @see NumberFormat\n * @see DecimalFormat\n * @see PluralFormat\n * @see PluralRules\n * @hide Only a subset of ICU is exposed in Android\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " Generated by serialver from JDK 1.4.1_01",
+    "links" : [ ]
+  }, {
+    "name" : "SPELLOUT",
+    "type" : "int",
+    "comment" : "\n     * Selector code that tells the constructor to create a spellout formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ORDINAL",
+    "type" : "int",
+    "comment" : "\n     * Selector code that tells the constructor to create an ordinal formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DURATION",
+    "type" : "int",
+    "comment" : "\n     * Selector code that tells the constructor to create a duration formatter\n     * @deprecated ICU 74 Use MeasureFormat instead.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NUMBERING_SYSTEM",
+    "type" : "int",
+    "comment" : "\n     * Selector code that tells the constructor to create a numbering system formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ruleSets",
+    "type" : "NFRuleSet[]",
+    "comment" : "\n     * The formatter's rule sets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ruleSetsMap",
+    "type" : "Map<String, NFRuleSet>",
+    "comment" : "\n     * The formatter's rule names mapped to rule sets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "defaultRuleSet",
+    "type" : "NFRuleSet",
+    "comment" : "\n     * A pointer to the formatter's default rule set.  This is always included\n     * in ruleSets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "locale",
+    "type" : "ULocale",
+    "comment" : "\n     * The formatter's locale.  This is used to create DecimalFormatSymbols and\n     * Collator objects.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "roundingMode",
+    "type" : "int",
+    "comment" : "\n     * The formatter's rounding mode.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "scannerProvider",
+    "type" : "RbnfLenientScannerProvider",
+    "comment" : "\n     * Collator to be used in lenient parsing.  This variable is lazy-evaluated:\n     * the collator is actually created the first time the client does a parse\n     * with lenient-parse mode turned on.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "lookedForScanner",
+    "type" : "boolean",
+    "comment" : " flag to mark whether we've previously looked for a scanner and failed",
+    "links" : [ ]
+  }, {
+    "name" : "decimalFormatSymbols",
+    "type" : "DecimalFormatSymbols",
+    "comment" : "\n     * The DecimalFormatSymbols object that any DecimalFormat objects this\n     * formatter uses should use.  This variable is lazy-evaluated: it isn't\n     * filled in if the rule set never uses a DecimalFormat pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "decimalFormat",
+    "type" : "DecimalFormat",
+    "comment" : "\n     * The NumberFormat used when lenient parsing numbers.  This needs to reflect\n     * the locale.  This is lazy-evaluated, like decimalFormatSymbols.  It is\n     * here so it can be shared by different NFSubstitutions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "defaultInfinityRule",
+    "type" : "NFRule",
+    "comment" : "\n     * The rule used when dealing with infinity. This is lazy-evaluated, and derived from decimalFormat.\n     * It is here so it can be shared by different NFRuleSets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "defaultNaNRule",
+    "type" : "NFRule",
+    "comment" : "\n     * The rule used when dealing with IEEE 754 NaN. This is lazy-evaluated, and derived from decimalFormat.\n     * It is here so it can be shared by different NFRuleSets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "lenientParse",
+    "type" : "boolean",
+    "comment" : "\n     * Flag specifying whether lenient parse mode is on or off.  Off by default.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "lenientParseRules",
+    "type" : "String",
+    "comment" : "\n     * If the description specifies lenient-parse rules, they're stored here until\n     * the collator is created.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "postProcessRules",
+    "type" : "String",
+    "comment" : "\n     * If the description specifies post-process rules, they're stored here until\n     * post-processing is required.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "postProcessor",
+    "type" : "RBNFPostProcessor",
+    "comment" : "\n     * Post processor lazily constructed from the postProcessRules.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ruleSetDisplayNames",
+    "type" : "Map<String, String[]>",
+    "comment" : "\n     * Localizations for rule set names.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "publicRuleSetNames",
+    "type" : "String[]",
+    "comment" : "\n     * The public rule set names;\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationInfoIsSet",
+    "type" : "boolean",
+    "comment" : "\n     * Data for handling context-based capitalization\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationForListOrMenu",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationForStandAlone",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationBrkIter",
+    "type" : "BreakIterator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "rulenames",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "locnames",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_VALUE",
+    "type" : "android.icu.math.BigDecimal",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_VALUE",
+    "type" : "android.icu.math.BigDecimal",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Duplicates this formatter.\n     * @return A RuleBasedNumberFormat that is equal to this one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object that)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tests two RuleBasedNumberFormats for equality.\n     * @param that The formatter to compare against this one.\n     * @return true if the two formatters have identical behavior.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Generates a textual description of this formatter.\n     * @return a String containing a rule set that will produce a RuleBasedNumberFormat\n     * with identical behavior to this one.  This won't necessarily be identical\n     * to the rule set description that was originally passed in, but will produce\n     * the same result.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Writes this object to a stream.\n     * @param out The stream to write to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(java.io.ObjectInputStream in) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads this object in from a stream.\n     * @param in The stream to read from.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] getRuleSetNames()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Returns a list of the names of all of this formatter's public rule sets.\n     * @return A list of the names of all of this formatter's public rule sets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ULocale[] getRuleSetDisplayNameLocales()",
+    "returnType" : "ULocale[]",
+    "comment" : "\n     * Return a list of locales for which there are locale-specific display names\n     * for the rule sets in this formatter.  If there are no localized display names, return null.\n     * @return an array of the ULocales for which there is rule set display name information\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String[] getNameListForLocale(ULocale loc)",
+    "returnType" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] getRuleSetDisplayNames(ULocale loc)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Return the rule set display names for the provided locale.  These are in the same order\n     * as those returned by getRuleSetNames.  The locale is matched against the locales for\n     * which there is display name data, using normal fallback rules.  If no locale matches,\n     * the default display names are returned.  (These are the internal rule set names minus\n     * the leading '%'.)\n     * @return an array of the locales that have display name information\n     * @see #getRuleSetNames\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] getRuleSetDisplayNames()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Return the rule set display names for the current default <code>DISPLAY</code> locale.\n     * @return an array of the display names\n     * @see #getRuleSetDisplayNames(ULocale)\n     * @see Category#DISPLAY\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getRuleSetDisplayName(String ruleSetName, ULocale loc)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the rule set display name for the provided rule set and locale.\n     * The locale is matched against the locales for which there is display name data, using\n     * normal fallback rules.  If no locale matches, the default display name is returned.\n     * @return the display name for the rule set\n     * @see #getRuleSetDisplayNames\n     * @throws IllegalArgumentException if ruleSetName is not a valid rule set name for this format\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getRuleSetDisplayName(String ruleSetName)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the rule set display name for the provided rule set in the current default <code>DISPLAY</code> locale.\n     * @return the display name for the rule set\n     * @see #getRuleSetDisplayName(String,ULocale)\n     * @see Category#DISPLAY\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String format(double number, String ruleSet) throws IllegalArgumentException",
+    "returnType" : "String",
+    "comment" : "\n     * Formats the specified number according to the specified rule set.\n     * @param number The number to format.\n     * @param ruleSet The name of the rule set to format the number with.\n     * This must be the name of a valid public rule set for this formatter.\n     * @return A textual representation of the number.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String format(long number, String ruleSet) throws IllegalArgumentException",
+    "returnType" : "String",
+    "comment" : "\n     * Formats the specified number according to the specified rule set.\n     * (If the specified rule set specifies a default [\"x.0\"] rule, this function\n     * ignores it.  Convert the number to a double first if you ned it.)  This\n     * function preserves all the precision in the long-- it doesn't convert it\n     * to a double.\n     * @param number The number to format.\n     * @param ruleSet The name of the rule set to format the number with.\n     * This must be the name of a valid public rule set for this formatter.\n     * @return A textual representation of the number.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(double number, StringBuffer toAppendTo, FieldPosition ignore)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats the specified number using the formatter's default rule set.\n     * (The default rule set is the last public rule set defined in the description.)\n     * @param number The number to format.\n     * @param toAppendTo A StringBuffer that the result should be appended to.\n     * @param ignore This function doesn't examine or update the field position.\n     * @return toAppendTo\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(long number, StringBuffer toAppendTo, FieldPosition ignore)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats the specified number using the formatter's default rule set.\n     * (The default rule set is the last public rule set defined in the description.)\n     * (If the specified rule set specifies a default [\"x.0\"] rule, this function\n     * ignores it.  Convert the number to a double first if you ned it.)  This\n     * function preserves all the precision in the long-- it doesn't convert it\n     * to a double.\n     * @param number The number to format.\n     * @param toAppendTo A StringBuffer that the result should be appended to.\n     * @param ignore This function doesn't examine or update the field position.\n     * @return toAppendTo\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(BigInteger number, StringBuffer toAppendTo, FieldPosition pos)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * <strong style=\"font-family: helvetica; color: red;\">NEW</strong>\n     * Implement android.icu.text.NumberFormat:\n     * Format a BigInteger.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(java.math.BigDecimal number, StringBuffer toAppendTo, FieldPosition pos)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * <strong style=\"font-family: helvetica; color: red;\">NEW</strong>\n     * Implement android.icu.text.NumberFormat:\n     * Format a BigDecimal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(android.icu.math.BigDecimal number, StringBuffer toAppendTo, FieldPosition pos)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * <strong style=\"font-family: helvetica; color: red;\">NEW</strong>\n     * Implement android.icu.text.NumberFormat:\n     * Format a BigDecimal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Number parse(String text, ParsePosition parsePosition)",
+    "returnType" : "Number",
+    "comment" : "\n     * Parses the specified string, beginning at the specified position, according\n     * to this formatter's rules.  This will match the string against all of the\n     * formatter's public rule sets and return the value corresponding to the longest\n     * parseable substring.  This function's behavior is affected by the lenient\n     * parse mode.\n     * @param text The string to parse\n     * @param parsePosition On entry, contains the position of the first character\n     * in \"text\" to examine.  On exit, has been updated to contain the position\n     * of the first character in \"text\" that wasn't consumed by the parse.\n     * @return The number that corresponds to the parsed text.  This will be an\n     * instance of either Long or Double, depending on whether the result has a\n     * fractional part.\n     * @see #setLenientParseMode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLenientParseMode(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Turns lenient parse mode on and off.\n     *\n     * When in lenient parse mode, the formatter uses an RbnfLenientScanner\n     * for parsing the text.  Lenient parsing is only in effect if a scanner\n     * is set.  If a provider is not set, and this is used for parsing,\n     * a default scanner <code>RbnfLenientScannerProviderImpl</code> will be set if\n     * it is available on the classpath.  Otherwise this will have no effect.\n     *\n     * @param enabled If true, turns lenient-parse mode on; if false, turns it off.\n     * @see RbnfLenientScanner\n     * @see RbnfLenientScannerProvider\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean lenientParseEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if lenient-parse mode is turned on.  Lenient parsing is off\n     * by default.\n     * @return true if lenient-parse mode is turned on.\n     * @see #setLenientParseMode\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLenientScannerProvider(RbnfLenientScannerProvider scannerProvider)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the provider for the lenient scanner.  If this has not been set,\n     * {@link #setLenientParseMode}\n     * has no effect.  This is necessary to decouple collation from format code.\n     * @param scannerProvider the provider\n     * @see #setLenientParseMode\n     * @see #getLenientScannerProvider\n     ",
+    "links" : [ "#setLenientParseMode" ]
+  }, {
+    "name" : "public RbnfLenientScannerProvider getLenientScannerProvider()",
+    "returnType" : "RbnfLenientScannerProvider",
+    "comment" : "\n     * Returns the lenient scanner provider.  If none was set, and lenient parse is\n     * enabled, this will attempt to instantiate a default scanner, setting it if\n     * it was successful.  Otherwise this returns false.\n     *\n     * @see #setLenientScannerProvider\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDefaultRuleSet(String ruleSetName)",
+    "returnType" : "void",
+    "comment" : "\n     * Override the default rule set to use.  If ruleSetName is null, reset\n     * to the initial default rule set.\n     * @param ruleSetName the name of the rule set, or null to reset the initial default.\n     * @throws IllegalArgumentException if ruleSetName is not the name of a public ruleset.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getDefaultRuleSetName()",
+    "returnType" : "String",
+    "comment" : "\n     * Return the name of the current default rule set.\n     * @return the name of the current default rule set, if it is public, else the empty string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDecimalFormatSymbols(DecimalFormatSymbols newSymbols)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the decimal format symbols used by this formatter. The formatter uses a copy of the\n     * provided symbols.\n     *\n     * @param newSymbols desired DecimalFormatSymbols\n     * @see DecimalFormatSymbols\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContext(DisplayContext context)",
+    "returnType" : "void",
+    "comment" : " lazily initialize relevant items",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRoundingMode()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the rounding mode.\n     *\n     * @return A rounding mode, between <code>BigDecimal.ROUND_UP</code> and\n     * <code>BigDecimal.ROUND_UNNECESSARY</code>.\n     * @see #setRoundingMode\n     * @see java.math.BigDecimal\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRoundingMode(int roundingMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the rounding mode. This has no effect unless the rounding increment is greater\n     * than zero.\n     *\n     * @param roundingMode A rounding mode, between <code>BigDecimal.ROUND_UP</code> and\n     * <code>BigDecimal.ROUND_UNNECESSARY</code>.\n     * @exception IllegalArgumentException if <code>roundingMode</code> is unrecognized.\n     * @see #getRoundingMode\n     * @see java.math.BigDecimal\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " NFRuleSet getDefaultRuleSet()",
+    "returnType" : "NFRuleSet",
+    "comment" : "\n     * Returns a reference to the formatter's default rule set.  The default\n     * rule set is the last public rule set in the description, or the one\n     * most recently set by setDefaultRuleSet.\n     * @return The formatter's default rule set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " RbnfLenientScanner getLenientScanner()",
+    "returnType" : "RbnfLenientScanner",
+    "comment" : "\n     * Returns the scanner to use for lenient parsing.  The scanner is\n     * provided by the provider.\n     * @return The collator to use for lenient parsing, or null if lenient parsing\n     * is turned off.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " DecimalFormatSymbols getDecimalFormatSymbols()",
+    "returnType" : "DecimalFormatSymbols",
+    "comment" : "\n     * Returns the DecimalFormatSymbols object that should be used by all DecimalFormat\n     * instances owned by this formatter.  This object is lazily created: this function\n     * creates it the first time it's called.\n     * @return The DecimalFormatSymbols object that should be used by all DecimalFormat\n     * instances owned by this formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " DecimalFormat getDecimalFormat()",
+    "returnType" : "DecimalFormat",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " PluralFormat createPluralFormat(PluralRules.PluralType pluralType, String pattern)",
+    "returnType" : "PluralFormat",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " NFRule getDefaultInfinityRule()",
+    "returnType" : "NFRule",
+    "comment" : "\n     * Returns the default rule for infinity. This object is lazily created: this function\n     * creates it the first time it's called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " NFRule getDefaultNaNRule()",
+    "returnType" : "NFRule",
+    "comment" : "\n     * Returns the default rule for NaN. This object is lazily created: this function\n     * creates it the first time it's called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String extractSpecial(StringBuilder description, String specialName)",
+    "returnType" : "String",
+    "comment" : "\n     * This extracts the special information from the rule sets before the\n     * main parsing starts.  Extra whitespace must have already been removed\n     * from the description.  If found, the special information is removed from the\n     * description and returned, otherwise the description is unchanged and null\n     * is returned.  Note: the trailing semicolon at the end of the special\n     * rules is stripped.\n     * @param description the rbnf description with extra whitespace removed\n     * @param specialName the name of the special rule text to extract\n     * @return the special rule text, or null if the rule was not found\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void init(String description, String[][] localizations)",
+    "returnType" : "void",
+    "comment" : "\n     * This function parses the description and uses it to build all of\n     * internal data structures that the formatter uses to do formatting\n     * @param description The description of the formatter's desired behavior.\n     * This is either passed in by the caller or loaded out of a resource\n     * by one of the constructors, and is in the description format specified\n     * in the class docs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initLocalizations(String[][] localizations)",
+    "returnType" : "void",
+    "comment" : "\n     * Take the localizations array and create a Map from the locale strings to\n     * the localization arrays.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initCapitalizationContextInfo(ULocale theLocale)",
+    "returnType" : "void",
+    "comment" : "\n     * Set capitalizationForListOrMenu, capitalizationForStandAlone\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private StringBuilder stripWhitespace(String description)",
+    "returnType" : "StringBuilder",
+    "comment" : "\n     * This function is used by init() to strip whitespace between rules (i.e.,\n     * after semicolons).\n     * @param description The formatter description\n     * @return The description with all the whitespace that follows semicolons\n     * taken out.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String format(double number, NFRuleSet ruleSet)",
+    "returnType" : "String",
+    "comment" : "\n     * Bottleneck through which all the public format() methods\n     * that take a double pass. By the time we get here, we know\n     * which rule set we're using to do the formatting.\n     * @param number The number to format\n     * @param ruleSet The rule set to use to format the number\n     * @return The text that resulted from formatting the number\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String format(long number, NFRuleSet ruleSet)",
+    "returnType" : "String",
+    "comment" : "\n     * Bottleneck through which all the public format() methods\n     * that take a long pass. By the time we get here, we know\n     * which rule set we're using to do the formatting.\n     * @param number The number to format\n     * @param ruleSet The rule set to use to format the number\n     * @return The text that resulted from formatting the number\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void postProcess(StringBuilder result, NFRuleSet ruleSet)",
+    "returnType" : "void",
+    "comment" : "\n     * Post-process the rules if we have a post-processor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String adjustForContext(String result)",
+    "returnType" : "String",
+    "comment" : "\n     * Adjust capitalization of formatted result for display context\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " NFRuleSet findRuleSet(String name) throws IllegalArgumentException",
+    "returnType" : "NFRuleSet",
+    "comment" : "\n     * Returns the named rule set.  Throws an IllegalArgumentException\n     * if this formatter doesn't have a rule set with that name.\n     * @param name The name of the desired rule set\n     * @return The rule set with that name\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public Object clone()", "public boolean equals(Object that)", "public int hashCode()", "public String toString()", "private void writeObject(java.io.ObjectOutputStream out) throws java.io.IOException", "private void readObject(java.io.ObjectInputStream in) throws java.io.IOException", "public String[] getRuleSetNames()", "public ULocale[] getRuleSetDisplayNameLocales()", "private String[] getNameListForLocale(ULocale loc)", "public String[] getRuleSetDisplayNames(ULocale loc)", "public String[] getRuleSetDisplayNames()", "public String getRuleSetDisplayName(String ruleSetName, ULocale loc)", "public String getRuleSetDisplayName(String ruleSetName)", "public String format(double number, String ruleSet) throws IllegalArgumentException", "public String format(long number, String ruleSet) throws IllegalArgumentException", "public StringBuffer format(double number, StringBuffer toAppendTo, FieldPosition ignore)", "public StringBuffer format(long number, StringBuffer toAppendTo, FieldPosition ignore)", "public StringBuffer format(BigInteger number, StringBuffer toAppendTo, FieldPosition pos)", "public StringBuffer format(java.math.BigDecimal number, StringBuffer toAppendTo, FieldPosition pos)", "public StringBuffer format(android.icu.math.BigDecimal number, StringBuffer toAppendTo, FieldPosition pos)", "public Number parse(String text, ParsePosition parsePosition)", "public void setLenientParseMode(boolean enabled)", "public boolean lenientParseEnabled()", "public void setLenientScannerProvider(RbnfLenientScannerProvider scannerProvider)", "public RbnfLenientScannerProvider getLenientScannerProvider()", "public void setDefaultRuleSet(String ruleSetName)", "public String getDefaultRuleSetName()", "public void setDecimalFormatSymbols(DecimalFormatSymbols newSymbols)", "public void setContext(DisplayContext context)", "public int getRoundingMode()", "public void setRoundingMode(int roundingMode)", " NFRuleSet getDefaultRuleSet()", " RbnfLenientScanner getLenientScanner()", " DecimalFormatSymbols getDecimalFormatSymbols()", " DecimalFormat getDecimalFormat()", " PluralFormat createPluralFormat(PluralRules.PluralType pluralType, String pattern)", " NFRule getDefaultInfinityRule()", " NFRule getDefaultNaNRule()", "private String extractSpecial(StringBuilder description, String specialName)", "private void init(String description, String[][] localizations)", "private void initLocalizations(String[][] localizations)", "private void initCapitalizationContextInfo(ULocale theLocale)", "private StringBuilder stripWhitespace(String description)", "private String format(double number, NFRuleSet ruleSet)", "private String format(long number, NFRuleSet ruleSet)", "private void postProcess(StringBuilder result, NFRuleSet ruleSet)", "private String adjustForContext(String result)", " NFRuleSet findRuleSet(String name) throws IllegalArgumentException" ],
+  "variableNames" : [ "serialVersionUID", "SPELLOUT", "ORDINAL", "DURATION", "NUMBERING_SYSTEM", "ruleSets", "ruleSetsMap", "defaultRuleSet", "locale", "roundingMode", "scannerProvider", "lookedForScanner", "decimalFormatSymbols", "decimalFormat", "defaultInfinityRule", "defaultNaNRule", "lenientParse", "lenientParseRules", "postProcessRules", "postProcessor", "ruleSetDisplayNames", "publicRuleSetNames", "capitalizationInfoIsSet", "capitalizationForListOrMenu", "capitalizationForStandAlone", "capitalizationBrkIter", "DEBUG", "rulenames", "locnames", "MAX_VALUE", "MIN_VALUE" ]
+}

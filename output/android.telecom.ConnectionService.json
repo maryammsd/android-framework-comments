@@ -1,0 +1,1071 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/telecom/ConnectionService.java",
+  "packageName" : "android.telecom",
+  "className" : "ConnectionService",
+  "comment" : "\n * An abstract service that should be implemented by any apps which either:\n * <ol>\n *     <li>Can make phone calls (VoIP or otherwise) and want those calls to be integrated into the\n *     built-in phone app.  Referred to as a <b>system managed</b> {@link ConnectionService}.</li>\n *     <li>Are a standalone calling app and don't want their calls to be integrated into the\n *     built-in phone app.  Referred to as a <b>self managed</b> {@link ConnectionService}.</li>\n * </ol>\n * Once implemented, the {@link ConnectionService} needs to take the following steps so that Telecom\n * will bind to it:\n * <p>\n * 1. <i>Registration in AndroidManifest.xml</i>\n * <br/>\n * <pre>\n * &lt;service android:name=\"com.example.package.MyConnectionService\"\n *    android:label=\"@string/some_label_for_my_connection_service\"\n *    android:permission=\"android.permission.BIND_TELECOM_CONNECTION_SERVICE\"&gt;\n *  &lt;intent-filter&gt;\n *   &lt;action android:name=\"android.telecom.ConnectionService\" /&gt;\n *  &lt;/intent-filter&gt;\n * &lt;/service&gt;\n * </pre>\n * <p>\n * 2. <i> Registration of {@link PhoneAccount} with {@link TelecomManager}.</i>\n * <br/>\n * See {@link PhoneAccount} and {@link TelecomManager#registerPhoneAccount} for more information.\n * <p>\n * System managed {@link ConnectionService}s must be enabled by the user in the phone app settings\n * before Telecom will bind to them.  Self-managed {@link ConnectionService}s must declare the\n * {@link android.Manifest.permission#MANAGE_OWN_CALLS} permission in their manifest before Telecom\n * will bind to them.\n * <p>\n * Once registered and enabled by the user in the phone app settings or granted permission, telecom\n * will bind to a {@link ConnectionService} implementation when it wants that\n * {@link ConnectionService} to place a call or the service has indicated that is has an incoming\n * call through {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)}. The\n * {@link ConnectionService} can then expect a call to\n * {@link #onCreateIncomingConnection(PhoneAccountHandle, ConnectionRequest)} or\n * {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}\n * wherein it should provide a new instance of a {@link Connection} object.  It is through this\n * {@link Connection} object that telecom receives state updates and the {@link ConnectionService}\n * receives call-commands such as answer, reject, hold and disconnect.\n * <p>\n * When there are no more live calls, telecom will unbind from the {@link ConnectionService}.\n * <p>\n * <h1>Self-Managed Connection Services</h1>\n * A VoIP app can implement a {@link ConnectionService} to ensure that its calls are integrated\n * into the Android platform.  There are numerous benefits to using the Telecom APIs for a VoIP app:\n * <ul>\n *     <li>Call concurrency is handled - the user is able to swap between calls in different\n *     apps and on the mobile network.</li>\n *     <li>Simplified audio routing - the platform provides your app with a unified list of the\n *     audio routes which are available\n *     (e.g. {@link android.telecom.Connection#onAvailableCallEndpointsChanged(List)}) and a\n *     standardized way to switch audio routes\n *     (e.g. {@link android.telecom.Connection#requestCallEndpointChange(CallEndpoint, Executor,\n *     OutcomeReceiver)} ).</li>\n *     <li>Bluetooth integration - your calls will be visible on and controllable via\n *     bluetooth devices (e.g. car head units and headsets).</li>\n *     <li>Companion device integration - wearable devices such as watches which implement an\n *     {@link InCallService} can optionally subscribe to see self-managed calls.  Similar to a\n *     bluetooth headunit, wearables will typically render your call using a generic call UX and\n *     provide the user with basic call controls such as hangup, answer, reject.</li>\n *     <li>Automotive calling experiences - Android supports automotive optimized experiences which\n *     provides a means for calls to be controlled and viewed in an automobile; these experiences\n *     are capable of leveraging call metadata provided by your app.</li>\n * </ul>\n * <h2>Registering a Phone Account</h2>\n * Before your app can handle incoming or outgoing calls through Telecom it needs to register a\n * {@link PhoneAccount} with Telecom indicating to the platform that your app is capable of calling.\n * <p>\n * Your app should create a new instance of {@link PhoneAccount} which meets the following\n * requirements:\n * <ul>\n *     <li>Has {@link PhoneAccount#CAPABILITY_SELF_MANAGED} (set using\n *     {@link PhoneAccount.Builder#setCapabilities(int)}).  This indicates to Telecom that your\n *     app will report calls but that it provides a primary UI for the calls by itself.</li>\n *     <li>Provide a unique identifier for the {@link PhoneAccount} via the\n *     {@link PhoneAccountHandle#getId()} attribute.  As per the {@link PhoneAccountHandle}\n *     documentation, you should NOT use an identifier which contains PII or other sensitive\n *     information.  A typical choice is a UUID.</li>\n * </ul>\n * Your app should register the new {@link PhoneAccount} with Telecom using\n * {@link TelecomManager#registerPhoneAccount(PhoneAccount)}.  {@link PhoneAccount}s persist across\n * reboot.  You can use {@link TelecomManager#getOwnSelfManagedPhoneAccounts()} to confirm the\n * {@link PhoneAccount} you registered.  Your app should generally only register a single\n * {@link PhoneAccount}.\n *\n * <h2>Implementing ConnectionService</h2>\n * Your app uses {@link TelecomManager#placeCall(Uri, Bundle)} to start new outgoing calls and\n * {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)} to report new incoming\n * calls.  Calling these APIs causes the Telecom stack to bind to your app's\n * {@link ConnectionService} implementation.  Telecom will either inform your app that it cannot\n * handle a call request at the current time (i.e. there could be an ongoing emergency call, which\n * means your app is not allowed to handle calls at the current time), or it will ask your app to\n * create a new instance of {@link Connection} to represent a call in your app.\n *\n * Your app should implement the following {@link ConnectionService} methods:\n * <ul>\n *     <li>{@link ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle,\n *     ConnectionRequest)} - called by Telecom to ask your app to make a new {@link Connection}\n *     to represent an outgoing call your app requested via\n *     {@link TelecomManager#placeCall(Uri, Bundle)}.</li>\n *     <li><{@link ConnectionService#onCreateOutgoingConnectionFailed(PhoneAccountHandle,\n *     ConnectionRequest)} - called by Telecom to inform your app that a call it reported via\n *     {@link TelecomManager#placeCall(Uri, Bundle)} cannot be handled at this time.  Your app\n *     should NOT place a call at the current time.</li>\n *     <li>{@link ConnectionService#onCreateIncomingConnection(PhoneAccountHandle,\n *     ConnectionRequest)} - called by Telecom to ask your app to make a new {@link Connection}\n *     to represent an incoming call your app reported via\n *     {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)}.</li>\n *     <li>{@link ConnectionService#onCreateIncomingConnectionFailed(PhoneAccountHandle,\n *     ConnectionRequest)} - called by Telecom to inform your app that an incoming call it reported\n *     via {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)} cannot be handled\n *     at this time.  Your app should NOT post a new incoming call notification and should silently\n *     reject the call.</li>\n * </ul>\n *\n * <h2>Implementing a Connection</h2>\n * Your app should extend the {@link Connection} class to represent calls in your app.  When you\n * create new instances of your {@link Connection}, you should ensure the following properties are\n * set on the new {@link Connection} instance returned by your {@link ConnectionService}:\n * <ul>\n *     <li>{@link Connection#setAddress(Uri, int)} - the identifier for the other party.  For\n *     apps that user phone numbers the {@link Uri} can be a {@link PhoneAccount#SCHEME_TEL} URI\n *     representing the phone number.</li>\n *     <li>{@link Connection#setCallerDisplayName(String, int)} - the display name of the other\n *     party.  This is what will be shown on Bluetooth devices and other calling surfaces such\n *     as wearable devices.  This is particularly important for calls that do not use a phone\n *     number to identify the caller or called party.</li>\n *     <li>{@link Connection#setConnectionProperties(int)} - ensure you set\n *     {@link Connection#PROPERTY_SELF_MANAGED} to identify to the platform that the call is\n *     handled by your app.</li>\n *     <li>{@link Connection#setConnectionCapabilities(int)} - if your app supports making calls\n *     inactive (i.e. holding calls) you should get {@link Connection#CAPABILITY_SUPPORT_HOLD} and\n *     {@link Connection#CAPABILITY_HOLD} to indicate to the platform that you calls can potentially\n *     be held for concurrent calling scenarios.</li>\n *     <li>{@link Connection#setAudioModeIsVoip(boolean)} - set to {@code true} to ensure that the\n *     platform knows your call is a VoIP call.</li>\n *     <li>For newly created {@link Connection} instances, do NOT change the state of your call\n *     using {@link Connection#setActive()}, {@link Connection#setOnHold()} until the call is added\n *     to Telecom (ie you have returned it via\n *     {@link ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}\n *     or\n *     {@link ConnectionService#onCreateIncomingConnection(PhoneAccountHandle, ConnectionRequest)}).\n *     </li>\n * </ul>\n *\n * <h2>How to Place Outgoing Calls</h2>\n * When your app wants to place an outgoing call it calls\n * {@link TelecomManager#placeCall(Uri, Bundle)}.  You should specify a {@link Uri} to identify\n * who the call is being placed to, and specify the {@link PhoneAccountHandle} associated with the\n * {@link PhoneAccount} you registered for your app using\n * {@link TelecomManager#EXTRA_PHONE_ACCOUNT_HANDLE} in the {@link Bundle} parameter.\n * <p>\n * Telecom will bind to your app's {@link ConnectionService} implementation and call either:\n * <ul>\n *     <li>{@link ConnectionService#onCreateOutgoingConnection(PhoneAccountHandle,\n *     ConnectionRequest)} - the {@link ConnectionRequest#getAddress()} will match the address\n *     you specified when placing the call.  You should return a new instance of your app's\n *     {@link Connection} class to represent the outgoing call.</li>\n *     <li>{@link ConnectionService#onCreateOutgoingConnectionFailed(PhoneAccountHandle,\n *     ConnectionRequest)} - your app should not place the call at this time; the call should be\n *     cancelled and the user informed that the call cannot be placed.</li>\n * </ul>\n * <p>\n * New outgoing calls will start in a {@link Connection#STATE_DIALING} state.  This state indicates\n * that your app is in the process of connecting the call to the other party.\n * <p>\n * Once the other party answers the call (or it is set up successfully), your app should call\n * {@link Connection#setActive()} to inform Telecom that the call is now active.\n *\n * <h2>How to Add Incoming Calls</h2>\n * When your app receives an incoming call, it should call\n * {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)}.  Set the\n * {@link PhoneAccountHandle} parameter to the {@link PhoneAccountHandle} associated with your\n * app's {@link PhoneAccount}.\n * <p>\n * Telecom will bind to your app's {@link ConnectionService} implementation and call either:\n * <ul>\n *     <li>{@link ConnectionService#onCreateIncomingConnection(PhoneAccountHandle,\n *     ConnectionRequest)} - You should return a new instance of your app's\n *     {@link Connection} class to represent the incoming call.</li>\n *     <li>{@link ConnectionService#onCreateIncomingConnectionFailed(PhoneAccountHandle,\n *     ConnectionRequest)} - your app should not receive the call at this time; the call should be\n *     rejected silently; the user may be informed of a missed call.</li>\n * </ul>\n * <p>\n * New incoming calls will start with a {@link Connection#STATE_RINGING} state.  This state\n * indicates that your app has a new incoming call pending.  Telecom will NOT play a ringtone or\n * post a notification for your app.  It is up to your app to post an incoming call notification\n * with an associated ringtone.  Telecom will call {@link Connection#onShowIncomingCallUi()} on the\n * {@link Connection} when your app can post its incoming call notification.  See\n * {@link Connection#onShowIncomingCallUi() the docs} for more information on how to post the\n * notification.\n * <p>\n * Your incoming call notification (or full screen UI) will typically have an \"answer\" and \"decline\"\n * action which the user chooses.  When your app receives the \"answer\" or \"decline\"\n * {@link android.app.PendingIntent}, you should must call either {@link Connection#setActive()} to\n * inform Telecom that the call was answered, or\n * {@link Connection#setDisconnected(DisconnectCause)} to inform Telecom that the call was rejected.\n * If the call was rejected, supply an instance of {@link DisconnectCause} with\n * {@link DisconnectCause#REJECTED}, and then call {@link Connection#destroy()}.\n * <p>\n * In addition to handling requests to answer or decline the call via notification actions, your\n * app should also be implement the {@link Connection#onAnswer(int)} and\n * {@link Connection#onAnswer()} methods on the {@link Connection}.  These will be raised if the\n * user answers your call via a Bluetooth device or another device like a wearable or automotive\n * calling UX.  In response, your app should call {@link Connection#setActive()} to inform Telecom\n * that the call was answered.\n * <p>\n * Additionally, your app should implement {@link Connection#onReject()} to handle requests to\n * reject the call which are raised via Bluetooth or other calling surfaces.  Your app should call\n * {@link Connection#setDisconnected(DisconnectCause)} and supply an instance of\n * {@link DisconnectCause} with {@link DisconnectCause#REJECTED} in this case.\n *\n * <h2>Ending Calls</h2>\n * When an ongoing active call (incoming or outgoing) has ended, your app is responsible for\n * informing Telecom that the call ended.\n * <p>\n * Your app calls:\n * <ul>\n *     <li>{@link Connection#setDisconnected(DisconnectCause)} - this informs Telecom that the\n *     call has terminated.  You should provide a new instance of {@link DisconnectCause} with\n *     either {@link DisconnectCause#LOCAL} or {@link DisconnectCause#REMOTE} to indicate where the\n *     call disconnection took place.  {@link DisconnectCause#LOCAL} indicates that the call\n *     terminated in your app on the current device (i.e. via user action), where\n *     {@link DisconnectCause#REMOTE} indicates that the call terminates on the remote device.</li>\n *     <li>{@link Connection#destroy()} - this informs Telecom that your call instance can be\n *     cleaned up.  You should always call this when you are finished with a call.</li>\n * </ul>\n * <p>\n * Similar to answering incoming calls, requests to disconnect your call may originate from outside\n * your app.  You can handle these by implementing {@link Connection#onDisconnect()}.  Your app\n * should call {@link Connection#setDisconnected(DisconnectCause)} with an instance of\n * {@link DisconnectCause} and reason {@link DisconnectCause#LOCAL} to indicate to Telecom that your\n * app has disconnected the call as requested based on the user's request.\n *\n * <h2>Holding and Unholding Calls</h2>\n * When your app specifies {@link Connection#CAPABILITY_SUPPORT_HOLD} and\n * {@link Connection#CAPABILITY_HOLD} on your {@link Connection} instance, it is telling Telecom\n * that your calls can be placed into a suspended, or \"held\" state if required.  If your app\n * supports holding its calls, it will be possible for the user to switch between calls in your app\n * and holdable calls in another app or on the mobile network.  If your app does not support\n * holding its calls, you may receive a request to disconnect the call from Telecom if the user\n * opts to answer an incoming call in another app or on the mobile network; this ensures that the\n * user can only be in one call at a time.\n * <p>\n * Your app is free to change a call between the held and active state using\n * {@link Connection#setOnHold()} and {@link Connection#setActive()}.\n * <p>\n * Your app may receive a request from Telecom to hold or unhold a call via\n * {@link Connection#onHold()} and {@link Connection#onUnhold()}.  Telecom can ask your app to\n * hold or unhold its {@link Connection} either if the user requests this action through another\n * calling surface such as Bluetooth, or if the user answers or switches to a call in a different\n * app or on the mobile network.\n * <p>\n * When your app receives an {@link Connection#onHold()} it must call {@link Connection#setOnHold()}\n * to inform Telecom that the call has been held successfully.\n * <p>\n * When your app receives an {@link Connection#onUnhold()} it must call\n * {@link Connection#setActive()} to inform Telecom that the call has been resumed successfully.\n ",
+  "links" : [ "android.telecom.Connection#setDisconnected(DisconnectCause)", "android.os.Bundle", "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.Connection#onHold()", "android.net.Uri", "android.telecom.Connection#STATE_DIALING", "android.telecom.Connection#CAPABILITY_SUPPORT_HOLD", "android.app.PendingIntent", "android.telecom.Connection#setActive()", "android.telecom.Connection#onReject()", "android.telecom.PhoneAccountHandle", "android.telecom.InCallService", "android.telecom.Connection#onAnswer()", "com.android.internal.telecom.IConnectionService#onCreateIncomingConnectionFailed(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService#onCreateOutgoingConnectionFailed(PhoneAccountHandle", "android.telecom.TelecomManager#registerPhoneAccount", "android.telecom.Connection#onUnhold()", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection#setConnectionCapabilities(int)", "PhoneAccount.Builder#setCapabilities(int)", "com.android.internal.telecom.IConnectionService#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.DisconnectCause#REMOTE", "android.telecom.Connection#onDisconnect()", "android.telecom.Connection#setCallerDisplayName(String", "android.telecom.PhoneAccount#CAPABILITY_SELF_MANAGED", "android.telecom.Connection#STATE_RINGING", "android.telecom.DisconnectCause", "android.telecom.PhoneAccountHandle#getId()", "android.telecom.Connection#destroy()", "android.telecom.Connection#setConnectionProperties(int)", "android.telecom.DisconnectCause#LOCAL", "android.telecom.ConnectionRequest#getAddress()", "#onCreateIncomingConnection(PhoneAccountHandle", "android.telecom.Connection#PROPERTY_SELF_MANAGED", "android.telecom.Connection#setAddress(Uri", "android.telecom.Connection#onAvailableCallEndpointsChanged(List)", "android.telecom.Connection#setOnHold()", "android.telecom.TelecomManager#placeCall(Uri", "android.telecom.Connection#onAnswer(int)", "android.telecom.PhoneAccount#SCHEME_TEL", "android.telecom.TelecomManager#EXTRA_PHONE_ACCOUNT_HANDLE", "android.telecom.Connection#requestCallEndpointChange(CallEndpoint", "android.telecom.TelecomManager#registerPhoneAccount(PhoneAccount)", "android.telecom.Connection#setAudioModeIsVoip(boolean)", "android.telecom.TelecomManager#addNewIncomingCall(PhoneAccountHandle", "android.telecom.Connection#onShowIncomingCallUi()", "android.telecom.Connection", "android.telecom.Connection#CAPABILITY_HOLD", "android.telecom.DisconnectCause#REJECTED", "android.telecom.PhoneAccount", "android.Manifest.permission#MANAGE_OWN_CALLS", "android.telecom.TelecomManager", "android.telecom.TelecomManager#getOwnSelfManagedPhoneAccounts()", "com.android.internal.telecom.IConnectionService#onCreateIncomingConnection(PhoneAccountHandle" ],
+  "variables" : [ {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} that must be declared as handled by the service.\n     ",
+    "links" : [ "android.content.Intent" ]
+  }, {
+    "name" : "EXTRA_IS_HANDOVER",
+    "type" : "String",
+    "comment" : "\n     * Boolean extra used by Telecom to inform a {@link ConnectionService} that the purpose of it\n     * being asked to create a new outgoing {@link Connection} is to perform a handover of an\n     * ongoing call on the device from another {@link PhoneAccount}/{@link ConnectionService}.  Will\n     * be specified in the {@link ConnectionRequest#getExtras()} passed by Telecom when\n     * {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)} is called.\n     * <p>\n     * When your {@link ConnectionService} receives this extra, it should communicate the fact that\n     * this is a handover to the other device's matching {@link ConnectionService}.  That\n     * {@link ConnectionService} will continue the handover using\n     * {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, Bundle)}, specifying\n     * {@link TelecomManager#EXTRA_IS_HANDOVER}.  Telecom will match the phone numbers of the\n     * handover call on the other device with ongoing calls for {@link ConnectionService}s which\n     * support {@link PhoneAccount#EXTRA_SUPPORTS_HANDOVER_FROM}.\n     * @hide\n     ",
+    "links" : [ "android.telecom.PhoneAccount#EXTRA_SUPPORTS_HANDOVER_FROM", "android.telecom.ConnectionRequest#getExtras()", "android.telecom.PhoneAccount", "#onCreateOutgoingConnection(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService", "android.telecom.TelecomManager#addNewIncomingCall(PhoneAccountHandle", "android.telecom.TelecomManager#EXTRA_IS_HANDOVER", "android.telecom.Connection" ]
+  }, {
+    "name" : "PII_DEBUG",
+    "type" : "boolean",
+    "comment" : " Flag controlling whether PII is emitted into the logs",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_HANDLER",
+    "type" : "String",
+    "comment" : " Session Definitions",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_ADD_CS_ADAPTER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_REMOVE_CS_ADAPTER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONN",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONN_COMPLETE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONN_FAILED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_ABORT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_ANSWER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_ANSWER_VIDEO",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_DEFLECT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_TRANSFER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CONSULTATIVE_TRANSFER",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_REJECT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_REJECT_MESSAGE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_SILENCE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_DISCONNECT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_HOLD",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_UNHOLD",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CALL_AUDIO_SC",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_USING_ALTERNATIVE_UI",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_TRACKED_BY_NON_UI_SERVICE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_PLAY_DTMF",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_STOP_DTMF",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CONFERENCE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_SPLIT_CONFERENCE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_MERGE_CONFERENCE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_SWAP_CONFERENCE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_ADD_PARTICIPANT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_POST_DIAL_CONT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_PULL_EXTERNAL_CALL",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_SEND_CALL_EVENT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CALL_FILTERING_COMPLETED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_HANDOVER_COMPLETE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_EXTRAS_CHANGED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_START_RTT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_UPDATE_RTT_PIPES",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_STOP_RTT",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_RTT_UPGRADE_RESPONSE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CONNECTION_SERVICE_FOCUS_LOST",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CONNECTION_SERVICE_FOCUS_GAINED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_HANDOVER_FAILED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONF",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONF_COMPLETE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CREATE_CONF_FAILED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_CALL_ENDPOINT_CHANGED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_AVAILABLE_CALL_ENDPOINTS_CHANGED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SESSION_MUTE_STATE_CHANGED",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ADD_CONNECTION_SERVICE_ADAPTER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONNECTION",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ABORT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ANSWER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REJECT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_DISCONNECT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_HOLD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_UNHOLD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CALL_AUDIO_STATE_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_PLAY_DTMF_TONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_STOP_DTMF_TONE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CONFERENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SPLIT_FROM_CONFERENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_POST_DIAL_CONTINUE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REMOVE_CONNECTION_SERVICE_ADAPTER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ANSWER_VIDEO",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_MERGE_CONFERENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SWAP_CONFERENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REJECT_WITH_MESSAGE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SILENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_PULL_EXTERNAL_CALL",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_SEND_CALL_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_EXTRAS_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONNECTION_FAILED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_START_RTT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_STOP_RTT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_RTT_UPGRADE_RESPONSE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONNECTION_COMPLETE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CONNECTION_SERVICE_FOCUS_LOST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CONNECTION_SERVICE_FOCUS_GAINED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_HANDOVER_FAILED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_HANDOVER_COMPLETE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_DEFLECT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONFERENCE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONFERENCE_COMPLETE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_CREATE_CONFERENCE_FAILED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_REJECT_WITH_REASON",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ADD_PARTICIPANT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_EXPLICIT_CALL_TRANSFER",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_EXPLICIT_CALL_TRANSFER_CONSULTATIVE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CALL_FILTERING_COMPLETED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_USING_ALTERNATIVE_UI",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_TRACKED_BY_NON_UI_SERVICE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_CALL_ENDPOINT_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_AVAILABLE_CALL_ENDPOINTS_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_ON_MUTE_STATE_CHANGED",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNullConnection",
+    "type" : "Connection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionById",
+    "type" : "Map<String, Connection>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIdByConnection",
+    "type" : "Map<Connection, String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConferenceById",
+    "type" : "Map<String, Conference>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIdByConference",
+    "type" : "Map<Conference, String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteConnectionManager",
+    "type" : "RemoteConnectionManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPreInitializationConnectionRequests",
+    "type" : "List<Runnable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAdapter",
+    "type" : "ConnectionServiceAdapter",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAreAccountsInitialized",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNullConference",
+    "type" : "Conference",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIdSyncRoot",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBinder",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConferenceListener",
+    "type" : "Conference.Listener",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectionListener",
+    "type" : "Connection.Listener",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public final IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : " {@inheritDoc} ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean onUnbind(Intent intent)",
+    "returnType" : "boolean",
+    "comment" : " {@inheritDoc} ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onBindClient(@Nullable Intent intent)",
+    "returnType" : "void",
+    "comment" : "\n     * Used for testing to let the test suite know when the connection service has been bound.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void createConference(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming, boolean isUnknown)",
+    "returnType" : "void",
+    "comment" : "\n     * This can be used by telecom to either create a new outgoing conference call or attach\n     * to an existing incoming conference call. In either case, telecom will cycle through a\n     * set of services and call createConference until a connection service cancels the process\n     * or completes it successfully.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void createConnection(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming, boolean isUnknown)",
+    "returnType" : "void",
+    "comment" : "\n     * This can be used by telecom to either create a new outgoing call or attach to an existing\n     * incoming call. In either case, telecom will cycle through a set of services and call\n     * createConnection util a connection service cancels the process or completes it successfully.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void createConnectionFailed(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void createConferenceFailed(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handoverFailed(final String callId, final ConnectionRequest request, int reason)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyCreateConnectionComplete(final String callId)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom when the creation of a new Connection has completed and it is now added\n     * to Telecom.\n     * @param callId The ID of the connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyCreateConferenceComplete(final String callId)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom when the creation of a new Conference has completed and it is now added\n     * to Telecom.\n     * @param callId The ID of the connection.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void abort(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void answerVideo(String callId, int videoState)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void answer(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void deflect(String callId, Uri address)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void reject(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void reject(String callId, String rejectWithMessage)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void reject(String callId, @android.telecom.Call.RejectReason int rejectReason)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void transfer(String callId, Uri number, boolean isConfirmationRequired)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void consultativeTransfer(String callId, String otherCallId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void silence(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void disconnect(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void hold(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void unhold(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onCallAudioStateChanged(String callId, CallAudioState callAudioState)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onCallEndpointChanged(String callId, CallEndpoint callEndpoint)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onAvailableCallEndpointsChanged(String callId, List<CallEndpoint> availableCallEndpoints)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onMuteStateChanged(String callId, boolean isMuted)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onUsingAlternativeUi(String callId, boolean isUsingAlternativeUi)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onTrackedByNonUiService(String callId, boolean isTracked)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void playDtmfTone(String callId, char digit)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void stopDtmfTone(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void conference(String callId1, String callId2)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void splitFromConference(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void mergeConference(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void swapConference(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addConferenceParticipants(String callId, List<Uri> participants)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void pullExternalCall(String callId)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies a {@link Connection} of a request to pull an external call.\n     *\n     * See {@link Call#pullExternalCall()}.\n     *\n     * @param callId The ID of the call to pull.\n     ",
+    "links" : [ "android.telecom.Connection", "android.telecom.Call#pullExternalCall()" ]
+  }, {
+    "name" : "private void sendCallEvent(String callId, String event, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies a {@link Connection} of a call event.\n     *\n     * See {@link Call#sendCallEvent(String, Bundle)}.\n     *\n     * @param callId The ID of the call receiving the event.\n     * @param event The event.\n     * @param extras Extras associated with the event.\n     ",
+    "links" : [ "android.telecom.Call#sendCallEvent(String", "android.telecom.Connection" ]
+  }, {
+    "name" : "private void onCallFilteringCompleted(String callId, Connection.CallFilteringCompletionInfo callFilteringCompletionInfo)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyHandoverComplete(String callId)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies a {@link Connection} that a handover has completed.\n     *\n     * @param callId The ID of the call which completed handover.\n     ",
+    "links" : [ "android.telecom.Connection" ]
+  }, {
+    "name" : "private void handleExtrasChanged(String callId, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies a {@link Connection} or {@link Conference} of a change to the extras from Telecom.\n     * <p>\n     * These extra changes can originate from Telecom itself, or from an {@link InCallService} via\n     * the {@link android.telecom.Call#putExtra(String, boolean)},\n     * {@link android.telecom.Call#putExtra(String, int)},\n     * {@link android.telecom.Call#putExtra(String, String)},\n     * {@link Call#removeExtras(List)}.\n     *\n     * @param callId The ID of the call receiving the event.\n     * @param extras The new extras bundle.\n     ",
+    "links" : [ "android.telecom.InCallService", "android.telecom.Conference", "android.telecom.Connection", "android.telecom.Call#putExtra(String", "android.telecom.Call#removeExtras(List)" ]
+  }, {
+    "name" : "private void startRtt(String callId, Connection.RttTextStream rttTextStream)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void stopRtt(String callId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleRttUpgradeResponse(String callId, Connection.RttTextStream rttTextStream)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onPostDialContinue(String callId, boolean proceed)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onAdapterAttached()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final RemoteConnection createRemoteIncomingConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "RemoteConnection",
+    "comment" : "\n     * Ask some other {@code ConnectionService} to create a {@code RemoteConnection} given an\n     * incoming request. This is used by {@code ConnectionService}s that are registered with\n     * {@link PhoneAccount#CAPABILITY_CONNECTION_MANAGER} and want to be able to manage\n     * SIM-based incoming calls.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the incoming call.\n     * @return The {@code Connection} object to satisfy this call, or {@code null} to\n     *         not handle the call.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_CONNECTION_MANAGER", "#onCreateOutgoingConnection(PhoneAccountHandle" ]
+  }, {
+    "name" : "public final RemoteConnection createRemoteOutgoingConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "RemoteConnection",
+    "comment" : "\n     * Ask some other {@code ConnectionService} to create a {@code RemoteConnection} given an\n     * outgoing request. This is used by {@code ConnectionService}s that are registered with\n     * {@link PhoneAccount#CAPABILITY_CONNECTION_MANAGER} and want to be able to use the\n     * SIM-based {@code ConnectionService} to place its outgoing calls.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the outgoing call.\n     * @return The {@code Connection} object to satisfy this call, or {@code null} to\n     *         not handle the call.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_CONNECTION_MANAGER", "#onCreateOutgoingConnection(PhoneAccountHandle" ]
+  }, {
+    "name" : "public final RemoteConference createRemoteIncomingConference(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)",
+    "returnType" : "RemoteConference",
+    "comment" : "\n     * Ask some other {@code ConnectionService} to create a {@code RemoteConference} given an\n     * incoming request. This is used by {@code ConnectionService}s that are registered with\n     * {@link PhoneAccount#CAPABILITY_ADHOC_CONFERENCE_CALLING}.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *          {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the incoming conference call.\n     * @return The {@code RemoteConference} object to satisfy this call, or {@code null} to not\n     *         handle the call.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.PhoneAccount#CAPABILITY_ADHOC_CONFERENCE_CALLING" ]
+  }, {
+    "name" : "public final RemoteConference createRemoteOutgoingConference(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)",
+    "returnType" : "RemoteConference",
+    "comment" : "\n     * Ask some other {@code ConnectionService} to create a {@code RemoteConference} given an\n     * outgoing request. This is used by {@code ConnectionService}s that are registered with\n     * {@link PhoneAccount#CAPABILITY_ADHOC_CONFERENCE_CALLING}.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *          {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the outgoing conference call.\n     * @return The {@code RemoteConference} object to satisfy this call, or {@code null} to not\n     *         handle the call.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.PhoneAccount#CAPABILITY_ADHOC_CONFERENCE_CALLING" ]
+  }, {
+    "name" : "public final void conferenceRemoteConnections(RemoteConnection remoteConnection1, RemoteConnection remoteConnection2)",
+    "returnType" : "void",
+    "comment" : "\n     * Indicates to the relevant {@code RemoteConnectionService} that the specified\n     * {@link RemoteConnection}s should be merged into a conference call.\n     * <p>\n     * If the conference request is successful, the method {@link #onRemoteConferenceAdded} will\n     * be invoked.\n     *\n     * @param remoteConnection1 The first of the remote connections to conference.\n     * @param remoteConnection2 The second of the remote connections to conference.\n     ",
+    "links" : [ "#onRemoteConferenceAdded", "android.telecom.RemoteConnection" ]
+  }, {
+    "name" : "public final void addConference(Conference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a new conference call. When a conference call is created either as a result of an\n     * explicit request via {@link #onConference} or otherwise, the connection service should supply\n     * an instance of {@link Conference} by invoking this method. A conference call provided by this\n     * method will persist until {@link Conference#destroy} is invoked on the conference instance.\n     *\n     * @param conference The new conference object.\n     ",
+    "links" : [ "android.telecom.Conference", "#onConference", "android.telecom.Conference#destroy" ]
+  }, {
+    "name" : "public final void addExistingConnection(PhoneAccountHandle phoneAccountHandle, Connection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a connection created by the {@link ConnectionService} and informs telecom of the new\n     * connection.\n     *\n     * @param phoneAccountHandle The phone account handle for the connection.\n     * @param connection The connection to add.\n     ",
+    "links" : [ "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public final void connectionServiceFocusReleased()",
+    "returnType" : "void",
+    "comment" : "\n     * Call to inform Telecom that your {@link ConnectionService} has released call resources (e.g\n     * microphone, camera).\n     *\n     * <p>\n     * The {@link ConnectionService} will be disconnected when it failed to call this method within\n     * 5 seconds after {@link #onConnectionServiceFocusLost()} is called.\n     *\n     * @see ConnectionService#onConnectionServiceFocusLost()\n     ",
+    "links" : [ "#onConnectionServiceFocusLost()", "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public final void addExistingConnection(@NonNull PhoneAccountHandle phoneAccountHandle, @NonNull Connection connection, @NonNull Conference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds a connection created by the {@link ConnectionService} and informs telecom of the new\n     * connection, as well as adding that connection to the specified conference.\n     * <p>\n     * Note: This API is intended ONLY for use by the Telephony stack to provide an easy way to add\n     * IMS conference participants to be added to a conference in a single step; this helps ensure\n     * UI updates happen atomically, rather than adding the connection and then adding it to\n     * the conference in another step.\n     *\n     * @param phoneAccountHandle The phone account handle for the connection.\n     * @param connection The connection to add.\n     * @param conference The parent conference of the new connection.\n     * @hide\n     ",
+    "links" : [ "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public final Collection<Connection> getAllConnections()",
+    "returnType" : "Collection<Connection>",
+    "comment" : "\n     * Returns all the active {@code Connection}s for which this {@code ConnectionService}\n     * has taken responsibility.\n     *\n     * @return A collection of {@code Connection}s created by this {@code ConnectionService}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Collection<Conference> getAllConferences()",
+    "returnType" : "Collection<Conference>",
+    "comment" : "\n     * Returns all the active {@code Conference}s for which this {@code ConnectionService}\n     * has taken responsibility.\n     *\n     * @return A collection of {@code Conference}s created by this {@code ConnectionService}.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Connection onCreateIncomingConnection(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Create a {@code Connection} given an incoming request. This is used to attach to existing\n     * incoming calls.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the incoming call.\n     * @return The {@code Connection} object to satisfy this call, or {@code null} to\n     *         not handle the call.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle" ]
+  }, {
+    "name" : "public Conference onCreateIncomingConference(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "Conference",
+    "comment" : "\n     * Create a {@code Conference} given an incoming request. This is used to attach to an incoming\n     * conference call initiated via\n     * {@link TelecomManager#addNewIncomingConference(PhoneAccountHandle, Bundle)}.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request Details about the incoming conference call.\n     * @return The {@code Conference} object to satisfy this call. If the conference attempt is\n     *         failed, the return value will be a result of an invocation of\n     *         {@link Connection#createFailedConnection(DisconnectCause)}.\n     *         Return {@code null} if the {@link ConnectionService} cannot handle the call.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService", "android.telecom.TelecomManager#addNewIncomingConference(PhoneAccountHandle", "android.telecom.Connection#createFailedConnection(DisconnectCause)" ]
+  }, {
+    "name" : "public void onCreateConnectionComplete(@NonNull Connection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom after the {@link Connection} returned by\n     * {@link #onCreateIncomingConnection(PhoneAccountHandle, ConnectionRequest)}\n     * or {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)} has been\n     * added to the {@link ConnectionService} and sent to Telecom.\n     *\n     * @param connection the {@link Connection} which was added to Telecom.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection", "#onCreateIncomingConnection(PhoneAccountHandle" ]
+  }, {
+    "name" : "public void onCreateConferenceComplete(@NonNull Conference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom after the {@link Conference} returned by\n     * {@link #onCreateIncomingConference(PhoneAccountHandle, ConnectionRequest)}\n     * or {@link #onCreateOutgoingConference(PhoneAccountHandle, ConnectionRequest)} has been\n     * added to the {@link ConnectionService} and sent to Telecom.\n     *\n     * @param conference the {@link Conference} which was added to Telecom.\n     ",
+    "links" : [ "#onCreateOutgoingConference(PhoneAccountHandle", "android.telecom.Conference", "#onCreateIncomingConference(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public void onCreateIncomingConnectionFailed(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom to inform the {@link ConnectionService} that its request to create a new\n     * incoming {@link Connection} was denied.\n     * <p>\n     * Used when a self-managed {@link ConnectionService} attempts to create a new incoming\n     * {@link Connection}, but Telecom has determined that the call cannot be allowed at this time.\n     * The {@link ConnectionService} is responsible for silently rejecting the new incoming\n     * {@link Connection}.\n     * <p>\n     * See {@link TelecomManager#isIncomingCallPermitted(PhoneAccountHandle)} for more information.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request The incoming connection request.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.TelecomManager#isIncomingCallPermitted(PhoneAccountHandle)", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection" ]
+  }, {
+    "name" : "public void onCreateOutgoingConnectionFailed(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom to inform the {@link ConnectionService} that its request to create a new\n     * outgoing {@link Connection} was denied.\n     * <p>\n     * Used when a self-managed {@link ConnectionService} attempts to create a new outgoing\n     * {@link Connection}, but Telecom has determined that the call cannot be placed at this time.\n     * The {@link ConnectionService} is responisible for informing the user that the\n     * {@link Connection} cannot be made at this time.\n     * <p>\n     * See {@link TelecomManager#isOutgoingCallPermitted(PhoneAccountHandle)} for more information.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request The outgoing connection request.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection", "android.telecom.TelecomManager#isOutgoingCallPermitted(PhoneAccountHandle)" ]
+  }, {
+    "name" : "public void onCreateIncomingConferenceFailed(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom to inform the {@link ConnectionService} that its request to create a new\n     * incoming {@link Conference} was denied.\n     * <p>\n     * Used when a self-managed {@link ConnectionService} attempts to create a new incoming\n     * {@link Conference}, but Telecom has determined that the call cannot be allowed at this time.\n     * The {@link ConnectionService} is responsible for silently rejecting the new incoming\n     * {@link Conference}.\n     * <p>\n     * See {@link TelecomManager#isIncomingCallPermitted(PhoneAccountHandle)} for more information.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request The incoming connection request.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.Conference", "android.telecom.TelecomManager#isIncomingCallPermitted(PhoneAccountHandle)", "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public void onCreateOutgoingConferenceFailed(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom to inform the {@link ConnectionService} that its request to create a new\n     * outgoing {@link Conference} was denied.\n     * <p>\n     * Used when a self-managed {@link ConnectionService} attempts to create a new outgoing\n     * {@link Conference}, but Telecom has determined that the call cannot be placed at this time.\n     * The {@link ConnectionService} is responisible for informing the user that the\n     * {@link Conference} cannot be made at this time.\n     * <p>\n     * See {@link TelecomManager#isOutgoingCallPermitted(PhoneAccountHandle)} for more information.\n     *\n     * @param connectionManagerPhoneAccount See description at\n     *         {@link #onCreateOutgoingConnection(PhoneAccountHandle, ConnectionRequest)}.\n     * @param request The outgoing connection request.\n     ",
+    "links" : [ "#onCreateOutgoingConnection(PhoneAccountHandle", "android.telecom.Conference", "com.android.internal.telecom.IConnectionService", "android.telecom.TelecomManager#isOutgoingCallPermitted(PhoneAccountHandle)" ]
+  }, {
+    "name" : "public void triggerConferenceRecalculate()",
+    "returnType" : "void",
+    "comment" : "\n     * Trigger recalculate functinality for conference calls. This is used when a Telephony\n     * Connection is part of a conference controller but is not yet added to Connection\n     * Service and hence cannot be added to the conference call.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Connection onCreateOutgoingConnection(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Create a {@code Connection} given an outgoing request. This is used to initiate new\n     * outgoing calls.\n     *\n     * @param connectionManagerPhoneAccount The connection manager account to use for managing\n     *         this call.\n     *         <p>\n     *         If this parameter is not {@code null}, it means that this {@code ConnectionService}\n     *         has registered one or more {@code PhoneAccount}s having\n     *         {@link PhoneAccount#CAPABILITY_CONNECTION_MANAGER}. This parameter will contain\n     *         one of these {@code PhoneAccount}s, while the {@code request} will contain another\n     *         (usually but not always distinct) {@code PhoneAccount} to be used for actually\n     *         making the connection.\n     *         <p>\n     *         If this parameter is {@code null}, it means that this {@code ConnectionService} is\n     *         being asked to make a direct connection. The\n     *         {@link ConnectionRequest#getAccountHandle()} of parameter {@code request} will be\n     *         a {@code PhoneAccount} registered by this {@code ConnectionService} to use for\n     *         making the connection.\n     * @param request Details about the outgoing call.\n     * @return The {@code Connection} object to satisfy this call, or the result of an invocation\n     *         of {@link Connection#createFailedConnection(DisconnectCause)} to not handle the call.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_CONNECTION_MANAGER", "android.telecom.ConnectionRequest#getAccountHandle()", "android.telecom.Connection#createFailedConnection(DisconnectCause)" ]
+  }, {
+    "name" : "public Conference onCreateOutgoingConference(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "Conference",
+    "comment" : "\n     * Create a {@code Conference} given an outgoing request. This is used to initiate new\n     * outgoing conference call requested via\n     * {@link TelecomManager#startConference(List, Bundle)}.\n     *\n     * @param connectionManagerPhoneAccount The connection manager account to use for managing\n     *         this call.\n     *         <p>\n     *         If this parameter is not {@code null}, it means that this {@code ConnectionService}\n     *         has registered one or more {@code PhoneAccount}s having\n     *         {@link PhoneAccount#CAPABILITY_CONNECTION_MANAGER}. This parameter will contain\n     *         one of these {@code PhoneAccount}s, while the {@code request} will contain another\n     *         (usually but not always distinct) {@code PhoneAccount} to be used for actually\n     *         making the connection.\n     *         <p>\n     *         If this parameter is {@code null}, it means that this {@code ConnectionService} is\n     *         being asked to make a direct connection. The\n     *         {@link ConnectionRequest#getAccountHandle()} of parameter {@code request} will be\n     *         a {@code PhoneAccount} registered by this {@code ConnectionService} to use for\n     *         making the connection.\n     * @param request Details about the outgoing call.\n     * @return The {@code Conference} object to satisfy this call. If the conference attempt is\n     *         failed, the return value will be a result of an invocation of\n     *         {@link Connection#createFailedConnection(DisconnectCause)}.\n     *         Return {@code null} if the {@link ConnectionService} cannot handle the call.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_CONNECTION_MANAGER", "android.telecom.ConnectionRequest#getAccountHandle()", "com.android.internal.telecom.IConnectionService", "android.telecom.TelecomManager#startConference(List", "android.telecom.Connection#createFailedConnection(DisconnectCause)" ]
+  }, {
+    "name" : "public Connection onCreateOutgoingHandoverConnection(PhoneAccountHandle fromPhoneAccountHandle, ConnectionRequest request)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Called by Telecom to request that a {@link ConnectionService} creates an instance of an\n     * outgoing handover {@link Connection}.\n     * <p>\n     * A call handover is the process where an ongoing call is transferred from one app (i.e.\n     * {@link ConnectionService} to another app.  The user could, for example, choose to continue a\n     * mobile network call in a video calling app.  The mobile network call via the Telephony stack\n     * is referred to as the source of the handover, and the video calling app is referred to as the\n     * destination.\n     * <p>\n     * When considering a handover scenario the <em>initiating</em> device is where a user initiated\n     * the handover process (e.g. by calling {@link android.telecom.Call#handoverTo(\n     * PhoneAccountHandle, int, Bundle)}, and the other device is considered the <em>receiving</em>\n     * device.\n     * <p>\n     * This method is called on the destination {@link ConnectionService} on <em>initiating</em>\n     * device when the user initiates a handover request from one app to another.  The user request\n     * originates in the {@link InCallService} via\n     * {@link android.telecom.Call#handoverTo(PhoneAccountHandle, int, Bundle)}.\n     * <p>\n     * For a full discussion of the handover process and the APIs involved, see\n     * {@link android.telecom.Call#handoverTo(PhoneAccountHandle, int, Bundle)}.\n     * <p>\n     * Implementations of this method should return an instance of {@link Connection} which\n     * represents the handover.  If your app does not wish to accept a handover to it at this time,\n     * you can return {@code null}.  The code below shows an example of how this is done.\n     * <pre>\n     * {@code\n     * public Connection onCreateIncomingHandoverConnection(PhoneAccountHandle\n     *     fromPhoneAccountHandle, ConnectionRequest request) {\n     *   if (!isHandoverAvailable()) {\n     *       return null;\n     *   }\n     *   MyConnection connection = new MyConnection();\n     *   connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);\n     *   connection.setVideoState(request.getVideoState());\n     *   return connection;\n     * }\n     * }\n     * </pre>\n     *\n     * @param fromPhoneAccountHandle {@link PhoneAccountHandle} associated with the\n     *                               ConnectionService which needs to handover the call.\n     * @param request Details about the call to handover.\n     * @return {@link Connection} instance corresponding to the handover call.\n     ",
+    "links" : [ "android.telecom.PhoneAccountHandle", "android.telecom.InCallService", "android.telecom.Call#handoverTo(", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+  }, {
+    "name" : "public Connection onCreateIncomingHandoverConnection(PhoneAccountHandle fromPhoneAccountHandle, ConnectionRequest request)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Called by Telecom to request that a {@link ConnectionService} creates an instance of an\n     * incoming handover {@link Connection}.\n     * <p>\n     * A call handover is the process where an ongoing call is transferred from one app (i.e.\n     * {@link ConnectionService} to another app.  The user could, for example, choose to continue a\n     * mobile network call in a video calling app.  The mobile network call via the Telephony stack\n     * is referred to as the source of the handover, and the video calling app is referred to as the\n     * destination.\n     * <p>\n     * When considering a handover scenario the <em>initiating</em> device is where a user initiated\n     * the handover process (e.g. by calling {@link android.telecom.Call#handoverTo(\n     * PhoneAccountHandle, int, Bundle)}, and the other device is considered the <em>receiving</em>\n     * device.\n     * <p>\n     * This method is called on the destination app on the <em>receiving</em> device when the\n     * destination app calls {@link TelecomManager#acceptHandover(Uri, int, PhoneAccountHandle)} to\n     * accept an incoming handover from the <em>initiating</em> device.\n     * <p>\n     * For a full discussion of the handover process and the APIs involved, see\n     * {@link android.telecom.Call#handoverTo(PhoneAccountHandle, int, Bundle)}.\n     * <p>\n     * Implementations of this method should return an instance of {@link Connection} which\n     * represents the handover.  The code below shows an example of how this is done.\n     * <pre>\n     * {@code\n     * public Connection onCreateIncomingHandoverConnection(PhoneAccountHandle\n     *     fromPhoneAccountHandle, ConnectionRequest request) {\n     *   // Given that your app requested to accept the handover, you should not return null here.\n     *   MyConnection connection = new MyConnection();\n     *   connection.setAddress(request.getAddress(), TelecomManager.PRESENTATION_ALLOWED);\n     *   connection.setVideoState(request.getVideoState());\n     *   return connection;\n     * }\n     * }\n     * </pre>\n     *\n     * @param fromPhoneAccountHandle {@link PhoneAccountHandle} associated with the\n     *                               ConnectionService which needs to handover the call.\n     * @param request Details about the call which needs to be handover.\n     * @return {@link Connection} instance corresponding to the handover call.\n     ",
+    "links" : [ "android.telecom.PhoneAccountHandle", "android.telecom.TelecomManager#acceptHandover(Uri", "android.telecom.Call#handoverTo(", "com.android.internal.telecom.IConnectionService", "android.telecom.Connection", "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+  }, {
+    "name" : "public void onHandoverFailed(ConnectionRequest request, @Call.Callback.HandoverFailureErrors int error)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by Telecom in response to a {@code TelecomManager#acceptHandover()}\n     * invocation which failed.\n     * <p>\n     * For a full discussion of the handover process and the APIs involved, see\n     * {@link android.telecom.Call#handoverTo(PhoneAccountHandle, int, Bundle)}\n     *\n     * @param request Details about the call which failed to handover.\n     * @param error Reason for handover failure.  Will be one of the\n     ",
+    "links" : [ "android.telecom.Call#handoverTo(PhoneAccountHandle" ]
+  }, {
+    "name" : "public Connection onCreateUnknownConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)",
+    "returnType" : "Connection",
+    "comment" : "\n     * Calls of this type are created using\n     * {@link TelecomManager#addNewUnknownCall(PhoneAccountHandle, Bundle)}.  Unknown calls\n     * are used for representing calls which become known to the {@link ConnectionService}\n     * midway through the call.\n     *\n     * For example, a call transferred from one device to answer would surface as an active\n     * call in Telecom instead of going through a typical Ringing to Active transition, or\n     * Dialing to Active transition.\n     *\n     * A {@link ConnectionService} can return {@code null} (the default behavior)\n     * if it is not able to handle a request for the requested unknown connection.\n     *\n     * {@link TelecomManager#addNewIncomingCall(PhoneAccountHandle, android.os.Bundle)}.\n     *\n     * @param connectionManagerPhoneAccount The connection manager account to use for managing\n     *                                      this call\n     * @param request Details about the outgoing call\n     * @return The {@code Connection} object to satisfy this call, or the result of an invocation\n     *         of {@link Connection#createFailedConnection(DisconnectCause)} to not handle the call\n     * @hide\n     ",
+    "links" : [ "android.telecom.TelecomManager#addNewUnknownCall(PhoneAccountHandle", "com.android.internal.telecom.IConnectionService", "android.telecom.TelecomManager#addNewIncomingCall(PhoneAccountHandle", "android.telecom.Connection#createFailedConnection(DisconnectCause)" ]
+  }, {
+    "name" : "public void onConference(Connection connection1, Connection connection2)",
+    "returnType" : "void",
+    "comment" : "\n     * Conference two specified connections. Invoked when the user has made a request to merge the\n     * specified connections into a conference call. In response, the connection service should\n     * create an instance of {@link Conference} and pass it into {@link #addConference}.\n     *\n     * @param connection1 A connection to merge into a conference call.\n     * @param connection2 A connection to merge into a conference call.\n     ",
+    "links" : [ "android.telecom.Conference", "#addConference" ]
+  }, {
+    "name" : "public void onConnectionAdded(Connection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a connection is added.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConnectionRemoved(Connection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a connection is removed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConferenceAdded(Conference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a conference is added.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConferenceRemoved(Conference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when a conference is removed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onRemoteConferenceAdded(RemoteConference conference)",
+    "returnType" : "void",
+    "comment" : "\n     * Indicates that a remote conference has been created for existing {@link RemoteConnection}s.\n     * When this method is invoked, this {@link ConnectionService} should create its own\n     * representation of the conference call and send it to telecom using {@link #addConference}.\n     * <p>\n     * This is only relevant to {@link ConnectionService}s which are registered with\n     * {@link PhoneAccount#CAPABILITY_CONNECTION_MANAGER}.\n     *\n     * @param conference The remote conference call.\n     ",
+    "links" : [ "android.telecom.PhoneAccount#CAPABILITY_CONNECTION_MANAGER", "#addConference", "com.android.internal.telecom.IConnectionService", "android.telecom.RemoteConnection" ]
+  }, {
+    "name" : "public void onRemoteExistingConnectionAdded(RemoteConnection connection)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when an existing connection is added remotely.\n     * @param connection The existing connection which was added.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConnectionServiceFocusLost()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the {@link ConnectionService} has lost the call focus.\n     * The {@link ConnectionService} should release the call resources and invokes\n     * {@link ConnectionService#connectionServiceFocusReleased()} to inform telecom that it has\n     * released the call resources.\n     ",
+    "links" : [ "com.android.internal.telecom.IConnectionService", "com.android.internal.telecom.IConnectionService#connectionServiceFocusReleased()" ]
+  }, {
+    "name" : "public void onConnectionServiceFocusGained()",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the {@link ConnectionService} has gained the call focus. The\n     * {@link ConnectionService} can acquire the call resources at this time.\n     ",
+    "links" : [ "com.android.internal.telecom.IConnectionService" ]
+  }, {
+    "name" : "public boolean containsConference(Conference conference)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void addRemoteConference(RemoteConference remoteConference)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : " void addRemoteExistingConnection(RemoteConnection remoteConnection)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "private void onAccountsInitialized()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String addExistingConnectionInternal(PhoneAccountHandle handle, Connection connection)",
+    "returnType" : "String",
+    "comment" : "\n     * Adds an existing connection to the list of connections, identified by a new call ID unique\n     * to this connection service.\n     *\n     * @param connection The connection.\n     * @return The ID of the connection (e.g. the call-id).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addConnection(PhoneAccountHandle handle, String callId, Connection connection)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void removeConnection(Connection connection)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "private String addConferenceInternal(Conference conference)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeConference(Conference conference)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Connection findConnectionForAction(String callId, String action)",
+    "returnType" : "Connection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static synchronized Connection getNullConnection()",
+    "returnType" : "Connection",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Conference findConferenceForAction(String conferenceId, String action)",
+    "returnType" : "Conference",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private List<String> createConnectionIdList(List<Connection> connections)",
+    "returnType" : "List<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private List<String> createIdList(List<Conferenceable> conferenceables)",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Builds a list of {@link Connection} and {@link Conference} IDs based on the list of\n     * {@link Conferenceable}s passed in.\n     *\n     * @param conferenceables The {@link Conferenceable} connections and conferences.\n     * @return List of string conference and call Ids.\n     ",
+    "links" : [ "android.telecom.Conferenceable", "android.telecom.Conference", "android.telecom.Connection" ]
+  }, {
+    "name" : "private Conference getNullConference()",
+    "returnType" : "Conference",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void endAllConnections()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getNextCallId()",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieves the next call ID as maintainted by the connection service.\n     *\n     * @return The call ID.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Handler getHandler()",
+    "returnType" : "Handler",
+    "comment" : "\n     * Returns this handler, ONLY FOR TESTING.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setReadyForTest()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets this {@link ConnectionService} ready for testing purposes.\n     * @hide\n     ",
+    "links" : [ "com.android.internal.telecom.IConnectionService" ]
+  } ],
+  "methodNames" : [ "public final IBinder onBind(Intent intent)", "public boolean onUnbind(Intent intent)", "public void onBindClient(@Nullable Intent intent)", "private void createConference(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming, boolean isUnknown)", "private void createConnection(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming, boolean isUnknown)", "private void createConnectionFailed(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming)", "private void createConferenceFailed(final PhoneAccountHandle callManagerAccount, final String callId, final ConnectionRequest request, boolean isIncoming)", "private void handoverFailed(final String callId, final ConnectionRequest request, int reason)", "private void notifyCreateConnectionComplete(final String callId)", "private void notifyCreateConferenceComplete(final String callId)", "private void abort(String callId)", "private void answerVideo(String callId, int videoState)", "private void answer(String callId)", "private void deflect(String callId, Uri address)", "private void reject(String callId)", "private void reject(String callId, String rejectWithMessage)", "private void reject(String callId, @android.telecom.Call.RejectReason int rejectReason)", "private void transfer(String callId, Uri number, boolean isConfirmationRequired)", "private void consultativeTransfer(String callId, String otherCallId)", "private void silence(String callId)", "private void disconnect(String callId)", "private void hold(String callId)", "private void unhold(String callId)", "private void onCallAudioStateChanged(String callId, CallAudioState callAudioState)", "private void onCallEndpointChanged(String callId, CallEndpoint callEndpoint)", "private void onAvailableCallEndpointsChanged(String callId, List<CallEndpoint> availableCallEndpoints)", "private void onMuteStateChanged(String callId, boolean isMuted)", "private void onUsingAlternativeUi(String callId, boolean isUsingAlternativeUi)", "private void onTrackedByNonUiService(String callId, boolean isTracked)", "private void playDtmfTone(String callId, char digit)", "private void stopDtmfTone(String callId)", "private void conference(String callId1, String callId2)", "private void splitFromConference(String callId)", "private void mergeConference(String callId)", "private void swapConference(String callId)", "private void addConferenceParticipants(String callId, List<Uri> participants)", "private void pullExternalCall(String callId)", "private void sendCallEvent(String callId, String event, Bundle extras)", "private void onCallFilteringCompleted(String callId, Connection.CallFilteringCompletionInfo callFilteringCompletionInfo)", "private void notifyHandoverComplete(String callId)", "private void handleExtrasChanged(String callId, Bundle extras)", "private void startRtt(String callId, Connection.RttTextStream rttTextStream)", "private void stopRtt(String callId)", "private void handleRttUpgradeResponse(String callId, Connection.RttTextStream rttTextStream)", "private void onPostDialContinue(String callId, boolean proceed)", "private void onAdapterAttached()", "public final RemoteConnection createRemoteIncomingConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public final RemoteConnection createRemoteOutgoingConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public final RemoteConference createRemoteIncomingConference(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)", "public final RemoteConference createRemoteOutgoingConference(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)", "public final void conferenceRemoteConnections(RemoteConnection remoteConnection1, RemoteConnection remoteConnection2)", "public final void addConference(Conference conference)", "public final void addExistingConnection(PhoneAccountHandle phoneAccountHandle, Connection connection)", "public final void connectionServiceFocusReleased()", "public final void addExistingConnection(@NonNull PhoneAccountHandle phoneAccountHandle, @NonNull Connection connection, @NonNull Conference conference)", "public final Collection<Connection> getAllConnections()", "public final Collection<Conference> getAllConferences()", "public Connection onCreateIncomingConnection(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)", "public Conference onCreateIncomingConference(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public void onCreateConnectionComplete(@NonNull Connection connection)", "public void onCreateConferenceComplete(@NonNull Conference conference)", "public void onCreateIncomingConnectionFailed(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)", "public void onCreateOutgoingConnectionFailed(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)", "public void onCreateIncomingConferenceFailed(@Nullable PhoneAccountHandle connectionManagerPhoneAccount, @Nullable ConnectionRequest request)", "public void onCreateOutgoingConferenceFailed(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public void triggerConferenceRecalculate()", "public Connection onCreateOutgoingConnection(PhoneAccountHandle connectionManagerPhoneAccount, ConnectionRequest request)", "public Conference onCreateOutgoingConference(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public Connection onCreateOutgoingHandoverConnection(PhoneAccountHandle fromPhoneAccountHandle, ConnectionRequest request)", "public Connection onCreateIncomingHandoverConnection(PhoneAccountHandle fromPhoneAccountHandle, ConnectionRequest request)", "public void onHandoverFailed(ConnectionRequest request, @Call.Callback.HandoverFailureErrors int error)", "public Connection onCreateUnknownConnection(@NonNull PhoneAccountHandle connectionManagerPhoneAccount, @NonNull ConnectionRequest request)", "public void onConference(Connection connection1, Connection connection2)", "public void onConnectionAdded(Connection connection)", "public void onConnectionRemoved(Connection connection)", "public void onConferenceAdded(Conference conference)", "public void onConferenceRemoved(Conference conference)", "public void onRemoteConferenceAdded(RemoteConference conference)", "public void onRemoteExistingConnectionAdded(RemoteConnection connection)", "public void onConnectionServiceFocusLost()", "public void onConnectionServiceFocusGained()", "public boolean containsConference(Conference conference)", " void addRemoteConference(RemoteConference remoteConference)", " void addRemoteExistingConnection(RemoteConnection remoteConnection)", "private void onAccountsInitialized()", "private String addExistingConnectionInternal(PhoneAccountHandle handle, Connection connection)", "private void addConnection(PhoneAccountHandle handle, String callId, Connection connection)", "protected void removeConnection(Connection connection)", "private String addConferenceInternal(Conference conference)", "private void removeConference(Conference conference)", "private Connection findConnectionForAction(String callId, String action)", " static synchronized Connection getNullConnection()", "private Conference findConferenceForAction(String conferenceId, String action)", "private List<String> createConnectionIdList(List<Connection> connections)", "private List<String> createIdList(List<Conferenceable> conferenceables)", "private Conference getNullConference()", "private void endAllConnections()", "private int getNextCallId()", "public Handler getHandler()", "public void setReadyForTest()" ],
+  "variableNames" : [ "SERVICE_INTERFACE", "EXTRA_IS_HANDOVER", "PII_DEBUG", "SESSION_HANDLER", "SESSION_ADD_CS_ADAPTER", "SESSION_REMOVE_CS_ADAPTER", "SESSION_CREATE_CONN", "SESSION_CREATE_CONN_COMPLETE", "SESSION_CREATE_CONN_FAILED", "SESSION_ABORT", "SESSION_ANSWER", "SESSION_ANSWER_VIDEO", "SESSION_DEFLECT", "SESSION_TRANSFER", "SESSION_CONSULTATIVE_TRANSFER", "SESSION_REJECT", "SESSION_REJECT_MESSAGE", "SESSION_SILENCE", "SESSION_DISCONNECT", "SESSION_HOLD", "SESSION_UNHOLD", "SESSION_CALL_AUDIO_SC", "SESSION_USING_ALTERNATIVE_UI", "SESSION_TRACKED_BY_NON_UI_SERVICE", "SESSION_PLAY_DTMF", "SESSION_STOP_DTMF", "SESSION_CONFERENCE", "SESSION_SPLIT_CONFERENCE", "SESSION_MERGE_CONFERENCE", "SESSION_SWAP_CONFERENCE", "SESSION_ADD_PARTICIPANT", "SESSION_POST_DIAL_CONT", "SESSION_PULL_EXTERNAL_CALL", "SESSION_SEND_CALL_EVENT", "SESSION_CALL_FILTERING_COMPLETED", "SESSION_HANDOVER_COMPLETE", "SESSION_EXTRAS_CHANGED", "SESSION_START_RTT", "SESSION_UPDATE_RTT_PIPES", "SESSION_STOP_RTT", "SESSION_RTT_UPGRADE_RESPONSE", "SESSION_CONNECTION_SERVICE_FOCUS_LOST", "SESSION_CONNECTION_SERVICE_FOCUS_GAINED", "SESSION_HANDOVER_FAILED", "SESSION_CREATE_CONF", "SESSION_CREATE_CONF_COMPLETE", "SESSION_CREATE_CONF_FAILED", "SESSION_CALL_ENDPOINT_CHANGED", "SESSION_AVAILABLE_CALL_ENDPOINTS_CHANGED", "SESSION_MUTE_STATE_CHANGED", "MSG_ADD_CONNECTION_SERVICE_ADAPTER", "MSG_CREATE_CONNECTION", "MSG_ABORT", "MSG_ANSWER", "MSG_REJECT", "MSG_DISCONNECT", "MSG_HOLD", "MSG_UNHOLD", "MSG_ON_CALL_AUDIO_STATE_CHANGED", "MSG_PLAY_DTMF_TONE", "MSG_STOP_DTMF_TONE", "MSG_CONFERENCE", "MSG_SPLIT_FROM_CONFERENCE", "MSG_ON_POST_DIAL_CONTINUE", "MSG_REMOVE_CONNECTION_SERVICE_ADAPTER", "MSG_ANSWER_VIDEO", "MSG_MERGE_CONFERENCE", "MSG_SWAP_CONFERENCE", "MSG_REJECT_WITH_MESSAGE", "MSG_SILENCE", "MSG_PULL_EXTERNAL_CALL", "MSG_SEND_CALL_EVENT", "MSG_ON_EXTRAS_CHANGED", "MSG_CREATE_CONNECTION_FAILED", "MSG_ON_START_RTT", "MSG_ON_STOP_RTT", "MSG_RTT_UPGRADE_RESPONSE", "MSG_CREATE_CONNECTION_COMPLETE", "MSG_CONNECTION_SERVICE_FOCUS_LOST", "MSG_CONNECTION_SERVICE_FOCUS_GAINED", "MSG_HANDOVER_FAILED", "MSG_HANDOVER_COMPLETE", "MSG_DEFLECT", "MSG_CREATE_CONFERENCE", "MSG_CREATE_CONFERENCE_COMPLETE", "MSG_CREATE_CONFERENCE_FAILED", "MSG_REJECT_WITH_REASON", "MSG_ADD_PARTICIPANT", "MSG_EXPLICIT_CALL_TRANSFER", "MSG_EXPLICIT_CALL_TRANSFER_CONSULTATIVE", "MSG_ON_CALL_FILTERING_COMPLETED", "MSG_ON_USING_ALTERNATIVE_UI", "MSG_ON_TRACKED_BY_NON_UI_SERVICE", "MSG_ON_CALL_ENDPOINT_CHANGED", "MSG_ON_AVAILABLE_CALL_ENDPOINTS_CHANGED", "MSG_ON_MUTE_STATE_CHANGED", "sNullConnection", "mConnectionById", "mIdByConnection", "mConferenceById", "mIdByConference", "mRemoteConnectionManager", "mPreInitializationConnectionRequests", "mAdapter", "mAreAccountsInitialized", "sNullConference", "mIdSyncRoot", "mId", "mBinder", "mHandler", "mConferenceListener", "mConnectionListener" ]
+}

@@ -1,0 +1,531 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/apache/xml/dtm/ref/sax2dtm/SAX2DTM.java",
+  "packageName" : "org.apache.xml.dtm.ref.sax2dtm",
+  "className" : "SAX2DTM",
+  "comment" : "\n * This class implements a DTM that tends to be optimized more for speed than\n * for compactness, that is constructed via SAX2 ContentHandler events.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : " Set true to monitor SAX events and similar diagnostic info. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_incrementalSAXSource",
+    "type" : "IncrementalSAXSource",
+    "comment" : "\n   * If we're building the model incrementally on demand, we need to\n   * be able to tell the source when to send us more data.\n   *\n   * Note that if this has not been set, and you attempt to read ahead\n   * of the current build point, we'll probably throw a null-pointer\n   * exception. We could try to wait-and-retry instead, as a very poor\n   * fallback, but that has all the known problems with multithreading\n   * on multiprocessors and we Don't Want to Go There.\n   *\n   * @see setIncrementalSAXSource\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_chars",
+    "type" : "FastStringBuffer",
+    "comment" : "private FastStringBuffer m_chars = new FastStringBuffer(13, 13);",
+    "links" : [ ]
+  }, {
+    "name" : "m_data",
+    "type" : "SuballocatedIntVector",
+    "comment" : " This vector holds offset and length data.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_parents",
+    "type" : "IntStack",
+    "comment" : " The parent stack, needed only for construction.\n   * Made protected rather than private so SAX2RTFDTM can access it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_previous",
+    "type" : "int",
+    "comment" : " The current previous node, needed only for construction time.\n   * Made protected rather than private so SAX2RTFDTM can access it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_prefixMappings",
+    "type" : "java.util.Vector",
+    "comment" : " Namespace support, only relevent at construction time.\n   * Made protected rather than private so SAX2RTFDTM can access it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_contextIndexes",
+    "type" : "IntStack",
+    "comment" : " Namespace support, only relevent at construction time.\n   * Made protected rather than private so SAX2RTFDTM can access it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_textType",
+    "type" : "int",
+    "comment" : " Type of next characters() event within text block in prgress. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_coalescedTextType",
+    "type" : "int",
+    "comment" : "\n   * Type of coalesced text block. See logic in the characters()\n   * method.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_locator",
+    "type" : "Locator",
+    "comment" : " The SAX Document locator ",
+    "links" : [ ]
+  }, {
+    "name" : "m_systemId",
+    "type" : "String",
+    "comment" : " The SAX Document system-id ",
+    "links" : [ ]
+  }, {
+    "name" : "m_insideDTD",
+    "type" : "boolean",
+    "comment" : " We are inside the DTD.  This is used for ignoring comments.  ",
+    "links" : [ ]
+  }, {
+    "name" : "m_walker",
+    "type" : "DTMTreeWalker",
+    "comment" : " Tree Walker for dispatchToEvents. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_valuesOrPrefixes",
+    "type" : "DTMStringPool",
+    "comment" : " pool of string values that come as strings. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_endDocumentOccured",
+    "type" : "boolean",
+    "comment" : " End document has been reached.\n   * Made protected rather than private so SAX2RTFDTM can access it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_dataOrQName",
+    "type" : "SuballocatedIntVector",
+    "comment" : " Data or qualified name values, one array element for each node. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_idAttributes",
+    "type" : "Hashtable",
+    "comment" : "\n   * This table holds the ID string to node associations, for\n   * XML IDs.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_fixednames",
+    "type" : "String[]",
+    "comment" : "\n   * fixed dom-style names.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_entities",
+    "type" : "Vector",
+    "comment" : "\n   * Vector of entities.  Each record is composed of four Strings:\n   *  publicId, systemID, notationName, and name.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "ENTITY_FIELD_PUBLICID",
+    "type" : "int",
+    "comment" : " m_entities public ID offset. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENTITY_FIELD_SYSTEMID",
+    "type" : "int",
+    "comment" : " m_entities system ID offset. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENTITY_FIELD_NOTATIONNAME",
+    "type" : "int",
+    "comment" : " m_entities notation name offset. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENTITY_FIELD_NAME",
+    "type" : "int",
+    "comment" : " m_entities name offset. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENTITY_FIELDS_PER",
+    "type" : "int",
+    "comment" : " Number of entries per record for m_entities. ",
+    "links" : [ ]
+  }, {
+    "name" : "m_textPendingStart",
+    "type" : "int",
+    "comment" : "\n   * The starting offset within m_chars for the text or\n   * CDATA_SECTION node currently being acumulated,\n   * or -1 if there is no text node in progress\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_useSourceLocationProperty",
+    "type" : "boolean",
+    "comment" : "\n   * Describes whether information about document source location\n   * should be maintained or not.\n   * \n   * Made protected for access by SAX2RTFDTM.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_sourceSystemId",
+    "type" : "StringVector",
+    "comment" : " Made protected for access by SAX2RTFDTM.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_sourceLine",
+    "type" : "IntVector",
+    "comment" : " Made protected for access by SAX2RTFDTM.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_sourceColumn",
+    "type" : "IntVector",
+    "comment" : " Made protected for access by SAX2RTFDTM.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "m_pastFirstElement",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void setUseSourceLocation(boolean useSourceLocation)",
+    "returnType" : "void",
+    "comment" : "\n   * Set whether information about document source location\n   * should be maintained or not. \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int _dataOrQName(int identity)",
+    "returnType" : "int",
+    "comment" : "\n   * Get the data or qualified name for the given node identity.\n   *\n   * @param identity The node identity.\n   *\n   * @return The data or qualified name, or DTM.NULL.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearCoRoutine()",
+    "returnType" : "void",
+    "comment" : "\n   * Ask the CoRoutine parser to doTerminate and clear the reference.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearCoRoutine(boolean callDoTerminate)",
+    "returnType" : "void",
+    "comment" : "\n   * Ask the CoRoutine parser to doTerminate and clear the reference. If\n   * the CoRoutine parser has already been cleared, this will have no effect.\n   *\n   * @param callDoTerminate true of doTerminate should be called on the\n   * coRoutine parser.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setIncrementalSAXSource(IncrementalSAXSource incrementalSAXSource)",
+    "returnType" : "void",
+    "comment" : "\n   * Bind a IncrementalSAXSource to this DTM. If we discover we need nodes\n   * that have not yet been built, we will ask this object to send us more\n   * events, and it will manage interactions with its data sources.\n   *\n   * Note that we do not actually build the IncrementalSAXSource, since we don't\n   * know what source it's reading from, what thread that source will run in,\n   * or when it will run.\n   *\n   * @param incrementalSAXSource The parser that we want to recieve events from\n   * on demand.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ContentHandler getContentHandler()",
+    "returnType" : "ContentHandler",
+    "comment" : "\n   * getContentHandler returns \"our SAX builder\" -- the thing that\n   * someone else should send SAX events to in order to extend this\n   * DTM model.\n   *\n   * %REVIEW% Should this return null if constrution already done/begun?\n   *\n   * @return null if this model doesn't respond to SAX events,\n   * \"this\" if the DTM object has a built-in SAX ContentHandler,\n   * the IncrementalSAXSource if we're bound to one and should receive\n   * the SAX stream via it for incremental build purposes...\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public LexicalHandler getLexicalHandler()",
+    "returnType" : "LexicalHandler",
+    "comment" : "\n   * Return this DTM's lexical handler.\n   *\n   * %REVIEW% Should this return null if constrution already done/begun?\n   *\n   * @return null if this model doesn't respond to lexical SAX events,\n   * \"this\" if the DTM object has a built-in SAX ContentHandler,\n   * the IncrementalSAXSource if we're bound to one and should receive\n   * the SAX stream via it for incremental build purposes...\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public EntityResolver getEntityResolver()",
+    "returnType" : "EntityResolver",
+    "comment" : "\n   * Return this DTM's EntityResolver.\n   *\n   * @return null if this model doesn't respond to SAX entity ref events.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public DTDHandler getDTDHandler()",
+    "returnType" : "DTDHandler",
+    "comment" : "\n   * Return this DTM's DTDHandler.\n   *\n   * @return null if this model doesn't respond to SAX dtd events.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ErrorHandler getErrorHandler()",
+    "returnType" : "ErrorHandler",
+    "comment" : "\n   * Return this DTM's ErrorHandler.\n   *\n   * @return null if this model doesn't respond to SAX error events.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public DeclHandler getDeclHandler()",
+    "returnType" : "DeclHandler",
+    "comment" : "\n   * Return this DTM's DeclHandler.\n   *\n   * @return null if this model doesn't respond to SAX Decl events.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean needsTwoThreads()",
+    "returnType" : "boolean",
+    "comment" : "\n   * @return true iff we're building this model incrementally (eg\n   * we're partnered with a IncrementalSAXSource) and thus require that the\n   * transformation and the parse run simultaneously. Guidance to the\n   * DTMManager.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dispatchCharactersEvents(int nodeHandle, ContentHandler ch, boolean normalize) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Directly call the\n   * characters method on the passed ContentHandler for the\n   * string-value of the given node (see http://www.w3.org/TR/xpath#data-model\n   * for the definition of a node's string-value). Multiple calls to the\n   * ContentHandler's characters methods may well occur for a single call to\n   * this method.\n   *\n   * @param nodeHandle The node ID.\n   * @param ch A non-null reference to a ContentHandler.\n   * @param normalize true if the content should be normalized according to\n   * the rules for the XPath\n   * <a href=\"http://www.w3.org/TR/xpath#function-normalize-space\">normalize-space</a>\n   * function.\n   *\n   * @throws SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getNodeName(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a node handle, return its DOM-style node name. This will\n   * include names such as #text or #document.\n   *\n   * @param nodeHandle the id of the node.\n   * @return String Name of this node, which may be an empty string.\n   * %REVIEW% Document when empty string is possible...\n   * %REVIEW-COMMENT% It should never be empty, should it?\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getNodeNameX(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a node handle, return the XPath node name.  This should be\n   * the name as described by the XPath data model, NOT the DOM-style\n   * name.\n   *\n   * @param nodeHandle the id of the node.\n   * @return String Name of this node, which may be an empty string.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAttributeSpecified(int attributeHandle)",
+    "returnType" : "boolean",
+    "comment" : "\n   *     5. [specified] A flag indicating whether this attribute was actually\n   *        specified in the start-tag of its element, or was defaulted from the\n   *        DTD.\n   *\n   * @param attributeHandle Must be a valid handle to an attribute node.\n   * @return <code>true</code> if the attribute was specified;\n   *         <code>false</code> if it was defaulted.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getDocumentTypeDeclarationSystemIdentifier()",
+    "returnType" : "String",
+    "comment" : "\n   *   A document type declaration information item has the following properties:\n   *\n   *     1. [system identifier] The system identifier of the external subset, if\n   *        it exists. Otherwise this property has no value.\n   *\n   * @return the system identifier String object, or null if there is none.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int getNextNodeIdentity(int identity)",
+    "returnType" : "int",
+    "comment" : "\n   * Get the next node identity value in the list, and call the iterator\n   * if it hasn't been added yet.\n   *\n   * @param identity The node identity (index).\n   * @return identity+1, or DTM.NULL.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dispatchToEvents(int nodeHandle, org.xml.sax.ContentHandler ch) throws org.xml.sax.SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Directly create SAX parser events from a subtree.\n   *\n   * @param nodeHandle The node ID.\n   * @param ch A non-null reference to a ContentHandler.\n   *\n   * @throws org.xml.sax.SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getNumberOfNodes()",
+    "returnType" : "int",
+    "comment" : "\n   * Get the number of nodes that have been added.\n   *\n   * @return The number of that are currently in the tree.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean nextNode()",
+    "returnType" : "boolean",
+    "comment" : "\n   * This method should try and build one or more nodes in the table.\n   *\n   * @return The true if a next node is found or false if\n   *         there are no more nodes.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private final boolean isTextType(int type)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Bottleneck determination of text type.\n   *\n   * @param type oneof DTM.XXX_NODE.\n   *\n   * @return true if this is a text or cdata section.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int addNode(int type, int expandedTypeID, int parentIndex, int previousSibling, int dataOrPrefix, boolean canHaveFirstChild)",
+    "returnType" : "int",
+    "comment" : "\n   * Construct the node map from the node.\n   *\n   * @param type raw type ID, one of DTM.XXX_NODE.\n   * @param expandedTypeID The expended type ID.\n   * @param parentIndex The current parent index.\n   * @param previousSibling The previous sibling index.\n   * @param dataOrPrefix index into m_data table, or string handle.\n   * @param canHaveFirstChild true if the node can have a first child, false\n   *                          if it is atomic.\n   *\n   * @return The index identity of the node that was added.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void addNewDTMID(int nodeIndex)",
+    "returnType" : "void",
+    "comment" : "\n   * Get a new DTM ID beginning at the specified node index.\n   * @param  nodeIndex The node identity at which the new DTM ID will begin\n   * addressing.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void migrateTo(DTMManager manager)",
+    "returnType" : "void",
+    "comment" : "\n    * Migrate a DTM built with an old DTMManager to a new DTMManager.\n    * After the migration, the new DTMManager will treat the DTM as\n    * one that is built by itself.\n    * This is used to support DTM sharing between multiple transformations.\n    * @param manager the DTMManager\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void setSourceLocation()",
+    "returnType" : "void",
+    "comment" : "\n   * Store the source location of the current node.  This method must be called\n   * as every node is added to the DTM or for no node.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getNodeValue(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a node handle, return its node value. This is mostly\n   * as defined by the DOM, but may ignore some conveniences.\n   * <p>\n   *\n   * @param nodeHandle The node id.\n   * @return String Value of this node, or null if not\n   * meaningful for this node type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getLocalName(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a node handle, return its XPath-style localname.\n   * (As defined in Namespaces, this is the portion of the name after any\n   * colon character).\n   *\n   * @param nodeHandle the id of the node.\n   * @return String Local name of this node.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getUnparsedEntityURI(String name)",
+    "returnType" : "String",
+    "comment" : "\n   * The getUnparsedEntityURI function returns the URI of the unparsed\n   * entity with the specified name in the same document as the context\n   * node (see [3.3 Unparsed Entities]). It returns the empty string if\n   * there is no such entity.\n   * <p>\n   * XML processors may choose to use the System Identifier (if one\n   * is provided) to resolve the entity, rather than the URI in the\n   * Public Identifier. The details are dependent on the processor, and\n   * we would have to support some form of plug-in resolver to handle\n   * this properly. Currently, we simply return the System Identifier if\n   * present, and hope that it a usable URI or that our caller can\n   * map it to one.\n   * TODO: Resolve Public Identifiers... or consider changing function name.\n   * <p>\n   * If we find a relative URI\n   * reference, XML expects it to be resolved in terms of the base URI\n   * of the document. The DOM doesn't do that for us, and it isn't\n   * entirely clear whether that should be done here; currently that's\n   * pushed up to a higher level of our application. (Note that DOM Level\n   * 1 didn't store the document's base URI.)\n   * TODO: Consider resolving Relative URIs.\n   * <p>\n   * (The DOM's statement that \"An XML processor may choose to\n   * completely expand entities before the structure model is passed\n   * to the DOM\" refers only to parsed entities, not unparsed, and hence\n   * doesn't affect this function.)\n   *\n   * @param name A string containing the Entity Name of the unparsed\n   * entity.\n   *\n   * @return String containing the URI of the Unparsed Entity, or an\n   * empty string if no such entity exists.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getPrefix(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a namespace handle, return the prefix that the namespace decl is\n   * mapping.\n   * Given a node handle, return the prefix used to map to the namespace.\n   *\n   * <p> %REVIEW% Are you sure you want \"\" for no prefix?  </p>\n   * <p> %REVIEW-COMMENT% I think so... not totally sure. -sb  </p>\n   *\n   * @param nodeHandle the id of the node.\n   * @return String prefix of this node's name, or \"\" if no explicit\n   * namespace prefix was given.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getAttributeNode(int nodeHandle, String namespaceURI, String name)",
+    "returnType" : "int",
+    "comment" : "\n   * Retrieves an attribute node by by qualified name and namespace URI.\n   *\n   * @param nodeHandle int Handle of the node upon which to look up this attribute..\n   * @param namespaceURI The namespace URI of the attribute to\n   *   retrieve, or null.\n   * @param name The local name of the attribute to\n   *   retrieve.\n   * @return The attribute node handle with the specified name (\n   *   <code>nodeName</code>) or <code>DTM.NULL</code> if there is no such\n   *   attribute.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getDocumentTypeDeclarationPublicIdentifier()",
+    "returnType" : "String",
+    "comment" : "\n   * Return the public identifier of the external subset,\n   * normalized as described in 4.2.2 External Entities [XML]. If there is\n   * no external subset or if it has no public identifier, this property\n   * has no value.\n   *\n   * @return the public identifier String object, or null if there is none.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getNamespaceURI(int nodeHandle)",
+    "returnType" : "String",
+    "comment" : "\n   * Given a node handle, return its DOM-style namespace URI\n   * (As defined in Namespaces, this is the declared URI which this node's\n   * prefix -- or default in lieu thereof -- was mapped to.)\n   *\n   * <p>%REVIEW% Null or \"\"? -sb</p>\n   *\n   * @param nodeHandle the id of the node.\n   * @return String URI value of this node's namespace, or null if no\n   * namespace was resolved.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public XMLString getStringValue(int nodeHandle)",
+    "returnType" : "XMLString",
+    "comment" : "\n   * Get the string-value of a node as a String object\n   * (see http://www.w3.org/TR/xpath#data-model\n   * for the definition of a node's string-value).\n   *\n   * @param nodeHandle The node ID.\n   *\n   * @return A string object that represents the string-value of the given node.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isWhitespace(int nodeHandle)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Determine if the string-value of a node is whitespace\n   *\n   * @param nodeHandle The node Handle.\n   *\n   * @return Return true if the given node is whitespace.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getElementById(String elementId)",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the <code>Element</code> whose <code>ID</code> is given by\n   * <code>elementId</code>. If no such element exists, returns\n   * <code>DTM.NULL</code>. Behavior is not defined if more than one element\n   * has this <code>ID</code>. Attributes (including those\n   * with the name \"ID\") are not of type ID unless so defined by DTD/Schema\n   * information available to the DTM implementation.\n   * Implementations that do not know whether attributes are of type ID or\n   * not are expected to return <code>DTM.NULL</code>.\n   *\n   * <p>%REVIEW% Presumably IDs are still scoped to a single document,\n   * and this operation searches only within a single document, right?\n   * Wouldn't want collisions between DTMs in the same process.</p>\n   *\n   * @param elementId The unique <code>id</code> value for an element.\n   * @return The handle of the matching element.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getPrefix(String qname, String uri)",
+    "returnType" : "String",
+    "comment" : "\n   * Get a prefix either from the qname or from the uri mapping, or just make\n   * one up!\n   *\n   * @param qname The qualified name, which may be null.\n   * @param uri The namespace URI, which may be null.\n   *\n   * @return The prefix if there is one, or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getIdForNamespace(String uri)",
+    "returnType" : "int",
+    "comment" : "\n   * Get a prefix either from the uri mapping, or just make\n   * one up!\n   *\n   * @param uri The namespace URI, which may be null.\n   *\n   * @return The prefix if there is one, or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getNamespaceURI(String prefix)",
+    "returnType" : "String",
+    "comment" : "\n   * Get a prefix either from the qname or from the uri mapping, or just make\n   * one up!\n   *\n   * @return The prefix if there is one, or null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setIDAttribute(String id, int elem)",
+    "returnType" : "void",
+    "comment" : "\n   * Set an ID string to node association in the ID table.\n   *\n   * @param id The ID string.\n   * @param elem The associated element handle.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void charactersFlush()",
+    "returnType" : "void",
+    "comment" : "\n   * Check whether accumulated text should be stripped; if not,\n   * append the appropriate flavor of text/cdata node.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public InputSource resolveEntity(String publicId, String systemId) throws SAXException",
+    "returnType" : "InputSource",
+    "comment" : "\n   * Resolve an external entity.\n   *\n   * <p>Always return null, so that the parser will use the system\n   * identifier provided in the XML document.  This method implements\n   * the SAX default behaviour: application writers can override it\n   * in a subclass to do special translations such as catalog lookups\n   * or URI redirection.</p>\n   *\n   * @param publicId The public identifer, or null if none is\n   *                 available.\n   * @param systemId The system identifier provided in the XML\n   *                 document.\n   * @return The new input source, or null to require the\n   *         default behaviour.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.EntityResolver#resolveEntity\n   *\n   * @throws SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notationDecl(String name, String publicId, String systemId) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of a notation declaration.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass if they wish to keep track of the notations\n   * declared in a document.</p>\n   *\n   * @param name The notation name.\n   * @param publicId The notation public identifier, or null if not\n   *                 available.\n   * @param systemId The notation system identifier.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.DTDHandler#notationDecl\n   *\n   * @throws SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unparsedEntityDecl(String name, String publicId, String systemId, String notationName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of an unparsed entity declaration.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to keep track of the unparsed entities\n   * declared in a document.</p>\n   *\n   * @param name The entity name.\n   * @param publicId The entity public identifier, or null if not\n   *                 available.\n   * @param systemId The entity system identifier.\n   * @param notationName The name of the associated notation.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.DTDHandler#unparsedEntityDecl\n   *\n   * @throws SAXException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDocumentLocator(Locator locator)",
+    "returnType" : "void",
+    "comment" : "\n   * Receive a Locator object for document events.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass if they wish to store the locator for use\n   * with other document events.</p>\n   *\n   * @param locator A locator for all SAX document events.\n   * @see org.xml.sax.ContentHandler#setDocumentLocator\n   * @see org.xml.sax.Locator\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the beginning of the document.\n   *\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#startDocument\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endDocument() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the end of the document.\n   *\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#endDocument\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startPrefixMapping(String prefix, String uri) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the start of a Namespace mapping.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions at the start of\n   * each Namespace prefix scope (such as storing the prefix mapping).</p>\n   *\n   * @param prefix The Namespace prefix being declared.\n   * @param uri The Namespace URI mapped to the prefix.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#startPrefixMapping\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endPrefixMapping(String prefix) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the end of a Namespace mapping.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions at the end of\n   * each prefix mapping.</p>\n   *\n   * @param prefix The Namespace prefix being declared.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#endPrefixMapping\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean declAlreadyDeclared(String prefix)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Check if a declaration has already been made for a given prefix.\n   *\n   * @param prefix non-null prefix string.\n   *\n   * @return true if the declaration has already been declared in the\n   *         current context.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the start of an element.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions at the start of\n   * each element (such as allocating a new tree node or writing\n   * output to a file).</p>\n   *\n   * @param uri The Namespace URI, or the empty string if the\n   *        element has no Namespace URI or if Namespace\n   *        processing is not being performed.\n   * @param localName The local name (without prefix), or the\n   *        empty string if Namespace processing is not being\n   *        performed.\n   * @param qName The qualified name (with prefix), or the\n   *        empty string if qualified names are not available.\n   * @param attributes The specified or defaulted attributes.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#startElement\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void endElement(String uri, String localName, String qName) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of the end of an element.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions at the end of\n   * each element (such as finalising a tree node or writing\n   * output to a file).</p>\n   *\n   * @param uri The Namespace URI, or the empty string if the\n   *        element has no Namespace URI or if Namespace\n   *        processing is not being performed.\n   * @param localName The local name (without prefix), or the\n   *        empty string if Namespace processing is not being\n   *        performed.\n   * @param qName The qualified XML 1.0 name (with prefix), or the\n   *        empty string if qualified names are not available.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#endElement\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void characters(char[] ch, int start, int length) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of character data inside an element.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method to take specific actions for each chunk of character data\n   * (such as adding the data to a node or buffer, or printing it to\n   * a file).</p>\n   *\n   * @param ch The characters.\n   * @param start The start position in the character array.\n   * @param length The number of characters to use from the\n   *               character array.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#characters\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of ignorable whitespace in element content.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method to take specific actions for each chunk of ignorable\n   * whitespace (such as adding data to a node or buffer, or printing\n   * it to a file).</p>\n   *\n   * @param ch The whitespace characters.\n   * @param start The start position in the character array.\n   * @param length The number of characters to use from the\n   *               character array.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#ignorableWhitespace\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void processingInstruction(String target, String data) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of a processing instruction.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions for each\n   * processing instruction, such as setting status variables or\n   * invoking other methods.</p>\n   *\n   * @param target The processing instruction target.\n   * @param data The processing instruction data, or null if\n   *             none is supplied.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#processingInstruction\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void skippedEntity(String name) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of a skipped entity.\n   *\n   * <p>By default, do nothing.  Application writers may override this\n   * method in a subclass to take specific actions for each\n   * processing instruction, such as setting status variables or\n   * invoking other methods.</p>\n   *\n   * @param name The name of the skipped entity.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ContentHandler#processingInstruction\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void warning(SAXParseException e) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of a parser warning.\n   *\n   * <p>The default implementation does nothing.  Application writers\n   * may override this method in a subclass to take specific actions\n   * for each warning, such as inserting the message in a log file or\n   * printing it to the console.</p>\n   *\n   * @param e The warning information encoded as an exception.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ErrorHandler#warning\n   * @see org.xml.sax.SAXParseException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void error(SAXParseException e) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Receive notification of a recoverable parser error.\n   *\n   * <p>The default implementation does nothing.  Application writers\n   * may override this method in a subclass to take specific actions\n   * for each error, such as inserting the message in a log file or\n   * printing it to the console.</p>\n   *\n   * @param e The warning information encoded as an exception.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ErrorHandler#warning\n   * @see org.xml.sax.SAXParseException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void fatalError(SAXParseException e) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report a fatal XML parsing error.\n   *\n   * <p>The default implementation throws a SAXParseException.\n   * Application writers may override this method in a subclass if\n   * they need to take specific actions for each fatal error (such as\n   * collecting all of the errors into a single report): in any case,\n   * the application must stop all regular processing when this\n   * method is invoked, since the document is no longer reliable, and\n   * the parser may no longer report parsing events.</p>\n   *\n   * @param e The error information encoded as an exception.\n   * @throws SAXException Any SAX exception, possibly\n   *            wrapping another exception.\n   * @see org.xml.sax.ErrorHandler#fatalError\n   * @see org.xml.sax.SAXParseException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void elementDecl(String name, String model) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report an element type declaration.\n   *\n   * <p>The content model will consist of the string \"EMPTY\", the\n   * string \"ANY\", or a parenthesised group, optionally followed\n   * by an occurrence indicator.  The model will be normalized so\n   * that all whitespace is removed,and will include the enclosing\n   * parentheses.</p>\n   *\n   * @param name The element type name.\n   * @param model The content model as a normalized string.\n   * @throws SAXException The application may raise an exception.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void attributeDecl(String eName, String aName, String type, String valueDefault, String value) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report an attribute type declaration.\n   *\n   * <p>Only the effective (first) declaration for an attribute will\n   * be reported.  The type will be one of the strings \"CDATA\",\n   * \"ID\", \"IDREF\", \"IDREFS\", \"NMTOKEN\", \"NMTOKENS\", \"ENTITY\",\n   * \"ENTITIES\", or \"NOTATION\", or a parenthesized token group with\n   * the separator \"|\" and all whitespace removed.</p>\n   *\n   * @param eName The name of the associated element.\n   * @param aName The name of the attribute.\n   * @param type A string representing the attribute type.\n   * @param valueDefault A string representing the attribute default\n   *        (\"#IMPLIED\", \"#REQUIRED\", or \"#FIXED\") or null if\n   *        none of these applies.\n   * @param value A string representing the attribute's default value,\n   *        or null if there is none.\n   * @throws SAXException The application may raise an exception.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void internalEntityDecl(String name, String value) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report an internal entity declaration.\n   *\n   * <p>Only the effective (first) declaration for each entity\n   * will be reported.</p>\n   *\n   * @param name The name of the entity.  If it is a parameter\n   *        entity, the name will begin with '%'.\n   * @param value The replacement text of the entity.\n   * @throws SAXException The application may raise an exception.\n   * @see #externalEntityDecl\n   * @see org.xml.sax.DTDHandler#unparsedEntityDecl\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void externalEntityDecl(String name, String publicId, String systemId) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report a parsed external entity declaration.\n   *\n   * <p>Only the effective (first) declaration for each entity\n   * will be reported.</p>\n   *\n   * @param name The name of the entity.  If it is a parameter\n   *        entity, the name will begin with '%'.\n   * @param publicId The declared public identifier of the entity, or\n   *        null if none was declared.\n   * @param systemId The declared system identifier of the entity.\n   * @throws SAXException The application may raise an exception.\n   * @see #internalEntityDecl\n   * @see org.xml.sax.DTDHandler#unparsedEntityDecl\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startDTD(String name, String publicId, String systemId) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the start of DTD declarations, if any.\n   *\n   * <p>Any declarations are assumed to be in the internal subset\n   * unless otherwise indicated by a {@link #startEntity startEntity}\n   * event.</p>\n   *\n   * <p>Note that the start/endDTD events will appear within\n   * the start/endDocument events from ContentHandler and\n   * before the first startElement event.</p>\n   *\n   * @param name The document type name.\n   * @param publicId The declared public identifier for the\n   *        external DTD subset, or null if none was declared.\n   * @param systemId The declared system identifier for the\n   *        external DTD subset, or null if none was declared.\n   * @throws SAXException The application may raise an\n   *            exception.\n   * @see #endDTD\n   * @see #startEntity\n   ",
+    "links" : [ "#startEntity" ]
+  }, {
+    "name" : "public void endDTD() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the end of DTD declarations.\n   *\n   * @throws SAXException The application may raise an exception.\n   * @see #startDTD\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startEntity(String name) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the beginning of an entity in content.\n   *\n   * <p><strong>NOTE:</entity> entity references in attribute\n   * values -- and the start and end of the document entity --\n   * are never reported.</p>\n   *\n   * <p>The start and end of the external DTD subset are reported\n   * using the pseudo-name \"[dtd]\".  All other events must be\n   * properly nested within start/end entity events.</p>\n   *\n   * <p>Note that skipped entities will be reported through the\n   * {@link org.xml.sax.ContentHandler#skippedEntity skippedEntity}\n   * event, which is part of the ContentHandler interface.</p>\n   *\n   * @param name The name of the entity.  If it is a parameter\n   *        entity, the name will begin with '%'.\n   * @throws SAXException The application may raise an exception.\n   * @see #endEntity\n   * @see org.xml.sax.ext.DeclHandler#internalEntityDecl\n   * @see org.xml.sax.ext.DeclHandler#externalEntityDecl\n   ",
+    "links" : [ "org.xml.sax.ContentHandler#skippedEntity" ]
+  }, {
+    "name" : "public void endEntity(String name) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the end of an entity.\n   *\n   * @param name The name of the entity that is ending.\n   * @throws SAXException The application may raise an exception.\n   * @see #startEntity\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startCDATA() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the start of a CDATA section.\n   *\n   * <p>The contents of the CDATA section will be reported through\n   * the regular {@link org.xml.sax.ContentHandler#characters\n   * characters} event.</p>\n   *\n   * @throws SAXException The application may raise an exception.\n   * @see #endCDATA\n   ",
+    "links" : [ "org.xml.sax.ContentHandler#characterscharacters" ]
+  }, {
+    "name" : "public void endCDATA() throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report the end of a CDATA section.\n   *\n   * @throws SAXException The application may raise an exception.\n   * @see #startCDATA\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void comment(char[] ch, int start, int length) throws SAXException",
+    "returnType" : "void",
+    "comment" : "\n   * Report an XML comment anywhere in the document.\n   *\n   * <p>This callback will be used for comments inside or outside the\n   * document element, including comments in the external DTD\n   * subset (if read).</p>\n   *\n   * @param ch An array holding the characters in the comment.\n   * @param start The starting position in the array.\n   * @param length The number of characters to use from the array.\n   * @throws SAXException The application may raise an exception.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setProperty(String property, Object value)",
+    "returnType" : "void",
+    "comment" : "\n   * Set a run time property for this DTM instance.\n   * \n   * %REVIEW% Now that we no longer use this method to support\n   * getSourceLocatorFor, can we remove it?\n   *\n   * @param property a <code>String</code> value\n   * @param value an <code>Object</code> value\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public SourceLocator getSourceLocatorFor(int node)",
+    "returnType" : "SourceLocator",
+    "comment" : " Retrieve the SourceLocator associated with a specific node.\n   * This is only meaningful if the XalanProperties.SOURCE_LOCATION flag was\n   * set True using setProperty; if it was never set, or was set false, we\n   * will return null. \n   * \n   * (We _could_ return a locator with the document's base URI and bogus \n   * line/column information. Trying that; see the else clause.)\n   * ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getFixedNames(int type)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void setUseSourceLocation(boolean useSourceLocation)", "protected int _dataOrQName(int identity)", "public void clearCoRoutine()", "public void clearCoRoutine(boolean callDoTerminate)", "public void setIncrementalSAXSource(IncrementalSAXSource incrementalSAXSource)", "public ContentHandler getContentHandler()", "public LexicalHandler getLexicalHandler()", "public EntityResolver getEntityResolver()", "public DTDHandler getDTDHandler()", "public ErrorHandler getErrorHandler()", "public DeclHandler getDeclHandler()", "public boolean needsTwoThreads()", "public void dispatchCharactersEvents(int nodeHandle, ContentHandler ch, boolean normalize) throws SAXException", "public String getNodeName(int nodeHandle)", "public String getNodeNameX(int nodeHandle)", "public boolean isAttributeSpecified(int attributeHandle)", "public String getDocumentTypeDeclarationSystemIdentifier()", "protected int getNextNodeIdentity(int identity)", "public void dispatchToEvents(int nodeHandle, org.xml.sax.ContentHandler ch) throws org.xml.sax.SAXException", "public int getNumberOfNodes()", "protected boolean nextNode()", "private final boolean isTextType(int type)", "protected int addNode(int type, int expandedTypeID, int parentIndex, int previousSibling, int dataOrPrefix, boolean canHaveFirstChild)", "protected void addNewDTMID(int nodeIndex)", "public void migrateTo(DTMManager manager)", "protected void setSourceLocation()", "public String getNodeValue(int nodeHandle)", "public String getLocalName(int nodeHandle)", "public String getUnparsedEntityURI(String name)", "public String getPrefix(int nodeHandle)", "public int getAttributeNode(int nodeHandle, String namespaceURI, String name)", "public String getDocumentTypeDeclarationPublicIdentifier()", "public String getNamespaceURI(int nodeHandle)", "public XMLString getStringValue(int nodeHandle)", "public boolean isWhitespace(int nodeHandle)", "public int getElementById(String elementId)", "public String getPrefix(String qname, String uri)", "public int getIdForNamespace(String uri)", "public String getNamespaceURI(String prefix)", "public void setIDAttribute(String id, int elem)", "protected void charactersFlush()", "public InputSource resolveEntity(String publicId, String systemId) throws SAXException", "public void notationDecl(String name, String publicId, String systemId) throws SAXException", "public void unparsedEntityDecl(String name, String publicId, String systemId, String notationName) throws SAXException", "public void setDocumentLocator(Locator locator)", "public void startDocument() throws SAXException", "public void endDocument() throws SAXException", "public void startPrefixMapping(String prefix, String uri) throws SAXException", "public void endPrefixMapping(String prefix) throws SAXException", "protected boolean declAlreadyDeclared(String prefix)", "public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException", "public void endElement(String uri, String localName, String qName) throws SAXException", "public void characters(char[] ch, int start, int length) throws SAXException", "public void ignorableWhitespace(char[] ch, int start, int length) throws SAXException", "public void processingInstruction(String target, String data) throws SAXException", "public void skippedEntity(String name) throws SAXException", "public void warning(SAXParseException e) throws SAXException", "public void error(SAXParseException e) throws SAXException", "public void fatalError(SAXParseException e) throws SAXException", "public void elementDecl(String name, String model) throws SAXException", "public void attributeDecl(String eName, String aName, String type, String valueDefault, String value) throws SAXException", "public void internalEntityDecl(String name, String value) throws SAXException", "public void externalEntityDecl(String name, String publicId, String systemId) throws SAXException", "public void startDTD(String name, String publicId, String systemId) throws SAXException", "public void endDTD() throws SAXException", "public void startEntity(String name) throws SAXException", "public void endEntity(String name) throws SAXException", "public void startCDATA() throws SAXException", "public void endCDATA() throws SAXException", "public void comment(char[] ch, int start, int length) throws SAXException", "public void setProperty(String property, Object value)", "public SourceLocator getSourceLocatorFor(int node)", "public String getFixedNames(int type)" ],
+  "variableNames" : [ "DEBUG", "m_incrementalSAXSource", "m_chars", "m_data", "m_parents", "m_previous", "m_prefixMappings", "m_contextIndexes", "m_textType", "m_coalescedTextType", "m_locator", "m_systemId", "m_insideDTD", "m_walker", "m_valuesOrPrefixes", "m_endDocumentOccured", "m_dataOrQName", "m_idAttributes", "m_fixednames", "m_entities", "ENTITY_FIELD_PUBLICID", "ENTITY_FIELD_SYSTEMID", "ENTITY_FIELD_NOTATIONNAME", "ENTITY_FIELD_NAME", "ENTITY_FIELDS_PER", "m_textPendingStart", "m_useSourceLocationProperty", "m_sourceSystemId", "m_sourceLine", "m_sourceColumn", "m_pastFirstElement" ]
+}

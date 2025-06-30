@@ -1,0 +1,221 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/os/AsyncTask.java",
+  "packageName" : "android.os",
+  "className" : "AsyncTask",
+  "comment" : "\n * <p>AsyncTask was intended to enable proper and easy use of the UI thread. However, the most\n * common use case was for integrating into UI, and that would cause Context leaks, missed\n * callbacks, or crashes on configuration changes. It also has inconsistent behavior on different\n * versions of the platform, swallows exceptions from {@code doInBackground}, and does not provide\n * much utility over using {@link Executor}s directly.</p>\n *\n * <p>AsyncTask is designed to be a helper class around {@link Thread} and {@link Handler}\n * and does not constitute a generic threading framework. AsyncTasks should ideally be\n * used for short operations (a few seconds at the most.) If you need to keep threads\n * running for long periods of time, it is highly recommended you use the various APIs\n * provided by the <code>java.util.concurrent</code> package such as {@link Executor},\n * {@link ThreadPoolExecutor} and {@link FutureTask}.</p>\n *\n * <p>An asynchronous task is defined by a computation that runs on a background thread and\n * whose result is published on the UI thread. An asynchronous task is defined by 3 generic\n * types, called <code>Params</code>, <code>Progress</code> and <code>Result</code>,\n * and 4 steps, called <code>onPreExecute</code>, <code>doInBackground</code>,\n * <code>onProgressUpdate</code> and <code>onPostExecute</code>.</p>\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about using tasks and threads, read the\n * <a href=\"{@docRoot}guide/components/processes-and-threads.html\">Processes and\n * Threads</a> developer guide.</p>\n * </div>\n *\n * <h2>Usage</h2>\n * <p>AsyncTask must be subclassed to be used. The subclass will override at least\n * one method ({@link #doInBackground}), and most often will override a\n * second one ({@link #onPostExecute}.)</p>\n *\n * <p>Here is an example of subclassing:</p>\n * <pre class=\"prettyprint\">\n * private class DownloadFilesTask extends AsyncTask&lt;URL, Integer, Long&gt; {\n *     protected Long doInBackground(URL... urls) {\n *         int count = urls.length;\n *         long totalSize = 0;\n *         for (int i = 0; i &lt; count; i++) {\n *             totalSize += Downloader.downloadFile(urls[i]);\n *             publishProgress((int) ((i / (float) count) * 100));\n *             // Escape early if cancel() is called\n *             if (isCancelled()) break;\n *         }\n *         return totalSize;\n *     }\n *\n *     protected void onProgressUpdate(Integer... progress) {\n *         setProgressPercent(progress[0]);\n *     }\n *\n *     protected void onPostExecute(Long result) {\n *         showDialog(\"Downloaded \" + result + \" bytes\");\n *     }\n * }\n * </pre>\n *\n * <p>Once created, a task is executed very simply:</p>\n * <pre class=\"prettyprint\">\n * new DownloadFilesTask().execute(url1, url2, url3);\n * </pre>\n *\n * <h2>AsyncTask's generic types</h2>\n * <p>The three types used by an asynchronous task are the following:</p>\n * <ol>\n *     <li><code>Params</code>, the type of the parameters sent to the task upon\n *     execution.</li>\n *     <li><code>Progress</code>, the type of the progress units published during\n *     the background computation.</li>\n *     <li><code>Result</code>, the type of the result of the background\n *     computation.</li>\n * </ol>\n * <p>Not all types are always used by an asynchronous task. To mark a type as unused,\n * simply use the type {@link Void}:</p>\n * <pre>\n * private class MyTask extends AsyncTask&lt;Void, Void, Void&gt; { ... }\n * </pre>\n *\n * <h2>The 4 steps</h2>\n * <p>When an asynchronous task is executed, the task goes through 4 steps:</p>\n * <ol>\n *     <li>{@link #onPreExecute()}, invoked on the UI thread before the task\n *     is executed. This step is normally used to setup the task, for instance by\n *     showing a progress bar in the user interface.</li>\n *     <li>{@link #doInBackground}, invoked on the background thread\n *     immediately after {@link #onPreExecute()} finishes executing. This step is used\n *     to perform background computation that can take a long time. The parameters\n *     of the asynchronous task are passed to this step. The result of the computation must\n *     be returned by this step and will be passed back to the last step. This step\n *     can also use {@link #publishProgress} to publish one or more units\n *     of progress. These values are published on the UI thread, in the\n *     {@link #onProgressUpdate} step.</li>\n *     <li>{@link #onProgressUpdate}, invoked on the UI thread after a\n *     call to {@link #publishProgress}. The timing of the execution is\n *     undefined. This method is used to display any form of progress in the user\n *     interface while the background computation is still executing. For instance,\n *     it can be used to animate a progress bar or show logs in a text field.</li>\n *     <li>{@link #onPostExecute}, invoked on the UI thread after the background\n *     computation finishes. The result of the background computation is passed to\n *     this step as a parameter.</li>\n * </ol>\n * \n * <h2>Cancelling a task</h2>\n * <p>A task can be cancelled at any time by invoking {@link #cancel(boolean)}. Invoking\n * this method will cause subsequent calls to {@link #isCancelled()} to return true.\n * After invoking this method, {@link #onCancelled(Object)}, instead of\n * {@link #onPostExecute(Object)} will be invoked after {@link #doInBackground(Object[])}\n * returns. To ensure that a task is cancelled as quickly as possible, you should always\n * check the return value of {@link #isCancelled()} periodically from\n * {@link #doInBackground(Object[])}, if possible (inside a loop for instance.)</p>\n *\n * <h2>Threading rules</h2>\n * <p>There are a few threading rules that must be followed for this class to\n * work properly:</p>\n * <ul>\n *     <li>The AsyncTask class must be loaded on the UI thread. This is done\n *     automatically as of {@link android.os.Build.VERSION_CODES#JELLY_BEAN}.</li>\n *     <li>The task instance must be created on the UI thread.</li>\n *     <li>{@link #execute} must be invoked on the UI thread.</li>\n *     <li>Do not call {@link #onPreExecute()}, {@link #onPostExecute},\n *     {@link #doInBackground}, {@link #onProgressUpdate} manually.</li>\n *     <li>The task can be executed only once (an exception will be thrown if\n *     a second execution is attempted.)</li>\n * </ul>\n *\n * <h2>Memory observability</h2>\n * <p>AsyncTask guarantees that all callback calls are synchronized to ensure the following\n * without explicit synchronizations.</p>\n * <ul>\n *     <li>The memory effects of {@link #onPreExecute}, and anything else\n *     executed before the call to {@link #execute}, including the construction\n *     of the AsyncTask object, are visible to {@link #doInBackground}.\n *     <li>The memory effects of {@link #doInBackground} are visible to\n *     {@link #onPostExecute}.\n *     <li>Any memory effects of {@link #doInBackground} preceding a call\n *     to {@link #publishProgress} are visible to the corresponding\n *     {@link #onProgressUpdate} call. (But {@link #doInBackground} continues to\n *     run, and care needs to be taken that later updates in {@link #doInBackground}\n *     do not interfere with an in-progress {@link #onProgressUpdate} call.)\n *     <li>Any memory effects preceding a call to {@link #cancel} are visible\n *     after a call to {@link #isCancelled} that returns true as a result, or\n *     during and after a resulting call to {@link #onCancelled}.\n * </ul>\n *\n * <h2>Order of execution</h2>\n * <p>When first introduced, AsyncTasks were executed serially on a single background\n * thread. Starting with {@link android.os.Build.VERSION_CODES#DONUT}, this was changed\n * to a pool of threads allowing multiple tasks to operate in parallel. Starting with\n * {@link android.os.Build.VERSION_CODES#HONEYCOMB}, tasks are executed on a single\n * thread to avoid common application errors caused by parallel execution.</p>\n * <p>If you truly want parallel execution, you can invoke\n * {@link #executeOnExecutor(java.util.concurrent.Executor, Object[])} with\n * {@link #THREAD_POOL_EXECUTOR}.</p>\n *\n * @deprecated Use the standard <code>java.util.concurrent</code> or\n *   <a href=\"https://developer.android.com/topic/libraries/architecture/coroutines\">\n *   Kotlin concurrency utilities</a> instead.\n ",
+  "links" : [ "#onPreExecute()", "#THREAD_POOL_EXECUTOR", "java.util.concurrent.ThreadPoolExecutor", "android.os.Build.VERSION_CODES#HONEYCOMB", "#doInBackground(Object", "#onPostExecute(Object)", "#doInBackground", "java.util.concurrent.FutureTask", "#onPostExecute", "android.annotation.MainThread", "#isCancelled()", "#execute", "android.os.Build.VERSION_CODES#DONUT", "java.util.concurrent.RejectedExecutionHandler", "#executeOnExecutor(java.util.concurrent.Executor", "Void", "#cancel(boolean)", "java.util.concurrent.Executor", "#onProgressUpdate", "#cancel", "#isCancelled", "#onCancelled", "#onCancelled(Object)", "#publishProgress", "android.os.Build.VERSION_CODES#JELLY_BEAN", "#onPreExecute" ],
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CORE_POOL_SIZE",
+    "type" : "int",
+    "comment" : "    of tasks to be queued.",
+    "links" : [ ]
+  }, {
+    "name" : "MAXIMUM_POOL_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BACKUP_POOL_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEEP_ALIVE_SECONDS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sThreadFactory",
+    "type" : "ThreadFactory",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sBackupExecutor",
+    "type" : "ThreadPoolExecutor",
+    "comment" : " Initialization protected by sRunOnSerialPolicy lock.",
+    "links" : [ ]
+  }, {
+    "name" : "sBackupExecutorQueue",
+    "type" : "LinkedBlockingQueue<Runnable>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sRunOnSerialPolicy",
+    "type" : "RejectedExecutionHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "THREAD_POOL_EXECUTOR",
+    "type" : "Executor",
+    "comment" : "\n     * An {@link Executor} that can be used to execute tasks in parallel.\n     *\n     * @deprecated Using a single thread pool for a general purpose results in suboptimal behavior\n     *   for different tasks. Small, CPU-bound tasks benefit from a bounded pool and queueing, and\n     *   long-running blocking tasks, such as network operations, benefit from many threads. Use or\n     *   create an {@link Executor} configured for your use case.\n     ",
+    "links" : [ "java.util.concurrent.Executor" ]
+  }, {
+    "name" : "SERIAL_EXECUTOR",
+    "type" : "Executor",
+    "comment" : "\n     * An {@link Executor} that executes tasks one at a time in serial\n     * order.  This serialization is global to a particular process.\n     *\n     * @deprecated Globally serializing tasks results in excessive queuing for unrelated operations.\n     ",
+    "links" : [ "java.util.concurrent.Executor" ]
+  }, {
+    "name" : "MESSAGE_POST_RESULT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MESSAGE_POST_PROGRESS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sDefaultExecutor",
+    "type" : "Executor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sHandler",
+    "type" : "InternalHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWorker",
+    "type" : "WorkerRunnable<Params, Result>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mFuture",
+    "type" : "FutureTask<Result>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStatus",
+    "type" : "Status",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCancelled",
+    "type" : "AtomicBoolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTaskInvoked",
+    "type" : "AtomicBoolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static Handler getMainHandler()",
+    "returnType" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Handler getHandler()",
+    "returnType" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setDefaultExecutor(Executor exec)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void postResultIfNotInvoked(Result result)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Result postResult(Result result)",
+    "returnType" : "Result",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final Status getStatus()",
+    "returnType" : "Status",
+    "comment" : "\n     * Returns the current status of this task.\n     *\n     * @return The current status.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract Result doInBackground(Params... params)",
+    "returnType" : "Result",
+    "comment" : "\n     * Override this method to perform a computation on a background thread. The\n     * specified parameters are the parameters passed to {@link #execute}\n     * by the caller of this task.\n     *\n     * This will normally run on a background thread. But to better\n     * support testing frameworks, it is recommended that this also tolerates\n     * direct execution on the foreground thread, as part of the {@link #execute} call.\n     *\n     * This method can call {@link #publishProgress} to publish updates\n     * on the UI thread.\n     *\n     * @param params The parameters of the task.\n     *\n     * @return A result, defined by the subclass of this task.\n     *\n     * @see #onPreExecute()\n     * @see #onPostExecute\n     * @see #publishProgress\n     ",
+    "links" : [ "#execute", "#publishProgress" ]
+  }, {
+    "name" : "protected void onPreExecute()",
+    "returnType" : "void",
+    "comment" : "\n     * Runs on the UI thread before {@link #doInBackground}.\n     * Invoked directly by {@link #execute} or {@link #executeOnExecutor}.\n     * The default version does nothing.\n     *\n     * @see #onPostExecute\n     * @see #doInBackground\n     ",
+    "links" : [ "#execute", "#doInBackground", "#executeOnExecutor" ]
+  }, {
+    "name" : "protected void onPostExecute(Result result)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>Runs on the UI thread after {@link #doInBackground}. The\n     * specified result is the value returned by {@link #doInBackground}.\n     * To better support testing frameworks, it is recommended that this be\n     * written to tolerate direct execution as part of the execute() call.\n     * The default version does nothing.</p>\n     * \n     * <p>This method won't be invoked if the task was cancelled.</p>\n     *\n     * @param result The result of the operation computed by {@link #doInBackground}.\n     *\n     * @see #onPreExecute\n     * @see #doInBackground\n     * @see #onCancelled(Object) \n     ",
+    "links" : [ "#doInBackground" ]
+  }, {
+    "name" : "protected void onProgressUpdate(Progress... values)",
+    "returnType" : "void",
+    "comment" : "\n     * Runs on the UI thread after {@link #publishProgress} is invoked.\n     * The specified values are the values passed to {@link #publishProgress}.\n     * The default version does nothing.\n     *\n     * @param values The values indicating progress.\n     *\n     * @see #publishProgress\n     * @see #doInBackground\n     ",
+    "links" : [ "#publishProgress" ]
+  }, {
+    "name" : "protected void onCancelled(Result result)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>Runs on the UI thread after {@link #cancel(boolean)} is invoked and\n     * {@link #doInBackground(Object[])} has finished.</p>\n     * \n     * <p>The default implementation simply invokes {@link #onCancelled()} and\n     * ignores the result. If you write your own implementation, do not call\n     * <code>super.onCancelled(result)</code>.</p>\n     *\n     * @param result The result, if any, computed in\n     *               {@link #doInBackground(Object[])}, can be null\n     * \n     * @see #cancel(boolean)\n     * @see #isCancelled()\n     ",
+    "links" : [ "#cancel(boolean)", "#onCancelled()", "#doInBackground(Object" ]
+  }, {
+    "name" : "protected void onCancelled()",
+    "returnType" : "void",
+    "comment" : "\n     * <p>Applications should preferably override {@link #onCancelled(Object)}.\n     * This method is invoked by the default implementation of\n     * {@link #onCancelled(Object)}.\n     * The default version does nothing.</p>\n     * \n     * <p>Runs on the UI thread after {@link #cancel(boolean)} is invoked and\n     * {@link #doInBackground(Object[])} has finished.</p>\n     *\n     * @see #onCancelled(Object) \n     * @see #cancel(boolean)\n     * @see #isCancelled()\n     ",
+    "links" : [ "#cancel(boolean)", "#onCancelled(Object)", "#doInBackground(Object" ]
+  }, {
+    "name" : "public final boolean isCancelled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns <tt>true</tt> if this task was cancelled before it completed\n     * normally. If you are calling {@link #cancel(boolean)} on the task,\n     * the value returned by this method should be checked periodically from\n     * {@link #doInBackground(Object[])} to end the task as soon as possible.\n     *\n     * @return <tt>true</tt> if task was cancelled before it completed\n     *\n     * @see #cancel(boolean)\n     ",
+    "links" : [ "#cancel(boolean)", "#doInBackground(Object" ]
+  }, {
+    "name" : "public final boolean cancel(boolean mayInterruptIfRunning)",
+    "returnType" : "boolean",
+    "comment" : "\n     * <p>Attempts to cancel execution of this task.  This attempt will\n     * fail if the task has already completed, already been cancelled,\n     * or could not be cancelled for some other reason. If successful,\n     * and this task has not started when <tt>cancel</tt> is called,\n     * this task should never run. If the task has already started,\n     * then the <tt>mayInterruptIfRunning</tt> parameter determines\n     * whether the thread executing this task should be interrupted in\n     * an attempt to stop the task.</p>\n     * \n     * <p>Calling this method will result in {@link #onCancelled(Object)} being\n     * invoked on the UI thread after {@link #doInBackground(Object[])} returns.\n     * Calling this method guarantees that onPostExecute(Object) is never\n     * subsequently invoked, even if <tt>cancel</tt> returns false, but\n     * {@link #onPostExecute} has not yet run.  To finish the\n     * task as early as possible, check {@link #isCancelled()} periodically from\n     * {@link #doInBackground(Object[])}.</p>\n     *\n     * <p>This only requests cancellation. It never waits for a running\n     * background task to terminate, even if <tt>mayInterruptIfRunning</tt> is\n     * true.</p>\n     *\n     * @param mayInterruptIfRunning <tt>true</tt> if the thread executing this\n     *        task should be interrupted; otherwise, in-progress tasks are allowed\n     *        to complete.\n     *\n     * @return <tt>false</tt> if the task could not be cancelled,\n     *         typically because it has already completed normally;\n     *         <tt>true</tt> otherwise\n     *\n     * @see #isCancelled()\n     * @see #onCancelled(Object)\n     ",
+    "links" : [ "#onCancelled(Object)", "#doInBackground(Object", "#onPostExecute", "#isCancelled()" ]
+  }, {
+    "name" : "public final Result get() throws InterruptedException, ExecutionException",
+    "returnType" : "Result",
+    "comment" : "\n     * Waits if necessary for the computation to complete, and then\n     * retrieves its result.\n     *\n     * @return The computed result.\n     *\n     * @throws CancellationException If the computation was cancelled.\n     * @throws ExecutionException If the computation threw an exception.\n     * @throws InterruptedException If the current thread was interrupted\n     *         while waiting.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Result get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException",
+    "returnType" : "Result",
+    "comment" : "\n     * Waits if necessary for at most the given time for the computation\n     * to complete, and then retrieves its result.\n     *\n     * @param timeout Time to wait before cancelling the operation.\n     * @param unit The time unit for the timeout.\n     *\n     * @return The computed result.\n     *\n     * @throws CancellationException If the computation was cancelled.\n     * @throws ExecutionException If the computation threw an exception.\n     * @throws InterruptedException If the current thread was interrupted\n     *         while waiting.\n     * @throws TimeoutException If the wait timed out.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AsyncTask<Params, Progress, Result> execute(Params... params)",
+    "returnType" : "AsyncTask<Params, Progress, Result>",
+    "comment" : "\n     * Executes the task with the specified parameters. The task returns\n     * itself (this) so that the caller can keep a reference to it.\n     * \n     * <p>Note: this function schedules the task on a queue for a single background\n     * thread or pool of threads depending on the platform version.  When first\n     * introduced, AsyncTasks were executed serially on a single background thread.\n     * Starting with {@link android.os.Build.VERSION_CODES#DONUT}, this was changed\n     * to a pool of threads allowing multiple tasks to operate in parallel. Starting\n     * {@link android.os.Build.VERSION_CODES#HONEYCOMB}, tasks are back to being\n     * executed on a single thread to avoid common application errors caused\n     * by parallel execution.  If you truly want parallel execution, you can use\n     * the {@link #executeOnExecutor} version of this method\n     * with {@link #THREAD_POOL_EXECUTOR}; however, see commentary there for warnings\n     * on its use.\n     *\n     * <p>This method must be invoked on the UI thread.\n     *\n     * @param params The parameters of the task.\n     *\n     * @return This instance of AsyncTask.\n     *\n     * @throws IllegalStateException If {@link #getStatus()} returns either\n     *         {@link AsyncTask.Status#RUNNING} or {@link AsyncTask.Status#FINISHED}.\n     *\n     * @see #executeOnExecutor(java.util.concurrent.Executor, Object[])\n     * @see #execute(Runnable)\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#DONUT", "#THREAD_POOL_EXECUTOR", "android.os.Build.VERSION_CODES#HONEYCOMB", "AsyncTask.Status#RUNNING", "AsyncTask.Status#FINISHED", "#getStatus()", "#executeOnExecutor" ]
+  }, {
+    "name" : "public final AsyncTask<Params, Progress, Result> executeOnExecutor(Executor exec, Params... params)",
+    "returnType" : "AsyncTask<Params, Progress, Result>",
+    "comment" : "\n     * Executes the task with the specified parameters. The task returns\n     * itself (this) so that the caller can keep a reference to it.\n     * \n     * <p>This method is typically used with {@link #THREAD_POOL_EXECUTOR} to\n     * allow multiple tasks to run in parallel on a pool of threads managed by\n     * AsyncTask, however you can also use your own {@link Executor} for custom\n     * behavior.\n     * \n     * <p><em>Warning:</em> Allowing multiple tasks to run in parallel from\n     * a thread pool is generally <em>not</em> what one wants, because the order\n     * of their operation is not defined.  For example, if these tasks are used\n     * to modify any state in common (such as writing a file due to a button click),\n     * there are no guarantees on the order of the modifications.\n     * Without careful work it is possible in rare cases for the newer version\n     * of the data to be over-written by an older one, leading to obscure data\n     * loss and stability issues.  Such changes are best\n     * executed in serial; to guarantee such work is serialized regardless of\n     * platform version you can use this function with {@link #SERIAL_EXECUTOR}.\n     *\n     * <p>This method must be invoked on the UI thread.\n     *\n     * @param exec The executor to use.  {@link #THREAD_POOL_EXECUTOR} is available as a\n     *              convenient process-wide thread pool for tasks that are loosely coupled.\n     * @param params The parameters of the task.\n     *\n     * @return This instance of AsyncTask.\n     *\n     * @throws IllegalStateException If {@link #getStatus()} returns either\n     *         {@link AsyncTask.Status#RUNNING} or {@link AsyncTask.Status#FINISHED}.\n     *\n     * @see #execute(Object[])\n     ",
+    "links" : [ "#THREAD_POOL_EXECUTOR", "java.util.concurrent.Executor", "AsyncTask.Status#RUNNING", "#SERIAL_EXECUTOR", "AsyncTask.Status#FINISHED", "#getStatus()" ]
+  }, {
+    "name" : "public static void execute(Runnable runnable)",
+    "returnType" : "void",
+    "comment" : "\n     * Convenience version of {@link #execute(Object...)} for use with\n     * a simple Runnable object. See {@link #execute(Object[])} for more\n     * information on the order of execution.\n     *\n     * @see #execute(Object[])\n     * @see #executeOnExecutor(java.util.concurrent.Executor, Object[])\n     ",
+    "links" : [ "#execute(Object...)", "#execute(Object" ]
+  }, {
+    "name" : "protected final void publishProgress(Progress... values)",
+    "returnType" : "void",
+    "comment" : "\n     * This method can be invoked from {@link #doInBackground} to\n     * publish updates on the UI thread while the background computation is\n     * still running. Each call to this method will trigger the execution of\n     * {@link #onProgressUpdate} on the UI thread.\n     *\n     * {@link #onProgressUpdate} will not be called if the task has been\n     * canceled.\n     *\n     * @param values The progress values to update the UI with.\n     *\n     * @see #onProgressUpdate\n     * @see #doInBackground\n     ",
+    "links" : [ "#onProgressUpdate", "#doInBackground" ]
+  }, {
+    "name" : "private void finish(Result result)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static Handler getMainHandler()", "private Handler getHandler()", "public static void setDefaultExecutor(Executor exec)", "private void postResultIfNotInvoked(Result result)", "private Result postResult(Result result)", "public final Status getStatus()", "protected abstract Result doInBackground(Params... params)", "protected void onPreExecute()", "protected void onPostExecute(Result result)", "protected void onProgressUpdate(Progress... values)", "protected void onCancelled(Result result)", "protected void onCancelled()", "public final boolean isCancelled()", "public final boolean cancel(boolean mayInterruptIfRunning)", "public final Result get() throws InterruptedException, ExecutionException", "public final Result get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException", "public final AsyncTask<Params, Progress, Result> execute(Params... params)", "public final AsyncTask<Params, Progress, Result> executeOnExecutor(Executor exec, Params... params)", "public static void execute(Runnable runnable)", "protected final void publishProgress(Progress... values)", "private void finish(Result result)" ],
+  "variableNames" : [ "LOG_TAG", "CORE_POOL_SIZE", "MAXIMUM_POOL_SIZE", "BACKUP_POOL_SIZE", "KEEP_ALIVE_SECONDS", "sThreadFactory", "sBackupExecutor", "sBackupExecutorQueue", "sRunOnSerialPolicy", "THREAD_POOL_EXECUTOR", "SERIAL_EXECUTOR", "MESSAGE_POST_RESULT", "MESSAGE_POST_PROGRESS", "sDefaultExecutor", "sHandler", "mWorker", "mFuture", "mStatus", "mCancelled", "mTaskInvoked", "mHandler" ]
+}

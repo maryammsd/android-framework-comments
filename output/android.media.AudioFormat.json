@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/AudioFormat.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/AudioFormat.java",
   "packageName" : "android.media",
   "className" : "AudioFormat",
-  "comment" : "\n * The {@link AudioFormat} class is used to access a number of audio format and\n * channel configuration constants. They are for instance used\n * in {@link AudioTrack} and {@link AudioRecord}, as valid values in individual parameters of\n * constructors like {@link AudioTrack#AudioTrack(int, int, int, int, int, int)}, where the fourth\n * parameter is one of the <code>AudioFormat.ENCODING_*</code> constants.\n * The <code>AudioFormat</code> constants are also used in {@link MediaFormat} to specify\n * audio related values commonly used in media, such as for {@link MediaFormat#KEY_CHANNEL_MASK}.\n * <p>The {@link AudioFormat.Builder} class can be used to create instances of\n * the <code>AudioFormat</code> format class.\n * Refer to\n * {@link AudioFormat.Builder} for documentation on the mechanics of the configuration and building\n * of such instances. Here we describe the main concepts that the <code>AudioFormat</code> class\n * allow you to convey in each instance, they are:\n * <ol>\n * <li><a href=\"#sampleRate\">sample rate</a>\n * <li><a href=\"#encoding\">encoding</a>\n * <li><a href=\"#channelMask\">channel masks</a>\n * </ol>\n * <p>Closely associated with the <code>AudioFormat</code> is the notion of an\n * <a href=\"#audioFrame\">audio frame</a>, which is used throughout the documentation\n * to represent the minimum size complete unit of audio data.\n *\n * <h4 id=\"sampleRate\">Sample rate</h4>\n * <p>Expressed in Hz, the sample rate in an <code>AudioFormat</code> instance expresses the number\n * of audio samples for each channel per second in the content you are playing or recording. It is\n * not the sample rate\n * at which content is rendered or produced. For instance a sound at a media sample rate of 8000Hz\n * can be played on a device operating at a sample rate of 48000Hz; the sample rate conversion is\n * automatically handled by the platform, it will not play at 6x speed.\n *\n * <p>As of API {@link android.os.Build.VERSION_CODES#M},\n * sample rates up to 192kHz are supported\n * for <code>AudioRecord</code> and <code>AudioTrack</code>, with sample rate conversion\n * performed as needed.\n * To improve efficiency and avoid lossy conversions, it is recommended to match the sample rate\n * for <code>AudioRecord</code> and <code>AudioTrack</code> to the endpoint device\n * sample rate, and limit the sample rate to no more than 48kHz unless there are special\n * device capabilities that warrant a higher rate.\n *\n * <h4 id=\"encoding\">Encoding</h4>\n * <p>Audio encoding is used to describe the bit representation of audio data, which can be\n * either linear PCM or compressed audio, such as AC3 or DTS.\n * <p>For linear PCM, the audio encoding describes the sample size, 8 bits, 16 bits, or 32 bits,\n * and the sample representation, integer or float.\n * <ul>\n * <li> {@link #ENCODING_PCM_8BIT}: The audio sample is a 8 bit unsigned integer in the\n * range [0, 255], with a 128 offset for zero. This is typically stored as a Java byte in a\n * byte array or ByteBuffer. Since the Java byte is <em>signed</em>,\n * be careful with math operations and conversions as the most significant bit is inverted.\n * </li>\n * <li> {@link #ENCODING_PCM_16BIT}: The audio sample is a 16 bit signed integer\n * typically stored as a Java short in a short array, but when the short\n * is stored in a ByteBuffer, it is native endian (as compared to the default Java big endian).\n * The short has full range from [-32768, 32767],\n * and is sometimes interpreted as fixed point Q.15 data.\n * </li>\n * <li> {@link #ENCODING_PCM_FLOAT}: Introduced in\n * API {@link android.os.Build.VERSION_CODES#LOLLIPOP}, this encoding specifies that\n * the audio sample is a 32 bit IEEE single precision float. The sample can be\n * manipulated as a Java float in a float array, though within a ByteBuffer\n * it is stored in native endian byte order.\n * The nominal range of <code>ENCODING_PCM_FLOAT</code> audio data is [-1.0, 1.0].\n * It is implementation dependent whether the positive maximum of 1.0 is included\n * in the interval. Values outside of the nominal range are clamped before\n * sending to the endpoint device. Beware that\n * the handling of NaN is undefined; subnormals may be treated as zero; and\n * infinities are generally clamped just like other values for <code>AudioTrack</code>\n * &ndash; try to avoid infinities because they can easily generate a NaN.\n * <br>\n * To achieve higher audio bit depth than a signed 16 bit integer short,\n * it is recommended to use <code>ENCODING_PCM_FLOAT</code> for audio capture, processing,\n * and playback.\n * Floats are efficiently manipulated by modern CPUs,\n * have greater precision than 24 bit signed integers,\n * and have greater dynamic range than 32 bit signed integers.\n * <code>AudioRecord</code> as of API {@link android.os.Build.VERSION_CODES#M} and\n * <code>AudioTrack</code> as of API {@link android.os.Build.VERSION_CODES#LOLLIPOP}\n * support <code>ENCODING_PCM_FLOAT</code>.\n * </li>\n * </ul>\n * <p>For compressed audio, the encoding specifies the method of compression,\n * for example {@link #ENCODING_AC3} and {@link #ENCODING_DTS}. The compressed\n * audio data is typically stored as bytes in\n * a byte array or ByteBuffer. When a compressed audio encoding is specified\n * for an <code>AudioTrack</code>, it creates a direct (non-mixed) track\n * for output to an endpoint (such as HDMI) capable of decoding the compressed audio.\n * For (most) other endpoints, which are not capable of decoding such compressed audio,\n * you will need to decode the data first, typically by creating a {@link MediaCodec}.\n * Alternatively, one may use {@link MediaPlayer} for playback of compressed\n * audio files or streams.\n * <p>When compressed audio is sent out through a direct <code>AudioTrack</code>,\n * it need not be written in exact multiples of the audio access unit;\n * this differs from <code>MediaCodec</code> input buffers.\n *\n * <h4 id=\"channelMask\">Channel mask</h4>\n * <p>Channel masks are used in <code>AudioTrack</code> and <code>AudioRecord</code> to describe\n * the samples and their arrangement in the audio frame. They are also used in the endpoint (e.g.\n * a USB audio interface, a DAC connected to headphones) to specify allowable configurations of a\n * particular device.\n * <br>As of API {@link android.os.Build.VERSION_CODES#M}, there are two types of channel masks:\n * channel position masks and channel index masks.\n *\n * <h5 id=\"channelPositionMask\">Channel position masks</h5>\n * Channel position masks are the original Android channel masks, and are used since API\n * {@link android.os.Build.VERSION_CODES#BASE}.\n * For input and output, they imply a positional nature - the location of a speaker or a microphone\n * for recording or playback.\n * <br>For a channel position mask, each allowed channel position corresponds to a bit in the\n * channel mask. If that channel position is present in the audio frame, that bit is set,\n * otherwise it is zero. The order of the bits (from lsb to msb) corresponds to the order of that\n * position's sample in the audio frame.\n * <br>The canonical channel position masks by channel count are as follows:\n * <br><table>\n * <tr><td>channel count</td><td>channel position mask</td></tr>\n * <tr><td>1</td><td>{@link #CHANNEL_OUT_MONO}</td></tr>\n * <tr><td>2</td><td>{@link #CHANNEL_OUT_STEREO}</td></tr>\n * <tr><td>3</td><td>{@link #CHANNEL_OUT_STEREO} | {@link #CHANNEL_OUT_FRONT_CENTER}</td></tr>\n * <tr><td>4</td><td>{@link #CHANNEL_OUT_QUAD}</td></tr>\n * <tr><td>5</td><td>{@link #CHANNEL_OUT_QUAD} | {@link #CHANNEL_OUT_FRONT_CENTER}</td></tr>\n * <tr><td>6</td><td>{@link #CHANNEL_OUT_5POINT1}</td></tr>\n * <tr><td>7</td><td>{@link #CHANNEL_OUT_5POINT1} | {@link #CHANNEL_OUT_BACK_CENTER}</td></tr>\n * <tr><td>8</td><td>{@link #CHANNEL_OUT_7POINT1_SURROUND}</td></tr>\n * </table>\n * <br>These masks are an ORed composite of individual channel masks. For example\n * {@link #CHANNEL_OUT_STEREO} is composed of {@link #CHANNEL_OUT_FRONT_LEFT} and\n * {@link #CHANNEL_OUT_FRONT_RIGHT}.\n *\n * <h5 id=\"channelIndexMask\">Channel index masks</h5>\n * Channel index masks are introduced in API {@link android.os.Build.VERSION_CODES#M}. They allow\n * the selection of a particular channel from the source or sink endpoint by number, i.e. the first\n * channel, the second channel, and so forth. This avoids problems with artificially assigning\n * positions to channels of an endpoint, or figuring what the i<sup>th</sup> position bit is within\n * an endpoint's channel position mask etc.\n * <br>Here's an example where channel index masks address this confusion: dealing with a 4 channel\n * USB device. Using a position mask, and based on the channel count, this would be a\n * {@link #CHANNEL_OUT_QUAD} device, but really one is only interested in channel 0\n * through channel 3. The USB device would then have the following individual bit channel masks:\n * {@link #CHANNEL_OUT_FRONT_LEFT},\n * {@link #CHANNEL_OUT_FRONT_RIGHT}, {@link #CHANNEL_OUT_BACK_LEFT}\n * and {@link #CHANNEL_OUT_BACK_RIGHT}. But which is channel 0 and which is\n * channel 3?\n * <br>For a channel index mask, each channel number is represented as a bit in the mask, from the\n * lsb (channel 0) upwards to the msb, numerically this bit value is\n * <code>1 << channelNumber</code>.\n * A set bit indicates that channel is present in the audio frame, otherwise it is cleared.\n * The order of the bits also correspond to that channel number's sample order in the audio frame.\n * <br>For the previous 4 channel USB device example, the device would have a channel index mask\n * <code>0xF</code>. Suppose we wanted to select only the first and the third channels; this would\n * correspond to a channel index mask <code>0x5</code> (the first and third bits set). If an\n * <code>AudioTrack</code> uses this channel index mask, the audio frame would consist of two\n * samples, the first sample of each frame routed to channel 0, and the second sample of each frame\n * routed to channel 2.\n * The canonical channel index masks by channel count are given by the formula\n * <code>(1 << channelCount) - 1</code>.\n *\n * <h5>Use cases</h5>\n * <ul>\n * <li><i>Channel position mask for an endpoint:</i> <code>CHANNEL_OUT_FRONT_LEFT</code>,\n *  <code>CHANNEL_OUT_FRONT_CENTER</code>, etc. for HDMI home theater purposes.\n * <li><i>Channel position mask for an audio stream:</i> Creating an <code>AudioTrack</code>\n *  to output movie content, where 5.1 multichannel output is to be written.\n * <li><i>Channel index mask for an endpoint:</i> USB devices for which input and output do not\n *  correspond to left or right speaker or microphone.\n * <li><i>Channel index mask for an audio stream:</i> An <code>AudioRecord</code> may only want the\n *  third and fourth audio channels of the endpoint (i.e. the second channel pair), and not care the\n *  about position it corresponds to, in which case the channel index mask is <code>0xC</code>.\n *  Multichannel <code>AudioRecord</code> sessions should use channel index masks.\n * </ul>\n * <h4 id=\"audioFrame\">Audio Frame</h4>\n * <p>For linear PCM, an audio frame consists of a set of samples captured at the same time,\n * whose count and\n * channel association are given by the <a href=\"#channelMask\">channel mask</a>,\n * and whose sample contents are specified by the <a href=\"#encoding\">encoding</a>.\n * For example, a stereo 16 bit PCM frame consists of\n * two 16 bit linear PCM samples, with a frame size of 4 bytes.\n * For compressed audio, an audio frame may alternately\n * refer to an access unit of compressed data bytes that is logically grouped together for\n * decoding and bitstream access (e.g. {@link MediaCodec}),\n * or a single byte of compressed data (e.g. {@link AudioTrack#getBufferSizeInFrames()\n * AudioTrack.getBufferSizeInFrames()}),\n * or the linear PCM frame result from decoding the compressed data\n * (e.g.{@link AudioTrack#getPlaybackHeadPosition()\n * AudioTrack.getPlaybackHeadPosition()}),\n * depending on the context where audio frame is used.\n * For the purposes of {@link AudioFormat#getFrameSizeInBytes()}, a compressed data format\n * returns a frame size of 1 byte.\n ",
+  "comment" : "\n * The {@link AudioFormat} class is used to access a number of audio format and\n * channel configuration constants. They are for instance used\n * in {@link AudioTrack} and {@link AudioRecord}, as valid values in individual parameters of\n * constructors like {@link AudioTrack#AudioTrack(int, int, int, int, int, int)}, where the fourth\n * parameter is one of the <code>AudioFormat.ENCODING_*</code> constants.\n * The <code>AudioFormat</code> constants are also used in {@link MediaFormat} to specify\n * audio related values commonly used in media, such as for {@link MediaFormat#KEY_CHANNEL_MASK}.\n * <p>The {@link AudioFormat.Builder} class can be used to create instances of\n * the <code>AudioFormat</code> format class.\n * Refer to\n * {@link AudioFormat.Builder} for documentation on the mechanics of the configuration and building\n * of such instances. Here we describe the main concepts that the <code>AudioFormat</code> class\n * allow you to convey in each instance, they are:\n * <ol>\n * <li><a href=\"#sampleRate\">sample rate</a>\n * <li><a href=\"#encoding\">encoding</a>\n * <li><a href=\"#channelMask\">channel masks</a>\n * </ol>\n * <p>Closely associated with the <code>AudioFormat</code> is the notion of an\n * <a href=\"#audioFrame\">audio frame</a>, which is used throughout the documentation\n * to represent the minimum size complete unit of audio data.\n *\n * <h4 id=\"sampleRate\">Sample rate</h4>\n * <p>Expressed in Hz, the sample rate in an <code>AudioFormat</code> instance expresses the number\n * of audio samples for each channel per second in the content you are playing or recording. It is\n * not the sample rate\n * at which content is rendered or produced. For instance a sound at a media sample rate of 8000Hz\n * can be played on a device operating at a sample rate of 48000Hz; the sample rate conversion is\n * automatically handled by the platform, it will not play at 6x speed.\n *\n * <p>As of API {@link android.os.Build.VERSION_CODES#M},\n * sample rates up to 192kHz are supported\n * for <code>AudioRecord</code> and <code>AudioTrack</code>, with sample rate conversion\n * performed as needed.\n * To improve efficiency and avoid lossy conversions, it is recommended to match the sample rate\n * for <code>AudioRecord</code> and <code>AudioTrack</code> to the endpoint device\n * sample rate, and limit the sample rate to no more than 48kHz unless there are special\n * device capabilities that warrant a higher rate.\n *\n * <h4 id=\"encoding\">Encoding</h4>\n * <p>Audio encoding is used to describe the bit representation of audio data, which can be\n * either linear PCM or compressed audio, such as AC3 or DTS.\n * <p>For linear PCM, the audio encoding describes the sample size, 8 bits, 16 bits, or 32 bits,\n * and the sample representation, integer or float.\n * <ul>\n * <li> {@link #ENCODING_PCM_8BIT}: The audio sample is a 8 bit unsigned integer in the\n * range [0, 255], with a 128 offset for zero. This is typically stored as a Java byte in a\n * byte array or ByteBuffer. Since the Java byte is <em>signed</em>,\n * be careful with math operations and conversions as the most significant bit is inverted.\n * </li>\n * <li> {@link #ENCODING_PCM_16BIT}: The audio sample is a 16 bit signed integer\n * typically stored as a Java short in a short array, but when the short\n * is stored in a ByteBuffer, it is native endian (as compared to the default Java big endian).\n * The short has full range from [-32768, 32767],\n * and is sometimes interpreted as fixed point Q.15 data.\n * </li>\n * <li> {@link #ENCODING_PCM_FLOAT}: Introduced in\n * API {@link android.os.Build.VERSION_CODES#LOLLIPOP}, this encoding specifies that\n * the audio sample is a 32 bit IEEE single precision float. The sample can be\n * manipulated as a Java float in a float array, though within a ByteBuffer\n * it is stored in native endian byte order.\n * The nominal range of <code>ENCODING_PCM_FLOAT</code> audio data is [-1.0, 1.0].\n * It is implementation dependent whether the positive maximum of 1.0 is included\n * in the interval. Values outside of the nominal range are clamped before\n * sending to the endpoint device. Beware that\n * the handling of NaN is undefined; subnormals may be treated as zero; and\n * infinities are generally clamped just like other values for <code>AudioTrack</code>\n * &ndash; try to avoid infinities because they can easily generate a NaN.\n * <br>\n * To achieve higher audio bit depth than a signed 16 bit integer short,\n * it is recommended to use <code>ENCODING_PCM_FLOAT</code> for audio capture, processing,\n * and playback.\n * Floats are efficiently manipulated by modern CPUs,\n * have greater precision than 24 bit signed integers,\n * and have greater dynamic range than 32 bit signed integers.\n * <code>AudioRecord</code> as of API {@link android.os.Build.VERSION_CODES#M} and\n * <code>AudioTrack</code> as of API {@link android.os.Build.VERSION_CODES#LOLLIPOP}\n * support <code>ENCODING_PCM_FLOAT</code>.\n * </li>\n * <li> {@link #ENCODING_PCM_24BIT_PACKED}: Introduced in\n * API {@link android.os.Build.VERSION_CODES#S},\n * this encoding specifies the audio sample is an\n * extended precision 24 bit signed integer\n * stored as a 3 Java bytes in a {@code ByteBuffer} or byte array in native endian\n * (see {@link java.nio.ByteOrder#nativeOrder()}).\n * Each sample has full range from [-8388608, 8388607],\n * and can be interpreted as fixed point Q.23 data.\n * </li>\n * <li> {@link #ENCODING_PCM_32BIT}: Introduced in\n * API {@link android.os.Build.VERSION_CODES#S},\n * this encoding specifies the audio sample is an\n * extended precision 32 bit signed integer\n * stored as a 4 Java bytes in a {@code ByteBuffer} or byte array in native endian\n * (see {@link java.nio.ByteOrder#nativeOrder()}).\n * Each sample has full range from [-2147483648, 2147483647],\n * and can be interpreted as fixed point Q.31 data.\n * </li>\n * </ul>\n * <p>For compressed audio, the encoding specifies the method of compression,\n * for example {@link #ENCODING_AC3} and {@link #ENCODING_DTS}. The compressed\n * audio data is typically stored as bytes in\n * a byte array or ByteBuffer. When a compressed audio encoding is specified\n * for an <code>AudioTrack</code>, it creates a direct (non-mixed) track\n * for output to an endpoint (such as HDMI) capable of decoding the compressed audio.\n * For (most) other endpoints, which are not capable of decoding such compressed audio,\n * you will need to decode the data first, typically by creating a {@link MediaCodec}.\n * Alternatively, one may use {@link MediaPlayer} for playback of compressed\n * audio files or streams.\n * <p>When compressed audio is sent out through a direct <code>AudioTrack</code>,\n * it need not be written in exact multiples of the audio access unit;\n * this differs from <code>MediaCodec</code> input buffers.\n *\n * <h4 id=\"channelMask\">Channel mask</h4>\n * <p>Channel masks are used in <code>AudioTrack</code> and <code>AudioRecord</code> to describe\n * the samples and their arrangement in the audio frame. They are also used in the endpoint (e.g.\n * a USB audio interface, a DAC connected to headphones) to specify allowable configurations of a\n * particular device.\n * <br>As of API {@link android.os.Build.VERSION_CODES#M}, there are two types of channel masks:\n * channel position masks and channel index masks.\n *\n * <h5 id=\"channelPositionMask\">Channel position masks</h5>\n * Channel position masks are the original Android channel masks, and are used since API\n * {@link android.os.Build.VERSION_CODES#BASE}.\n * For input and output, they imply a positional nature - the location of a speaker or a microphone\n * for recording or playback.\n * <br>For a channel position mask, each allowed channel position corresponds to a bit in the\n * channel mask. If that channel position is present in the audio frame, that bit is set,\n * otherwise it is zero. The order of the bits (from lsb to msb) corresponds to the order of that\n * position's sample in the audio frame.\n * <br>The canonical channel position masks by channel count are as follows:\n * <br><table>\n * <tr><td>channel count</td><td>channel position mask</td></tr>\n * <tr><td>1</td><td>{@link #CHANNEL_OUT_MONO}</td></tr>\n * <tr><td>2</td><td>{@link #CHANNEL_OUT_STEREO}</td></tr>\n * <tr><td>3</td><td>{@link #CHANNEL_OUT_STEREO} | {@link #CHANNEL_OUT_FRONT_CENTER}</td></tr>\n * <tr><td>4</td><td>{@link #CHANNEL_OUT_QUAD}</td></tr>\n * <tr><td>5</td><td>{@link #CHANNEL_OUT_QUAD} | {@link #CHANNEL_OUT_FRONT_CENTER}</td></tr>\n * <tr><td>6</td><td>{@link #CHANNEL_OUT_5POINT1}</td></tr>\n * <tr><td>7</td><td>{@link #CHANNEL_OUT_5POINT1} | {@link #CHANNEL_OUT_BACK_CENTER}</td></tr>\n * <tr><td>8</td><td>{@link #CHANNEL_OUT_7POINT1_SURROUND}</td></tr>\n * </table>\n * <br>These masks are an ORed composite of individual channel masks. For example\n * {@link #CHANNEL_OUT_STEREO} is composed of {@link #CHANNEL_OUT_FRONT_LEFT} and\n * {@link #CHANNEL_OUT_FRONT_RIGHT}.\n * <p>\n * The following diagram represents the layout of the output channels, as seen from above\n * the listener (in the center at the \"lis\" position, facing the front-center channel).\n * <pre>\n *       TFL ----- TFC ----- TFR     T is Top\n *       |  \\       |       /  |\n *       |   FL --- FC --- FR  |     F is Front\n *       |   |\\     |     /|   |\n *       |   | BFL-BFC-BFR |   |     BF is Bottom Front\n *       |   |             |   |\n *       |   FWL   lis   FWR   |     W is Wide\n *       |   |             |   |\n *      TSL  SL    TC     SR  TSR    S is Side\n *       |   |             |   |\n *       |   BL --- BC -- BR   |     B is Back\n *       |  /               \\  |\n *       TBL ----- TBC ----- TBR     C is Center, L/R is Left/Right\n * </pre>\n * All \"T\" (top) channels are above the listener, all \"BF\" (bottom-front) channels are below the\n * listener, all others are in the listener's horizontal plane. When used in conjunction, LFE1 and\n * LFE2 are below the listener, when used alone, LFE plane is undefined.\n * See the channel definitions for the abbreviations\n *\n * <h5 id=\"channelIndexMask\">Channel index masks</h5>\n * Channel index masks are introduced in API {@link android.os.Build.VERSION_CODES#M}. They allow\n * the selection of a particular channel from the source or sink endpoint by number, i.e. the first\n * channel, the second channel, and so forth. This avoids problems with artificially assigning\n * positions to channels of an endpoint, or figuring what the i<sup>th</sup> position bit is within\n * an endpoint's channel position mask etc.\n * <br>Here's an example where channel index masks address this confusion: dealing with a 4 channel\n * USB device. Using a position mask, and based on the channel count, this would be a\n * {@link #CHANNEL_OUT_QUAD} device, but really one is only interested in channel 0\n * through channel 3. The USB device would then have the following individual bit channel masks:\n * {@link #CHANNEL_OUT_FRONT_LEFT},\n * {@link #CHANNEL_OUT_FRONT_RIGHT}, {@link #CHANNEL_OUT_BACK_LEFT}\n * and {@link #CHANNEL_OUT_BACK_RIGHT}. But which is channel 0 and which is\n * channel 3?\n * <br>For a channel index mask, each channel number is represented as a bit in the mask, from the\n * lsb (channel 0) upwards to the msb, numerically this bit value is\n * <code>1 << channelNumber</code>.\n * A set bit indicates that channel is present in the audio frame, otherwise it is cleared.\n * The order of the bits also correspond to that channel number's sample order in the audio frame.\n * <br>For the previous 4 channel USB device example, the device would have a channel index mask\n * <code>0xF</code>. Suppose we wanted to select only the first and the third channels; this would\n * correspond to a channel index mask <code>0x5</code> (the first and third bits set). If an\n * <code>AudioTrack</code> uses this channel index mask, the audio frame would consist of two\n * samples, the first sample of each frame routed to channel 0, and the second sample of each frame\n * routed to channel 2.\n * The canonical channel index masks by channel count are given by the formula\n * <code>(1 << channelCount) - 1</code>.\n *\n * <h5>Use cases</h5>\n * <ul>\n * <li><i>Channel position mask for an endpoint:</i> <code>CHANNEL_OUT_FRONT_LEFT</code>,\n *  <code>CHANNEL_OUT_FRONT_CENTER</code>, etc. for HDMI home theater purposes.\n * <li><i>Channel position mask for an audio stream:</i> Creating an <code>AudioTrack</code>\n *  to output movie content, where 5.1 multichannel output is to be written.\n * <li><i>Channel index mask for an endpoint:</i> USB devices for which input and output do not\n *  correspond to left or right speaker or microphone.\n * <li><i>Channel index mask for an audio stream:</i> An <code>AudioRecord</code> may only want the\n *  third and fourth audio channels of the endpoint (i.e. the second channel pair), and not care the\n *  about position it corresponds to, in which case the channel index mask is <code>0xC</code>.\n *  Multichannel <code>AudioRecord</code> sessions should use channel index masks.\n * </ul>\n * <h4 id=\"audioFrame\">Audio Frame</h4>\n * <p>For linear PCM, an audio frame consists of a set of samples captured at the same time,\n * whose count and\n * channel association are given by the <a href=\"#channelMask\">channel mask</a>,\n * and whose sample contents are specified by the <a href=\"#encoding\">encoding</a>.\n * For example, a stereo 16 bit PCM frame consists of\n * two 16 bit linear PCM samples, with a frame size of 4 bytes.\n * For compressed audio, an audio frame may alternately\n * refer to an access unit of compressed data bytes that is logically grouped together for\n * decoding and bitstream access (e.g. {@link MediaCodec}),\n * or a single byte of compressed data (e.g. {@link AudioTrack#getBufferSizeInFrames()\n * AudioTrack.getBufferSizeInFrames()}),\n * or the linear PCM frame result from decoding the compressed data\n * (e.g.{@link AudioTrack#getPlaybackHeadPosition()\n * AudioTrack.getPlaybackHeadPosition()}),\n * depending on the context where audio frame is used.\n * For the purposes of {@link AudioFormat#getFrameSizeInBytes()}, a compressed data format\n * returns a frame size of 1 byte.\n ",
+  "links" : [ "android.media.AudioTrack#AudioTrack(int", "#CHANNEL_OUT_QUAD", "android.os.Build.VERSION_CODES#BASE", "android.media.AudioTrack#getPlaybackHeadPosition()", "android.media.MediaFormat", "#ENCODING_PCM_24BIT_PACKED", "#CHANNEL_OUT_BACK_RIGHT", "#CHANNEL_OUT_BACK_CENTER", "android.media.AudioFormat", "android.media.MediaFormat#KEY_CHANNEL_MASK", "#ENCODING_PCM_16BIT", "android.media.MediaPlayer", "android.media.AudioTrack", "#ENCODING_PCM_32BIT", "#ENCODING_DTS", "android.os.Build.VERSION_CODES#M", "#ENCODING_PCM_8BIT", "#CHANNEL_OUT_FRONT_RIGHT", "#CHANNEL_OUT_STEREO", "#CHANNEL_OUT_FRONT_LEFT", "#CHANNEL_OUT_BACK_LEFT", "AudioFormat.Builder", "android.os.Build.VERSION_CODES#LOLLIPOP", "java.nio.ByteOrder#nativeOrder()", "#CHANNEL_OUT_MONO", "android.media.AudioRecord", "#ENCODING_PCM_FLOAT", "#CHANNEL_OUT_5POINT1", "android.media.MediaCodec", "android.os.Build.VERSION_CODES#S", "#CHANNEL_OUT_FRONT_CENTER", "android.media.AudioTrack#getBufferSizeInFrames()", "android.media.AudioFormat#getFrameSizeInBytes()", "#ENCODING_AC3", "#CHANNEL_OUT_7POINT1_SURROUND" ],
   "variables" : [ {
     "name" : "ENCODING_INVALID",
     "type" : "int",
@@ -71,8 +72,8 @@
   }, {
     "name" : "ENCODING_IEC61937",
     "type" : "int",
-    "comment" : " Audio data format: compressed audio wrapped in PCM for HDMI\n     * or S/PDIF passthrough.\n     * IEC61937 uses a stereo stream of 16-bit samples as the wrapper.\n     * So the channel mask for the track must be {@link #CHANNEL_OUT_STEREO}.\n     * Data should be written to the stream in a short[] array.\n     * If the data is written in a byte[] array then there may be endian problems\n     * on some platforms when converting to short internally.\n     ",
-    "links" : [ "#CHANNEL_OUT_STEREO" ]
+    "comment" : " Audio data format: compressed audio wrapped in PCM for HDMI\n     * or S/PDIF passthrough.\n     * For devices whose SDK version is less than {@link android.os.Build.VERSION_CODES#S}, the\n     * channel mask of IEC61937 track must be {@link #CHANNEL_OUT_STEREO}.\n     * Data should be written to the stream in a short[] array.\n     * If the data is written in a byte[] array then there may be endian problems\n     * on some platforms when converting to short internally.\n     ",
+    "links" : [ "#CHANNEL_OUT_STEREO", "android.os.Build.VERSION_CODES#S" ]
   }, {
     "name" : "ENCODING_DOLBY_TRUEHD",
     "type" : "int",
@@ -109,6 +110,71 @@
     "comment" : " Audio data format: OPUS compressed. ",
     "links" : [ ]
   }, {
+    "name" : "ENCODING_LEGACY_SHORT_ARRAY_THRESHOLD",
+    "type" : "int",
+    "comment" : " @hide\n     * We do not permit legacy short array reads or writes for encodings\n     * introduced after this threshold.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_PCM_24BIT_PACKED",
+    "type" : "int",
+    "comment" : " Audio data format: PCM 24 bit per sample packed as 3 bytes.\n     *\n     * The bytes are in little-endian order, so the least significant byte\n     * comes first in the byte array.\n     *\n     * Not guaranteed to be supported by devices, may be emulated if not supported. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_PCM_32BIT",
+    "type" : "int",
+    "comment" : " Audio data format: PCM 32 bit per sample.\n     * Not guaranteed to be supported by devices, may be emulated if not supported. ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_MPEGH_BL_L3",
+    "type" : "int",
+    "comment" : " Audio data format: MPEG-H baseline profile, level 3 ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_MPEGH_BL_L4",
+    "type" : "int",
+    "comment" : " Audio data format: MPEG-H baseline profile, level 4 ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_MPEGH_LC_L3",
+    "type" : "int",
+    "comment" : " Audio data format: MPEG-H low complexity profile, level 3 ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_MPEGH_LC_L4",
+    "type" : "int",
+    "comment" : " Audio data format: MPEG-H low complexity profile, level 4 ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_DTS_UHD",
+    "type" : "int",
+    "comment" : " Audio data format: DTS UHD Profile-1 compressed (aka DTS:X Profile 1)\n     * Has the same meaning and value as ENCODING_DTS_UHD_P1.\n     * @deprecated Use {@link #ENCODING_DTS_UHD_P1} instead. ",
+    "links" : [ "#ENCODING_DTS_UHD_P1" ]
+  }, {
+    "name" : "ENCODING_DRA",
+    "type" : "int",
+    "comment" : " Audio data format: DRA compressed ",
+    "links" : [ ]
+  }, {
+    "name" : "ENCODING_DTS_HD_MA",
+    "type" : "int",
+    "comment" : " Audio data format: DTS HD Master Audio compressed\n     * DTS HD Master Audio stream is variable bit rate and contains lossless audio.\n     * Use {@link #ENCODING_DTS_HD_MA} for lossless audio content (DTS-HD MA Lossless)\n     * and use {@link #ENCODING_DTS_HD} for other DTS bitstreams with extension substream\n     * (DTS 8Ch Discrete, DTS Hi Res, DTS Express). ",
+    "links" : [ "#ENCODING_DTS_HD", "#ENCODING_DTS_HD_MA" ]
+  }, {
+    "name" : "ENCODING_DTS_UHD_P1",
+    "type" : "int",
+    "comment" : " Audio data format: DTS UHD Profile-1 compressed (aka DTS:X Profile 1)\n     * Has the same meaning and value as the deprecated {@link #ENCODING_DTS_UHD}.",
+    "links" : [ "#ENCODING_DTS_UHD" ]
+  }, {
+    "name" : "ENCODING_DTS_UHD_P2",
+    "type" : "int",
+    "comment" : " Audio data format: DTS UHD Profile-2 compressed\n     * DTS-UHD Profile-2 supports delivery of Channel-Based Audio, Object-Based Audio\n     * and High Order Ambisonic presentations up to the fourth order.\n     * Use {@link #ENCODING_DTS_UHD_P1} to transmit DTS UHD Profile 1 (aka DTS:X Profile 1)\n     * bitstream.\n     * Use {@link #ENCODING_DTS_UHD_P2} to transmit DTS UHD Profile 2 (aka DTS:X Profile 2)\n     * bitstream. ",
+    "links" : [ "#ENCODING_DTS_UHD_P1", "#ENCODING_DTS_UHD_P2" ]
+  }, {
+    "name" : "ENCODING_DSD",
+    "type" : "int",
+    "comment" : " Audio data format: Direct Stream Digital ",
+    "links" : [ ]
+  }, {
     "name" : "CHANNEL_CONFIGURATION_INVALID",
     "type" : "int",
     "comment" : " @deprecated Use {@link #CHANNEL_INVALID} instead.  ",
@@ -141,32 +207,32 @@
   }, {
     "name" : "CHANNEL_OUT_FRONT_LEFT",
     "type" : "int",
-    "comment" : "  in /system/media/audio/include/system/audio.h in the JNI code of AudioTrack",
+    "comment" : " Front left output channel (see FL in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_FRONT_RIGHT",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Front right output channel (see FR in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_FRONT_CENTER",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Front center output channel (see FC in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_LOW_FREQUENCY",
     "type" : "int",
-    "comment" : "",
-    "links" : [ ]
+    "comment" : " LFE \"low frequency effect\" channel\n     * When used in conjunction with {@link #CHANNEL_OUT_LOW_FREQUENCY_2}, it is intended\n     * to contain the left low-frequency effect signal, also referred to as \"LFE1\"\n     * in ITU-R BS.2159-8 ",
+    "links" : [ "#CHANNEL_OUT_LOW_FREQUENCY_2" ]
   }, {
     "name" : "CHANNEL_OUT_BACK_LEFT",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Back left output channel (see BL in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_BACK_RIGHT",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Back right output channel (see BR in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_FRONT_LEFT_OF_CENTER",
@@ -181,50 +247,100 @@
   }, {
     "name" : "CHANNEL_OUT_BACK_CENTER",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Back center output channel (see BC in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_SIDE_LEFT",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Side left output channel (see SL in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_SIDE_RIGHT",
     "type" : "int",
-    "comment" : "",
+    "comment" : " Side right output channel (see SR in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_CENTER",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top center (above listener) output channel (see TC in channel diagram) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_FRONT_LEFT",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top front left output channel (see TFL in channel diagram above FL) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_FRONT_CENTER",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top front center output channel (see TFC in channel diagram above FC) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_FRONT_RIGHT",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top front right output channel (see TFR in channel diagram above FR) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_BACK_LEFT",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top back left output channel (see TBL in channel diagram above BL) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_BACK_CENTER",
     "type" : "int",
-    "comment" : " @hide ",
+    "comment" : " Top back center output channel (see TBC in channel diagram above BC) ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_TOP_BACK_RIGHT",
+    "type" : "int",
+    "comment" : " Top back right output channel (see TBR in channel diagram above BR) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_TOP_SIDE_LEFT",
+    "type" : "int",
+    "comment" : " Top side left output channel (see TSL in channel diagram above SL) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_TOP_SIDE_RIGHT",
+    "type" : "int",
+    "comment" : " Top side right output channel (see TSR in channel diagram above SR) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_BOTTOM_FRONT_LEFT",
+    "type" : "int",
+    "comment" : " Bottom front left output channel (see BFL in channel diagram below FL) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_BOTTOM_FRONT_CENTER",
+    "type" : "int",
+    "comment" : " Bottom front center output channel (see BFC in channel diagram below FC) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_BOTTOM_FRONT_RIGHT",
+    "type" : "int",
+    "comment" : " Bottom front right output channel (see BFR in channel diagram below FR) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_LOW_FREQUENCY_2",
+    "type" : "int",
+    "comment" : " The second LFE channel\n     * When used in conjunction with {@link #CHANNEL_OUT_LOW_FREQUENCY}, it is intended\n     * to contain the right low-frequency effect signal, also referred to as \"LFE2\"\n     * in ITU-R BS.2159-8 ",
+    "links" : [ "#CHANNEL_OUT_LOW_FREQUENCY" ]
+  }, {
+    "name" : "CHANNEL_OUT_FRONT_WIDE_LEFT",
+    "type" : "int",
+    "comment" : " Front wide left output channel (see FWL in channel diagram) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_FRONT_WIDE_RIGHT",
+    "type" : "int",
+    "comment" : " Front wide right output channel (see FWR in channel diagram) ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_HAPTIC_B",
+    "type" : "int",
+    "comment" : " @hide\n     * Haptic channels can be used by internal framework code. Use the same values as in native.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_HAPTIC_A",
     "type" : "int",
     "comment" : " @hide ",
     "links" : [ ]
@@ -256,7 +372,12 @@
   }, {
     "name" : "CHANNEL_OUT_5POINT1",
     "type" : "int",
-    "comment" : " aka 5POINT1_BACK",
+    "comment" : " Output channel mask for 5.1 ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_6POINT1",
+    "type" : "int",
+    "comment" : " Output channel mask for 6.1\n     *  Same as 5.1 with the addition of the back center channel ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_OUT_5POINT1_SIDE",
@@ -272,6 +393,46 @@
     "name" : "CHANNEL_OUT_7POINT1_SURROUND",
     "type" : "int",
     "comment" : " matches AUDIO_CHANNEL_OUT_7POINT1",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_5POINT1POINT2",
+    "type" : "int",
+    "comment" : " Output channel mask for 5.1.2\n     *  Same as 5.1 with the addition of left and right top channels ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_5POINT1POINT4",
+    "type" : "int",
+    "comment" : " Output channel mask for 5.1.4\n     * Same as 5.1 with the addition of four top channels ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_7POINT1POINT2",
+    "type" : "int",
+    "comment" : " Output channel mask for 7.1.2\n     * Same as 7.1 with the addition of left and right top channels",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_7POINT1POINT4",
+    "type" : "int",
+    "comment" : " Output channel mask for 7.1.4\n     *  Same as 7.1 with the addition of four top channels ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_9POINT1POINT4",
+    "type" : "int",
+    "comment" : " Output channel mask for 9.1.4\n     * Same as 7.1.4 with the addition of left and right front wide channels ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_9POINT1POINT6",
+    "type" : "int",
+    "comment" : " Output channel mask for 9.1.6\n     * Same as 9.1.4 with the addition of left and right top side channels ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_13POINT_360RA",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_OUT_22POINT2",
+    "type" : "int",
+    "comment" : " @hide ",
     "links" : [ ]
   }, {
     "name" : "SAMPLE_RATE_HZ_MIN",
@@ -364,6 +525,36 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "CHANNEL_IN_BACK_LEFT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_BACK_RIGHT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_CENTER",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_LOW_FREQUENCY",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_TOP_LEFT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_TOP_RIGHT",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
     "name" : "CHANNEL_IN_MONO",
     "type" : "int",
     "comment" : "",
@@ -372,6 +563,31 @@
     "name" : "CHANNEL_IN_STEREO",
     "type" : "int",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_2POINT0POINT2",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_2POINT1POINT2",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_3POINT0POINT2",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_3POINT1POINT2",
+    "type" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "CHANNEL_IN_5POINT1",
+    "type" : "int",
+    "comment" : " @hide ",
     "links" : [ ]
   }, {
     "name" : "CHANNEL_IN_FRONT_BACK",
@@ -580,6 +796,6 @@
     "comment" : "\n     * @hide\n     *\n     * Return default name for a surround format. This is not an International name.\n     * It is just a default to use if an international name is not available.\n     *\n     * @param audioFormat a surround format\n     * @return short default name for the format.\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "ENCODING_INVALID", "ENCODING_DEFAULT", "ENCODING_PCM_16BIT", "ENCODING_PCM_8BIT", "ENCODING_PCM_FLOAT", "ENCODING_AC3", "ENCODING_E_AC3", "ENCODING_DTS", "ENCODING_DTS_HD", "ENCODING_MP3", "ENCODING_AAC_LC", "ENCODING_AAC_HE_V1", "ENCODING_AAC_HE_V2", "ENCODING_IEC61937", "ENCODING_DOLBY_TRUEHD", "ENCODING_AAC_ELD", "ENCODING_AAC_XHE", "ENCODING_AC4", "ENCODING_E_AC3_JOC", "ENCODING_DOLBY_MAT", "ENCODING_OPUS", "CHANNEL_CONFIGURATION_INVALID", "CHANNEL_CONFIGURATION_DEFAULT", "CHANNEL_CONFIGURATION_MONO", "CHANNEL_CONFIGURATION_STEREO", "CHANNEL_INVALID", "CHANNEL_OUT_DEFAULT", "CHANNEL_OUT_FRONT_LEFT", "CHANNEL_OUT_FRONT_RIGHT", "CHANNEL_OUT_FRONT_CENTER", "CHANNEL_OUT_LOW_FREQUENCY", "CHANNEL_OUT_BACK_LEFT", "CHANNEL_OUT_BACK_RIGHT", "CHANNEL_OUT_FRONT_LEFT_OF_CENTER", "CHANNEL_OUT_FRONT_RIGHT_OF_CENTER", "CHANNEL_OUT_BACK_CENTER", "CHANNEL_OUT_SIDE_LEFT", "CHANNEL_OUT_SIDE_RIGHT", "CHANNEL_OUT_TOP_CENTER", "CHANNEL_OUT_TOP_FRONT_LEFT", "CHANNEL_OUT_TOP_FRONT_CENTER", "CHANNEL_OUT_TOP_FRONT_RIGHT", "CHANNEL_OUT_TOP_BACK_LEFT", "CHANNEL_OUT_TOP_BACK_CENTER", "CHANNEL_OUT_TOP_BACK_RIGHT", "CHANNEL_OUT_MONO", "CHANNEL_OUT_STEREO", "CHANNEL_OUT_QUAD", "CHANNEL_OUT_QUAD_SIDE", "CHANNEL_OUT_SURROUND", "CHANNEL_OUT_5POINT1", "CHANNEL_OUT_5POINT1_SIDE", "CHANNEL_OUT_7POINT1", "CHANNEL_OUT_7POINT1_SURROUND", "SAMPLE_RATE_HZ_MIN", "SAMPLE_RATE_HZ_MAX", "SAMPLE_RATE_UNSPECIFIED", "CHANNEL_IN_DEFAULT", "CHANNEL_IN_LEFT", "CHANNEL_IN_RIGHT", "CHANNEL_IN_FRONT", "CHANNEL_IN_BACK", "CHANNEL_IN_LEFT_PROCESSED", "CHANNEL_IN_RIGHT_PROCESSED", "CHANNEL_IN_FRONT_PROCESSED", "CHANNEL_IN_BACK_PROCESSED", "CHANNEL_IN_PRESSURE", "CHANNEL_IN_X_AXIS", "CHANNEL_IN_Y_AXIS", "CHANNEL_IN_Z_AXIS", "CHANNEL_IN_VOICE_UPLINK", "CHANNEL_IN_VOICE_DNLINK", "CHANNEL_IN_MONO", "CHANNEL_IN_STEREO", "CHANNEL_IN_FRONT_BACK", "AUDIO_FORMAT_HAS_PROPERTY_NONE", "AUDIO_FORMAT_HAS_PROPERTY_ENCODING", "AUDIO_FORMAT_HAS_PROPERTY_SAMPLE_RATE", "AUDIO_FORMAT_HAS_PROPERTY_CHANNEL_MASK", "AUDIO_FORMAT_HAS_PROPERTY_CHANNEL_INDEX_MASK", "mEncoding", "mSampleRate", "mChannelMask", "mChannelIndexMask", "mPropertySetMask", "mChannelCount", "mFrameSizeInBytes", "CREATOR", "SURROUND_SOUND_ENCODING" ],
-  "methodNames" : [ "public static String toLogFriendlyEncoding(int enc)", "public static int inChannelMaskFromOutChannelMask(int outMask) throws IllegalArgumentException", "public static int channelCountFromInChannelMask(int mask)", "public static int channelCountFromOutChannelMask(int mask)", "public static int convertChannelOutMaskToNativeMask(int javaMask)", "public static int convertNativeChannelMaskToOutMask(int nativeMask)", "public static int getBytesPerSample(int audioFormat)", "public static boolean isValidEncoding(int audioFormat)", "public static boolean isPublicEncoding(int audioFormat)", "public static boolean isEncodingLinearPcm(int audioFormat)", "public static boolean isEncodingLinearFrames(int audioFormat)", "public static int[] filterPublicFormats(int[] formats)", "public int getEncoding()", "public int getSampleRate()", "public int getChannelMask()", "public int getChannelIndexMask()", "public int getChannelCount()", "public int getFrameSizeInBytes()", "public int getPropertySetMask()", "public String toLogFriendlyString()", "public boolean equals(Object o)", "public int hashCode()", "public int describeContents()", "public void writeToParcel(Parcel dest, int flags)", "public String toString()", "public static String toDisplayName(@SurroundSoundEncoding int audioFormat)" ]
+  "methodNames" : [ "public static String toLogFriendlyEncoding(int enc)", "public static int inChannelMaskFromOutChannelMask(int outMask) throws IllegalArgumentException", "public static int channelCountFromInChannelMask(int mask)", "public static int channelCountFromOutChannelMask(int mask)", "public static int convertChannelOutMaskToNativeMask(int javaMask)", "public static int convertNativeChannelMaskToOutMask(int nativeMask)", "public static int getBytesPerSample(int audioFormat)", "public static boolean isValidEncoding(int audioFormat)", "public static boolean isPublicEncoding(int audioFormat)", "public static boolean isEncodingLinearPcm(int audioFormat)", "public static boolean isEncodingLinearFrames(int audioFormat)", "public static int[] filterPublicFormats(int[] formats)", "public int getEncoding()", "public int getSampleRate()", "public int getChannelMask()", "public int getChannelIndexMask()", "public int getChannelCount()", "public int getFrameSizeInBytes()", "public int getPropertySetMask()", "public String toLogFriendlyString()", "public boolean equals(Object o)", "public int hashCode()", "public int describeContents()", "public void writeToParcel(Parcel dest, int flags)", "public String toString()", "public static String toDisplayName(@SurroundSoundEncoding int audioFormat)" ],
+  "variableNames" : [ "ENCODING_INVALID", "ENCODING_DEFAULT", "ENCODING_PCM_16BIT", "ENCODING_PCM_8BIT", "ENCODING_PCM_FLOAT", "ENCODING_AC3", "ENCODING_E_AC3", "ENCODING_DTS", "ENCODING_DTS_HD", "ENCODING_MP3", "ENCODING_AAC_LC", "ENCODING_AAC_HE_V1", "ENCODING_AAC_HE_V2", "ENCODING_IEC61937", "ENCODING_DOLBY_TRUEHD", "ENCODING_AAC_ELD", "ENCODING_AAC_XHE", "ENCODING_AC4", "ENCODING_E_AC3_JOC", "ENCODING_DOLBY_MAT", "ENCODING_OPUS", "ENCODING_LEGACY_SHORT_ARRAY_THRESHOLD", "ENCODING_PCM_24BIT_PACKED", "ENCODING_PCM_32BIT", "ENCODING_MPEGH_BL_L3", "ENCODING_MPEGH_BL_L4", "ENCODING_MPEGH_LC_L3", "ENCODING_MPEGH_LC_L4", "ENCODING_DTS_UHD", "ENCODING_DRA", "ENCODING_DTS_HD_MA", "ENCODING_DTS_UHD_P1", "ENCODING_DTS_UHD_P2", "ENCODING_DSD", "CHANNEL_CONFIGURATION_INVALID", "CHANNEL_CONFIGURATION_DEFAULT", "CHANNEL_CONFIGURATION_MONO", "CHANNEL_CONFIGURATION_STEREO", "CHANNEL_INVALID", "CHANNEL_OUT_DEFAULT", "CHANNEL_OUT_FRONT_LEFT", "CHANNEL_OUT_FRONT_RIGHT", "CHANNEL_OUT_FRONT_CENTER", "CHANNEL_OUT_LOW_FREQUENCY", "CHANNEL_OUT_BACK_LEFT", "CHANNEL_OUT_BACK_RIGHT", "CHANNEL_OUT_FRONT_LEFT_OF_CENTER", "CHANNEL_OUT_FRONT_RIGHT_OF_CENTER", "CHANNEL_OUT_BACK_CENTER", "CHANNEL_OUT_SIDE_LEFT", "CHANNEL_OUT_SIDE_RIGHT", "CHANNEL_OUT_TOP_CENTER", "CHANNEL_OUT_TOP_FRONT_LEFT", "CHANNEL_OUT_TOP_FRONT_CENTER", "CHANNEL_OUT_TOP_FRONT_RIGHT", "CHANNEL_OUT_TOP_BACK_LEFT", "CHANNEL_OUT_TOP_BACK_CENTER", "CHANNEL_OUT_TOP_BACK_RIGHT", "CHANNEL_OUT_TOP_SIDE_LEFT", "CHANNEL_OUT_TOP_SIDE_RIGHT", "CHANNEL_OUT_BOTTOM_FRONT_LEFT", "CHANNEL_OUT_BOTTOM_FRONT_CENTER", "CHANNEL_OUT_BOTTOM_FRONT_RIGHT", "CHANNEL_OUT_LOW_FREQUENCY_2", "CHANNEL_OUT_FRONT_WIDE_LEFT", "CHANNEL_OUT_FRONT_WIDE_RIGHT", "CHANNEL_OUT_HAPTIC_B", "CHANNEL_OUT_HAPTIC_A", "CHANNEL_OUT_MONO", "CHANNEL_OUT_STEREO", "CHANNEL_OUT_QUAD", "CHANNEL_OUT_QUAD_SIDE", "CHANNEL_OUT_SURROUND", "CHANNEL_OUT_5POINT1", "CHANNEL_OUT_6POINT1", "CHANNEL_OUT_5POINT1_SIDE", "CHANNEL_OUT_7POINT1", "CHANNEL_OUT_7POINT1_SURROUND", "CHANNEL_OUT_5POINT1POINT2", "CHANNEL_OUT_5POINT1POINT4", "CHANNEL_OUT_7POINT1POINT2", "CHANNEL_OUT_7POINT1POINT4", "CHANNEL_OUT_9POINT1POINT4", "CHANNEL_OUT_9POINT1POINT6", "CHANNEL_OUT_13POINT_360RA", "CHANNEL_OUT_22POINT2", "SAMPLE_RATE_HZ_MIN", "SAMPLE_RATE_HZ_MAX", "SAMPLE_RATE_UNSPECIFIED", "CHANNEL_IN_DEFAULT", "CHANNEL_IN_LEFT", "CHANNEL_IN_RIGHT", "CHANNEL_IN_FRONT", "CHANNEL_IN_BACK", "CHANNEL_IN_LEFT_PROCESSED", "CHANNEL_IN_RIGHT_PROCESSED", "CHANNEL_IN_FRONT_PROCESSED", "CHANNEL_IN_BACK_PROCESSED", "CHANNEL_IN_PRESSURE", "CHANNEL_IN_X_AXIS", "CHANNEL_IN_Y_AXIS", "CHANNEL_IN_Z_AXIS", "CHANNEL_IN_VOICE_UPLINK", "CHANNEL_IN_VOICE_DNLINK", "CHANNEL_IN_BACK_LEFT", "CHANNEL_IN_BACK_RIGHT", "CHANNEL_IN_CENTER", "CHANNEL_IN_LOW_FREQUENCY", "CHANNEL_IN_TOP_LEFT", "CHANNEL_IN_TOP_RIGHT", "CHANNEL_IN_MONO", "CHANNEL_IN_STEREO", "CHANNEL_IN_2POINT0POINT2", "CHANNEL_IN_2POINT1POINT2", "CHANNEL_IN_3POINT0POINT2", "CHANNEL_IN_3POINT1POINT2", "CHANNEL_IN_5POINT1", "CHANNEL_IN_FRONT_BACK", "AUDIO_FORMAT_HAS_PROPERTY_NONE", "AUDIO_FORMAT_HAS_PROPERTY_ENCODING", "AUDIO_FORMAT_HAS_PROPERTY_SAMPLE_RATE", "AUDIO_FORMAT_HAS_PROPERTY_CHANNEL_MASK", "AUDIO_FORMAT_HAS_PROPERTY_CHANNEL_INDEX_MASK", "mEncoding", "mSampleRate", "mChannelMask", "mChannelIndexMask", "mPropertySetMask", "mChannelCount", "mFrameSizeInBytes", "CREATOR", "SURROUND_SOUND_ENCODING" ]
 }

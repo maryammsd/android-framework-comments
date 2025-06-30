@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/window/WindowContainerTransaction.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/window/WindowContainerTransaction.java",
   "packageName" : "android.window",
   "className" : "WindowContainerTransaction",
   "comment" : "\n * Represents a collection of operations on some WindowContainers that should be applied all at\n * once.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "mChanges",
     "type" : "ArrayMap<IBinder, Change>",
@@ -12,6 +13,16 @@
     "name" : "mHierarchyOps",
     "type" : "ArrayList<HierarchyOp>",
     "comment" : " Flat list because re-order operations are order-dependent",
+    "links" : [ ]
+  }, {
+    "name" : "mErrorCallbackToken",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTaskFragmentOrganizer",
+    "type" : "ITaskFragmentOrganizer",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "CREATOR",
@@ -24,6 +35,11 @@
     "returnType" : "Change",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "public void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear the transaction object.\n     * This is equivalent to a new empty {@link WindowContainerTransaction} in content.\n     *\n     * @hide\n     ",
+    "links" : [ "android.window.WindowContainerTransaction" ]
   }, {
     "name" : "public WindowContainerTransaction setBounds(@NonNull WindowContainerToken container, @NonNull Rect bounds)",
     "returnType" : "WindowContainerTransaction",
@@ -40,10 +56,15 @@
     "comment" : "\n     * Resize a container's configuration size. The configuration size is what gets reported to the\n     * app via screenWidth/HeightDp and influences which resources get loaded. This size is\n     * derived by subtracting the overlapping portions of both the statusbar and the navbar from\n     * the full bounds.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public WindowContainerTransaction setDensityDpi(@NonNull WindowContainerToken container, int densityDpi)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets the densityDpi value in the configuration for the given container.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public WindowContainerTransaction scheduleFinishEnterPip(@NonNull WindowContainerToken container, @NonNull Rect bounds)",
     "returnType" : "WindowContainerTransaction",
-    "comment" : "\n     * Notify activities within the hierarchy of a container that they have entered picture-in-picture\n     * mode with the given bounds.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Notify {@link com.android.server.wm.PinnedTaskController} that the picture-in-picture task\n     * has finished the enter animation with the given bounds.\n     ",
+    "links" : [ "com.android.server.wm.PinnedTaskController" ]
   }, {
     "name" : "public WindowContainerTransaction setBoundsChangeTransaction(@NonNull WindowContainerToken container, @NonNull SurfaceControl.Transaction t)",
     "returnType" : "WindowContainerTransaction",
@@ -80,6 +101,26 @@
     "comment" : "\n     * Set the smallestScreenWidth of a container.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public WindowContainerTransaction setIgnoreOrientationRequest(@NonNull WindowContainerToken container, boolean ignoreOrientationRequest)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets whether a container should ignore the orientation request from apps and windows below\n     * it. It currently only applies to {@link com.android.server.wm.DisplayArea}. When\n     * {@code false}, it may rotate based on the orientation request; When {@code true}, it can\n     * never specify orientation, but shows the fixed-orientation apps below it in the letterbox.\n     * @hide\n     ",
+    "links" : [ "com.android.server.wm.DisplayArea" ]
+  }, {
+    "name" : "public WindowContainerTransaction setForceTranslucent(@NonNull WindowContainerToken container, boolean forceTranslucent)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets whether a task should be translucent. When {@code false}, the existing translucent of\n     * the task applies, but when {@code true} the task will be forced to be translucent.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setDoNotPip(@NonNull WindowContainerToken container)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Used in conjunction with a shell-transition call (usually finishTransition). This is\n     * basically a message to the transition system that a particular task should NOT go into\n     * PIP even though it normally would. This is to deal with some edge-case situations where\n     * Recents will \"commit\" the transition to go home, but then not actually go-home.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setRelativeBounds(@NonNull WindowContainerToken container, @NonNull Rect relBounds)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Resizes a container by providing a bounds in its parent coordinate.\n     * This is only used by {@link TaskFragmentOrganizer}.\n     ",
+    "links" : [ "android.window.TaskFragmentOrganizer" ]
+  }, {
     "name" : "public WindowContainerTransaction reparent(@NonNull WindowContainerToken child, @Nullable WindowContainerToken parent, boolean onTop)",
     "returnType" : "WindowContainerTransaction",
     "comment" : "\n     * Reparents a container into another one. The effect of a {@code null} parent can vary. For\n     * example, reparenting a stack to {@code null} will reparent it to its display.\n     *\n     * @param onTop When {@code true}, the child goes to the top of parent; otherwise it goes to\n     *              the bottom.\n     ",
@@ -90,9 +131,169 @@
     "comment" : "\n     * Reorders a container within its parent.\n     *\n     * @param onTop When {@code true}, the child goes to the top of parent; otherwise it goes to\n     *              the bottom.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public WindowContainerTransaction reparentTasks(@Nullable WindowContainerToken currentParent, @Nullable WindowContainerToken newParent, @Nullable int[] windowingModes, @Nullable int[] activityTypes, boolean onTop, boolean reparentTopOnly)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Reparent's all children tasks or the top task of {@param currentParent} in the specified\n     * {@param windowingMode} and {@param activityType} to {@param newParent} in their current\n     * z-order.\n     *\n     * @param currentParent of the tasks to perform the operation no.\n     *                      {@code null} will perform the operation on the display.\n     * @param newParent for the tasks. {@code null} will perform the operation on the display.\n     * @param windowingModes of the tasks to reparent.\n     * @param activityTypes of the tasks to reparent.\n     * @param onTop When {@code true}, the child goes to the top of parent; otherwise it goes to\n     *              the bottom.\n     * @param reparentTopOnly When {@code true}, only reparent the top task which fit windowingModes\n     *                        and activityTypes.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction reparentTasks(@Nullable WindowContainerToken currentParent, @Nullable WindowContainerToken newParent, @Nullable int[] windowingModes, @Nullable int[] activityTypes, boolean onTop)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Reparent's all children tasks of {@param currentParent} in the specified\n     * {@param windowingMode} and {@param activityType} to {@param newParent} in their current\n     * z-order.\n     *\n     * @param currentParent of the tasks to perform the operation no.\n     *                      {@code null} will perform the operation on the display.\n     * @param newParent for the tasks. {@code null} will perform the operation on the display.\n     * @param windowingModes of the tasks to reparent. {@code null} ignore this attribute when\n     *                       perform the operation.\n     * @param activityTypes of the tasks to reparent.  {@code null} ignore this attribute when\n     *                      perform the operation.\n     * @param onTop When {@code true}, the child goes to the top of parent; otherwise it goes to\n     *              the bottom.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setLaunchRoot(@NonNull WindowContainerToken container, @Nullable int[] windowingModes, @Nullable int[] activityTypes)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets whether a container should be the launch root for the specified windowing mode and\n     * activity type. This currently only applies to Task containers created by organizer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setAdjacentRoots(@NonNull WindowContainerToken root1, @NonNull WindowContainerToken root2)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets to containers adjacent to each other. Containers below two visible adjacent roots will\n     * be made invisible. This currently only applies to TaskFragment containers created by\n     * organizer.\n     * @param root1 the first root.\n     * @param root2 the second root.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setLaunchAdjacentFlagRoot(@NonNull WindowContainerToken container)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets the container as launch adjacent flag root. Task starting with\n     * {@link FLAG_ACTIVITY_LAUNCH_ADJACENT} will be launching to.\n     ",
+    "links" : [ "FLAG_ACTIVITY_LAUNCH_ADJACENT" ]
+  }, {
+    "name" : "public WindowContainerTransaction clearLaunchAdjacentFlagRoot(@NonNull WindowContainerToken container)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Clears launch adjacent flag root for the display area of passing container.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction startTask(int taskId, @Nullable Bundle options)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Starts a task by id. The task is expected to already exist (eg. as a recent task).\n     * @param taskId Id of task to start.\n     * @param options bundle containing ActivityOptions for the task's top activity.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction removeTask(@NonNull WindowContainerToken containerToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Finds and removes a task and its children using its container token. The task is removed\n     * from recents.\n     * @param containerToken ContainerToken of Task to be removed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setDragResizing(@NonNull WindowContainerToken container, boolean dragResizing)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets whether a container is being drag-resized.\n     * When {@code true}, the client will reuse a single (larger) surface size to avoid\n     * continuous allocations on every size change.\n     *\n     * @param container WindowContainerToken of the task that changed its drag resizing state\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction sendPendingIntent(PendingIntent sender, Intent intent, @Nullable Bundle options)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sends a pending intent in sync.\n     * @param sender The PendingIntent sender.\n     * @param intent The fillIn intent to patch over the sender's base intent.\n     * @param options bundle containing ActivityOptions for the task's top activity.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction startShortcut(@NonNull String callingPackage, @NonNull ShortcutInfo shortcutInfo, @Nullable Bundle options)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Starts activity(s) from a shortcut.\n     * @param callingPackage The package launching the shortcut.\n     * @param shortcutInfo Information about the shortcut to start\n     * @param options bundle containing ActivityOptions for the task's top activity.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction createTaskFragment(@NonNull TaskFragmentCreationParams taskFragmentCreationParams)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Creates a new TaskFragment with the given options.\n     * @param taskFragmentCreationParams the options used to create the TaskFragment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction deleteTaskFragment(@NonNull IBinder fragmentToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Deletes an existing TaskFragment. Any remaining activities below it will be destroyed.\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified in\n     *                      {@link TaskFragmentCreationParams#getFragmentToken()}.\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction startActivityInTaskFragment(@NonNull IBinder fragmentToken, @NonNull IBinder callerToken, @NonNull Intent activityIntent, @Nullable Bundle activityOptions)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Starts an activity in the TaskFragment.\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified in\n     *                      {@link TaskFragmentCreationParams#getFragmentToken()}.\n     * @param callerToken  the activity token that initialized the activity launch.\n     * @param activityIntent    intent to start the activity.\n     * @param activityOptions    ActivityOptions to start the activity with.\n     * @see android.content.Context#startActivity(Intent, Bundle).\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction reparentActivityToTaskFragment(@NonNull IBinder fragmentToken, @NonNull IBinder activityToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Moves an activity into the TaskFragment.\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified in\n     *                      {@link TaskFragmentCreationParams#getFragmentToken()}.\n     * @param activityToken activity to be reparented.\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction setAdjacentTaskFragments(@NonNull IBinder fragmentToken1, @NonNull IBinder fragmentToken2, @Nullable TaskFragmentAdjacentParams params)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets to TaskFragments adjacent to each other. Containers below two visible adjacent\n     * TaskFragments will be made invisible. This is similar to\n     * {@link #setAdjacentRoots(WindowContainerToken, WindowContainerToken)}, but can be used with\n     * fragmentTokens when that TaskFragments haven't been created (but will be created in the same\n     * {@link WindowContainerTransaction}).\n     * @param fragmentToken1    client assigned unique token to create TaskFragment with specified\n     *                          in {@link TaskFragmentCreationParams#getFragmentToken()}.\n     * @param fragmentToken2    client assigned unique token to create TaskFragment with specified\n     *                          in {@link TaskFragmentCreationParams#getFragmentToken()}.\n     ",
+    "links" : [ "android.window.WindowContainerTransaction", "android.window.TaskFragmentCreationParams#getFragmentToken()", "#setAdjacentRoots(WindowContainerToken" ]
+  }, {
+    "name" : "public WindowContainerTransaction clearAdjacentTaskFragments(@NonNull IBinder fragmentToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Clears the adjacent TaskFragments relationship that is previously set through\n     * {@link #setAdjacentTaskFragments}. Clear operation on one TaskFragment will also clear its\n     * current adjacent TaskFragment's.\n     * @param fragmentToken     client assigned unique token to create TaskFragment with specified\n     *                          in {@link TaskFragmentCreationParams#getFragmentToken()}.\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()", "#setAdjacentTaskFragments" ]
+  }, {
+    "name" : "public WindowContainerTransaction restoreTransientOrder(@NonNull WindowContainerToken container)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * If `container` was brought to front as a transient-launch (eg. recents), this will reorder\n     * the container back to where it was prior to the transient-launch. This way if a transient\n     * launch is \"aborted\", the z-ordering of containers in WM should be restored to before the\n     * launch.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction addInsetsSource(@NonNull WindowContainerToken receiver, IBinder owner, int index, @InsetsType int type, Rect frame, Rect[] boundingRects)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Adds a given {@code Rect} as an insets source frame on the {@code receiver}.\n     *\n     * @param receiver The window container that the insets source is added to.\n     * @param owner    The owner of the insets source. An insets source can only be modified by its\n     *                 owner.\n     * @param index    An owner might add multiple insets sources with the same type.\n     *                 This identifies them.\n     * @param type     The {@link InsetsType} of the insets source.\n     * @param frame    The rectangle area of the insets source.\n     * @param boundingRects The bounding rects within this inset, relative to the |frame|.\n     * @hide\n     ",
+    "links" : [ "android.view.WindowInsets.Type.InsetsType" ]
+  }, {
+    "name" : "public WindowContainerTransaction removeInsetsSource(@NonNull WindowContainerToken receiver, IBinder owner, int index, @InsetsType int type)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Removes the insets source from the {@code receiver}.\n     *\n     * @param receiver The window container that the insets source was added to.\n     * @param owner    The owner of the insets source. An insets source can only be modified by its\n     *                 owner.\n     * @param index    An owner might add multiple insets sources with the same type.\n     *                 This identifies them.\n     * @param type     The {@link InsetsType} of the insets source.\n     * @hide\n     ",
+    "links" : [ "android.view.WindowInsets.Type.InsetsType" ]
+  }, {
+    "name" : "public WindowContainerTransaction requestFocusOnTaskFragment(@NonNull IBinder fragmentToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Requests focus on the top running Activity in the given TaskFragment. This will only take\n     * effect if there is no focus, or if the current focus is in the same Task as the requested\n     * TaskFragment.\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified in\n     *                      {@link TaskFragmentCreationParams#getFragmentToken()}.\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction finishActivity(@NonNull IBinder activityToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Finishes the Activity.\n     * Comparing to directly calling {@link android.app.Activity#finish()}, calling this can make\n     * sure the finishing happens in the same transaction with other operations.\n     * @param activityToken activity to be finished.\n     ",
+    "links" : [ "android.app.Activity#finish()" ]
+  }, {
+    "name" : "public WindowContainerTransaction setCompanionTaskFragment(@NonNull IBinder fragmentToken, @Nullable IBinder companionFragmentToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets the TaskFragment {@code fragmentToken} to have a companion TaskFragment\n     * {@code companionFragmentToken}.\n     * This indicates that the organizer will remove the TaskFragment when the companion\n     * TaskFragment is removed.\n     *\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified\n     *                      in {@link TaskFragmentCreationParams#getFragmentToken()}.\n     * @param companionFragmentToken client assigned unique token to create TaskFragment with\n     *                               specified in\n     *                               {@link TaskFragmentCreationParams#getFragmentToken()}.\n     *                               If it is {@code null}, the transaction will reset the companion\n     *                               TaskFragment.\n     * @hide\n     ",
+    "links" : [ "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction addTaskFragmentOperation(@NonNull IBinder fragmentToken, @NonNull TaskFragmentOperation taskFragmentOperation)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Adds a {@link TaskFragmentOperation} to apply to the given TaskFragment.\n     *\n     * @param fragmentToken client assigned unique token to create TaskFragment with specified in\n     *                      {@link TaskFragmentCreationParams#getFragmentToken()}.\n     * @param taskFragmentOperation the {@link TaskFragmentOperation} to apply to the given\n     *                              TaskFramgent.\n     * @hide\n     ",
+    "links" : [ "android.window.TaskFragmentOperation", "android.window.TaskFragmentCreationParams#getFragmentToken()" ]
+  }, {
+    "name" : "public WindowContainerTransaction setAlwaysOnTop(@NonNull WindowContainerToken windowContainer, boolean alwaysOnTop)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets/removes the always on top flag for this {@code windowContainer}. See\n     * {@link com.android.server.wm.ConfigurationContainer#setAlwaysOnTop(boolean)}.\n     * Please note that this method is only intended to be used for a\n     * {@link com.android.server.wm.Task} or {@link com.android.server.wm.DisplayArea}.\n     *\n     * <p>\n     *     Setting always on top to {@code True} will also make the {@code windowContainer} to move\n     *     to the top.\n     * </p>\n     * <p>\n     *     Setting always on top to {@code False} will make this {@code windowContainer} to move\n     *     below the other always on top sibling containers.\n     * </p>\n     *\n     * @param windowContainer the container which the flag need to be updated for.\n     * @param alwaysOnTop denotes whether or not always on top flag should be set.\n     * @hide\n     ",
+    "links" : [ "com.android.server.wm.DisplayArea", "com.android.server.wm.Task", "com.android.server.wm.ConfigurationContainer#setAlwaysOnTop(boolean)" ]
+  }, {
+    "name" : "public WindowContainerTransaction setErrorCallbackToken(@NonNull IBinder errorCallbackToken)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * When this {@link WindowContainerTransaction} failed to finish on the server side, it will\n     * trigger callback with this {@param errorCallbackToken}.\n     * @param errorCallbackToken    client provided token that will be passed back as parameter in\n     *                              the callback if there is an error on the server side.\n     * @see ITaskFragmentOrganizer#onTaskFragmentError\n     ",
+    "links" : [ "android.window.WindowContainerTransaction" ]
+  }, {
+    "name" : "public WindowContainerTransaction setTaskFragmentOrganizer(@NonNull ITaskFragmentOrganizer organizer)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets the {@link TaskFragmentOrganizer} that applies this {@link WindowContainerTransaction}.\n     * When this is set, the server side will not check for the permission of\n     * {@link android.Manifest.permission#MANAGE_ACTIVITY_TASKS}, but will ensure this WCT only\n     * contains operations that are allowed for this organizer, such as modifying TaskFragments that\n     * are organized by this organizer.\n     * @hide\n     ",
+    "links" : [ "android.window.WindowContainerTransaction", "android.Manifest.permission#MANAGE_ACTIVITY_TASKS", "android.window.TaskFragmentOrganizer" ]
+  }, {
+    "name" : "public WindowContainerTransaction clearAdjacentRoots(@NonNull WindowContainerToken root)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Clears container adjacent.\n     * @param root the root container to clear the adjacent roots for.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction setReparentLeafTaskIfRelaunch(@NonNull WindowContainerToken windowContainer, boolean reparentLeafTaskIfRelaunch)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Sets/removes the reparent leaf task flag for this {@code windowContainer}.\n     * When this is set, the server side will try to reparent the leaf task to task display area\n     * if there is an existing activity in history during the activity launch. This operation only\n     * support on the organized root task.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction movePipActivityToPinnedRootTask(@NonNull WindowContainerToken parentToken, @NonNull Rect bounds)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Moves the PiP activity of a parent task to a pinned root task.\n     * @param parentToken the parent task of the PiP activity\n     * @param bounds the entry bounds\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public WindowContainerTransaction deferConfigToTransitionEnd(@NonNull WindowContainerToken container)",
+    "returnType" : "WindowContainerTransaction",
+    "comment" : "\n     * Defers client-facing configuration changes for activities in `container` until the end of\n     * the transition animation. The configuration will still be applied to the WMCore hierarchy\n     * at the normal time (beginning); so, special consideration must be made for this in the\n     * animation.\n     *\n     * @param container WindowContainerToken who's children should defer config notification.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void merge(WindowContainerTransaction other, boolean transfer)",
     "returnType" : "void",
     "comment" : "\n     * Merges another WCT into this one.\n     * @param transfer When true, this will transfer everything from other potentially leaving\n     *                 other in an unusable state. When false, other is left alone, but\n     *                 SurfaceFlinger Transactions will not be merged.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
     "links" : [ ]
   }, {
     "name" : "public Map<IBinder, Change> getChanges()",
@@ -102,6 +303,16 @@
   }, {
     "name" : "public List<HierarchyOp> getHierarchyOps()",
     "returnType" : "List<HierarchyOp>",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public IBinder getErrorCallbackToken()",
+    "returnType" : "IBinder",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public ITaskFragmentOrganizer getTaskFragmentOrganizer()",
+    "returnType" : "ITaskFragmentOrganizer",
     "comment" : " @hide ",
     "links" : [ ]
   }, {
@@ -120,6 +331,6 @@
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "mChanges", "mHierarchyOps", "CREATOR" ],
-  "methodNames" : [ "private Change getOrCreateChange(IBinder token)", "public WindowContainerTransaction setBounds(@NonNull WindowContainerToken container, @NonNull Rect bounds)", "public WindowContainerTransaction setAppBounds(@NonNull WindowContainerToken container, @NonNull Rect appBounds)", "public WindowContainerTransaction setScreenSizeDp(@NonNull WindowContainerToken container, int w, int h)", "public WindowContainerTransaction scheduleFinishEnterPip(@NonNull WindowContainerToken container, @NonNull Rect bounds)", "public WindowContainerTransaction setBoundsChangeTransaction(@NonNull WindowContainerToken container, @NonNull SurfaceControl.Transaction t)", "public WindowContainerTransaction setBoundsChangeTransaction(@NonNull WindowContainerToken task, @NonNull Rect surfaceBounds)", "public WindowContainerTransaction setActivityWindowingMode(@NonNull WindowContainerToken container, int windowingMode)", "public WindowContainerTransaction setWindowingMode(@NonNull WindowContainerToken container, int windowingMode)", "public WindowContainerTransaction setFocusable(@NonNull WindowContainerToken container, boolean focusable)", "public WindowContainerTransaction setHidden(@NonNull WindowContainerToken container, boolean hidden)", "public WindowContainerTransaction setSmallestScreenWidthDp(@NonNull WindowContainerToken container, int widthDp)", "public WindowContainerTransaction reparent(@NonNull WindowContainerToken child, @Nullable WindowContainerToken parent, boolean onTop)", "public WindowContainerTransaction reorder(@NonNull WindowContainerToken child, boolean onTop)", "public void merge(WindowContainerTransaction other, boolean transfer)", "public Map<IBinder, Change> getChanges()", "public List<HierarchyOp> getHierarchyOps()", "public String toString()", "public void writeToParcel(@NonNull Parcel dest, int flags)", "public int describeContents()" ]
+  "methodNames" : [ "private Change getOrCreateChange(IBinder token)", "public void clear()", "public WindowContainerTransaction setBounds(@NonNull WindowContainerToken container, @NonNull Rect bounds)", "public WindowContainerTransaction setAppBounds(@NonNull WindowContainerToken container, @NonNull Rect appBounds)", "public WindowContainerTransaction setScreenSizeDp(@NonNull WindowContainerToken container, int w, int h)", "public WindowContainerTransaction setDensityDpi(@NonNull WindowContainerToken container, int densityDpi)", "public WindowContainerTransaction scheduleFinishEnterPip(@NonNull WindowContainerToken container, @NonNull Rect bounds)", "public WindowContainerTransaction setBoundsChangeTransaction(@NonNull WindowContainerToken container, @NonNull SurfaceControl.Transaction t)", "public WindowContainerTransaction setBoundsChangeTransaction(@NonNull WindowContainerToken task, @NonNull Rect surfaceBounds)", "public WindowContainerTransaction setActivityWindowingMode(@NonNull WindowContainerToken container, int windowingMode)", "public WindowContainerTransaction setWindowingMode(@NonNull WindowContainerToken container, int windowingMode)", "public WindowContainerTransaction setFocusable(@NonNull WindowContainerToken container, boolean focusable)", "public WindowContainerTransaction setHidden(@NonNull WindowContainerToken container, boolean hidden)", "public WindowContainerTransaction setSmallestScreenWidthDp(@NonNull WindowContainerToken container, int widthDp)", "public WindowContainerTransaction setIgnoreOrientationRequest(@NonNull WindowContainerToken container, boolean ignoreOrientationRequest)", "public WindowContainerTransaction setForceTranslucent(@NonNull WindowContainerToken container, boolean forceTranslucent)", "public WindowContainerTransaction setDoNotPip(@NonNull WindowContainerToken container)", "public WindowContainerTransaction setRelativeBounds(@NonNull WindowContainerToken container, @NonNull Rect relBounds)", "public WindowContainerTransaction reparent(@NonNull WindowContainerToken child, @Nullable WindowContainerToken parent, boolean onTop)", "public WindowContainerTransaction reorder(@NonNull WindowContainerToken child, boolean onTop)", "public WindowContainerTransaction reparentTasks(@Nullable WindowContainerToken currentParent, @Nullable WindowContainerToken newParent, @Nullable int[] windowingModes, @Nullable int[] activityTypes, boolean onTop, boolean reparentTopOnly)", "public WindowContainerTransaction reparentTasks(@Nullable WindowContainerToken currentParent, @Nullable WindowContainerToken newParent, @Nullable int[] windowingModes, @Nullable int[] activityTypes, boolean onTop)", "public WindowContainerTransaction setLaunchRoot(@NonNull WindowContainerToken container, @Nullable int[] windowingModes, @Nullable int[] activityTypes)", "public WindowContainerTransaction setAdjacentRoots(@NonNull WindowContainerToken root1, @NonNull WindowContainerToken root2)", "public WindowContainerTransaction setLaunchAdjacentFlagRoot(@NonNull WindowContainerToken container)", "public WindowContainerTransaction clearLaunchAdjacentFlagRoot(@NonNull WindowContainerToken container)", "public WindowContainerTransaction startTask(int taskId, @Nullable Bundle options)", "public WindowContainerTransaction removeTask(@NonNull WindowContainerToken containerToken)", "public WindowContainerTransaction setDragResizing(@NonNull WindowContainerToken container, boolean dragResizing)", "public WindowContainerTransaction sendPendingIntent(PendingIntent sender, Intent intent, @Nullable Bundle options)", "public WindowContainerTransaction startShortcut(@NonNull String callingPackage, @NonNull ShortcutInfo shortcutInfo, @Nullable Bundle options)", "public WindowContainerTransaction createTaskFragment(@NonNull TaskFragmentCreationParams taskFragmentCreationParams)", "public WindowContainerTransaction deleteTaskFragment(@NonNull IBinder fragmentToken)", "public WindowContainerTransaction startActivityInTaskFragment(@NonNull IBinder fragmentToken, @NonNull IBinder callerToken, @NonNull Intent activityIntent, @Nullable Bundle activityOptions)", "public WindowContainerTransaction reparentActivityToTaskFragment(@NonNull IBinder fragmentToken, @NonNull IBinder activityToken)", "public WindowContainerTransaction setAdjacentTaskFragments(@NonNull IBinder fragmentToken1, @NonNull IBinder fragmentToken2, @Nullable TaskFragmentAdjacentParams params)", "public WindowContainerTransaction clearAdjacentTaskFragments(@NonNull IBinder fragmentToken)", "public WindowContainerTransaction restoreTransientOrder(@NonNull WindowContainerToken container)", "public WindowContainerTransaction addInsetsSource(@NonNull WindowContainerToken receiver, IBinder owner, int index, @InsetsType int type, Rect frame, Rect[] boundingRects)", "public WindowContainerTransaction removeInsetsSource(@NonNull WindowContainerToken receiver, IBinder owner, int index, @InsetsType int type)", "public WindowContainerTransaction requestFocusOnTaskFragment(@NonNull IBinder fragmentToken)", "public WindowContainerTransaction finishActivity(@NonNull IBinder activityToken)", "public WindowContainerTransaction setCompanionTaskFragment(@NonNull IBinder fragmentToken, @Nullable IBinder companionFragmentToken)", "public WindowContainerTransaction addTaskFragmentOperation(@NonNull IBinder fragmentToken, @NonNull TaskFragmentOperation taskFragmentOperation)", "public WindowContainerTransaction setAlwaysOnTop(@NonNull WindowContainerToken windowContainer, boolean alwaysOnTop)", "public WindowContainerTransaction setErrorCallbackToken(@NonNull IBinder errorCallbackToken)", "public WindowContainerTransaction setTaskFragmentOrganizer(@NonNull ITaskFragmentOrganizer organizer)", "public WindowContainerTransaction clearAdjacentRoots(@NonNull WindowContainerToken root)", "public WindowContainerTransaction setReparentLeafTaskIfRelaunch(@NonNull WindowContainerToken windowContainer, boolean reparentLeafTaskIfRelaunch)", "public WindowContainerTransaction movePipActivityToPinnedRootTask(@NonNull WindowContainerToken parentToken, @NonNull Rect bounds)", "public WindowContainerTransaction deferConfigToTransitionEnd(@NonNull WindowContainerToken container)", "public void merge(WindowContainerTransaction other, boolean transfer)", "public boolean isEmpty()", "public Map<IBinder, Change> getChanges()", "public List<HierarchyOp> getHierarchyOps()", "public IBinder getErrorCallbackToken()", "public ITaskFragmentOrganizer getTaskFragmentOrganizer()", "public String toString()", "public void writeToParcel(@NonNull Parcel dest, int flags)", "public int describeContents()" ],
+  "variableNames" : [ "mChanges", "mHierarchyOps", "mErrorCallbackToken", "mTaskFragmentOrganizer", "CREATOR" ]
 }

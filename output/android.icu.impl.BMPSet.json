@@ -1,0 +1,81 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/impl/BMPSet.java",
+  "packageName" : "android.icu.impl",
+  "className" : "BMPSet",
+  "comment" : "\n * Helper class for frozen UnicodeSets, implements contains() and span() optimized for BMP code points.\n *\n * Latin-1: Look up bytes.\n * 2-byte characters: Bits organized vertically.\n * 3-byte characters: Use zero/one/mixed data per 64-block in U+0000..U+FFFF, with mixed for illegal ranges.\n * Supplementary characters: Binary search over\n * the supplementary part of the parent set's inversion list.\n * @hide Only a subset of ICU is exposed in Android\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "U16_SURROGATE_OFFSET",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "latin1Contains",
+    "type" : "boolean[]",
+    "comment" : "\n     * One boolean ('true' or 'false') per Latin-1 character.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "table7FF",
+    "type" : "int[]",
+    "comment" : "\n     * One bit per code point from U+0000..U+07FF. The bits are organized vertically; consecutive code points\n     * correspond to the same bit positions in consecutive table words. With code point parts lead=c{10..6}\n     * trail=c{5..0} it is set.contains(c)==(table7FF[trail] bit lead)\n     *\n     * Bits for 0..FF are unused (0).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "bmpBlockBits",
+    "type" : "int[]",
+    "comment" : "\n     * One bit per 64 BMP code points. The bits are organized vertically; consecutive 64-code point blocks\n     * correspond to the same bit position in consecutive table words. With code point parts lead=c{15..12}\n     * t1=c{11..6} test bits (lead+16) and lead in bmpBlockBits[t1]. If the upper bit is 0, then the lower bit\n     * indicates if contains(c) for all code points in the 64-block. If the upper bit is 1, then the block is mixed\n     * and set.contains(c) must be called.\n     *\n     * Bits for 0..7FF are unused (0).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "list4kStarts",
+    "type" : "int[]",
+    "comment" : "\n     * Inversion list indexes for restricted binary searches in findCodePoint(), from findCodePoint(U+0800, U+1000,\n     * U+2000, .., U+F000, U+10000). U+0800 is the first 3-byte-UTF-8 code point. Code points below U+0800 are\n     * always looked up in the bit tables. The last pair of indexes is for finding supplementary code points.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "list",
+    "type" : "int[]",
+    "comment" : "\n     * The inversion list of the parent set, for the slower contains() implementation for mixed BMP blocks and for\n     * supplementary code points. The list is terminated with list[listLength-1]=0x110000.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "listLength",
+    "type" : "int",
+    "comment" : " length used; list may be longer to minimize reallocs",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean contains(int c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int span(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)",
+    "returnType" : "int",
+    "comment" : "\n     * Span the initial substring for which each character c has spanCondition==contains(c). It must be\n     * spanCondition==0 or 1.\n     *\n     * @param start The start index\n     * @param outCount If not null: Receives the number of code points in the span.\n     * @return the limit (exclusive end) of the span\n     *\n     * NOTE: to reduce the overhead of function call to contains(c), it is manually inlined here. Check for\n     * sufficient length for trail unit for each surrogate pair. Handle single surrogates as surrogate code points\n     * as usual in ICU.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int spanBack(CharSequence s, int limit, SpanCondition spanCondition)",
+    "returnType" : "int",
+    "comment" : "\n     * Symmetrical with span().\n     * Span the trailing substring for which each character c has spanCondition==contains(c). It must be s.length >=\n     * limit and spanCondition==0 or 1.\n     *\n     * @return The string index which starts the span (i.e. inclusive).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void set32x64Bits(int[] table, int start, int limit)",
+    "returnType" : "void",
+    "comment" : "\n     * Set bits in a bit rectangle in \"vertical\" bit organization. start<limit<=0x800\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initBits()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int findCodePoint(int c, int lo, int hi)",
+    "returnType" : "int",
+    "comment" : "\n     * Same as UnicodeSet.findCodePoint(int c) except that the binary search is restricted for finding code\n     * points in a certain range.\n     *\n     * For restricting the search for finding in the range start..end, pass in lo=findCodePoint(start) and\n     * hi=findCodePoint(end) with 0<=lo<=hi<len. findCodePoint(c) defaults to lo=0 and hi=len-1.\n     *\n     * @param c\n     *            a character in a subrange of MIN_VALUE..MAX_VALUE\n     * @param lo\n     *            The lowest index to be returned.\n     * @param hi\n     *            The highest index to be returned.\n     * @return the smallest integer i in the range lo..hi, inclusive, such that c < list[i]\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final boolean containsSlow(int c, int lo, int hi)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public boolean contains(int c)", "public final int span(CharSequence s, int start, SpanCondition spanCondition, OutputInt outCount)", "public final int spanBack(CharSequence s, int limit, SpanCondition spanCondition)", "private static void set32x64Bits(int[] table, int start, int limit)", "private void initBits()", "private int findCodePoint(int c, int lo, int hi)", "private final boolean containsSlow(int c, int lo, int hi)" ],
+  "variableNames" : [ "U16_SURROGATE_OFFSET", "latin1Contains", "table7FF", "bmpBlockBits", "list4kStarts", "list", "listLength" ]
+}

@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/hardware/display/DisplayManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/hardware/display/DisplayManager.java",
   "packageName" : "android.hardware.display",
   "className" : "DisplayManager",
   "comment" : "\n * Manages the properties of attached displays.\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -11,8 +12,18 @@
   }, {
     "name" : "DEBUG",
     "type" : "boolean",
+    "comment" : " 'adb shell setprop persist.log.tag.DisplayManager DEBUG && adb reboot'",
+    "links" : [ ]
+  }, {
+    "name" : "ENABLE_VIRTUAL_DISPLAY_REFRESH_RATE",
+    "type" : "boolean",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "HDR_OUTPUT_CONTROL_FLAG",
+    "type" : "String",
+    "comment" : "\n     * The hdr output control feature flag, the value should be read via\n     * {@link android.provider.DeviceConfig#getBoolean(String, String, boolean)} with\n     * {@link android.provider.DeviceConfig#NAMESPACE_DISPLAY_MANAGER} as the namespace.\n     * @hide\n     ",
+    "links" : [ "android.provider.DeviceConfig#getBoolean(String", "android.provider.DeviceConfig#NAMESPACE_DISPLAY_MANAGER" ]
   }, {
     "name" : "mContext",
     "type" : "Context",
@@ -29,13 +40,8 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mDisplays",
-    "type" : "SparseArray<Display>",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "mTempDisplays",
-    "type" : "ArrayList<Display>",
+    "name" : "mDisplayCache",
+    "type" : "WeakDisplayCache",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -52,6 +58,16 @@
     "name" : "DISPLAY_CATEGORY_PRESENTATION",
     "type" : "String",
     "comment" : "\n     * Display category: Presentation displays.\n     * <p>\n     * This category can be used to identify secondary displays that are suitable for\n     * use as presentation displays such as external or wireless displays.  Applications\n     * may automatically project their content to presentation displays to provide\n     * richer second screen experiences.\n     * </p>\n     *\n     * @see android.app.Presentation\n     * @see Display#FLAG_PRESENTATION\n     * @see #getDisplays(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DISPLAY_CATEGORY_REAR",
+    "type" : "String",
+    "comment" : "\n     * Display category: Rear displays.\n     * <p>\n     * This category can be used to identify complementary internal displays that are facing away\n     * from the user.\n     * Certain applications may present to this display.\n     * Similar to presentation displays.\n     * </p>\n     *\n     * @see android.app.Presentation\n     * @see Display#FLAG_PRESENTATION\n     * @see #getDisplays(String)\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DISPLAY_CATEGORY_ALL_INCLUDING_DISABLED",
+    "type" : "String",
+    "comment" : "\n     * Display category: All displays, including disabled displays.\n     * <p>\n     * This returns all displays, including currently disabled and inaccessible displays.\n     *\n     * @see #getDisplays(String)\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "VIRTUAL_DISPLAY_FLAG_PUBLIC",
@@ -91,7 +107,7 @@
   }, {
     "name" : "VIRTUAL_DISPLAY_FLAG_ROTATES_WITH_CONTENT",
     "type" : "int",
-    "comment" : "\n     * Virtual display flag: Indicates that the orientation of this display device is coupled to\n     * the rotation of its associated logical display.\n     *\n     * @see #createVirtualDisplay\n     * @hide\n     ",
+    "comment" : "\n     * Virtual display flag: Indicates that the orientation of this display device is coupled to\n     * the orientation of its associated logical display.\n     * <p>\n     * The flag should not be set when the physical display is mounted in a fixed orientation\n     * such as on a desk. Without this flag, display manager will apply a coordinate transformation\n     * such as a scale and translation to letterbox or pillarbox format under the assumption that\n     * the physical orientation of the display is invariant. With this flag set, the content will\n     * rotate to fill in the space of the display, as it does on the internal device display.\n     * </p>\n     *\n     * @see #createVirtualDisplay\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL",
@@ -101,12 +117,112 @@
   }, {
     "name" : "VIRTUAL_DISPLAY_FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS",
     "type" : "int",
-    "comment" : " TODO (b/114338689): Remove the flag and use IWindowManager#setShouldShowSystemDecors",
-    "links" : [ ]
+    "comment" : "\n     * Virtual display flag: Indicates that the display should support system decorations. Virtual\n     * displays without this flag shouldn't show home, navigation bar or wallpaper.\n     * <p>This flag doesn't work without {@link #VIRTUAL_DISPLAY_FLAG_TRUSTED}</p>\n     *\n     * @see #createVirtualDisplay\n     * @see #VIRTUAL_DISPLAY_FLAG_TRUSTED\n     * @hide\n     ",
+    "links" : [ "#VIRTUAL_DISPLAY_FLAG_TRUSTED" ]
   }, {
     "name" : "VIRTUAL_DISPLAY_FLAG_TRUSTED",
     "type" : "int",
     "comment" : "\n     * Virtual display flags: Indicates that the display is trusted to show system decorations and\n     * receive inputs without users' touch.\n     *\n     * @see #createVirtualDisplay\n     * @see #VIRTUAL_DISPLAY_FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the display should not be a part of the default\n     * DisplayGroup and instead be part of a new DisplayGroup.\n     *\n     * @see #createVirtualDisplay\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_ALWAYS_UNLOCKED",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the virtual display should always be unlocked and not\n     * have keyguard displayed on it. Only valid for virtual displays that aren't in the default\n     * display group.\n     *\n     * @see #createVirtualDisplay\n     * @see #VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_TOUCH_FEEDBACK_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the display should not play sound effects or perform\n     * haptic feedback when the user touches the screen.\n     *\n     * @see #createVirtualDisplay\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_OWN_FOCUS",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the display maintains its own focus and touch mode.\n     *\n     * This flag is similar to {@link com.android.internal.R.bool.config_perDisplayFocusEnabled} in\n     * behavior, but only applies to the specific display instead of system-wide to all displays.\n     *\n     * Note: The display must be trusted in order to have its own focus.\n     *\n     * @see #createVirtualDisplay\n     * @see #VIRTUAL_DISPLAY_FLAG_TRUSTED\n     * @hide\n     ",
+    "links" : [ "com.android.internal.R.bool.config_perDisplayFocusEnabled" ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_DEVICE_DISPLAY_GROUP",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the display should not be a part of the default\n     * DisplayGroup and instead be part of a DisplayGroup associated with its virtual device.\n     *\n     * @see #createVirtualDisplay\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "VIRTUAL_DISPLAY_FLAG_STEAL_TOP_FOCUS_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * Virtual display flags: Indicates that the display should not become the top focused display\n     * by stealing the top focus from another display.\n     *\n     * @see Display#FLAG_STEAL_TOP_FOCUS_DISABLED\n     * @see #createVirtualDisplay\n     * @see #VIRTUAL_DISPLAY_FLAG_OWN_FOCUS\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CONTENT_FRAMERATE_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * Match content frame rate user preference is unknown.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CONTENT_FRAMERATE_NEVER",
+    "type" : "int",
+    "comment" : "\n     * No mode switching is allowed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CONTENT_FRAMERATE_SEAMLESSS_ONLY",
+    "type" : "int",
+    "comment" : "\n     * Only refresh rate switches without visual interruptions are allowed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CONTENT_FRAMERATE_ALWAYS",
+    "type" : "int",
+    "comment" : "\n     * Refresh rate switches between all refresh rates are allowed even if they have visual\n     * interruptions for the user.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SWITCHING_TYPE_NONE",
+    "type" : "int",
+    "comment" : "\n     * No display mode switching will happen.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SWITCHING_TYPE_WITHIN_GROUPS",
+    "type" : "int",
+    "comment" : "\n     * Allow only refresh rate switching between modes in the same configuration group. This way\n     * only switches without visual interruptions for the user will be allowed.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS",
+    "type" : "int",
+    "comment" : "\n     * Allow refresh rate switching between all refresh rates even if the switch with have visual\n     * interruptions for the user.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SWITCHING_TYPE_RENDER_FRAME_RATE_ONLY",
+    "type" : "int",
+    "comment" : "\n     * Allow render frame rate switches, but not physical modes.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_FLAG_DISPLAY_ADDED",
+    "type" : "long",
+    "comment" : "\n     * Event type for when a new display is added.\n     *\n     * @see #registerDisplayListener(DisplayListener, Handler, long)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_FLAG_DISPLAY_REMOVED",
+    "type" : "long",
+    "comment" : "\n     * Event type for when a display is removed.\n     *\n     * @see #registerDisplayListener(DisplayListener, Handler, long)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_FLAG_DISPLAY_CHANGED",
+    "type" : "long",
+    "comment" : "\n     * Event type for when a display is changed.\n     *\n     * @see #registerDisplayListener(DisplayListener, Handler, long)\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_FLAG_DISPLAY_BRIGHTNESS",
+    "type" : "long",
+    "comment" : "\n     * Event flag to register for a display's brightness changes. This notification is sent\n     * through the {@link DisplayListener#onDisplayChanged} callback method. New brightness\n     * values can be retrieved via {@link android.view.Display#getBrightnessInfo()}.\n     *\n     * @see #registerDisplayListener(DisplayListener, Handler, long)\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.Display#getBrightnessInfo()", "#onDisplayChanged" ]
+  }, {
+    "name" : "EVENT_FLAG_HDR_SDR_RATIO_CHANGED",
+    "type" : "long",
+    "comment" : "\n     * Event flag to register for a display's hdr/sdr ratio changes. This notification is sent\n     * through the {@link DisplayListener#onDisplayChanged} callback method. New hdr/sdr\n     * values can be retrieved via {@link Display#getHdrSdrRatio()}.\n     *\n     * Requires that {@link Display#isHdrSdrRatioAvailable()} is true.\n     *\n     * @see #registerDisplayListener(DisplayListener, Handler, long)\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.Display#isHdrSdrRatioAvailable()", "#onDisplayChanged", "android.view.Display#getHdrSdrRatio()" ]
+  }, {
+    "name" : "EVENT_FLAG_DISPLAY_CONNECTION_CHANGED",
+    "type" : "long",
+    "comment" : "\n     * Event flag to register for a display's connection changed.\n     *\n     * @hide\n     ",
     "links" : [ ]
   } ],
   "methods" : [ {
@@ -125,24 +241,34 @@
     "comment" : "\n     * Gets all currently valid logical displays of the specified category.\n     * <p>\n     * When there are multiple displays in a category the returned displays are sorted\n     * of preference.  For example, if the requested category is\n     * {@link #DISPLAY_CATEGORY_PRESENTATION} and there are multiple presentation displays\n     * then the displays are sorted so that the first display in the returned array\n     * is the most preferred presentation display.  The application may simply\n     * use the first display or allow the user to choose.\n     * </p>\n     *\n     * @param category The requested display category or null to return all displays.\n     * @return An array containing all displays sorted by order of preference.\n     *\n     * @see #DISPLAY_CATEGORY_PRESENTATION\n     ",
     "links" : [ "#DISPLAY_CATEGORY_PRESENTATION" ]
   }, {
-    "name" : "private void addAllDisplaysLocked(ArrayList<Display> displays, int[] displayIds)",
-    "returnType" : "void",
+    "name" : "private Display[] getDisplays(int[] displayIds, Predicate<Display> predicate)",
+    "returnType" : "Display[]",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private void addPresentationDisplaysLocked(ArrayList<Display> displays, int[] displayIds, int matchType)",
-    "returnType" : "void",
+    "name" : "private static boolean isPresentationDisplay(@Nullable Display display)",
+    "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private Display getOrCreateDisplayLocked(int displayId, boolean assumeValid)",
+    "name" : "private static boolean isRearDisplay(@Nullable Display display)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Display getOrCreateDisplay(int displayId, boolean assumeValid)",
     "returnType" : "Display",
     "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public void registerDisplayListener(DisplayListener listener, Handler handler)",
     "returnType" : "void",
-    "comment" : "\n     * Registers an display listener to receive notifications about when\n     * displays are added, removed or changed.\n     *\n     * @param listener The listener to register.\n     * @param handler The handler on which the listener should be invoked, or null\n     * if the listener should be invoked on the calling thread's looper.\n     *\n     * @see #unregisterDisplayListener\n     ",
+    "comment" : "\n     * Registers a display listener to receive notifications about when\n     * displays are added, removed or changed.\n     *\n     * @param listener The listener to register.\n     * @param handler The handler on which the listener should be invoked, or null\n     * if the listener should be invoked on the calling thread's looper.\n     *\n     * @see #unregisterDisplayListener\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerDisplayListener(@NonNull DisplayListener listener, @Nullable Handler handler, @EventsMask long eventsMask)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a display listener to receive notifications about given display event types.\n     *\n     * @param listener The listener to register.\n     * @param handler The handler on which the listener should be invoked, or null\n     * if the listener should be invoked on the calling thread's looper.\n     * @param eventsMask A bitmask of the event types for which this listener is subscribed.\n     *\n     * @see #EVENT_FLAG_DISPLAY_ADDED\n     * @see #EVENT_FLAG_DISPLAY_CHANGED\n     * @see #EVENT_FLAG_DISPLAY_REMOVED\n     * @see #EVENT_FLAG_DISPLAY_BRIGHTNESS\n     * @see #registerDisplayListener(DisplayListener, Handler)\n     * @see #unregisterDisplayListener\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void unregisterDisplayListener(DisplayListener listener)",
@@ -195,22 +321,67 @@
     "comment" : "\n     * Gets the current Wifi display status.\n     * Watch for changes in the status by registering a broadcast receiver for\n     * {@link #ACTION_WIFI_DISPLAY_STATUS_CHANGED}.\n     *\n     * @return The current Wifi display status.\n     * @hide\n     ",
     "links" : [ "#ACTION_WIFI_DISPLAY_STATUS_CHANGED" ]
   }, {
+    "name" : "public void enableConnectedDisplay(int displayId)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable a connected display that is currently disabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disableConnectedDisplay(int displayId)",
+    "returnType" : "void",
+    "comment" : "\n     * Disable a connected display that is currently enabled.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void setSaturationLevel(float level)",
     "returnType" : "void",
     "comment" : "\n     * Set the level of color saturation to apply to the display.\n     * @param level The amount of saturation to apply, between 0 and 1 inclusive.\n     * 0 produces a grayscale image, 1 is normal.\n     *\n     * @hide\n     * @deprecated use {@link ColorDisplayManager#setSaturationLevel(int)} instead. The level passed\n     * as a parameter here will be rounded to the nearest hundredth.\n     ",
     "links" : [ "android.hardware.display.ColorDisplayManager#setSaturationLevel(int)" ]
   }, {
-    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags)",
+    "name" : "public void setUserDisabledHdrTypes(@NonNull @HdrType int[] userDisabledTypes)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the HDR types that have been disabled by user.\n     * @param userDisabledTypes the HDR types to disable.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAreUserDisabledHdrTypesAllowed(boolean areUserDisabledHdrTypesAllowed)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets whether or not the user disabled HDR types are returned from\n     * {@link Display#getHdrCapabilities}.\n     *\n     * @param areUserDisabledHdrTypesAllowed If true, the user-disabled types\n     * are ignored and returned, if the display supports them. If false, the\n     * user-disabled types are taken into consideration and are never returned,\n     * even if the display supports them.\n     * @hide\n     ",
+    "links" : [ "android.view.Display#getHdrCapabilities" ]
+  }, {
+    "name" : "public boolean areUserDisabledHdrTypesAllowed()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether or not the user-disabled HDR types are returned from\n     * {@link Display#getHdrCapabilities}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.view.Display#getHdrCapabilities" ]
+  }, {
+    "name" : "public int[] getUserDisabledHdrTypes()",
+    "returnType" : "int[]",
+    "comment" : "\n     * Returns the HDR formats disabled by the user.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void overrideHdrTypes(int displayId, @NonNull int[] modes)",
+    "returnType" : "void",
+    "comment" : "\n     * Overrides HDR modes for a display device.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags)",
     "returnType" : "VirtualDisplay",
     "comment" : "\n     * Creates a virtual display.\n     *\n     * @see #createVirtualDisplay(String, int, int, int, Surface, int,\n     * VirtualDisplay.Callback, Handler)\n     ",
     "links" : [ ]
   }, {
-    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)",
+    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)",
     "returnType" : "VirtualDisplay",
     "comment" : "\n     * Creates a virtual display.\n     * <p>\n     * The content of a virtual display is rendered to a {@link Surface} provided\n     * by the application.\n     * </p><p>\n     * The virtual display should be {@link VirtualDisplay#release released}\n     * when no longer needed.  Because a virtual display renders to a surface\n     * provided by the application, it will be released automatically when the\n     * process terminates and all remaining windows on it will be forcibly removed.\n     * </p><p>\n     * The behavior of the virtual display depends on the flags that are provided\n     * to this method.  By default, virtual displays are created to be private,\n     * non-presentation and unsecure.  Permissions may be required to use certain flags.\n     * </p><p>\n     * As of {@link android.os.Build.VERSION_CODES#KITKAT_WATCH}, the surface may\n     * be attached or detached dynamically using {@link VirtualDisplay#setSurface}.\n     * Previously, the surface had to be non-null when {@link #createVirtualDisplay}\n     * was called and could not be changed for the lifetime of the display.\n     * </p><p>\n     * Detaching the surface that backs a virtual display has a similar effect to\n     * turning off the screen.\n     * </p>\n     *\n     * @param name The name of the virtual display, must be non-empty.\n     * @param width The width of the virtual display in pixels, must be greater than 0.\n     * @param height The height of the virtual display in pixels, must be greater than 0.\n     * @param densityDpi The density of the virtual display in dpi, must be greater than 0.\n     * @param surface The surface to which the content of the virtual display should\n     * be rendered, or null if there is none initially.\n     * @param flags A combination of virtual display flags:\n     * {@link #VIRTUAL_DISPLAY_FLAG_PUBLIC}, {@link #VIRTUAL_DISPLAY_FLAG_PRESENTATION},\n     * {@link #VIRTUAL_DISPLAY_FLAG_SECURE}, {@link #VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY},\n     * or {@link #VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR}.\n     * @param callback Callback to call when the state of the {@link VirtualDisplay} changes\n     * @param handler The handler on which the listener should be invoked, or null\n     * if the listener should be invoked on the calling thread's looper.\n     * @return The newly created virtual display, or null if the application could\n     * not create the virtual display.\n     *\n     * @throws SecurityException if the caller does not have permission to create\n     * a virtual display with the specified flags.\n     ",
     "links" : [ "#VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY", "android.view.Surface", "#VIRTUAL_DISPLAY_FLAG_SECURE", "android.hardware.display.VirtualDisplay#release", "android.hardware.display.VirtualDisplay#setSurface", "#VIRTUAL_DISPLAY_FLAG_PRESENTATION", "#VIRTUAL_DISPLAY_FLAG_PUBLIC", "android.os.Build.VERSION_CODES#KITKAT_WATCH", "android.hardware.display.VirtualDisplay", "#createVirtualDisplay", "#VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR" ]
   }, {
-    "name" : "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler, @Nullable String uniqueId)",
+    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull VirtualDisplayConfig config)",
+    "returnType" : "VirtualDisplay",
+    "comment" : "\n     * Creates a virtual display.\n     *\n     * @see #createVirtualDisplay(VirtualDisplayConfig, Handler, VirtualDisplay.Callback)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VirtualDisplay createVirtualDisplay(@NonNull VirtualDisplayConfig config, @Nullable Handler handler, @Nullable VirtualDisplay.Callback callback)",
+    "returnType" : "VirtualDisplay",
+    "comment" : "\n     * Creates a virtual display.\n     * <p>\n     * The content of a virtual display is rendered to a {@link Surface} provided\n     * by the application.\n     * </p><p>\n     * The virtual display should be {@link VirtualDisplay#release released}\n     * when no longer needed.  Because a virtual display renders to a surface\n     * provided by the application, it will be released automatically when the\n     * process terminates and all remaining windows on it will be forcibly removed.\n     * </p><p>\n     * The behavior of the virtual display depends on the flags that are provided\n     * to this method.  By default, virtual displays are created to be private,\n     * non-presentation and unsecure.  Permissions may be required to use certain flags.\n     * </p><p>\n     * As of {@link android.os.Build.VERSION_CODES#KITKAT_WATCH}, the surface may\n     * be attached or detached dynamically using {@link VirtualDisplay#setSurface}.\n     * Previously, the surface had to be non-null when {@link #createVirtualDisplay}\n     * was called and could not be changed for the lifetime of the display.\n     * </p><p>\n     * Detaching the surface that backs a virtual display has a similar effect to\n     * turning off the screen.\n     * </p>\n     *\n     * @param config The configuration of the virtual display, must be non-null.\n     * @param handler The handler on which the listener should be invoked, or null\n     * if the listener should be invoked on the calling thread's looper.\n     * @param callback Callback to call when the state of the {@link VirtualDisplay} changes\n     * @return The newly created virtual display, or null if the application could\n     * not create the virtual display.\n     *\n     * @throws SecurityException if the caller does not have permission to create\n     * a virtual display with flags specified in the configuration.\n     ",
+    "links" : [ "android.view.Surface", "android.hardware.display.VirtualDisplay#release", "android.hardware.display.VirtualDisplay#setSurface", "android.os.Build.VERSION_CODES#KITKAT_WATCH", "android.hardware.display.VirtualDisplay", "#createVirtualDisplay" ]
+  }, {
+    "name" : "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler, @Nullable String uniqueId)",
     "returnType" : "VirtualDisplay",
     "comment" : " @hide ",
     "links" : [ ]
@@ -240,6 +411,16 @@
     "comment" : "\n     * Sets the global display brightness configuration.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public void setBrightnessConfigurationForDisplay(@NonNull BrightnessConfiguration c, @NonNull String uniqueId)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the brightness configuration for the specified display.\n     * If the specified display doesn't exist, then this will return and do nothing.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public BrightnessConfiguration getBrightnessConfigurationForDisplay(@NonNull String uniqueId)",
+    "returnType" : "BrightnessConfiguration",
+    "comment" : "\n     * Gets the brightness configuration for the specified display and default user.\n     * Returns the default configuration if unset or display is invalid.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public void setBrightnessConfigurationForUser(BrightnessConfiguration c, int userId, String packageName)",
     "returnType" : "void",
     "comment" : "\n     * Sets the global display brightness configuration for a specific user.\n     *\n     * Note this requires the INTERACT_ACROSS_USERS permission if setting the configuration for a\n     * user other than the one you're currently running as.\n     *\n     * @hide\n     ",
@@ -265,9 +446,19 @@
     "comment" : "\n     * Gets the last requested minimal post processing setting for the display with displayId.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void setTemporaryBrightness(float brightness)",
+    "name" : "public void setTemporaryBrightness(int displayId, float brightness)",
     "returnType" : "void",
     "comment" : "\n     * Temporarily sets the brightness of the display.\n     * <p>\n     * Requires the {@link android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS} permission.\n     * </p>\n     *\n     * @param brightness The brightness value from 0.0f to 1.0f.\n     *\n     * @hide Requires signature permission.\n     ",
+    "links" : [ "android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS" ]
+  }, {
+    "name" : "public void setBrightness(int displayId, @FloatRange(from = 0f, to = 1f) float brightness)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the brightness of the specified display.\n     * <p>\n     * Requires the {@link android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS}\n     * permission.\n     * </p>\n     *\n     * @param displayId the logical display id\n     * @param brightness The brightness value from 0.0f to 1.0f.\n     *\n     * @hide\n     ",
+    "links" : [ "android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS" ]
+  }, {
+    "name" : "public float getBrightness(int displayId)",
+    "returnType" : "float",
+    "comment" : "\n     * Gets the brightness of the specified display.\n     * <p>\n     * Requires the {@link android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS}\n     * permission.\n     * </p>\n     *\n     * @param displayId The display of which brightness value to get from.\n     *\n     * @hide\n     ",
     "links" : [ "android.Manifest.permission#CONTROL_DISPLAY_BRIGHTNESS" ]
   }, {
     "name" : "public void setTemporaryAutoBrightnessAdjustment(float adjustment)",
@@ -279,7 +470,82 @@
     "returnType" : "Pair<float[], float[]>",
     "comment" : "\n     * Returns the minimum brightness curve, which guarantess that any brightness curve that dips\n     * below it is rejected by the system.\n     * This prevent auto-brightness from setting the screen so dark as to prevent the user from\n     * resetting or disabling it, and maps lux to the absolute minimum nits that are still readable\n     * in that ambient brightness.\n     *\n     * @return The minimum brightness curve (as lux values and their corresponding nits values).\n     *\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public void setGlobalUserPreferredDisplayMode(@NonNull Display.Mode mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the global default {@link Display.Mode}.  The display mode includes preference for\n     * resolution and refresh rate. The mode change is applied globally, i.e. to all the connected\n     * displays. If the mode specified is not supported by a connected display, then no mode change\n     * occurs for that display.\n     *\n     * @param mode The {@link Display.Mode} to set, which can include resolution and/or\n     * refresh-rate. It is created using {@link Display.Mode.Builder}.\n     *`\n     * @hide\n     ",
+    "links" : [ "Display.Mode", "Display.Mode.Builder" ]
+  }, {
+    "name" : "public void clearGlobalUserPreferredDisplayMode()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes the global user preferred display mode.\n     * User preferred display mode is cleared for all the connected displays.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Display.Mode getGlobalUserPreferredDisplayMode()",
+    "returnType" : "Display.Mode",
+    "comment" : "\n     * Returns the global user preferred display mode.\n     * If no user preferred mode has been set, or it has been cleared, this method returns null.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHdrConversionMode(@NonNull HdrConversionMode hdrConversionMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the HDR conversion mode for the device.\n     *\n     * @param hdrConversionMode The {@link HdrConversionMode} to set.\n     * Note, {@code HdrConversionMode.preferredHdrOutputType} is only applicable when\n     * {@code HdrConversionMode.conversionMode} is {@link HdrConversionMode#HDR_CONVERSION_FORCE}.\n     * If {@code HdrConversionMode.preferredHdrOutputType} is not set in case when\n     * {@code HdrConversionMode.conversionMode} is {@link HdrConversionMode#HDR_CONVERSION_FORCE},\n     * it means that preferred output type is SDR.\n     *\n     * @throws IllegalArgumentException if hdrConversionMode.preferredHdrOutputType is set but\n     * hdrConversionMode.conversionMode is not {@link HdrConversionMode#HDR_CONVERSION_FORCE}.\n     *\n     * @see #getHdrConversionMode\n     * @see #getHdrConversionModeSetting\n     * @see #getSupportedHdrOutputTypes\n     * @hide\n     ",
+    "links" : [ "android.hardware.display.HdrConversionMode#HDR_CONVERSION_FORCE", "android.hardware.display.HdrConversionMode" ]
+  }, {
+    "name" : "public HdrConversionMode getHdrConversionMode()",
+    "returnType" : "HdrConversionMode",
+    "comment" : "\n     * Returns the {@link HdrConversionMode} of the device, which is set by the user.\n     *\n     * When {@link HdrConversionMode#getConversionMode} is\n     * {@link HdrConversionMode#HDR_CONVERSION_SYSTEM}, the\n     * {@link HdrConversionMode#getPreferredHdrOutputType} depicts the systemPreferredHdrOutputType.\n     * The HDR conversion mode chosen by user which considers the app override is returned. Apps can\n     * override HDR conversion using\n     * {@link android.view.WindowManager.LayoutParams#setHdrConversionEnabled(boolean)}.\n     ",
+    "links" : [ "android.hardware.display.HdrConversionMode#getConversionMode", "android.view.WindowManager.LayoutParams#setHdrConversionEnabled(boolean)", "android.hardware.display.HdrConversionMode", "android.hardware.display.HdrConversionMode#getPreferredHdrOutputType", "android.hardware.display.HdrConversionMode#HDR_CONVERSION_SYSTEM" ]
+  }, {
+    "name" : "public HdrConversionMode getHdrConversionModeSetting()",
+    "returnType" : "HdrConversionMode",
+    "comment" : "\n     * Returns the {@link HdrConversionMode} of the device, which is set by the user.\n\n     * The HDR conversion mode chosen by user is returned irrespective of whether HDR conversion\n     * is disabled by an app.\n     *\n     * @see #setHdrConversionMode\n     * @see #getSupportedHdrOutputTypes\n     * @see #getHdrConversionMode\n     * @hide\n     ",
+    "links" : [ "android.hardware.display.HdrConversionMode" ]
+  }, {
+    "name" : "public int[] getSupportedHdrOutputTypes()",
+    "returnType" : "int[]",
+    "comment" : "\n     * Returns the HDR output types supported by the device.\n     *\n     * @see #getHdrConversionMode\n     * @see #setHdrConversionMode\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setShouldAlwaysRespectAppRequestedMode(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n     * When enabled the app requested mode is always selected regardless of user settings and\n     * policies for low brightness, low battery, etc.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean shouldAlwaysRespectAppRequestedMode()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether we are running in a mode which always selects the app requested display mode\n     * and ignores user settings and policies for low brightness, low battery etc.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean supportsSeamlessRefreshRateSwitching()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether device supports seamless refresh rate switching.\n     *\n     * Match content frame rate setting has three options: seamless, non-seamless and never.\n     * The seamless option does nothing if the device does not support seamless refresh rate\n     * switching. This API is used in such a case to hide the seamless option.\n     *\n     * @see DisplayManager#setRefreshRateSwitchingType\n     * @see DisplayManager#getMatchContentFrameRateUserPreference\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRefreshRateSwitchingType(@SwitchingType int newValue)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the refresh rate switching type.\n     * This matches {@link android.provider.Settings.Secure.MATCH_CONTENT_FRAME_RATE}\n     *\n     * @hide\n     ",
+    "links" : [ "android.provider.Settings.Secure.MATCH_CONTENT_FRAME_RATE" ]
+  }, {
+    "name" : "public int getMatchContentFrameRateUserPreference()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the user preference for \"Match content frame rate\".\n     * <p>\n     * Never: Even if the app requests it, the device will never try to match its output to the\n     * original frame rate of the content.\n     * </p><p>\n     * Seamless: If the app requests it, the device will match its output to the original frame\n     * rate of the content, ONLY if the display can transition seamlessly.\n     * </p><p>\n     * Always: If the app requests it, the device will match its output to the original\n     * frame rate of the content. This may cause the screen to go blank for a\n     * second when exiting or entering a video playback.\n     * </p>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int toMatchContentFrameRateSetting(@SwitchingType int switchingType)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int displayIdToMirror, @Nullable Surface surface)",
+    "returnType" : "VirtualDisplay",
+    "comment" : "\n     * Creates a VirtualDisplay that will mirror the content of displayIdToMirror\n     * @param name The name for the virtual display\n     * @param width The initial width for the virtual display\n     * @param height The initial height for the virtual display\n     * @param displayIdToMirror The displayId that will be mirrored into the virtual display.\n     * @return VirtualDisplay that can be used to update properties.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void requestDisplayModes(int displayId, @Nullable int[] modeIds)",
+    "returnType" : "void",
+    "comment" : "\n     * Allows internal application to restrict display modes to specified modeIds\n     *\n     * @param displayId display that restrictions will be applied to\n     * @param modeIds allowed mode ids\n     *\n     * @hide\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "mContext", "mGlobal", "mLock", "mDisplays", "mTempDisplays", "ACTION_WIFI_DISPLAY_STATUS_CHANGED", "EXTRA_WIFI_DISPLAY_STATUS", "DISPLAY_CATEGORY_PRESENTATION", "VIRTUAL_DISPLAY_FLAG_PUBLIC", "VIRTUAL_DISPLAY_FLAG_PRESENTATION", "VIRTUAL_DISPLAY_FLAG_SECURE", "VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY", "VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR", "VIRTUAL_DISPLAY_FLAG_CAN_SHOW_WITH_INSECURE_KEYGUARD", "VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH", "VIRTUAL_DISPLAY_FLAG_ROTATES_WITH_CONTENT", "VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL", "VIRTUAL_DISPLAY_FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS", "VIRTUAL_DISPLAY_FLAG_TRUSTED" ],
-  "methodNames" : [ "public Display getDisplay(int displayId)", "public Display[] getDisplays()", "public Display[] getDisplays(String category)", "private void addAllDisplaysLocked(ArrayList<Display> displays, int[] displayIds)", "private void addPresentationDisplaysLocked(ArrayList<Display> displays, int[] displayIds, int matchType)", "private Display getOrCreateDisplayLocked(int displayId, boolean assumeValid)", "public void registerDisplayListener(DisplayListener listener, Handler handler)", "public void unregisterDisplayListener(DisplayListener listener)", "public void startWifiDisplayScan()", "public void stopWifiDisplayScan()", "public void connectWifiDisplay(String deviceAddress)", "public void pauseWifiDisplay()", "public void resumeWifiDisplay()", "public void disconnectWifiDisplay()", "public void renameWifiDisplay(String deviceAddress, String alias)", "public void forgetWifiDisplay(String deviceAddress)", "public WifiDisplayStatus getWifiDisplayStatus()", "public void setSaturationLevel(float level)", "public VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags)", "public VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)", "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull String name, int width, int height, int densityDpi, @Nullable Surface surface, int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler, @Nullable String uniqueId)", "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull VirtualDisplayConfig virtualDisplayConfig, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)", "public Point getStableDisplaySize()", "public List<BrightnessChangeEvent> getBrightnessEvents()", "public List<AmbientBrightnessDayStats> getAmbientBrightnessStats()", "public void setBrightnessConfiguration(BrightnessConfiguration c)", "public void setBrightnessConfigurationForUser(BrightnessConfiguration c, int userId, String packageName)", "public BrightnessConfiguration getBrightnessConfiguration()", "public BrightnessConfiguration getBrightnessConfigurationForUser(int userId)", "public BrightnessConfiguration getDefaultBrightnessConfiguration()", "public boolean isMinimalPostProcessingRequested(int displayId)", "public void setTemporaryBrightness(float brightness)", "public void setTemporaryAutoBrightnessAdjustment(float adjustment)", "public Pair<float[], float[]> getMinimumBrightnessCurve()" ]
+  "methodNames" : [ "public Display getDisplay(int displayId)", "public Display[] getDisplays()", "public Display[] getDisplays(String category)", "private Display[] getDisplays(int[] displayIds, Predicate<Display> predicate)", "private static boolean isPresentationDisplay(@Nullable Display display)", "private static boolean isRearDisplay(@Nullable Display display)", "private Display getOrCreateDisplay(int displayId, boolean assumeValid)", "public void registerDisplayListener(DisplayListener listener, Handler handler)", "public void registerDisplayListener(@NonNull DisplayListener listener, @Nullable Handler handler, @EventsMask long eventsMask)", "public void unregisterDisplayListener(DisplayListener listener)", "public void startWifiDisplayScan()", "public void stopWifiDisplayScan()", "public void connectWifiDisplay(String deviceAddress)", "public void pauseWifiDisplay()", "public void resumeWifiDisplay()", "public void disconnectWifiDisplay()", "public void renameWifiDisplay(String deviceAddress, String alias)", "public void forgetWifiDisplay(String deviceAddress)", "public WifiDisplayStatus getWifiDisplayStatus()", "public void enableConnectedDisplay(int displayId)", "public void disableConnectedDisplay(int displayId)", "public void setSaturationLevel(float level)", "public void setUserDisabledHdrTypes(@NonNull @HdrType int[] userDisabledTypes)", "public void setAreUserDisabledHdrTypesAllowed(boolean areUserDisabledHdrTypesAllowed)", "public boolean areUserDisabledHdrTypesAllowed()", "public int[] getUserDisabledHdrTypes()", "public void overrideHdrTypes(int displayId, @NonNull int[] modes)", "public VirtualDisplay createVirtualDisplay(@NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags)", "public VirtualDisplay createVirtualDisplay(@NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)", "public VirtualDisplay createVirtualDisplay(@NonNull VirtualDisplayConfig config)", "public VirtualDisplay createVirtualDisplay(@NonNull VirtualDisplayConfig config, @Nullable Handler handler, @Nullable VirtualDisplay.Callback callback)", "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull String name, @IntRange(from = 1) int width, @IntRange(from = 1) int height, @IntRange(from = 1) int densityDpi, @Nullable Surface surface, @VirtualDisplayFlag int flags, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler, @Nullable String uniqueId)", "public VirtualDisplay createVirtualDisplay(@Nullable MediaProjection projection, @NonNull VirtualDisplayConfig virtualDisplayConfig, @Nullable VirtualDisplay.Callback callback, @Nullable Handler handler)", "public Point getStableDisplaySize()", "public List<BrightnessChangeEvent> getBrightnessEvents()", "public List<AmbientBrightnessDayStats> getAmbientBrightnessStats()", "public void setBrightnessConfiguration(BrightnessConfiguration c)", "public void setBrightnessConfigurationForDisplay(@NonNull BrightnessConfiguration c, @NonNull String uniqueId)", "public BrightnessConfiguration getBrightnessConfigurationForDisplay(@NonNull String uniqueId)", "public void setBrightnessConfigurationForUser(BrightnessConfiguration c, int userId, String packageName)", "public BrightnessConfiguration getBrightnessConfiguration()", "public BrightnessConfiguration getBrightnessConfigurationForUser(int userId)", "public BrightnessConfiguration getDefaultBrightnessConfiguration()", "public boolean isMinimalPostProcessingRequested(int displayId)", "public void setTemporaryBrightness(int displayId, float brightness)", "public void setBrightness(int displayId, @FloatRange(from = 0f, to = 1f) float brightness)", "public float getBrightness(int displayId)", "public void setTemporaryAutoBrightnessAdjustment(float adjustment)", "public Pair<float[], float[]> getMinimumBrightnessCurve()", "public void setGlobalUserPreferredDisplayMode(@NonNull Display.Mode mode)", "public void clearGlobalUserPreferredDisplayMode()", "public Display.Mode getGlobalUserPreferredDisplayMode()", "public void setHdrConversionMode(@NonNull HdrConversionMode hdrConversionMode)", "public HdrConversionMode getHdrConversionMode()", "public HdrConversionMode getHdrConversionModeSetting()", "public int[] getSupportedHdrOutputTypes()", "public void setShouldAlwaysRespectAppRequestedMode(boolean enabled)", "public boolean shouldAlwaysRespectAppRequestedMode()", "public boolean supportsSeamlessRefreshRateSwitching()", "public void setRefreshRateSwitchingType(@SwitchingType int newValue)", "public int getMatchContentFrameRateUserPreference()", "private int toMatchContentFrameRateSetting(@SwitchingType int switchingType)", "public static VirtualDisplay createVirtualDisplay(@NonNull String name, int width, int height, int displayIdToMirror, @Nullable Surface surface)", "public void requestDisplayModes(int displayId, @Nullable int[] modeIds)" ],
+  "variableNames" : [ "TAG", "DEBUG", "ENABLE_VIRTUAL_DISPLAY_REFRESH_RATE", "HDR_OUTPUT_CONTROL_FLAG", "mContext", "mGlobal", "mLock", "mDisplayCache", "ACTION_WIFI_DISPLAY_STATUS_CHANGED", "EXTRA_WIFI_DISPLAY_STATUS", "DISPLAY_CATEGORY_PRESENTATION", "DISPLAY_CATEGORY_REAR", "DISPLAY_CATEGORY_ALL_INCLUDING_DISABLED", "VIRTUAL_DISPLAY_FLAG_PUBLIC", "VIRTUAL_DISPLAY_FLAG_PRESENTATION", "VIRTUAL_DISPLAY_FLAG_SECURE", "VIRTUAL_DISPLAY_FLAG_OWN_CONTENT_ONLY", "VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR", "VIRTUAL_DISPLAY_FLAG_CAN_SHOW_WITH_INSECURE_KEYGUARD", "VIRTUAL_DISPLAY_FLAG_SUPPORTS_TOUCH", "VIRTUAL_DISPLAY_FLAG_ROTATES_WITH_CONTENT", "VIRTUAL_DISPLAY_FLAG_DESTROY_CONTENT_ON_REMOVAL", "VIRTUAL_DISPLAY_FLAG_SHOULD_SHOW_SYSTEM_DECORATIONS", "VIRTUAL_DISPLAY_FLAG_TRUSTED", "VIRTUAL_DISPLAY_FLAG_OWN_DISPLAY_GROUP", "VIRTUAL_DISPLAY_FLAG_ALWAYS_UNLOCKED", "VIRTUAL_DISPLAY_FLAG_TOUCH_FEEDBACK_DISABLED", "VIRTUAL_DISPLAY_FLAG_OWN_FOCUS", "VIRTUAL_DISPLAY_FLAG_DEVICE_DISPLAY_GROUP", "VIRTUAL_DISPLAY_FLAG_STEAL_TOP_FOCUS_DISABLED", "MATCH_CONTENT_FRAMERATE_UNKNOWN", "MATCH_CONTENT_FRAMERATE_NEVER", "MATCH_CONTENT_FRAMERATE_SEAMLESSS_ONLY", "MATCH_CONTENT_FRAMERATE_ALWAYS", "SWITCHING_TYPE_NONE", "SWITCHING_TYPE_WITHIN_GROUPS", "SWITCHING_TYPE_ACROSS_AND_WITHIN_GROUPS", "SWITCHING_TYPE_RENDER_FRAME_RATE_ONLY", "EVENT_FLAG_DISPLAY_ADDED", "EVENT_FLAG_DISPLAY_REMOVED", "EVENT_FLAG_DISPLAY_CHANGED", "EVENT_FLAG_DISPLAY_BRIGHTNESS", "EVENT_FLAG_HDR_SDR_RATIO_CHANGED", "EVENT_FLAG_DISPLAY_CONNECTION_CHANGED" ]
 }

@@ -1,0 +1,116 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/service/quickaccesswallet/QuickAccessWalletService.java",
+  "packageName" : "android.service.quickaccesswallet",
+  "className" : "QuickAccessWalletService",
+  "comment" : "\n * A {@code QuickAccessWalletService} provides a list of {@code WalletCard}s shown in the Quick\n * Access Wallet. The Quick Access Wallet allows the user to change their selected payment method\n * and access other important passes, such as tickets and transit passes, without leaving the\n * context of their current app.\n *\n * <p>An {@code QuickAccessWalletService} is only bound to the Android System for the purposes of\n * showing wallet cards if:\n * <ol>\n *   <li>The application hosting the QuickAccessWalletService is also the default NFC payment\n *   application. This means that the same application must also have a\n *   {@link android.nfc.cardemulation.HostApduService} or\n *   {@link android.nfc.cardemulation.OffHostApduService} that requires the\n *   android.permission.BIND_NFC_SERVICE permission.\n *   <li>The user explicitly selected the application as the default payment application in\n *   the Tap &amp; pay settings screen.\n *   <li>The QuickAccessWalletService requires that the binding application hold the\n *   {@code android.permission.BIND_QUICK_ACCESS_WALLET_SERVICE} permission, which only the System\n *   Service can hold.\n *   <li>The user explicitly enables it using Android Settings (the\n *       {@link Settings#ACTION_QUICK_ACCESS_WALLET_SETTINGS} intent can be used to launch it).\n * </ol>\n *\n * <a name=\"BasicUsage\"></a>\n * <h3>Basic usage</h3>\n *\n * <p>The basic Quick Access Wallet process is defined by the workflow below:\n * <ol>\n *   <li>User performs a gesture to bring up the Quick Access Wallet, which is displayed by the\n *   Android System.\n *   <li>The Android System creates a {@link GetWalletCardsRequest}, binds to the\n *   {@link QuickAccessWalletService}, and delivers the request.\n *   <li>The service receives the request through {@link #onWalletCardsRequested}\n *   <li>The service responds by calling {@link GetWalletCardsCallback#onSuccess} with a\n *   {@link GetWalletCardsResponse response} that contains between 1 and\n *   {@link GetWalletCardsRequest#getMaxCards() maxCards} cards.\n *   <li>The Android System displays the Quick Access Wallet containing the provided cards. The\n *   card at the {@link GetWalletCardsResponse#getSelectedIndex() selectedIndex} will initially\n *   be presented as the 'selected' card.\n *   <li>As soon as the cards are displayed, the Android System will notify the service that the\n *   card at the selected index has been selected through {@link #onWalletCardSelected}.\n *   <li>The user interacts with the wallet and may select one or more cards in sequence. Each time\n *   a new card is selected, the Android System will notify the service through\n *   {@link #onWalletCardSelected} and will provide the {@link WalletCard#getCardId() cardId} of the\n *   card that is now selected.\n *   <li>If the user commences an NFC payment, the service may send a {@link WalletServiceEvent}\n *   to the System indicating that the wallet application now needs to show the activity associated\n *   with making a payment. Sending a {@link WalletServiceEvent} of type\n *   {@link WalletServiceEvent#TYPE_NFC_PAYMENT_STARTED} should cause the quick access wallet UI\n *   to be dismissed.\n *   <li>When the wallet is dismissed, the Android System will notify the service through\n *   {@link #onWalletDismissed}.\n * </ol>\n *\n * <p>The workflow is designed to minimize the time that the Android System is bound to the\n * service, but connections may be cached and reused to improve performance and conserve memory.\n * All calls should be considered stateless: if the service needs to keep state between calls, it\n * must do its own state management (keeping in mind that the service's process might be killed\n * by the Android System when unbound; for example, if the device is running low in memory).\n *\n * <p>\n * <a name=\"ErrorHandling\"></a>\n * <h3>Error handling</h3>\n * <p>If the service encountered an error processing the request, it should call\n * {@link GetWalletCardsCallback#onFailure}.\n * For performance reasons, it's paramount that the service calls either\n * {@link GetWalletCardsCallback#onSuccess} or\n * {@link GetWalletCardsCallback#onFailure} for each\n * {@link #onWalletCardsRequested} received - if it doesn't, the request will eventually time out\n * and be discarded by the Android System.\n *\n * <p>\n * <a name=\"ManifestEntry\"></a>\n * <h3>Manifest entry</h3>\n *\n * <p>QuickAccessWalletService must require the permission\n * \"android.permission.BIND_QUICK_ACCESS_WALLET_SERVICE\".\n *\n * <pre class=\"prettyprint\">\n * {@literal\n * <service\n *     android:name=\".MyQuickAccessWalletService\"\n *     android:label=\"@string/my_default_tile_label\"\n *     android:icon=\"@drawable/my_default_icon_label\"\n *     android:logo=\"@drawable/my_wallet_logo\"\n *     android:permission=\"android.permission.BIND_QUICK_ACCESS_WALLET_SERVICE\">\n *     <intent-filter>\n *         <action android:name=\"android.service.quickaccesswallet.QuickAccessWalletService\" />\n *         <category android:name=\"android.intent.category.DEFAULT\"/>\n *     </intent-filter>\n *     <meta-data android:name=\"android.quickaccesswallet\"\n *          android:resource=\"@xml/quickaccesswallet_configuration\" />;\n * </service>}\n * </pre>\n * <p>\n * The {@literal <meta-data>} element includes an android:resource attribute that points to an\n * XML resource with further details about the service. The {@code quickaccesswallet_configuration}\n * in the example above specifies an activity that allows the users to view the entire wallet.\n * The following example shows the quickaccesswallet_configuration XML resource:\n * <p>\n * <pre class=\"prettyprint\">\n * {@literal\n * <quickaccesswallet-service\n *   xmlns:android=\"http://schemas.android.com/apk/res/android\"\n *   android:settingsActivity=\"com.example.android.SettingsActivity\"\n *   android:shortcutLongLabel=\"@string/my_wallet_empty_state_text\"\n *   android:shortcutShortLabel=\"@string/my_wallet_button_text\"\n *   android:targetActivity=\"com.example.android.WalletActivity\"/>\n * }\n * </pre>\n *\n * <p>The entry for {@code settingsActivity} should contain the fully qualified class name of an\n * activity that allows the user to modify the settings for this service. The {@code targetActivity}\n * entry should contain the fully qualified class name of an activity that allows the user to view\n * their entire wallet. The {@code targetActivity} will be started with the Intent action\n * {@link #ACTION_VIEW_WALLET} and the {@code settingsActivity} will be started with the Intent\n * action {@link #ACTION_VIEW_WALLET_SETTINGS}.\n *\n * <p>The {@code shortcutShortLabel} and {@code shortcutLongLabel} are used by the QuickAccessWallet\n * in the buttons that navigate to the wallet app. The {@code shortcutShortLabel} is displayed next\n * to the cards that are returned by the service and should be no more than 20 characters. The\n * {@code shortcutLongLabel} is displayed when no cards are returned. This 'empty state' view also\n * displays the service logo, specified by the {@code android:logo} manifest entry. If the logo is\n * not specified, the empty state view will show the app icon instead.\n ",
+  "links" : [ "android.service.quickaccesswallet.QuickAccessWalletService", "#onWalletDismissed", "android.service.quickaccesswallet.WalletServiceEvent#TYPE_NFC_PAYMENT_STARTED", "#ACTION_VIEW_WALLET_SETTINGS", "android.service.quickaccesswallet.GetWalletCardsRequest#getMaxCards()", "#onWalletCardSelected", "android.provider.Settings#ACTION_QUICK_ACCESS_WALLET_SETTINGS", "android.service.quickaccesswallet.GetWalletCardsRequest", "#onWalletCardsRequested", "#ACTION_VIEW_WALLET", "android.nfc.cardemulation.OffHostApduService", "android.service.quickaccesswallet.WalletCard#getCardId()", "android.service.quickaccesswallet.GetWalletCardsResponse", "android.service.quickaccesswallet.WalletServiceEvent", "android.service.quickaccesswallet.GetWalletCardsCallback#onFailure", "android.service.quickaccesswallet.GetWalletCardsResponse#getSelectedIndex()", "android.nfc.cardemulation.HostApduService", "android.service.quickaccesswallet.GetWalletCardsCallback#onSuccess" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} that must be declared as handled by the service. To be supported, the\n     * service must also require the\n     * {@link android.Manifest.permission#BIND_QUICK_ACCESS_WALLET_SERVICE}\n     * permission so that other applications can not abuse it.\n     ",
+    "links" : [ "android.Manifest.permission#BIND_QUICK_ACCESS_WALLET_SERVICE", "android.app.PendingIntent" ]
+  }, {
+    "name" : "ACTION_VIEW_WALLET",
+    "type" : "String",
+    "comment" : "\n     * Intent action to launch an activity to display the wallet.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_VIEW_WALLET_SETTINGS",
+    "type" : "String",
+    "comment" : "\n     * Intent action to launch an activity to display quick access wallet settings.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_META_DATA",
+    "type" : "String",
+    "comment" : "\n     * Name under which a QuickAccessWalletService component publishes information about itself.\n     * This meta-data should reference an XML resource containing a\n     * <code>&lt;{@link\n     * android.R.styleable#QuickAccessWalletService quickaccesswallet-service}&gt;</code> tag. This\n     * is a a sample XML file configuring an QuickAccessWalletService:\n     * <pre> &lt;quickaccesswallet-service\n     *     android:walletActivity=\"foo.bar.WalletActivity\"\n     *     . . .\n     * /&gt;</pre>\n     ",
+    "links" : [ "android.R.styleable#QuickAccessWalletService" ]
+  }, {
+    "name" : "TILE_SERVICE_META_DATA",
+    "type" : "String",
+    "comment" : "\n     * Name of the QuickAccessWallet tile service meta-data.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEventListenerId",
+    "type" : "String",
+    "comment" : "\n     * The service currently only supports one listener at a time. Multiple connections that\n     * register different listeners will clobber the listener. This field may only be accessed from\n     * the main thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mEventListener",
+    "type" : "IQuickAccessWalletServiceCallbacks",
+    "comment" : "\n     * The service currently only supports one listener at a time. Multiple connections that\n     * register different listeners will clobber the listener. This field may only be accessed from\n     * the main thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mInterface",
+    "type" : "IQuickAccessWalletService",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void onWalletCardsRequestedInternal(GetWalletCardsRequest request, IQuickAccessWalletServiceCallbacks callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onTargetActivityIntentRequestedInternal(IQuickAccessWalletServiceCallbacks callbacks)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public IBinder onBind(@NonNull Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void onWalletCardsRequested(@NonNull GetWalletCardsRequest request, @NonNull GetWalletCardsCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when the user requests the service to provide wallet cards.\n     *\n     * <p>This method will be called on the main thread, but the callback may be called from any\n     * thread. The callback should be called as quickly as possible. The service must always call\n     * either {@link GetWalletCardsCallback#onSuccess(GetWalletCardsResponse)} or {@link\n     * GetWalletCardsCallback#onFailure(GetWalletCardsError)}. Calling multiple times or calling\n     * both methods will cause an exception to be thrown.\n     ",
+    "links" : [ "android.service.quickaccesswallet.GetWalletCardsCallback#onFailure(GetWalletCardsError)", "android.service.quickaccesswallet.GetWalletCardsCallback#onSuccess(GetWalletCardsResponse)" ]
+  }, {
+    "name" : "public abstract void onWalletCardSelected(@NonNull SelectWalletCardRequest request)",
+    "returnType" : "void",
+    "comment" : "\n     * A wallet card was selected. Sent when the user selects a wallet card from the list of cards.\n     * Selection may indicate that the card is now in the center of the screen, or highlighted in\n     * some other fashion. It does not mean that the user clicked on the card -- clicking on the\n     * card will cause the {@link WalletCard#getPendingIntent()} to be sent.\n     *\n     * <p>Card selection events are especially important to NFC payment applications because\n     * many NFC terminals can only accept one payment card at a time. If the user has several NFC\n     * cards in their wallet, selecting different cards can change which payment method is presented\n     * to the terminal.\n     ",
+    "links" : [ "android.service.quickaccesswallet.WalletCard#getPendingIntent()" ]
+  }, {
+    "name" : "public abstract void onWalletDismissed()",
+    "returnType" : "void",
+    "comment" : "\n     * Indicates that the wallet was dismissed. This is received when the Quick Access Wallet is no\n     * longer visible.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void sendWalletServiceEvent(@NonNull WalletServiceEvent serviceEvent)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a {@link WalletServiceEvent} to the Quick Access Wallet.\n     * <p>\n     * Background events may require that the Quick Access Wallet view be updated. For example, if\n     * the wallet application hosting this service starts to handle an NFC payment while the Quick\n     * Access Wallet is being shown, the Quick Access Wallet will need to be dismissed so that the\n     * Activity showing the payment can be displayed to the user.\n     ",
+    "links" : [ "android.service.quickaccesswallet.WalletServiceEvent" ]
+  }, {
+    "name" : "public PendingIntent getTargetActivityPendingIntent()",
+    "returnType" : "PendingIntent",
+    "comment" : "\n     * Specify a {@link PendingIntent} to be launched as the \"Quick Access\" activity.\n     *\n     * This activity will be launched directly by the system in lieu of the card switcher activity\n     * provided by the system.\n     *\n     * In order to use the system-provided card switcher activity, return null from this method.\n     ",
+    "links" : [ "android.app.PendingIntent" ]
+  }, {
+    "name" : "private void sendWalletServiceEventInternal(WalletServiceEvent serviceEvent)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void registerDismissWalletListenerInternal(@NonNull WalletServiceEventListenerRequest request, @NonNull IQuickAccessWalletServiceCallbacks callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void unregisterDismissWalletListenerInternal(@NonNull WalletServiceEventListenerRequest request)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void onWalletCardsRequestedInternal(GetWalletCardsRequest request, IQuickAccessWalletServiceCallbacks callback)", "private void onTargetActivityIntentRequestedInternal(IQuickAccessWalletServiceCallbacks callbacks)", "public IBinder onBind(@NonNull Intent intent)", "public abstract void onWalletCardsRequested(@NonNull GetWalletCardsRequest request, @NonNull GetWalletCardsCallback callback)", "public abstract void onWalletCardSelected(@NonNull SelectWalletCardRequest request)", "public abstract void onWalletDismissed()", "public final void sendWalletServiceEvent(@NonNull WalletServiceEvent serviceEvent)", "public PendingIntent getTargetActivityPendingIntent()", "private void sendWalletServiceEventInternal(WalletServiceEvent serviceEvent)", "private void registerDismissWalletListenerInternal(@NonNull WalletServiceEventListenerRequest request, @NonNull IQuickAccessWalletServiceCallbacks callback)", "private void unregisterDismissWalletListenerInternal(@NonNull WalletServiceEventListenerRequest request)" ],
+  "variableNames" : [ "TAG", "SERVICE_INTERFACE", "ACTION_VIEW_WALLET", "ACTION_VIEW_WALLET_SETTINGS", "SERVICE_META_DATA", "TILE_SERVICE_META_DATA", "mHandler", "mEventListenerId", "mEventListener", "mInterface" ]
+}

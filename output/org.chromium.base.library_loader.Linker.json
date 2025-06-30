@@ -1,0 +1,176 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/chromium/base/library_loader/Linker.java",
+  "packageName" : "org.chromium.base.library_loader",
+  "className" : "Linker",
+  "comment" : "\n * This class provides a way to load the native library as an alternative to System.loadLibrary().\n * It has the ability to save RAM by placing the PT_GNU_RELRO segments in a shared memory region and\n * memory-mapping this region from different processes. This approach saves a few MiB RAM compared\n * to the normal placement of the segment in private dirty memory.\n *\n * In the main library only one PT_GNU_RELRO segment is present, and it maps only one section\n * (.data.rel.ro), so here and below it will be referred as a \"RELRO section\".\n *\n * When two processes load the same native library at the _same_ memory address, the content of\n * their RELRO section (which includes C++ vtables or any constants that contain pointers) will be\n * largely identical. The exceptions are pointers to external, randomized, symbols, like those from\n * some system libraries, but these are very rare in practice.\n *\n * In order to establish usage of the same shared region in different processes, the Linker can\n * serialize/deserialize the relevant information to/from a Bundle. Providing the RELRO shared\n * memory region is done by loading the library normally, then replacing the virtual address mapping\n * behind the RELRO section with the one backed by the shared memory, with identical contents.\n *\n * Security considerations:\n *\n * - The shared RELRO memory region is always forced read-only after creation, which means it is\n *   impossible for a compromised process to map it read-write (e.g. by calling mmap() or\n *   mprotect()) and modify its content, altering values seen in other processes.\n *\n * - The common library load addresses are randomized for each instance of the program on the\n *   device.\n *\n * Usage:\n *\n * - The native shared library must be loaded with Linker.loadLibrary(), instead of\n *   System.loadLibrary(). The two functions should behave the same (at a high level).\n *\n * - Early on, before the attempt to load the library, the linker needs to be initialized either as\n *   a producer or a consumer of the RELRO region by invoking ensureInitialized(). Since various\n *   Chromium projects have vastly different initialization paths, for convenience the\n *   initialization runs implicitly as part of loading the library. In this case the behaviour is of\n *   a producer.\n *\n * - After loading the native library as a RELRO producer, the putSharedRelrosToBundle() becomes\n *   available to then send the Bundle to Linkers in other processes, consumed\n *   by takeSharedRelrosFromBundle().\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LINKER_JNI_LIBRARY",
+    "type" : "String",
+    "comment" : " Name of the library that contains the JNI code.",
+    "links" : [ ]
+  }, {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : " Constant guarding debug logging.",
+    "links" : [ ]
+  }, {
+    "name" : "SHARED_RELROS",
+    "type" : "String",
+    "comment" : " Constants used to pass the shared RELRO Bundle through Binder.",
+    "links" : [ ]
+  }, {
+    "name" : "BASE_LOAD_ADDRESS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalLibInfo",
+    "type" : "LibInfo",
+    "comment" : " process is a \"RELRO producer\".",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteLibInfo",
+    "type" : "LibInfo",
+    "comment" : " FD.",
+    "links" : [ ]
+  }, {
+    "name" : "mRelroProducer",
+    "type" : "boolean",
+    "comment" : " to arrive from another process.",
+    "links" : [ ]
+  }, {
+    "name" : "mState",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLinkerForAssert",
+    "type" : "Linker",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sNativesInstance",
+    "type" : "Linker.Natives",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " void pretendLibraryIsLoadedForTesting()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String preferAddressToString(@PreferAddress int a)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isNonZeroLoadAddress(LibInfo libInfo)",
+    "returnType" : "boolean",
+    "comment" : " Exposed to be able to mock out an assertion.",
+    "links" : [ ]
+  }, {
+    "name" : " final void ensureInitialized(boolean asRelroProducer, @PreferAddress int preference, long addressHint)",
+    "returnType" : "void",
+    "comment" : "\n     * Initializes the Linker. This is the first method to be called on the instance.\n     *\n     * The Linker abstracts away from knowing process types and what the role of each process is.\n     * The LibraryLoader and the layers above tell the singleton linker whether it needs to produce\n     * the RELRO region, consume it, whether to use the address hint or to synthesize according to a\n     * strategy.\n     *\n     * In many cases finding the library load address is on the critical path, and needs to be\n     * transferred to other processes as soon as possible. For this purpose initialization is\n     * invoked separately from loading.\n     *\n     * The caller should provide the |preference| for obtaining the address at which to load the\n     * native library. The value is one of these:\n     *\n     *     FIND_RESERVED, RESERVE_HINT, RESERVE_RANDOM.\n     *\n     * In the vast majority of cases the chosen preference will be fulfilled and the address (with\n     * the size) will be saved for use during {@link Linker#loadLibrary(String)}. In case the\n     * preferred way fails (due to address fragmentation, for example), a fallback attempt will be\n     * made with |preference| to the right of the current one in the list above. There is no\n     * fallback for RESERVE_RANDOM.\n     *\n     * FIND_RESERVED: Finds the (named) reserved address range for library loading. The caller needs\n     *     to make sure that this is only called on platform versions supporting this memory\n     *     reservation (Android Q+).\n     *\n     * RESERVE_HINT: Reserves enough of address range for loading a library, starting at the\n     *     |addressHint| provided. The latter is expected to arrive from another process (randomized\n     *     there), hence sometimes the address range may not be available.\n     *\n     * RESERVE_RANDOM: Finds a free random address range and reserves it.\n     *\n     * @param asRelroProducer whether the Linker instance will need to produce the shared memory\n     *                        region as part of work in {@link Linker#loadLibrary(String)}.\n     * @param preference the preference for obtaining the address, with fallback to a less memory\n     *                   efficient method\n     * @param addressHint the hint to be used when RESERVE_HINT is provided as |preference|\n     *\n     ",
+    "links" : [ "org.chromium.base.library_loader.Linker#loadLibrary(String)" ]
+  }, {
+    "name" : "private void chooseAndReserveMemoryRange(boolean asRelroProducer, @PreferAddress int preference, long addressHint)",
+    "returnType" : "void",
+    "comment" : " Initializes the |mLocalLibInfo| and reserves the address range chosen.",
+    "links" : [ ]
+  }, {
+    "name" : " static long extractLoadAddressFromBundle(Bundle bundle)",
+    "returnType" : "long",
+    "comment" : "\n     * Extracts the native library start address as serialized by\n     * {@link #putLoadAddressToBundle(Bundle)} in a Linker instance from another process.\n     ",
+    "links" : [ "#putLoadAddressToBundle(Bundle)" ]
+  }, {
+    "name" : " void putLoadAddressToBundle(Bundle bundle)",
+    "returnType" : "void",
+    "comment" : "\n     * Serializes the native library start address. If not asked to be initialized previously,\n     * initializes the Linker as a RELRO producer.\n     * @param bundle Bundle to put the address to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean shouldAtomicallyReplaceRelroAfterLoad()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tells whether atomic replacement of RELRO after library load should be performed. The linker\n     * should give up with RELRO on the retry that uses the RelroSharingMode.NO_SHARING. This method\n     * should be called after loading the library.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void attemptLoadLibraryLocked(String library, @RelroSharingMode int relroMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Loads the native library using a given mode.\n     *\n     * @param library The library name to load.\n     * @param relroMode Tells whether and how to share relocations.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final void loadLibrary(String library)",
+    "returnType" : "void",
+    "comment" : "\n     * Loads the native shared library.\n     *\n     * The library must not be the Chromium linker library.\n     *\n     * @param library The library name to load.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void putSharedRelrosToBundle(Bundle bundle)",
+    "returnType" : "void",
+    "comment" : "\n     * Serializes information about the RELRO region to be passed to a Linker in another process.\n     * @param bundle The Bundle to serialize to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void takeSharedRelrosFromBundle(Bundle bundle)",
+    "returnType" : "void",
+    "comment" : "\n     * Deserializes the RELRO region information that was marshalled by\n     * {@link #putLoadAddressToBundle(Bundle)} and wakes up the threads waiting for it to replace\n     * the RELRO section in this process with shared memory.\n     * @param bundle The Bundle to extract the information from.\n     ",
+    "links" : [ "#putLoadAddressToBundle(Bundle)" ]
+  }, {
+    "name" : "private void loadWithoutProducingRelro(String libFilePath)",
+    "returnType" : "void",
+    "comment" : " failure to allow a safe retry.",
+    "links" : [ ]
+  }, {
+    "name" : "private void loadAndProduceSharedRelro(String libFilePath)",
+    "returnType" : "void",
+    "comment" : " System.loadLibrary() is useful. Records a histogram to count failures.",
+    "links" : [ ]
+  }, {
+    "name" : "private void loadLibraryImplLocked(String library, @RelroSharingMode int relroMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Linker-specific entry point for library loading. Loads the library into the address range\n     * provided by mLocalLibInfo. Assumes that the range is reserved with mmap(2).\n     *\n     * If the library is within a zip file, it must be uncompressed and page aligned in this file.\n     *\n     * The {@link #atomicReplaceRelroLocked(boolean)} must be implemented to *atomically* replace\n     * the RELRO region. Atomicity is required because the library code can be running concurrently\n     * on another thread.\n     *\n     * @param library The name of the library to load.\n     * @param relroMode Tells whether to use RELRO sharing and whether to produce or consume the\n     *                  RELRO region.\n     ",
+    "links" : [ "#atomicReplaceRelroLocked(boolean)" ]
+  }, {
+    "name" : "private void atomicReplaceRelroLocked(boolean relroAvailableImmediately)",
+    "returnType" : "void",
+    "comment" : "\n     * Atomically replaces the RELRO with the shared memory region described in the\n     * |mRemoteLibInfo|. In order to perform the replacement verifies that the replacement is safe\n     * by inspecting |mLocalLibInfo| for equality of the library address range and the contents of\n     * the RELRO region.\n     *\n     * @param relroAvailableImmediately Whether the RELRO bundle arrived before\n     * {@link #loadLibraryImplLocked(String, int)} was called.\n     ",
+    "links" : [ "#loadLibraryImplLocked(String" ]
+  }, {
+    "name" : " void loadLinkerJniLibraryLocked()",
+    "returnType" : "void",
+    "comment" : " Loads the Linker JNI library. Throws UnsatisfiedLinkError on error. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureInitializedImplicitlyAsLastResort()",
+    "returnType" : "void",
+    "comment" : "\n     * Initializes the auxiliary native library unless it was initialized before.\n     *\n     * Initializes as a RELRO producer without knowledge about preferred placement of the RELRO\n     * region. Should only be used as the last resort: when the simplicity of avoiding the explicit\n     * initialization is preferred over memory savings, such as in tests.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void resetAndThrow(String message, UnsatisfiedLinkError cause)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static void setLinkerNativesForTesting(Natives instance)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static Linker.Natives getLinkerJni()",
+    "returnType" : "Linker.Natives",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " void pretendLibraryIsLoadedForTesting()", "private String preferAddressToString(@PreferAddress int a)", " boolean isNonZeroLoadAddress(LibInfo libInfo)", " final void ensureInitialized(boolean asRelroProducer, @PreferAddress int preference, long addressHint)", "private void chooseAndReserveMemoryRange(boolean asRelroProducer, @PreferAddress int preference, long addressHint)", " static long extractLoadAddressFromBundle(Bundle bundle)", " void putLoadAddressToBundle(Bundle bundle)", "private boolean shouldAtomicallyReplaceRelroAfterLoad()", "private void attemptLoadLibraryLocked(String library, @RelroSharingMode int relroMode)", " final void loadLibrary(String library)", " void putSharedRelrosToBundle(Bundle bundle)", " void takeSharedRelrosFromBundle(Bundle bundle)", "private void loadWithoutProducingRelro(String libFilePath)", "private void loadAndProduceSharedRelro(String libFilePath)", "private void loadLibraryImplLocked(String library, @RelroSharingMode int relroMode)", "private void atomicReplaceRelroLocked(boolean relroAvailableImmediately)", " void loadLinkerJniLibraryLocked()", "private void ensureInitializedImplicitlyAsLastResort()", "private void resetAndThrow(String message, UnsatisfiedLinkError cause)", " static void setLinkerNativesForTesting(Natives instance)", " static Linker.Natives getLinkerJni()" ],
+  "variableNames" : [ "TAG", "LINKER_JNI_LIBRARY", "DEBUG", "SHARED_RELROS", "BASE_LOAD_ADDRESS", "mLock", "mLocalLibInfo", "mRemoteLibInfo", "mRelroProducer", "mState", "sLinkerForAssert", "sNativesInstance" ]
+}

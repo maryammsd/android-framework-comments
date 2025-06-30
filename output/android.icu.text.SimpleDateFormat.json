@@ -1,0 +1,596 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/SimpleDateFormat.java",
+  "packageName" : "android.icu.text",
+  "className" : "SimpleDateFormat",
+  "comment" : "\n * <strong>[icu enhancement]</strong> ICU's replacement for {@link java.text.SimpleDateFormat}.&nbsp;Methods, fields, and other functionality specific to ICU are labeled '<strong>[icu]</strong>'.\n *\n * <p><code>SimpleDateFormat</code> is a concrete class for formatting and\n * parsing dates in a locale-sensitive manner. It allows for formatting\n * (date -&gt; text), parsing (text -&gt; date), and normalization.\n *\n * <p>\n * Clients are encouraged to create a date-time formatter using\n * <code>DateFormat.getDateInstance()</code>, <code>DateFormat.getDateInstance()</code>,\n * or <code>DateFormat.getDateTimeInstance()</code> rather than\n * explicitly constructing an instance of <code>SimpleDateFormat</code>.  This way, the client\n * is guaranteed to get an appropriate formatting pattern for whatever locale the\n * program is running in.  If the client needs more control, they should consider using\n * <code>DateFormat.getInstanceForSkeleton()</code>.\n * However, if the client needs something more unusual than\n * the default patterns in the locales, he can construct a <code>SimpleDateFormat</code> directly\n * and give it an appropriate pattern (or use one of the factory methods on DateFormat\n * and modify the pattern after the fact with <code>toPattern()</code> and <code>applyPattern()</code>.\n * For more information on using these methods, see\n * {@link DateFormat}.\n *\n * <p><strong>Date and Time Patterns:</strong></p>\n *\n * <p>Date and time formats are specified by <em>date and time pattern</em> strings.\n * The full syntax for date and time patterns can be found at\n * <a href=\"https://unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns\">https://unicode.org/reports/tr35/tr35-dates.html#Date_Format_Patterns</a>.</p>\n *\n * <p>Within date and time pattern strings, all unquoted ASCII letters [A-Za-z] are reserved\n * as pattern letters representing calendar fields. Some of the most commonly used pattern letters are:</p>\n * <blockquote>\n * <table border=\"1\">\n *     <tr>\n *         <th style=\"text-align: center\">Sym.</th>\n *         <th style=\"text-align: center\">No.</th>\n *         <th>Example</th>\n *         <th>Description</th>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">G</td>\n *         <td style=\"text-align: center\">1..3</td>\n *         <td>AD</td>\n *         <td>Era - Replaced with the Era string for the current date. One to three letters for the\n *         abbreviated form, four letters for the long (wide) form, five for the narrow form.</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">y</td>\n *         <td style=\"text-align: center\">1..n</td>\n *         <td>1996</td>\n *         <td>Year. Normally the length specifies the padding, but for two letters it also specifies the maximum\n *         length. Example:<div style=\"text-align: center\">\n *             <center>\n *             <table border=\"1\" cellpadding=\"2\" cellspacing=\"0\">\n *                 <tr>\n *                     <th>Year</th>\n *                     <th style=\"text-align: right\">y</th>\n *                     <th style=\"text-align: right\">yy</th>\n *                     <th style=\"text-align: right\">yyy</th>\n *                     <th style=\"text-align: right\">yyyy</th>\n *                     <th style=\"text-align: right\">yyyyy</th>\n *                 </tr>\n *                 <tr>\n *                     <td>AD 1</td>\n *                     <td style=\"text-align: right\">1</td>\n *                     <td style=\"text-align: right\">01</td>\n *                     <td style=\"text-align: right\">001</td>\n *                     <td style=\"text-align: right\">0001</td>\n *                     <td style=\"text-align: right\">00001</td>\n *                 </tr>\n *                 <tr>\n *                     <td>AD 12</td>\n *                     <td style=\"text-align: right\">12</td>\n *                     <td style=\"text-align: right\">12</td>\n *                     <td style=\"text-align: right\">012</td>\n *                     <td style=\"text-align: right\">0012</td>\n *                     <td style=\"text-align: right\">00012</td>\n *                 </tr>\n *                 <tr>\n *                     <td>AD 123</td>\n *                     <td style=\"text-align: right\">123</td>\n *                     <td style=\"text-align: right\">23</td>\n *                     <td style=\"text-align: right\">123</td>\n *                     <td style=\"text-align: right\">0123</td>\n *                     <td style=\"text-align: right\">00123</td>\n *                 </tr>\n *                 <tr>\n *                     <td>AD 1234</td>\n *                     <td style=\"text-align: right\">1234</td>\n *                     <td style=\"text-align: right\">34</td>\n *                     <td style=\"text-align: right\">1234</td>\n *                     <td style=\"text-align: right\">1234</td>\n *                     <td style=\"text-align: right\">01234</td>\n *                 </tr>\n *                 <tr>\n *                     <td>AD 12345</td>\n *                     <td style=\"text-align: right\">12345</td>\n *                     <td style=\"text-align: right\">45</td>\n *                     <td style=\"text-align: right\">12345</td>\n *                     <td style=\"text-align: right\">12345</td>\n *                     <td style=\"text-align: right\">12345</td>\n *                 </tr>\n *             </table>\n *             </center></div>\n *         </td>\n *     </tr>\n *     <tr>\n *         <td rowspan=\"3\" style=\"text-align: center\">Q</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>02</td>\n *         <td rowspan=\"3\">Quarter - Use one or two for the numerical quarter, three for the abbreviation, or four\n *         for the full (wide) name (five for the narrow name is not yet supported).</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">3</td>\n *         <td>Q2</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">4</td>\n *         <td>2nd quarter</td>\n *     </tr>\n *     <tr>\n *         <td rowspan=\"4\" style=\"text-align: center\">M</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>09</td>\n *         <td rowspan=\"4\">Month - Use one or two for the numerical month, three for the abbreviation, four for\n *         the full (wide) name, or five for the narrow name. With two (\"MM\"), the month number is zero-padded\n *         if necessary (e.g. \"08\").</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">3</td>\n *         <td>Sep</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">4</td>\n *         <td>September</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">5</td>\n *         <td>S</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">d</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>1</td>\n *         <td>Date - Day of the month. Use \"d\" to show the minimum number of digits, or \"dd\" to always show\n *         two digits (zero-padding if necessary, e.g. \"08\").</td>\n *     </tr>\n *     <tr>\n *         <td rowspan=\"4\" style=\"text-align: center\">E</td>\n *         <td style=\"text-align: center\">1..3</td>\n *         <td>Tue</td>\n *         <td rowspan=\"4\">Day of week - Use one through three letters for the short day, four for the full (wide) name,\n *         five for the narrow name, or six for the short name.</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">4</td>\n *         <td>Tuesday</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">5</td>\n *         <td>T</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">6</td>\n *         <td>Tu</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">a</td>\n *         <td style=\"text-align: center\">1</td>\n *         <td>AM</td>\n *         <td>AM or PM</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">h</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>11</td>\n *         <td>Hour [1-12]. When used in skeleton data or in a skeleton passed in an API for flexible data pattern\n *         generation, it should match the 12-hour-cycle format preferred by the locale (h or K); it should not match\n *         a 24-hour-cycle format (H or k). Use hh for zero padding.</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">H</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>13</td>\n *         <td>Hour [0-23]. When used in skeleton data or in a skeleton passed in an API for flexible data pattern\n *         generation, it should match the 24-hour-cycle format preferred by the locale (H or k); it should not match a\n *         12-hour-cycle format (h or K). Use HH for zero padding.</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">m</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>59</td>\n *         <td>Minute. Use \"m\" to show the minimum number of digits, or \"mm\" to always show two digits\n *         (zero-padding if necessary, e.g. \"08\")..</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">s</td>\n *         <td style=\"text-align: center\">1..2</td>\n *         <td>12</td>\n *         <td>Second. Use \"s\" to show the minimum number of digits, or \"ss\" to always show two digits\n *         (zero-padding if necessary, e.g. \"08\").</td>\n *     </tr>\n *     <tr>\n *         <td rowspan=\"2\" style=\"text-align: center\">z</td>\n *         <td style=\"text-align: center\">1..3</td>\n *         <td>PDT</td>\n *         <td>Time zone.  The <i>short specific non-location format</i>.\n *         Where that is unavailable, falls back to the <i>short localized GMT format</i> (\"O\").</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">4</td>\n *         <td>Pacific Daylight Time</td>\n *         <td>The <i>long specific non-location format</i>.\n *         Where that is unavailable, falls back to the <i>long localized GMT format</i> (\"OOOO\").</td>\n *     </tr>\n *     <tr>\n *         <td rowspan=\"2\" style=\"text-align: center\">v</td>\n *         <td style=\"text-align: center\">1</td>\n *         <td>PT</td>\n *         <td>Time zone. The <i>short generic non-location format</i>.\n *         Where that is unavailable, falls back to the <i>generic location format</i> (\"VVVV\"),\n *         then the <i>short localized GMT format</i> as the final fallback.</td>\n *     </tr>\n *     <tr>\n *         <td style=\"text-align: center\">4</td>\n *         <td>Pacific Time</td>\n *         <td>The <i>long generic non-location format</i>.\n *         Where that is unavailable, falls back to <i>generic location format</i> (\"VVVV\").\n *     </tr>\n * </table>\n *\n * </blockquote>\n * <p>\n * Any characters in the pattern that are not in the ranges of ['a'..'z']\n * and ['A'..'Z'] will be treated as quoted text. For instance, characters\n * like ':', '.', ' ', '#' and '@' will appear in the resulting time text\n * even they are not embraced within single quotes.\n * <p>\n * A pattern containing any invalid pattern letter will result in a thrown\n * exception during formatting or parsing.\n *\n * <p>\n * <strong>Examples Using the US Locale:</strong>\n * <blockquote>\n * <pre>\n * Format Pattern                         Result\n * --------------                         -------\n * \"yyyy.MM.dd G 'at' HH:mm:ss vvvv\" -&gt;&gt;  1996.07.10 AD at 15:08:56 Pacific Time\n * \"EEE, MMM d, ''yy\"                -&gt;&gt;  Wed, July 10, '96\n * \"h:mm a\"                          -&gt;&gt;  12:08 PM\n * \"hh 'o''clock' a, zzzz\"           -&gt;&gt;  12 o'clock PM, Pacific Daylight Time\n * \"K:mm a, vvv\"                     -&gt;&gt;  0:00 PM, PT\n * \"yyyyy.MMMMM.dd GGG hh:mm aaa\"    -&gt;&gt;  01996.July.10 AD 12:08 PM\n * </pre>\n * </blockquote>\n * <strong>Code Sample:</strong>\n * <blockquote>\n * <pre>\n * SimpleTimeZone pdt = new SimpleTimeZone(-8 * 60 * 60 * 1000, \"PST\");\n * pdt.setStartRule(Calendar.APRIL, 1, Calendar.SUNDAY, 2*60*60*1000);\n * pdt.setEndRule(Calendar.OCTOBER, -1, Calendar.SUNDAY, 2*60*60*1000);\n * <br>\n * // Format the current time.\n * SimpleDateFormat formatter\n *     = new SimpleDateFormat (\"yyyy.MM.dd G 'at' hh:mm:ss a zzz\");\n * Date currentTime_1 = new Date();\n * String dateString = formatter.format(currentTime_1);\n * <br>\n * // Parse the previous string back into a Date.\n * ParsePosition pos = new ParsePosition(0);\n * Date currentTime_2 = formatter.parse(dateString, pos);\n * </pre>\n * </blockquote>\n * In the example, the time value <code>currentTime_2</code> obtained from\n * parsing will be equal to <code>currentTime_1</code>. However, they may not be\n * equal if the am/pm marker 'a' is left out from the format pattern while\n * the \"hour in am/pm\" pattern symbol is used. This information loss can\n * happen when formatting the time in PM.\n *\n * <p>When parsing a date string using the abbreviated year pattern (\"yy\"),\n * SimpleDateFormat must interpret the abbreviated year\n * relative to some century.  It does this by adjusting dates to be\n * within 80 years before and 20 years after the time the SimpleDateFormat\n * instance is created. For example, using a pattern of \"MM/dd/yy\" and a\n * SimpleDateFormat instance created on Jan 1, 1997,  the string\n * \"01/11/12\" would be interpreted as Jan 11, 2012 while the string \"05/04/64\"\n * would be interpreted as May 4, 1964.\n * During parsing, only strings consisting of exactly two digits, as defined by\n * {@link android.icu.lang.UCharacter#isDigit(int)}, will be parsed into the default\n * century.\n * Any other numeric string, such as a one digit string, a three or more digit\n * string, or a two digit string that isn't all digits (for example, \"-1\"), is\n * interpreted literally.  So \"01/02/3\" or \"01/02/003\" are parsed, using the\n * same pattern, as Jan 2, 3 AD.  Likewise, \"01/02/-3\" is parsed as Jan 2, 4 BC.\n *\n * <p>If the year pattern does not have exactly two 'y' characters, the year is\n * interpreted literally, regardless of the number of digits.  So using the\n * pattern \"MM/dd/yyyy\", \"01/11/12\" parses to Jan 11, 12 A.D.\n *\n * <p>When numeric fields abut one another directly, with no intervening delimiter\n * characters, they constitute a run of abutting numeric fields.  Such runs are\n * parsed specially.  For example, the format \"HHmmss\" parses the input text\n * \"123456\" to 12:34:56, parses the input text \"12345\" to 1:23:45, and fails to\n * parse \"1234\".  In other words, the leftmost field of the run is flexible,\n * while the others keep a fixed width.  If the parse fails anywhere in the run,\n * then the leftmost field is shortened by one character, and the entire run is\n * parsed again. This is repeated until either the parse succeeds or the\n * leftmost field is one character in length.  If the parse still fails at that\n * point, the parse of the run fails.\n *\n * <p>For time zones that have no names, use strings GMT+hours:minutes or\n * GMT-hours:minutes.\n *\n * <p>The calendar defines what is the first day of the week, the first week\n * of the year, whether hours are zero based or not (0 vs 12 or 24), and the\n * time zone. There is one common decimal format to handle all the numbers;\n * the digit count is handled programmatically according to the pattern.\n *\n * <h3>Synchronization</h3>\n *\n * Date formats are not synchronized. It is recommended to create separate\n * format instances for each thread. If multiple threads access a format\n * concurrently, it must be synchronized externally.\n *\n * @see          android.icu.util.Calendar\n * @see          android.icu.util.GregorianCalendar\n * @see          android.icu.util.TimeZone\n * @see          DateFormat\n * @see          DateFormatSymbols\n * @see          DecimalFormat\n * @see          TimeZoneFormat\n * @author       Mark Davis, Chen-Lieh Huang, Alan Liu\n ",
+  "links" : [ "java.text.SimpleDateFormat", "android.icu.text.DateFormat", "android.icu.lang.UCharacter#isDigit(int)" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " which version we're compatible with",
+    "links" : [ ]
+  }, {
+    "name" : "currentSerialVersion",
+    "type" : "int",
+    "comment" : " - 2 we write additional int for capitalizationSetting",
+    "links" : [ ]
+  }, {
+    "name" : "DelayedHebrewMonthCheck",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CALENDAR_FIELD_TO_LEVEL",
+    "type" : "int[]",
+    "comment" : "\n     * From calendar field to its level.\n     * Used to order calendar field.\n     * For example, calendar fields can be defined in the following order:\n     * year >  month > date > am-pm > hour >  minute\n     * YEAR --> 10, MONTH -->20, DATE --> 30;\n     * AM_PM -->40, HOUR --> 50, MINUTE -->60\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_CHAR_TO_LEVEL",
+    "type" : "int[]",
+    "comment" : "\n     * From calendar field letter to its level.\n     * Used to order calendar field.\n     * For example, calendar fields can be defined in the following order:\n     * year >  month > date > am-pm > hour >  minute\n     * 'y' --> 10, 'M' -->20, 'd' --> 30; 'a' -->40, 'h' --> 50, 'm' -->60\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_CHAR_IS_SYNTAX",
+    "type" : "boolean[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "HEBREW_CAL_CUR_MILLENIUM_START_YEAR",
+    "type" : "int",
+    "comment" : " offset the years within the current millenium down to 1-999",
+    "links" : [ ]
+  }, {
+    "name" : "HEBREW_CAL_CUR_MILLENIUM_END_YEAR",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionOnStream",
+    "type" : "int",
+    "comment" : "\n     * The version of the serialized data on the stream.  Possible values:\n     * <ul>\n     * <li><b>0</b> or not present on stream: JDK 1.1.3.  This version\n     * has no <code>defaultCenturyStart</code> on stream.\n     * <li><b>1</b> JDK 1.1.4 or later.  This version adds\n     * <code>defaultCenturyStart</code>.\n     * <li><b>2</b> This version writes an additional int for\n     * <code>capitalizationSetting</code>.\n     * </ul>\n     * When streaming out this class, the most recent format\n     * and the highest allowable <code>serialVersionOnStream</code>\n     * is written.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "pattern",
+    "type" : "String",
+    "comment" : "\n     * The pattern string of this formatter.  This is always a non-localized\n     * pattern.  May not be null.  See class documentation for details.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "override",
+    "type" : "String",
+    "comment" : "\n     * The override string of this formatter.  Used to override the\n     * numbering system for one or more fields.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "numberFormatters",
+    "type" : "HashMap<String, NumberFormat>",
+    "comment" : "\n     * The hash map used for number format overrides.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "overrideMap",
+    "type" : "HashMap<Character, String>",
+    "comment" : "\n     * The hash map used for number format overrides.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "formatData",
+    "type" : "DateFormatSymbols",
+    "comment" : "\n     * The symbols used by this formatter for week names, month names,\n     * etc.  May not be null.\n     * @serial\n     * @see DateFormatSymbols\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "locale",
+    "type" : "ULocale",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "defaultCenturyStart",
+    "type" : "Date",
+    "comment" : "\n     * We map dates with two-digit years into the century starting at\n     * <code>defaultCenturyStart</code>, which may be any date.  May\n     * not be null.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "defaultCenturyStartYear",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "defaultCenturyBase",
+    "type" : "long",
+    "comment" : " and may be used for calculating defaultCenturyStart when needed.",
+    "links" : [ ]
+  }, {
+    "name" : "millisPerHour",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ISOSpecialEra",
+    "type" : "int",
+    "comment" : " year specifier is a negative number.",
+    "links" : [ ]
+  }, {
+    "name" : "SUPPRESS_NEGATIVE_PREFIX",
+    "type" : "String",
+    "comment" : " this becomes valid Unicode).",
+    "links" : [ ]
+  }, {
+    "name" : "useFastFormat",
+    "type" : "boolean",
+    "comment" : "\n     * If true, this object supports fast formatting using the\n     * subFormat variant that takes a StringBuffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "tzFormat",
+    "type" : "TimeZoneFormat",
+    "comment" : "\n     *  The time zone sub-formatter, introduced in ICU 4.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationBrkIter",
+    "type" : "BreakIterator",
+    "comment" : "\n     * BreakIterator to use for capitalization (will be cloned for actual use)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "hasMinute",
+    "type" : "boolean",
+    "comment" : "\n     * DateFormat pattern contains the minute field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "hasSecond",
+    "type" : "boolean",
+    "comment" : "\n     * DateFormat pattern contains the second field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "hasHanYearChar",
+    "type" : "boolean",
+    "comment" : "\n     * DateFormat pattern contains the Han year character \\u5E74=年, => non-numeric E Asian format.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "cachedDefaultLocale",
+    "type" : "ULocale",
+    "comment" : " privates for the default pattern",
+    "links" : [ ]
+  }, {
+    "name" : "cachedDefaultPattern",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FALLBACKPATTERN",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_CHAR_TO_INDEX",
+    "type" : "int[]",
+    "comment" : " Map pattern character to index",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_INDEX_TO_CALENDAR_FIELD",
+    "type" : "int[]",
+    "comment" : " Map pattern character index to Calendar field number",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_INDEX_TO_DATE_FORMAT_FIELD",
+    "type" : "int[]",
+    "comment" : " Map pattern character index to DateFormat field number",
+    "links" : [ ]
+  }, {
+    "name" : "PATTERN_INDEX_TO_DATE_FORMAT_ATTRIBUTE",
+    "type" : "DateFormat.Field[]",
+    "comment" : " Map pattern character index to DateFormat.Field",
+    "links" : [ ]
+  }, {
+    "name" : "PARSED_PATTERN_CACHE",
+    "type" : "ICUCache<String, Object[]>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "patternItems",
+    "type" : "Object[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "useLocalZeroPaddingNumberFormat",
+    "type" : "boolean",
+    "comment" : " If true, use local version of zero padding number format",
+    "links" : [ ]
+  }, {
+    "name" : "decDigits",
+    "type" : "char[]",
+    "comment" : " read-only - can be shared by multiple instances",
+    "links" : [ ]
+  }, {
+    "name" : "decimalBuf",
+    "type" : "char[]",
+    "comment" : " mutable - one per instance",
+    "links" : [ ]
+  }, {
+    "name" : "DECIMAL_BUF_SIZE",
+    "type" : "int",
+    "comment" : " sufficient for int numbers",
+    "links" : [ ]
+  }, {
+    "name" : "NUMERIC_FORMAT_CHARS",
+    "type" : "String",
+    "comment" : "\n     * Format characters that indicate numeric fields always.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NUMERIC_FORMAT_CHARS2",
+    "type" : "String",
+    "comment" : "\n     * Format characters that indicate numeric fields when pattern length\n     * is up to 2.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_DAYLIGHT_DETECTION_RANGE",
+    "type" : "long",
+    "comment" : "\n     * Maximum range for detecting daylight offset of a time zone when parsed time zone\n     * string indicates it's daylight saving time, but the detected time zone does not\n     * observe daylight saving time at the parsed date.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DATE_PATTERN_TYPE",
+    "type" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static int getLevelFromChar(char ch)",
+    "returnType" : "int",
+    "comment" : "\n     * Map calendar field letter into calendar field level.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isSyntaxChar(char ch)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tell if a character can be used to define a field in a format string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static SimpleDateFormat getInstance(Calendar.FormatConfiguration formatConfig)",
+    "returnType" : "SimpleDateFormat",
+    "comment" : "\n     * Creates an instance of SimpleDateFormat for the given format configuration\n     * @param formatConfig the format configuration\n     * @return A SimpleDateFormat instance\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initialize()",
+    "returnType" : "void",
+    "comment" : "\n     * Initialized fields\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized void initializeTimeZoneFormat(boolean bForceUpdate)",
+    "returnType" : "void",
+    "comment" : "\n     * Private method lazily instantiate the TimeZoneFormat field\n     * @param bForceUpdate when true, check if tzFormat is synchronized with\n     * the current numberFormat and update its digits if necessary. When false,\n     * this check is skipped.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private TimeZoneFormat tzFormat()",
+    "returnType" : "TimeZoneFormat",
+    "comment" : "\n     * Private method, returns non-null TimeZoneFormat.\n     * @return the TimeZoneFormat used by this formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static synchronized String getDefaultPattern()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the default date and time pattern (SHORT) for the default locale.\n     * This method is only used by the default SimpleDateFormat constructor.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void parseAmbiguousDatesAsAfter(Date startDate)",
+    "returnType" : "void",
+    "comment" : " Define one-century window into which to disambiguate dates using\n     * two-digit years.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initializeDefaultCenturyStart(long baseTime)",
+    "returnType" : "void",
+    "comment" : " Initialize defaultCenturyStart and defaultCenturyStartYear by base time.\n     * The default start time is 80 years before the creation time of this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Date getDefaultCenturyStart()",
+    "returnType" : "Date",
+    "comment" : " Gets the default century start date for this object ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getDefaultCenturyStartYear()",
+    "returnType" : "int",
+    "comment" : " Gets the default century start year for this object ",
+    "links" : [ ]
+  }, {
+    "name" : "public void set2DigitYearStart(Date startDate)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the 100-year period 2-digit years will be interpreted as being in\n     * to begin on the date the user specifies.\n     * @param startDate During parsing, two digit years will be placed in the range\n     * <code>startDate</code> to <code>startDate + 100 years</code>.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Date get2DigitYearStart()",
+    "returnType" : "Date",
+    "comment" : "\n     * Returns the beginning date of the 100-year period 2-digit years are interpreted\n     * as being within.\n     * @return the start of the 100-year period into which two digit years are\n     * parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContext(DisplayContext context)",
+    "returnType" : "void",
+    "comment" : " Here we override the DateFormat implementation in order to lazily initialize relevant items",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition pos)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats a date or time, which is the standard millis\n     * since January 1, 1970, 00:00:00 GMT.\n     * <p>Example: using the US locale:\n     * \"yyyy.MM.dd G 'at' HH:mm:ss zzz\" -&gt;&gt; 1996.07.10 AD at 15:08:56 PDT\n     * @param cal the calendar whose date-time value is to be formatted into a date-time string\n     * @param toAppendTo where the new date-time text is to be appended\n     * @param pos the formatting position. On input: an alignment field,\n     * if desired. On output: the offsets of the alignment field.\n     * @return the formatted date-time string.\n     * @see DateFormat\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition pos, List<FieldPosition> attributes)",
+    "returnType" : "StringBuffer",
+    "comment" : " Internal formatting method that accepts an attributes list. ",
+    "links" : [ ]
+  }, {
+    "name" : "private StringBuffer format(Calendar cal, DisplayContext capitalizationContext, StringBuffer toAppendTo, FieldPosition pos, List<FieldPosition> attributes)",
+    "returnType" : "StringBuffer",
+    "comment" : " then attribute information will be recorded.",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getIndexFromChar(char ch)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormat.Field patternCharToDateFormatField(char ch)",
+    "returnType" : "DateFormat.Field",
+    "comment" : "\n     * Returns a DateFormat.Field constant associated with the specified format pattern\n     * character.\n     *\n     * @param ch The pattern character\n     * @return DateFormat.Field associated with the pattern character\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String subFormat(char ch, int count, int beginOffset, FieldPosition pos, DateFormatSymbols fmtData, Calendar cal) throws IllegalArgumentException",
+    "returnType" : "String",
+    "comment" : "\n     * Formats a single field, given its pattern character.  Subclasses may\n     * override this method in order to modify or add formatting\n     * capabilities.\n     * @param ch the pattern character\n     * @param count the number of times ch is repeated in the pattern\n     * @param beginOffset the offset of the output string at the start of\n     * this field; used to set pos when appropriate\n     * @param pos receives the position of a field, when appropriate\n     * @param fmtData the symbols for this formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String subFormat(char ch, int count, int beginOffset, int fieldNum, DisplayContext capitalizationContext, FieldPosition pos, char patternCharToOutput, Calendar cal)",
+    "returnType" : "String",
+    "comment" : "\n     * Formats a single field. This is the version called internally; it\n     * adds fieldNum and capitalizationContext parameters.\n     *\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void subFormat(StringBuffer buf, char ch, int count, int beginOffset, int fieldNum, DisplayContext capitalizationContext, FieldPosition pos, char patternCharToOutput, Calendar cal)",
+    "returnType" : "void",
+    "comment" : "\n     * Formats a single field; useFastFormat variant.  Reuses a\n     * StringBuffer for results instead of creating a String on the\n     * heap for each call.\n     *\n     * NOTE We don't really need the beginOffset parameter, EXCEPT for\n     * the need to support the slow subFormat variant (above) which\n     * has to pass it in to us.\n     *\n     * @deprecated This API is ICU internal only.\n * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void safeAppend(String[] array, int value, StringBuffer appendTo)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void safeAppendWithMonthPattern(String[] array, int value, StringBuffer appendTo, String monthPattern)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Object[] getPatternItems()",
+    "returnType" : "Object[]",
+    "comment" : "\n     * Returns parsed pattern items.  Each item is either String or\n     * PatternItem.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void zeroPaddingNumber(NumberFormat nf, StringBuffer buf, int value, int minDigits, int maxDigits)",
+    "returnType" : "void",
+    "comment" : "\n     * Internal high-speed method.  Reuses a StringBuffer for results\n     * instead of creating a String on the heap for each call.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumberFormat(NumberFormat newNumberFormat)",
+    "returnType" : "void",
+    "comment" : "\n     * Overrides superclass method and\n     * This method also clears per field NumberFormat instances\n     * previously set by {@link #setNumberFormat(String, NumberFormat)}\n     ",
+    "links" : [ "#setNumberFormat(String" ]
+  }, {
+    "name" : "private void initLocalZeroPaddingNumberFormat()",
+    "returnType" : "void",
+    "comment" : "\n     * Initializes transient fields for fast simple numeric formatting\n     * code. This method should be called whenever number format is updated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void fastZeroPaddingNumber(StringBuffer buf, int value, int minDigits, int maxDigits)",
+    "returnType" : "void",
+    "comment" : "\n     * Lightweight zero padding integer number format function.\n     *\n     * Note: This implementation is almost equivalent to format method in DateNumberFormat.\n     * In the method zeroPaddingNumber above should be able to use the one in DateNumberFormat,\n     * but, it does not help IBM J9's JIT to optimize the performance much.  In simple repeative\n     * date format test case, having local implementation is ~10% faster than using one in\n     * DateNumberFormat on IBM J9 VM.  On Sun Hotspot VM, I do not see such difference.\n     *\n     * -Yoshito\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String zeroPaddingNumber(long value, int minDigits, int maxDigits)",
+    "returnType" : "String",
+    "comment" : "\n     * Formats a number with the specified minimum and maximum number of digits.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final boolean isNumeric(char formatChar, int count)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if the given format character, occurring count\n     * times, represents a numeric field.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void parse(String text, Calendar cal, ParsePosition parsePos)",
+    "returnType" : "void",
+    "comment" : "\n     * Overrides DateFormat\n     * @see DateFormat\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int matchLiteral(String text, int pos, Object[] items, int itemIndex, boolean[] complete)",
+    "returnType" : "int",
+    "comment" : "\n     * Matches text (starting at pos) with patl. Returns the new pos, and sets complete[0]\n     * if it matched the entire text. Whitespace sequences are treated as singletons.\n     * <p>If isLenient and if we fail to match the first time, some special hacks are put into place.\n     * <ul><li>we are between date and time fields, then one or more whitespace characters\n     * in the text are accepted instead.</li>\n     * <ul><li>we are after a non-numeric field, and the text starts with a \".\", we skip it.</li>\n     * </ul>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int matchAlphaMonthStrings(String text, int start, String[] wideData, String[] shortData, Calendar cal)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to match the text at a given position against two arrays of\n     * month symbol strings.  Since multiple strings in the array may match (for\n     * example, if the array contains \"a\", \"ab\", and \"abc\", all will match\n     * the input string \"abcd\") the longest match is returned.  As a side\n     * effect, the given field of <code>cal</code> is set to the index\n     * of the best match, if there is one.\n     * @param text the time text being parsed.\n     * @param start where to start parsing.\n     * @param wideData the string array of wide month symbols\n     * @param shortData the string array of short month symbols\n     * @param cal\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * sets the <code>cal</code> field <code>field</code> to the index\n     * of the best match, if matching succeeded.\n     * @deprecated This API is ICU internal only.\n     * Does not handle monthPattern.\n     * field is always Calendar.MONTH\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int matchString(String text, int start, int field, String[] data, Calendar cal)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to match the text at a given position against an array of\n     * strings.  Since multiple strings in the array may match (for\n     * example, if the array contains \"a\", \"ab\", and \"abc\", all will match\n     * the input string \"abcd\") the longest match is returned.  As a side\n     * effect, the given field of <code>cal</code> is set to the index\n     * of the best match, if there is one.\n     * @param text the time text being parsed.\n     * @param start where to start parsing.\n     * @param field the date field being parsed.\n     * @param data the string array to parsed.\n     * @param cal\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * sets the <code>cal</code> field <code>field</code> to the index\n     * of the best match, if matching succeeded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int matchString(String text, int start, int field, String[] data, String monthPattern, Calendar cal)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to match the text at a given position against an array of\n     * strings.  Since multiple strings in the array may match (for\n     * example, if the array contains \"a\", \"ab\", and \"abc\", all will match\n     * the input string \"abcd\") the longest match is returned.  As a side\n     * effect, the given field of <code>cal</code> is set to the index\n     * of the best match, if there is one.\n     * @param text the time text being parsed.\n     * @param start where to start parsing.\n     * @param field the date field being parsed.\n     * @param data the string array to parsed.\n     * @param monthPattern leap month pattern, or null if none.\n     * @param cal\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * sets the <code>cal</code> field <code>field</code> to the index\n     * of the best match, if matching succeeded.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int regionMatchesWithOptionalDot(String text, int start, String data, int length)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected int matchQuarterString(String text, int start, int field, String[] data, Calendar cal)",
+    "returnType" : "int",
+    "comment" : "\n     * Attempt to match the text at a given position against an array of quarter\n     * strings.  Since multiple strings in the array may match (for\n     * example, if the array contains \"a\", \"ab\", and \"abc\", all will match\n     * the input string \"abcd\") the longest match is returned.  As a side\n     * effect, the given field of <code>cal</code> is set to the index\n     * of the best match, if there is one.\n     * @param text the time text being parsed.\n     * @param start where to start parsing.\n     * @param field the date field being parsed.\n     * @param data the string array to parsed.\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * sets the <code>cal</code> field <code>field</code> to the index\n     * of the best match, if matching succeeded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int matchDayPeriodString(String text, int start, String[] data, int dataLength, Output<DayPeriodRules.DayPeriod> dayPeriod)",
+    "returnType" : "int",
+    "comment" : "\n     * Similar to matchQuarterString but customized for day periods.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal)",
+    "returnType" : "int",
+    "comment" : "\n     * Protected method that converts one field of the input string into a\n     * numeric field value in <code>cal</code>.  Returns -start (for\n     * ParsePosition) if failed.  Subclasses may override this method to\n     * modify or add parsing capabilities.\n     * @param text the time text to be parsed.\n     * @param start where to start parsing.\n     * @param ch the pattern character for the date field text to be parsed.\n     * @param count the count of a pattern character.\n     * @param obeyCount if true, then the next field directly abuts this one,\n     * and we should use the count to know when to stop parsing.\n     * @param ambiguousYear return parameter; upon return, if ambiguousYear[0]\n     * is true, then a two-digit year was parsed and may need to be readjusted.\n     * @param cal\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * set the appropriate field of <code>cal</code> with the parsed\n     * value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal, MessageFormat numericLeapMonthFormatter, Output<TimeType> tzTimeType)",
+    "returnType" : "int",
+    "comment" : "\n     * Overloading to provide default argument (null) for day period.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal, MessageFormat numericLeapMonthFormatter, Output<TimeType> tzTimeType, Output<DayPeriodRules.DayPeriod> dayPeriod)",
+    "returnType" : "int",
+    "comment" : "\n     * Protected method that converts one field of the input string into a\n     * numeric field value in <code>cal</code>.  Returns -start (for\n     * ParsePosition) if failed.  Subclasses may override this method to\n     * modify or add parsing capabilities.\n     * @param text the time text to be parsed.\n     * @param start where to start parsing.\n     * @param ch the pattern character for the date field text to be parsed.\n     * @param count the count of a pattern character.\n     * @param obeyCount if true, then the next field directly abuts this one,\n     * and we should use the count to know when to stop parsing.\n     * @param ambiguousYear return parameter; upon return, if ambiguousYear[0]\n     * is true, then a two-digit year was parsed and may need to be readjusted.\n     * @param cal\n     * @param numericLeapMonthFormatter if non-null, used to parse numeric leap months.\n     * @param tzTimeType the type of parsed time zone - standard, daylight or unknown (output).\n     *      This parameter can be null if caller does not need the information.\n     * @return the new start position if matching succeeded; a negative\n     * number indicating matching failure, otherwise.  As a side effect,\n     * set the appropriate field of <code>cal</code> with the parsed\n     * value.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean allowNumericFallback(int patternCharIndex)",
+    "returnType" : "boolean",
+    "comment" : "\n     * return true if the pattern specified by patternCharIndex is one that allows\n     * numeric fallback regardless of actual pattern size.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Number parseInt(String text, ParsePosition pos, boolean allowNegative, NumberFormat fmt)",
+    "returnType" : "Number",
+    "comment" : "\n     * Parse an integer using numberFormat.  This method is semantically\n     * const, but actually may modify fNumberFormat.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Number parseInt(String text, int maxDigits, ParsePosition pos, boolean allowNegative, NumberFormat fmt)",
+    "returnType" : "Number",
+    "comment" : "\n     * Parse an integer using numberFormat up to maxDigits.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int countDigits(String text, int start, int end)",
+    "returnType" : "int",
+    "comment" : "\n     * Counts number of digit code points in the specified text.\n     *\n     * @param text  input text\n     * @param start start index, inclusive\n     * @param end   end index, exclusive\n     * @return  number of digits found in the text in the specified range.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String translatePattern(String pat, String from, String to)",
+    "returnType" : "String",
+    "comment" : "\n     * Translate a pattern, mapping each character in the from string to the\n     * corresponding character in the to string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toPattern()",
+    "returnType" : "String",
+    "comment" : "\n     * Return a pattern string describing this date format.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toLocalizedPattern()",
+    "returnType" : "String",
+    "comment" : "\n     * Return a localized pattern string describing this date format.\n     * <p>\n     * <b>Note:</b> This implementation depends on {@link DateFormatSymbols#getLocalPatternChars()}\n     * to get localized format pattern characters. ICU does not include\n     * localized pattern character data, therefore, unless user sets localized\n     * pattern characters manually, this method returns the same result as\n     * {@link #toPattern()}.\n     ",
+    "links" : [ "#toPattern()", "android.icu.text.DateFormatSymbols#getLocalPatternChars()" ]
+  }, {
+    "name" : "public void applyPattern(String pat)",
+    "returnType" : "void",
+    "comment" : "\n     * Apply the given unlocalized pattern string to this date format.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void applyLocalizedPattern(String pat)",
+    "returnType" : "void",
+    "comment" : "\n     * Apply the given localized pattern string to this date format.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public DateFormatSymbols getDateFormatSymbols()",
+    "returnType" : "DateFormatSymbols",
+    "comment" : "\n     * Gets the date/time formatting data.\n     * @return a copy of the date-time formatting data associated\n     * with this date-time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDateFormatSymbols(DateFormatSymbols newFormatSymbols)",
+    "returnType" : "void",
+    "comment" : "\n     * Allows you to set the date/time formatting data.\n     * @param newFormatSymbols the new symbols\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected DateFormatSymbols getSymbols()",
+    "returnType" : "DateFormatSymbols",
+    "comment" : "\n     * Method for subclasses to access the DateFormatSymbols.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public TimeZoneFormat getTimeZoneFormat()",
+    "returnType" : "TimeZoneFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Gets the time zone formatter which this date/time\n     * formatter uses to format and parse a time zone.\n     *\n     * @return the time zone formatter which this date/time\n     * formatter uses.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTimeZoneFormat(TimeZoneFormat tzfmt)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong> Allows you to set the time zone formatter.\n     *\n     * @param tzfmt the new time zone formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Overrides Cloneable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Override hashCode.\n     * Generates the hash code for the SimpleDateFormat object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Override equals.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(ObjectOutputStream stream) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Override writeObject.\n     * See http://docs.oracle.com/javase/6/docs/api/java/io/ObjectOutputStream.html\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Override readObject.\n     * See http://docs.oracle.com/javase/6/docs/api/java/io/ObjectInputStream.html\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AttributedCharacterIterator formatToCharacterIterator(Object obj)",
+    "returnType" : "AttributedCharacterIterator",
+    "comment" : "\n     * Format the object to an attributed string, and return the corresponding iterator\n     * Overrides superclass method.\n     *\n     * @param obj The object to format\n     * @return <code>AttributedCharacterIterator</code> describing the formatted value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " ULocale getLocale()",
+    "returnType" : "ULocale",
+    "comment" : "\n     * Get the locale of this simple date formatter.\n     * It is package accessible. also used in DateIntervalFormat.\n     *\n     * @return   locale in this simple date formatter\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isFieldUnitIgnored(int field)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean isFieldUnitIgnored(String pattern, int field)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check whether the 'field' is smaller than all the fields covered in\n     * pattern, return true if it is.\n     * The sequence of calendar field,\n     * from large to small is: ERA, YEAR, MONTH, DATE, AM_PM, HOUR, MINUTE,...\n     * @param pattern  the pattern to check against\n     * @param field    the calendar field need to check against\n     * @return         true if the 'field' is smaller than all the fields\n     *                 covered in pattern. false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final StringBuffer intervalFormatByAlgorithm(Calendar fromCalendar, Calendar toCalendar, StringBuffer appendTo, FieldPosition pos) throws IllegalArgumentException",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Format date interval by algorithm.\n     * It is supposed to be used only by CLDR survey tool.\n     *\n     * @param fromCalendar      calendar set to the from date in date interval\n     *                          to be formatted into date interval string\n     * @param toCalendar        calendar set to the to date in date interval\n     *                          to be formatted into date interval string\n     * @param appendTo          Output parameter to receive result.\n     *                          Result is appended to existing contents.\n     * @param pos               On input: an alignment field, if desired.\n     *                          On output: the offsets of the alignment field.\n     * @exception IllegalArgumentException when there is non-recognized\n     *                                     pattern letter\n     * @return                  Reference to 'appendTo' parameter.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean diffCalFieldValue(Calendar fromCalendar, Calendar toCalendar, Object[] items, int i) throws IllegalArgumentException",
+    "returnType" : "boolean",
+    "comment" : "\n     * check whether the i-th item in 2 calendar is in different value.\n     *\n     * It is supposed to be used only by CLDR survey tool.\n     * It is used by intervalFormatByAlgorithm().\n     *\n     * @param fromCalendar   one calendar\n     * @param toCalendar     the other calendar\n     * @param items          pattern items\n     * @param i              the i-th item in pattern items\n     * @exception IllegalArgumentException when there is non-recognized\n     *                                     pattern letter\n     * @return               true is i-th item in 2 calendar is in different\n     *                       value, false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean lowerLevel(Object[] items, int i, int level) throws IllegalArgumentException",
+    "returnType" : "boolean",
+    "comment" : "\n     * check whether the i-th item's level is lower than the input 'level'\n     *\n     * It is supposed to be used only by CLDR survey tool.\n     * It is used by intervalFormatByAlgorithm().\n     *\n     * @param items  the pattern items\n     * @param i      the i-th item in pattern items\n     * @param level  the level with which the i-th pattern item compared to\n     * @exception IllegalArgumentException when there is non-recognized\n     *                                     pattern letter\n     * @return       true if i-th pattern item is lower than 'level',\n     *               false otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumberFormat(String fields, NumberFormat overrideNF)",
+    "returnType" : "void",
+    "comment" : "\n     * allow the user to set the NumberFormat for several fields\n     * It can be a single field like: \"y\"(year) or \"M\"(month)\n     * It can be several field combined together: \"yMd\"(year, month and date)\n     * Note:\n     * 1 symbol field is enough for multiple symbol fields (so \"y\" will override \"yy\", \"yyy\")\n     * If the field is not numeric, then override has no effect (like \"MMM\" will use abbreviation, not numerical field)\n     *\n     * @param fields the fields to override\n     * @param overrideNF the NumbeferFormat used\n     * @exception IllegalArgumentException when the fields contain invalid field\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public NumberFormat getNumberFormat(char field)",
+    "returnType" : "NumberFormat",
+    "comment" : "\n     * give the NumberFormat used for the field like 'y'(year) and 'M'(year)\n     *\n     * @param field the field the user wants\n     * @return override NumberFormat used for the field\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initNumberFormatters(ULocale loc)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void processOverrideString(ULocale loc, String str)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void parsePattern()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static int getLevelFromChar(char ch)", "private static boolean isSyntaxChar(char ch)", "public static SimpleDateFormat getInstance(Calendar.FormatConfiguration formatConfig)", "private void initialize()", "private synchronized void initializeTimeZoneFormat(boolean bForceUpdate)", "private TimeZoneFormat tzFormat()", "private static synchronized String getDefaultPattern()", "private void parseAmbiguousDatesAsAfter(Date startDate)", "private void initializeDefaultCenturyStart(long baseTime)", "private Date getDefaultCenturyStart()", "private int getDefaultCenturyStartYear()", "public void set2DigitYearStart(Date startDate)", "public Date get2DigitYearStart()", "public void setContext(DisplayContext context)", "public StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition pos)", " StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition pos, List<FieldPosition> attributes)", "private StringBuffer format(Calendar cal, DisplayContext capitalizationContext, StringBuffer toAppendTo, FieldPosition pos, List<FieldPosition> attributes)", "private static int getIndexFromChar(char ch)", "protected DateFormat.Field patternCharToDateFormatField(char ch)", "protected String subFormat(char ch, int count, int beginOffset, FieldPosition pos, DateFormatSymbols fmtData, Calendar cal) throws IllegalArgumentException", "protected String subFormat(char ch, int count, int beginOffset, int fieldNum, DisplayContext capitalizationContext, FieldPosition pos, char patternCharToOutput, Calendar cal)", "protected void subFormat(StringBuffer buf, char ch, int count, int beginOffset, int fieldNum, DisplayContext capitalizationContext, FieldPosition pos, char patternCharToOutput, Calendar cal)", "private static void safeAppend(String[] array, int value, StringBuffer appendTo)", "private static void safeAppendWithMonthPattern(String[] array, int value, StringBuffer appendTo, String monthPattern)", "private Object[] getPatternItems()", "protected void zeroPaddingNumber(NumberFormat nf, StringBuffer buf, int value, int minDigits, int maxDigits)", "public void setNumberFormat(NumberFormat newNumberFormat)", "private void initLocalZeroPaddingNumberFormat()", "private void fastZeroPaddingNumber(StringBuffer buf, int value, int minDigits, int maxDigits)", "protected String zeroPaddingNumber(long value, int minDigits, int maxDigits)", "private static final boolean isNumeric(char formatChar, int count)", "public void parse(String text, Calendar cal, ParsePosition parsePos)", "private int matchLiteral(String text, int pos, Object[] items, int itemIndex, boolean[] complete)", "private int matchAlphaMonthStrings(String text, int start, String[] wideData, String[] shortData, Calendar cal)", "protected int matchString(String text, int start, int field, String[] data, Calendar cal)", "private int matchString(String text, int start, int field, String[] data, String monthPattern, Calendar cal)", "private int regionMatchesWithOptionalDot(String text, int start, String data, int length)", "protected int matchQuarterString(String text, int start, int field, String[] data, Calendar cal)", "private int matchDayPeriodString(String text, int start, String[] data, int dataLength, Output<DayPeriodRules.DayPeriod> dayPeriod)", "protected int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal)", "private int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal, MessageFormat numericLeapMonthFormatter, Output<TimeType> tzTimeType)", "private int subParse(String text, int start, char ch, int count, boolean obeyCount, boolean allowNegative, boolean[] ambiguousYear, Calendar cal, MessageFormat numericLeapMonthFormatter, Output<TimeType> tzTimeType, Output<DayPeriodRules.DayPeriod> dayPeriod)", "private boolean allowNumericFallback(int patternCharIndex)", "private Number parseInt(String text, ParsePosition pos, boolean allowNegative, NumberFormat fmt)", "private Number parseInt(String text, int maxDigits, ParsePosition pos, boolean allowNegative, NumberFormat fmt)", "private static int countDigits(String text, int start, int end)", "private String translatePattern(String pat, String from, String to)", "public String toPattern()", "public String toLocalizedPattern()", "public void applyPattern(String pat)", "public void applyLocalizedPattern(String pat)", "public DateFormatSymbols getDateFormatSymbols()", "public void setDateFormatSymbols(DateFormatSymbols newFormatSymbols)", "protected DateFormatSymbols getSymbols()", "public TimeZoneFormat getTimeZoneFormat()", "public void setTimeZoneFormat(TimeZoneFormat tzfmt)", "public Object clone()", "public int hashCode()", "public boolean equals(Object obj)", "private void writeObject(ObjectOutputStream stream) throws IOException", "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException", "public AttributedCharacterIterator formatToCharacterIterator(Object obj)", " ULocale getLocale()", " boolean isFieldUnitIgnored(int field)", " static boolean isFieldUnitIgnored(String pattern, int field)", "public final StringBuffer intervalFormatByAlgorithm(Calendar fromCalendar, Calendar toCalendar, StringBuffer appendTo, FieldPosition pos) throws IllegalArgumentException", "private boolean diffCalFieldValue(Calendar fromCalendar, Calendar toCalendar, Object[] items, int i) throws IllegalArgumentException", "private boolean lowerLevel(Object[] items, int i, int level) throws IllegalArgumentException", "public void setNumberFormat(String fields, NumberFormat overrideNF)", "public NumberFormat getNumberFormat(char field)", "private void initNumberFormatters(ULocale loc)", "private void processOverrideString(ULocale loc, String str)", "private void parsePattern()" ],
+  "variableNames" : [ "serialVersionUID", "currentSerialVersion", "DelayedHebrewMonthCheck", "CALENDAR_FIELD_TO_LEVEL", "PATTERN_CHAR_TO_LEVEL", "PATTERN_CHAR_IS_SYNTAX", "HEBREW_CAL_CUR_MILLENIUM_START_YEAR", "HEBREW_CAL_CUR_MILLENIUM_END_YEAR", "serialVersionOnStream", "pattern", "override", "numberFormatters", "overrideMap", "formatData", "locale", "defaultCenturyStart", "defaultCenturyStartYear", "defaultCenturyBase", "millisPerHour", "ISOSpecialEra", "SUPPRESS_NEGATIVE_PREFIX", "useFastFormat", "tzFormat", "capitalizationBrkIter", "hasMinute", "hasSecond", "hasHanYearChar", "cachedDefaultLocale", "cachedDefaultPattern", "FALLBACKPATTERN", "PATTERN_CHAR_TO_INDEX", "PATTERN_INDEX_TO_CALENDAR_FIELD", "PATTERN_INDEX_TO_DATE_FORMAT_FIELD", "PATTERN_INDEX_TO_DATE_FORMAT_ATTRIBUTE", "PARSED_PATTERN_CACHE", "patternItems", "useLocalZeroPaddingNumberFormat", "decDigits", "decimalBuf", "DECIMAL_BUF_SIZE", "NUMERIC_FORMAT_CHARS", "NUMERIC_FORMAT_CHARS2", "MAX_DAYLIGHT_DETECTION_RANGE", "DATE_PATTERN_TYPE" ]
+}

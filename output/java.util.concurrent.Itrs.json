@@ -1,0 +1,66 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ArrayBlockingQueue.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "Itrs",
+  "comment" : "\n     * Shared data between iterators and their queue, allowing queue\n     * modifications to update iterators when elements are removed.\n     *\n     * This adds a lot of complexity for the sake of correctly\n     * handling some uncommon operations, but the combination of\n     * circular-arrays and supporting interior removes (i.e., those\n     * not at head) would cause iterators to sometimes lose their\n     * places and/or (re)report elements they shouldn't.  To avoid\n     * this, when a queue has one or more iterators, it keeps iterator\n     * state consistent by:\n     *\n     * (1) keeping track of the number of \"cycles\", that is, the\n     *     number of times takeIndex has wrapped around to 0.\n     * (2) notifying all iterators via the callback removedAt whenever\n     *     an interior element is removed (and thus other elements may\n     *     be shifted).\n     *\n     * These suffice to eliminate iterator inconsistencies, but\n     * unfortunately add the secondary responsibility of maintaining\n     * the list of iterators.  We track all active iterators in a\n     * simple linked list (accessed only when the queue's lock is\n     * held) of weak references to Itr.  The list is cleaned up using\n     * 3 different mechanisms:\n     *\n     * (1) Whenever a new iterator is created, do some O(1) checking for\n     *     stale list elements.\n     *\n     * (2) Whenever takeIndex wraps around to 0, check for iterators\n     *     that have been unused for more than one wrap-around cycle.\n     *\n     * (3) Whenever the queue becomes empty, all iterators are notified\n     *     and this entire data structure is discarded.\n     *\n     * So in addition to the removedAt callback that is necessary for\n     * correctness, iterators have the shutdown and takeIndexWrapped\n     * callbacks that help remove stale iterators from the list.\n     *\n     * Whenever a list element is examined, it is expunged if either\n     * the GC has determined that the iterator is discarded, or if the\n     * iterator reports that it is \"detached\" (does not need any\n     * further state updates).  Overhead is maximal when takeIndex\n     * never advances, iterators are discarded before they are\n     * exhausted, and all removals are interior removes, in which case\n     * all stale iterators are discovered by the GC.  But even in this\n     * case we don't increase the amortized complexity.\n     *\n     * Care must be taken to keep list sweeping methods from\n     * reentrantly invoking another such method, causing subtle\n     * corruption bugs.\n     ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "cycles",
+    "type" : "int",
+    "comment" : " Incremented whenever takeIndex wraps around to 0 ",
+    "links" : [ ]
+  }, {
+    "name" : "head",
+    "type" : "Node",
+    "comment" : " Linked list of weak iterator references ",
+    "links" : [ ]
+  }, {
+    "name" : "sweeper",
+    "type" : "Node",
+    "comment" : " Used to expunge stale iterators ",
+    "links" : [ ]
+  }, {
+    "name" : "SHORT_SWEEP_PROBES",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LONG_SWEEP_PROBES",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " void doSomeSweeping(boolean tryHarder)",
+    "returnType" : "void",
+    "comment" : "\n         * Sweeps itrs, looking for and expunging stale iterators.\n         * If at least one was found, tries harder to find more.\n         * Called only from iterating thread.\n         *\n         * @param tryHarder whether to start in try-harder mode, because\n         * there is known to be at least one iterator to collect\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " void register(Itr itr)",
+    "returnType" : "void",
+    "comment" : "\n         * Adds a new iterator to the linked list of tracked iterators.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " void takeIndexWrapped()",
+    "returnType" : "void",
+    "comment" : "\n         * Called whenever takeIndex wraps around to 0.\n         *\n         * Notifies all iterators, and expunges any that are now stale.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " void removedAt(int removedIndex)",
+    "returnType" : "void",
+    "comment" : "\n         * Called whenever an interior remove (not at takeIndex) occurred.\n         *\n         * Notifies all iterators, and expunges any that are now stale.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " void queueIsEmpty()",
+    "returnType" : "void",
+    "comment" : "\n         * Called whenever the queue becomes empty.\n         *\n         * Notifies all active iterators that the queue is empty,\n         * clears all weak refs, and unlinks the itrs datastructure.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : " void elementDequeued()",
+    "returnType" : "void",
+    "comment" : "\n         * Called whenever an element has been dequeued (at takeIndex).\n         ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " void doSomeSweeping(boolean tryHarder)", " void register(Itr itr)", " void takeIndexWrapped()", " void removedAt(int removedIndex)", " void queueIsEmpty()", " void elementDequeued()" ],
+  "variableNames" : [ "cycles", "head", "sweeper", "SHORT_SWEEP_PROBES", "LONG_SWEEP_PROBES" ]
+}

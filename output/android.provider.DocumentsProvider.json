@@ -1,0 +1,331 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/provider/DocumentsProvider.java",
+  "packageName" : "android.provider",
+  "className" : "DocumentsProvider",
+  "comment" : "\n * Base class for a document provider. A document provider offers read and write\n * access to durable files, such as files stored on a local disk, or files in a\n * cloud storage service. To create a document provider, extend this class,\n * implement the abstract methods, and add it to your manifest like this:\n *\n * <pre class=\"prettyprint\">&lt;manifest&gt;\n *    ...\n *    &lt;application&gt;\n *        ...\n *        &lt;provider\n *            android:name=\"com.example.MyCloudProvider\"\n *            android:authorities=\"com.example.mycloudprovider\"\n *            android:exported=\"true\"\n *            android:grantUriPermissions=\"true\"\n *            android:permission=\"android.permission.MANAGE_DOCUMENTS\"\n *            android:enabled=\"@bool/isAtLeastKitKat\"&gt;\n *            &lt;intent-filter&gt;\n *                &lt;action android:name=\"android.content.action.DOCUMENTS_PROVIDER\" /&gt;\n *            &lt;/intent-filter&gt;\n *        &lt;/provider&gt;\n *        ...\n *    &lt;/application&gt;\n *&lt;/manifest&gt;</pre>\n * <p>\n * When defining your provider, you must protect it with\n * {@link android.Manifest.permission#MANAGE_DOCUMENTS}, which is a permission\n * only the system can obtain. Applications cannot use a documents provider\n * directly; they must go through {@link Intent#ACTION_OPEN_DOCUMENT} or\n * {@link Intent#ACTION_CREATE_DOCUMENT} which requires a user to actively\n * navigate and select documents. When a user selects documents through that UI,\n * the system issues narrow URI permission grants to the requesting application.\n * </p>\n * <h3>Documents</h3>\n * <p>\n * A document can be either an openable stream (with a specific MIME type), or a\n * directory containing additional documents (with the\n * {@link Document#MIME_TYPE_DIR} MIME type). Each directory represents the top\n * of a subtree containing zero or more documents, which can recursively contain\n * even more documents and directories.\n * </p>\n * <p>\n * Each document can have different capabilities, as described by\n * {@link Document#COLUMN_FLAGS}. For example, if a document can be represented\n * as a thumbnail, your provider can set\n * {@link Document#FLAG_SUPPORTS_THUMBNAIL} and implement\n * {@link #openDocumentThumbnail(String, Point, CancellationSignal)} to return\n * that thumbnail.\n * </p>\n * <p>\n * Each document under a provider is uniquely referenced by its\n * {@link Document#COLUMN_DOCUMENT_ID}, which must not change once returned. A\n * single document can be included in multiple directories when responding to\n * {@link #queryChildDocuments(String, String[], String)}. For example, a\n * provider might surface a single photo in multiple locations: once in a\n * directory of geographic locations, and again in a directory of dates.\n * </p>\n * <h3>Roots</h3>\n * <p>\n * All documents are surfaced through one or more \"roots.\" Each root represents\n * the top of a document tree that a user can navigate. For example, a root\n * could represent an account or a physical storage device. Similar to\n * documents, each root can have capabilities expressed through\n * {@link Root#COLUMN_FLAGS}.\n * </p>\n *\n * @see Intent#ACTION_OPEN_DOCUMENT\n * @see Intent#ACTION_OPEN_DOCUMENT_TREE\n * @see Intent#ACTION_CREATE_DOCUMENT\n ",
+  "links" : [ "android.provider.DocumentsContract.Document#MIME_TYPE_DIR", "android.provider.DocumentsContract.Document#COLUMN_FLAGS", "android.Manifest.permission#MANAGE_DOCUMENTS", "android.content.Intent#ACTION_CREATE_DOCUMENT", "android.provider.DocumentsContract.Root#COLUMN_FLAGS", "android.provider.DocumentsContract.Document#COLUMN_DOCUMENT_ID", "android.content.Intent#ACTION_OPEN_DOCUMENT", "android.provider.DocumentsContract.Document#FLAG_SUPPORTS_THUMBNAIL", "#openDocumentThumbnail(String", "#queryChildDocuments(String" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_ROOTS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_ROOT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_RECENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_SEARCH",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_DOCUMENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CHILDREN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_DOCUMENT_TREE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MATCH_CHILDREN_TREE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAuthority",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMatcher",
+    "type" : "UriMatcher",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void attachInfo(Context context, ProviderInfo info)",
+    "returnType" : "void",
+    "comment" : "\n     * Implementation is provided by the parent class.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void attachInfoForTesting(Context context, ProviderInfo info)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "private void registerAuthority(String authority)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isChildDocument(String parentDocumentId, String documentId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Test if a document is descendant (child, grandchild, etc) from the given\n     * parent. For example, providers must implement this to support\n     * {@link Intent#ACTION_OPEN_DOCUMENT_TREE}. You should avoid making network\n     * requests to keep this request fast.\n     *\n     * @param parentDocumentId parent to verify against.\n     * @param documentId child to verify.\n     * @return if given document is a descendant of the given parent.\n     * @see DocumentsContract.Root#FLAG_SUPPORTS_IS_CHILD\n     ",
+    "links" : [ "android.content.Intent#ACTION_OPEN_DOCUMENT_TREE" ]
+  }, {
+    "name" : "private void enforceTreeForExtraUris(Bundle extras)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "private void enforceTree(@Nullable Uri documentUri)",
+    "returnType" : "void",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "private Uri validateIncomingNullableUri(@Nullable Uri uri)",
+    "returnType" : "Uri",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String createDocument(String parentDocumentId, String mimeType, String displayName) throws FileNotFoundException",
+    "returnType" : "String",
+    "comment" : "\n     * Create a new document and return its newly generated\n     * {@link Document#COLUMN_DOCUMENT_ID}. You must allocate a new\n     * {@link Document#COLUMN_DOCUMENT_ID} to represent the document, which must\n     * not change once returned.\n     *\n     * @param parentDocumentId the parent directory to create the new document\n     *            under.\n     * @param mimeType the concrete MIME type associated with the new document.\n     *            If the MIME type is not supported, the provider must throw.\n     * @param displayName the display name of the new document. The provider may\n     *            alter this name to meet any internal constraints, such as\n     *            avoiding conflicting names.\n\n     * @throws AuthenticationRequiredException If authentication is required from the user (such as\n     *             login credentials), but it is not guaranteed that the client will handle this\n     *             properly.\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_DOCUMENT_ID" ]
+  }, {
+    "name" : "public String renameDocument(String documentId, String displayName) throws FileNotFoundException",
+    "returnType" : "String",
+    "comment" : "\n     * Rename an existing document.\n     * <p>\n     * If a different {@link Document#COLUMN_DOCUMENT_ID} must be used to\n     * represent the renamed document, generate and return it. Any outstanding\n     * URI permission grants will be updated to point at the new document. If\n     * the original {@link Document#COLUMN_DOCUMENT_ID} is still valid after the\n     * rename, return {@code null}.\n     *\n     * @param documentId the document to rename.\n     * @param displayName the updated display name of the document. The provider\n     *            may alter this name to meet any internal constraints, such as\n     *            avoiding conflicting names.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_DOCUMENT_ID" ]
+  }, {
+    "name" : "public void deleteDocument(String documentId) throws FileNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Delete the requested document.\n     * <p>\n     * Upon returning, any URI permission grants for the given document will be\n     * revoked. If additional documents were deleted as a side effect of this\n     * call (such as documents inside a directory) the implementor is\n     * responsible for revoking those permissions using\n     * {@link #revokeDocumentPermission(String)}.\n     *\n     * @param documentId the document to delete.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ "#revokeDocumentPermission(String)" ]
+  }, {
+    "name" : "public String copyDocument(String sourceDocumentId, String targetParentDocumentId) throws FileNotFoundException",
+    "returnType" : "String",
+    "comment" : "\n     * Copy the requested document or a document tree.\n     * <p>\n     * Copies a document including all child documents to another location within\n     * the same document provider. Upon completion returns the document id of\n     * the copied document at the target destination. {@code null} must never\n     * be returned.\n     *\n     * @param sourceDocumentId the document to copy.\n     * @param targetParentDocumentId the target document to be copied into as a child.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String moveDocument(String sourceDocumentId, String sourceParentDocumentId, String targetParentDocumentId) throws FileNotFoundException",
+    "returnType" : "String",
+    "comment" : "\n     * Move the requested document or a document tree.\n     *\n     * <p>Moves a document including all child documents to another location within\n     * the same document provider. Upon completion returns the document id of\n     * the copied document at the target destination. {@code null} must never\n     * be returned.\n     *\n     * <p>It's the responsibility of the provider to revoke grants if the document\n     * is no longer accessible using <code>sourceDocumentId</code>.\n     *\n     * @param sourceDocumentId the document to move.\n     * @param sourceParentDocumentId the parent of the document to move.\n     * @param targetParentDocumentId the target document to be a new parent of the\n     *     source document.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeDocument(String documentId, String parentDocumentId) throws FileNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Removes the requested document or a document tree.\n     *\n     * <p>In contrast to {@link #deleteDocument} it requires specifying the parent.\n     * This method is especially useful if the document can be in multiple parents.\n     *\n     * <p>It's the responsibility of the provider to revoke grants if the document is\n     * removed from the last parent, and effectively the document is deleted.\n     *\n     * @param documentId the document to remove.\n     * @param parentDocumentId the parent of the document to move.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ "#deleteDocument" ]
+  }, {
+    "name" : "public Path findDocumentPath(@Nullable String parentDocumentId, String childDocumentId) throws FileNotFoundException",
+    "returnType" : "Path",
+    "comment" : "\n     * Finds the canonical path for the requested document. The path must start\n     * from the parent document if parentDocumentId is not null or the root document\n     * if parentDocumentId is null. If there are more than one path to this document,\n     * return the most typical one. Include both the parent document or root document\n     * and the requested document in the returned path.\n     *\n     * <p>This API assumes that document ID has enough info to infer the root.\n     * Different roots should use different document ID to refer to the same\n     * document.\n     *\n     *\n     * @param parentDocumentId the document from which the path starts if not null,\n     *     or null to indicate a path from the root is requested.\n     * @param childDocumentId the document which path is requested.\n     * @return the path of the requested document. If parentDocumentId is null\n     *     returned root ID must not be null. If parentDocumentId is not null\n     *     returned root ID must be null.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public IntentSender createWebLinkIntent(String documentId, @Nullable Bundle options) throws FileNotFoundException",
+    "returnType" : "IntentSender",
+    "comment" : "\n     * Creates an intent sender for a web link, if the document is web linkable.\n     * <p>\n     * {@link AuthenticationRequiredException} can be thrown if user does not have\n     * sufficient permission for the linked document. Before any new permissions\n     * are granted for the linked document, a visible UI must be shown, so the\n     * user can explicitly confirm whether the permission grants are expected.\n     * The user must be able to cancel the operation.\n     * <p>\n     * Options passed as an argument may include a list of recipients, such\n     * as email addresses. The provider should reflect these options if possible,\n     * but it's acceptable to ignore them. In either case, confirmation UI must\n     * be shown before any new permission grants are granted.\n     * <p>\n     * It is all right to generate a web link without granting new permissions,\n     * if opening the link would result in a page for requesting permission\n     * access. If it's impossible then the operation must fail by throwing an exception.\n     *\n     * @param documentId the document to create a web link intent for.\n     * @param options additional information, such as list of recipients. Optional.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     *\n     * @see DocumentsContract.Document#FLAG_WEB_LINKABLE\n     * @see android.app.PendingIntent#getIntentSender\n     ",
+    "links" : [ "android.app.AuthenticationRequiredException" ]
+  }, {
+    "name" : "public abstract Cursor queryRoots(String[] projection) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return all roots currently provided. To display to users, you must define\n     * at least one root. You should avoid making network requests to keep this\n     * request fast.\n     * <p>\n     * Each root is defined by the metadata columns described in {@link Root},\n     * including {@link Root#COLUMN_DOCUMENT_ID} which points to a directory\n     * representing a tree of documents to display under that root.\n     * <p>\n     * If this set of roots changes, you must call {@link ContentResolver#notifyChange(Uri,\n     * android.database.ContentObserver, boolean)} with\n     * {@link DocumentsContract#buildRootsUri(String)} to notify the system.\n     * <p>\n     *\n     * @param projection list of {@link Root} columns to put into the cursor. If\n     *            {@code null} all supported columns should be included.\n     ",
+    "links" : [ "android.content.ContentResolver#notifyChange(Uri", "android.provider.DocumentsContract#buildRootsUri(String)", "android.provider.DocumentsContract.Root#COLUMN_DOCUMENT_ID", "android.provider.DocumentsContract.Root" ]
+  }, {
+    "name" : "public Cursor queryRecentDocuments(String rootId, String[] projection) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return recently modified documents under the requested root. This will\n     * only be called for roots that advertise\n     * {@link Root#FLAG_SUPPORTS_RECENTS}. The returned documents should be\n     * sorted by {@link Document#COLUMN_LAST_MODIFIED} in descending order, and\n     * limited to only return the 64 most recently modified documents.\n     * <p>\n     * Recent documents do not support change notifications.\n     *\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @see DocumentsContract#EXTRA_LOADING\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_LAST_MODIFIED", "android.provider.DocumentsContract.Root#FLAG_SUPPORTS_RECENTS", "android.provider.DocumentsContract.Document" ]
+  }, {
+    "name" : "public Cursor queryRecentDocuments(@NonNull String rootId, @Nullable String[] projection, @Nullable Bundle queryArgs, @Nullable CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return recently modified documents under the requested root. This will\n     * only be called for roots that advertise\n     * {@link Root#FLAG_SUPPORTS_RECENTS}. The returned documents should be\n     * sorted by {@link Document#COLUMN_LAST_MODIFIED} in descending order of\n     * the most recently modified documents.\n     * <p>\n     * If this method is overriden by the concrete DocumentsProvider and\n     * {@link ContentResolver#QUERY_ARG_LIMIT} is specified with a nonnegative\n     * int under queryArgs, the result will be limited by that number and\n     * {@link ContentResolver#QUERY_ARG_LIMIT} will be specified under\n     * {@link ContentResolver#EXTRA_HONORED_ARGS}. Otherwise, a default 64 limit\n     * will be used and no QUERY_ARG* will be specified under\n     * {@link ContentResolver#EXTRA_HONORED_ARGS}.\n     * <p>\n     * Recent documents do not support change notifications.\n     *\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @param queryArgs the extra query arguments.\n     * @param signal used by the caller to signal if the request should be\n     *            cancelled. May be null.\n     * @see DocumentsContract#EXTRA_LOADING\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_LAST_MODIFIED", "android.provider.DocumentsContract.Root#FLAG_SUPPORTS_RECENTS", "android.content.ContentResolver#EXTRA_HONORED_ARGS", "android.provider.DocumentsContract.Document", "android.content.ContentResolver#QUERY_ARG_LIMIT" ]
+  }, {
+    "name" : "public abstract Cursor queryDocument(String documentId, String[] projection) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return metadata for the single requested document. You should avoid\n     * making network requests to keep this request fast.\n     *\n     * @param documentId the document to return.\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document" ]
+  }, {
+    "name" : "public abstract Cursor queryChildDocuments(String parentDocumentId, String[] projection, String sortOrder) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return the children documents contained in the requested directory. This\n     * must only return immediate descendants, as additional queries will be\n     * issued to recursively explore the tree.\n     * <p>\n     * Apps targeting {@link android.os.Build.VERSION_CODES#O} or higher\n     * should override {@link #queryChildDocuments(String, String[], Bundle)}.\n     * <p>\n     * If your provider is cloud-based, and you have some data cached or pinned\n     * locally, you may return the local data immediately, setting\n     * {@link DocumentsContract#EXTRA_LOADING} on the Cursor to indicate that\n     * you are still fetching additional data. Then, when the network data is\n     * available, you can send a change notification to trigger a requery and\n     * return the complete contents. To return a Cursor with extras, you need to\n     * extend and override {@link Cursor#getExtras()}.\n     * <p>\n     * To support change notifications, you must\n     * {@link Cursor#setNotificationUri(ContentResolver, Uri)} with a relevant\n     * Uri, such as\n     * {@link DocumentsContract#buildChildDocumentsUri(String, String)}. Then\n     * you can call {@link ContentResolver#notifyChange(Uri,\n     * android.database.ContentObserver, boolean)} with that Uri to send change\n     * notifications.\n     *\n     * @param parentDocumentId the directory to return children for.\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @param sortOrder how to order the rows, formatted as an SQL\n     *            {@code ORDER BY} clause (excluding the ORDER BY itself).\n     *            Passing {@code null} will use the default sort order, which\n     *            may be unordered. This ordering is a hint that can be used to\n     *            prioritize how data is fetched from the network, but UI may\n     *            always enforce a specific ordering.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     * @see DocumentsContract#EXTRA_LOADING\n     * @see DocumentsContract#EXTRA_INFO\n     * @see DocumentsContract#EXTRA_ERROR\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#O", "android.content.ContentResolver#notifyChange(Uri", "android.provider.DocumentsContract#EXTRA_LOADING", "android.database.Cursor#getExtras()", "android.database.Cursor#setNotificationUri(ContentResolver", "#queryChildDocuments(String", "android.provider.DocumentsContract#buildChildDocumentsUri(String", "android.provider.DocumentsContract.Document" ]
+  }, {
+    "name" : "public Cursor queryChildDocuments(String parentDocumentId, @Nullable String[] projection, @Nullable Bundle queryArgs) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Override this method to return the children documents contained\n     * in the requested directory. This must return immediate descendants only.\n     *\n     * <p>If your provider is cloud-based, and you have data cached\n     * locally, you may return the local data immediately, setting\n     * {@link DocumentsContract#EXTRA_LOADING} on Cursor extras to indicate that\n     * you are still fetching additional data. Then, when the network data is\n     * available, you can send a change notification to trigger a requery and\n     * return the complete contents. To return a Cursor with extras, you need to\n     * extend and override {@link Cursor#getExtras()}.\n     *\n     * <p>To support change notifications, you must\n     * {@link Cursor#setNotificationUri(ContentResolver, Uri)} with a relevant\n     * Uri, such as\n     * {@link DocumentsContract#buildChildDocumentsUri(String, String)}. Then\n     * you can call {@link ContentResolver#notifyChange(Uri,\n     * android.database.ContentObserver, boolean)} with that Uri to send change\n     * notifications.\n     *\n     * @param parentDocumentId the directory to return children for.\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @param queryArgs Bundle containing sorting information or other\n     *            argument useful to the provider. If no sorting\n     *            information is available, default sorting\n     *            will be used, which may be unordered. See\n     *            {@link ContentResolver#QUERY_ARG_SORT_COLUMNS} for\n     *            details.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     *\n     * @see DocumentsContract#EXTRA_LOADING\n     * @see DocumentsContract#EXTRA_INFO\n     * @see DocumentsContract#EXTRA_ERROR\n     ",
+    "links" : [ "android.content.ContentResolver#notifyChange(Uri", "android.provider.DocumentsContract#EXTRA_LOADING", "android.database.Cursor#getExtras()", "android.database.Cursor#setNotificationUri(ContentResolver", "android.content.ContentResolver#QUERY_ARG_SORT_COLUMNS", "android.provider.DocumentsContract#buildChildDocumentsUri(String", "android.provider.DocumentsContract.Document" ]
+  }, {
+    "name" : "public Cursor queryChildDocumentsForManage(String parentDocumentId, @Nullable String[] projection, @Nullable String sortOrder) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : " {@hide} ",
+    "links" : [ ]
+  }, {
+    "name" : "public Cursor querySearchDocuments(String rootId, String query, String[] projection) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return documents that match the given query under the requested\n     * root. The returned documents should be sorted by relevance in descending\n     * order. How documents are matched against the query string is an\n     * implementation detail left to each provider, but it's suggested that at\n     * least {@link Document#COLUMN_DISPLAY_NAME} be matched in a\n     * case-insensitive fashion.\n     * <p>\n     * If your provider is cloud-based, and you have some data cached or pinned\n     * locally, you may return the local data immediately, setting\n     * {@link DocumentsContract#EXTRA_LOADING} on the Cursor to indicate that\n     * you are still fetching additional data. Then, when the network data is\n     * available, you can send a change notification to trigger a requery and\n     * return the complete contents.\n     * <p>\n     * To support change notifications, you must\n     * {@link Cursor#setNotificationUri(ContentResolver, Uri)} with a relevant\n     * Uri, such as {@link DocumentsContract#buildSearchDocumentsUri(String,\n     * String, String)}. Then you can call {@link ContentResolver#notifyChange(Uri,\n     * android.database.ContentObserver, boolean)} with that Uri to send change\n     * notifications.\n     *\n     * @param rootId the root to search under.\n     * @param query string to match documents against.\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     *\n     * @see DocumentsContract#EXTRA_LOADING\n     * @see DocumentsContract#EXTRA_INFO\n     * @see DocumentsContract#EXTRA_ERROR\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_DISPLAY_NAME", "android.content.ContentResolver#notifyChange(Uri", "android.provider.DocumentsContract#EXTRA_LOADING", "android.provider.DocumentsContract#buildSearchDocumentsUri(String", "android.database.Cursor#setNotificationUri(ContentResolver", "android.provider.DocumentsContract.Document" ]
+  }, {
+    "name" : "public Cursor querySearchDocuments(@NonNull String rootId, @Nullable String[] projection, @NonNull Bundle queryArgs) throws FileNotFoundException",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Return documents that match the given query under the requested\n     * root. The returned documents should be sorted by relevance in descending\n     * order. How documents are matched against the query string is an\n     * implementation detail left to each provider, but it's suggested that at\n     * least {@link Document#COLUMN_DISPLAY_NAME} be matched in a\n     * case-insensitive fashion.\n     * <p>\n     * If your provider is cloud-based, and you have some data cached or pinned\n     * locally, you may return the local data immediately, setting\n     * {@link DocumentsContract#EXTRA_LOADING} on the Cursor to indicate that\n     * you are still fetching additional data. Then, when the network data is\n     * available, you can send a change notification to trigger a requery and\n     * return the complete contents.\n     * <p>\n     * To support change notifications, you must\n     * {@link Cursor#setNotificationUri(ContentResolver, Uri)} with a relevant\n     * Uri, such as {@link DocumentsContract#buildSearchDocumentsUri(String,\n     * String, String)}. Then you can call {@link ContentResolver#notifyChange(Uri,\n     * android.database.ContentObserver, boolean)} with that Uri to send change\n     * notifications.\n     *\n     * @param rootId the root to search under.\n     * @param projection list of {@link Document} columns to put into the\n     *            cursor. If {@code null} all supported columns should be\n     *            included.\n     * @param queryArgs the query arguments.\n     *            {@link DocumentsContract#QUERY_ARG_EXCLUDE_MEDIA},\n     *            {@link DocumentsContract#QUERY_ARG_DISPLAY_NAME},\n     *            {@link DocumentsContract#QUERY_ARG_MIME_TYPES},\n     *            {@link DocumentsContract#QUERY_ARG_FILE_SIZE_OVER},\n     *            {@link DocumentsContract#QUERY_ARG_LAST_MODIFIED_AFTER}.\n     * @return cursor containing search result. Include\n     *         {@link ContentResolver#EXTRA_HONORED_ARGS} in {@link Cursor}\n     *         extras {@link Bundle} when any QUERY_ARG_* value was honored\n     *         during the preparation of the results.\n     *\n     * @see Root#COLUMN_QUERY_ARGS\n     * @see ContentResolver#EXTRA_HONORED_ARGS\n     * @see DocumentsContract#EXTRA_LOADING\n     * @see DocumentsContract#EXTRA_INFO\n     * @see DocumentsContract#EXTRA_ERROR\n     ",
+    "links" : [ "android.provider.DocumentsContract.Document#COLUMN_DISPLAY_NAME", "android.content.ContentResolver#notifyChange(Uri", "android.provider.DocumentsContract#QUERY_ARG_MIME_TYPES", "android.provider.DocumentsContract#EXTRA_LOADING", "android.os.Bundle", "android.provider.DocumentsContract#buildSearchDocumentsUri(String", "android.provider.DocumentsContract#QUERY_ARG_LAST_MODIFIED_AFTER", "android.provider.DocumentsContract#QUERY_ARG_DISPLAY_NAME", "android.database.Cursor#setNotificationUri(ContentResolver", "android.provider.DocumentsContract#QUERY_ARG_EXCLUDE_MEDIA", "android.provider.DocumentsContract#QUERY_ARG_FILE_SIZE_OVER", "android.content.ContentResolver#EXTRA_HONORED_ARGS", "android.provider.DocumentsContract.Document", "android.database.Cursor" ]
+  }, {
+    "name" : "public void ejectRoot(String rootId)",
+    "returnType" : "void",
+    "comment" : "\n     * Ejects the root. Throws {@link IllegalStateException} if ejection failed.\n     *\n     * @param rootId the root to be ejected.\n     * @see Root#FLAG_SUPPORTS_EJECT\n     ",
+    "links" : [ "IllegalStateException" ]
+  }, {
+    "name" : "public Bundle getDocumentMetadata(@NonNull String documentId) throws FileNotFoundException",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Returns metadata associated with the document. The type of metadata returned\n     * is specific to the document type. For example the data returned for an image\n     * file will likely consist primarily or solely of EXIF metadata.\n     *\n     * <p>The returned {@link Bundle} will contain zero or more entries depending\n     * on the type of data supported by the document provider.\n     *\n     * <ol>\n     * <li>A {@link DocumentsContract#METADATA_TYPES} containing a {@code String[]} value.\n     *     The string array identifies the type or types of metadata returned. Each\n     *     value in the can be used to access a {@link Bundle} of data\n     *     containing that type of data.\n     * <li>An entry each for each type of returned metadata. Each set of metadata is\n     *     itself represented as a bundle and accessible via a string key naming\n     *     the type of data.\n     * </ol>\n     *\n     * @param documentId get the metadata of the document\n     * @return a Bundle of Bundles.\n     * @see DocumentsContract#getDocumentMetadata(ContentResolver, Uri)\n     ",
+    "links" : [ "android.os.Bundle", "android.provider.DocumentsContract#METADATA_TYPES" ]
+  }, {
+    "name" : "public String getDocumentType(String documentId) throws FileNotFoundException",
+    "returnType" : "String",
+    "comment" : "\n     * Return concrete MIME type of the requested document. Must match the value\n     * of {@link Document#COLUMN_MIME_TYPE} for this document. The default\n     * implementation queries {@link #queryDocument(String, String[])}, so\n     * providers may choose to override this as an optimization.\n     * <p>\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     ",
+    "links" : [ "#queryDocument(String", "android.provider.DocumentsContract.Document#COLUMN_MIME_TYPE" ]
+  }, {
+    "name" : "public abstract ParcelFileDescriptor openDocument(String documentId, String mode, @Nullable CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * Open and return the requested document.\n     * <p>\n     * Your provider should return a reliable {@link ParcelFileDescriptor} to\n     * detect when the remote caller has finished reading or writing the\n     * document.\n     * <p>\n     * Mode \"r\" should always be supported. Provider should throw\n     * {@link UnsupportedOperationException} if the passing mode is not supported.\n     * You may return a pipe or socket pair if the mode is exclusively \"r\" or\n     * \"w\", but complex modes like \"rw\" imply a normal file on disk that\n     * supports seeking.\n     * <p>\n     * If you block while downloading content, you should periodically check\n     * {@link CancellationSignal#isCanceled()} to abort abandoned open requests.\n     *\n     * @param documentId the document to return.\n     * @param mode the mode to open with, such as 'r', 'w', or 'rw'.\n     * @param signal used by the caller to signal if the request should be\n     *            cancelled. May be null.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     * @see ParcelFileDescriptor#open(java.io.File, int, android.os.Handler,\n     *      OnCloseListener)\n     * @see ParcelFileDescriptor#createReliablePipe()\n     * @see ParcelFileDescriptor#createReliableSocketPair()\n     * @see ParcelFileDescriptor#parseMode(String)\n     ",
+    "links" : [ "android.os.ParcelFileDescriptor", "android.os.CancellationSignal#isCanceled()", "UnsupportedOperationException" ]
+  }, {
+    "name" : "public AssetFileDescriptor openDocumentThumbnail(String documentId, Point sizeHint, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Open and return a thumbnail of the requested document.\n     * <p>\n     * A provider should return a thumbnail closely matching the hinted size,\n     * attempting to serve from a local cache if possible. A provider should\n     * never return images more than double the hinted size.\n     * <p>\n     * If you perform expensive operations to download or generate a thumbnail,\n     * you should periodically check {@link CancellationSignal#isCanceled()} to\n     * abort abandoned thumbnail requests.\n     *\n     * @param documentId the document to return.\n     * @param sizeHint hint of the optimal thumbnail dimensions.\n     * @param signal used by the caller to signal if the request should be\n     *            cancelled. May be null.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     * @see Document#FLAG_SUPPORTS_THUMBNAIL\n     ",
+    "links" : [ "android.os.CancellationSignal#isCanceled()" ]
+  }, {
+    "name" : "public AssetFileDescriptor openTypedDocument(String documentId, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Open and return the document in a format matching the specified MIME\n     * type filter.\n     * <p>\n     * A provider may perform a conversion if the documents's MIME type is not\n     * matching the specified MIME type filter.\n     * <p>\n     * Virtual documents must have at least one streamable format.\n     *\n     * @param documentId the document to return.\n     * @param mimeTypeFilter the MIME type filter for the requested format. May\n     *            be *\\/*, which matches any MIME type.\n     * @param opts extra options from the client. Specific to the content\n     *            provider.\n     * @param signal used by the caller to signal if the request should be\n     *            cancelled. May be null.\n     * @throws AuthenticationRequiredException If authentication is required from\n     *            the user (such as login credentials), but it is not guaranteed\n     *            that the client will handle this properly.\n     * @see #getDocumentStreamTypes(String, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)",
+    "returnType" : "Cursor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * WARNING: Sub-classes should not override this method. This method is non-final\n     * solely for the purposes of backwards compatibility.\n     *\n     * @see #queryChildDocuments(String, String[], Bundle),\n     *      {@link #queryDocument(String, String[])},\n     *      {@link #queryRecentDocuments(String, String[])},\n     *      {@link #queryRoots(String[])}, and\n     *      {@link #querySearchDocuments(String, String[], Bundle)}.\n     ",
+    "links" : [ "#queryDocument(String", "#queryRoots(String", "#querySearchDocuments(String", "#queryRecentDocuments(String" ]
+  }, {
+    "name" : "public final Cursor query(Uri uri, String[] projection, Bundle queryArgs, CancellationSignal cancellationSignal)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #queryRoots(String[])\n     * @see #queryRecentDocuments(String, String[], Bundle, CancellationSignal)\n     * @see #queryDocument(String, String[])\n     * @see #queryChildDocuments(String, String[], String)\n     * @see #querySearchDocuments(String, String[], Bundle)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getSortClause(@Nullable Bundle queryArgs)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getType(Uri uri)",
+    "returnType" : "String",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #getDocumentType(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getTypeAnonymous(@NonNull Uri uri)",
+    "returnType" : "String",
+    "comment" : "\n     * An unrestricted version of getType, which does not reveal sensitive information\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Uri canonicalize(Uri uri)",
+    "returnType" : "Uri",
+    "comment" : "\n     * Implementation is provided by the parent class. Can be overridden to\n     * provide additional functionality, but subclasses <em>must</em> always\n     * call the superclass. If the superclass returns {@code null}, the subclass\n     * may implement custom behavior.\n     * <p>\n     * This is typically used to resolve a subtree URI into a concrete document\n     * reference, issuing a narrower single-document URI permission grant along\n     * the way.\n     *\n     * @see DocumentsContract#buildDocumentUriUsingTree(Uri, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int getCallingOrSelfUriPermissionModeFlags(Context context, Uri uri)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final Uri insert(Uri uri, ContentValues values)",
+    "returnType" : "Uri",
+    "comment" : "\n     * Implementation is provided by the parent class. Throws by default, and\n     * cannot be overridden.\n     *\n     * @see #createDocument(String, String, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int delete(Uri uri, String selection, String[] selectionArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * Implementation is provided by the parent class. Throws by default, and\n     * cannot be overridden.\n     *\n     * @see #deleteDocument(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * Implementation is provided by the parent class. Throws by default, and\n     * cannot be overridden.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Bundle call(String method, String arg, Bundle extras)",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Implementation is provided by the parent class. Can be overridden to\n     * provide additional functionality, but subclasses <em>must</em> always\n     * call the superclass. If the superclass returns {@code null}, the subclass\n     * may implement custom behavior.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Bundle callUnchecked(String method, String arg, Bundle extras) throws FileNotFoundException",
+    "returnType" : "Bundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void revokeDocumentPermission(String documentId)",
+    "returnType" : "void",
+    "comment" : "\n     * Revoke any active permission grants for the given\n     * {@link Document#COLUMN_DOCUMENT_ID}, usually called when a document\n     * becomes invalid. Follows the same semantics as\n     * {@link Context#revokeUriPermission(Uri, int)}.\n     ",
+    "links" : [ "android.content.Context#revokeUriPermission(Uri", "android.provider.DocumentsContract.Document#COLUMN_DOCUMENT_ID" ]
+  }, {
+    "name" : "public final ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocument(String, String, CancellationSignal)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ParcelFileDescriptor openFile(Uri uri, String mode, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocument(String, String, CancellationSignal)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AssetFileDescriptor openAssetFile(Uri uri, String mode) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocument(String, String, CancellationSignal)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AssetFileDescriptor openAssetFile(Uri uri, String mode, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocument(String, String, CancellationSignal)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocumentThumbnail(String, Point, CancellationSignal)\n     * @see #openTypedDocument(String, String, Bundle, CancellationSignal)\n     * @see #getDocumentStreamTypes(String, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * Implementation is provided by the parent class. Cannot be overridden.\n     *\n     * @see #openDocumentThumbnail(String, Point, CancellationSignal)\n     * @see #openTypedDocument(String, String, Bundle, CancellationSignal)\n     * @see #getDocumentStreamTypes(String, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String[] getDocumentStreamTypes(String documentId, String mimeTypeFilter)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Return a list of streamable MIME types matching the filter, which can be passed to\n     * {@link #openTypedDocument(String, String, Bundle, CancellationSignal)}.\n     *\n     * <p>The default implementation returns a MIME type provided by\n     * {@link #queryDocument(String, String[])} as long as it matches the filter and the document\n     * does not have the {@link Document#FLAG_VIRTUAL_DOCUMENT} flag set.\n     *\n     * <p>Virtual documents must have at least one streamable format.\n     *\n     * @see #getStreamTypes(Uri, String)\n     * @see #openTypedDocument(String, String, Bundle, CancellationSignal)\n     ",
+    "links" : [ "#queryDocument(String", "#openTypedDocument(String", "android.provider.DocumentsContract.Document#FLAG_VIRTUAL_DOCUMENT" ]
+  }, {
+    "name" : "public String[] getStreamTypes(Uri uri, String mimeTypeFilter)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Called by a client to determine the types of data streams that this content provider\n     * support for the given URI.\n     *\n     * <p>Overriding this method is deprecated. Override {@link #openTypedDocument} instead.\n     *\n     * @see #getDocumentStreamTypes(String, String)\n     ",
+    "links" : [ "#openTypedDocument" ]
+  }, {
+    "name" : "private final AssetFileDescriptor openTypedAssetFileImpl(Uri uri, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException",
+    "returnType" : "AssetFileDescriptor",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void attachInfo(Context context, ProviderInfo info)", "public void attachInfoForTesting(Context context, ProviderInfo info)", "private void registerAuthority(String authority)", "public boolean isChildDocument(String parentDocumentId, String documentId)", "private void enforceTreeForExtraUris(Bundle extras)", "private void enforceTree(@Nullable Uri documentUri)", "private Uri validateIncomingNullableUri(@Nullable Uri uri)", "public String createDocument(String parentDocumentId, String mimeType, String displayName) throws FileNotFoundException", "public String renameDocument(String documentId, String displayName) throws FileNotFoundException", "public void deleteDocument(String documentId) throws FileNotFoundException", "public String copyDocument(String sourceDocumentId, String targetParentDocumentId) throws FileNotFoundException", "public String moveDocument(String sourceDocumentId, String sourceParentDocumentId, String targetParentDocumentId) throws FileNotFoundException", "public void removeDocument(String documentId, String parentDocumentId) throws FileNotFoundException", "public Path findDocumentPath(@Nullable String parentDocumentId, String childDocumentId) throws FileNotFoundException", "public IntentSender createWebLinkIntent(String documentId, @Nullable Bundle options) throws FileNotFoundException", "public abstract Cursor queryRoots(String[] projection) throws FileNotFoundException", "public Cursor queryRecentDocuments(String rootId, String[] projection) throws FileNotFoundException", "public Cursor queryRecentDocuments(@NonNull String rootId, @Nullable String[] projection, @Nullable Bundle queryArgs, @Nullable CancellationSignal signal) throws FileNotFoundException", "public abstract Cursor queryDocument(String documentId, String[] projection) throws FileNotFoundException", "public abstract Cursor queryChildDocuments(String parentDocumentId, String[] projection, String sortOrder) throws FileNotFoundException", "public Cursor queryChildDocuments(String parentDocumentId, @Nullable String[] projection, @Nullable Bundle queryArgs) throws FileNotFoundException", "public Cursor queryChildDocumentsForManage(String parentDocumentId, @Nullable String[] projection, @Nullable String sortOrder) throws FileNotFoundException", "public Cursor querySearchDocuments(String rootId, String query, String[] projection) throws FileNotFoundException", "public Cursor querySearchDocuments(@NonNull String rootId, @Nullable String[] projection, @NonNull Bundle queryArgs) throws FileNotFoundException", "public void ejectRoot(String rootId)", "public Bundle getDocumentMetadata(@NonNull String documentId) throws FileNotFoundException", "public String getDocumentType(String documentId) throws FileNotFoundException", "public abstract ParcelFileDescriptor openDocument(String documentId, String mode, @Nullable CancellationSignal signal) throws FileNotFoundException", "public AssetFileDescriptor openDocumentThumbnail(String documentId, Point sizeHint, CancellationSignal signal) throws FileNotFoundException", "public AssetFileDescriptor openTypedDocument(String documentId, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException", "public final Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)", "public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder, CancellationSignal cancellationSignal)", "public final Cursor query(Uri uri, String[] projection, Bundle queryArgs, CancellationSignal cancellationSignal)", "private static String getSortClause(@Nullable Bundle queryArgs)", "public final String getType(Uri uri)", "public final String getTypeAnonymous(@NonNull Uri uri)", "public Uri canonicalize(Uri uri)", "private static int getCallingOrSelfUriPermissionModeFlags(Context context, Uri uri)", "public final Uri insert(Uri uri, ContentValues values)", "public final int delete(Uri uri, String selection, String[] selectionArgs)", "public final int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)", "public Bundle call(String method, String arg, Bundle extras)", "private Bundle callUnchecked(String method, String arg, Bundle extras) throws FileNotFoundException", "public final void revokeDocumentPermission(String documentId)", "public final ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException", "public final ParcelFileDescriptor openFile(Uri uri, String mode, CancellationSignal signal) throws FileNotFoundException", "public final AssetFileDescriptor openAssetFile(Uri uri, String mode) throws FileNotFoundException", "public final AssetFileDescriptor openAssetFile(Uri uri, String mode, CancellationSignal signal) throws FileNotFoundException", "public final AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts) throws FileNotFoundException", "public final AssetFileDescriptor openTypedAssetFile(Uri uri, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException", "public String[] getDocumentStreamTypes(String documentId, String mimeTypeFilter)", "public String[] getStreamTypes(Uri uri, String mimeTypeFilter)", "private final AssetFileDescriptor openTypedAssetFileImpl(Uri uri, String mimeTypeFilter, Bundle opts, CancellationSignal signal) throws FileNotFoundException" ],
+  "variableNames" : [ "TAG", "MATCH_ROOTS", "MATCH_ROOT", "MATCH_RECENT", "MATCH_SEARCH", "MATCH_DOCUMENT", "MATCH_CHILDREN", "MATCH_DOCUMENT_TREE", "MATCH_CHILDREN_TREE", "mAuthority", "mMatcher" ]
+}

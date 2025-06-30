@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/ResourcesManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/ResourcesManager.java",
   "packageName" : "android.app",
   "className" : "ResourcesManager",
   "comment" : " @hide ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -19,6 +20,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "\n     * Internal lock object\n     ",
+    "links" : [ ]
+  }, {
     "name" : "mResCompatibilityInfo",
     "type" : "CompatibilityInfo",
     "comment" : "\n     * The global compatibility settings.\n     ",
@@ -27,6 +33,16 @@
     "name" : "mResConfiguration",
     "type" : "Configuration",
     "comment" : "\n     * The global configuration upon which all Resources are based. Multi-window Resources\n     * apply their overrides to this configuration.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mResDisplayId",
+    "type" : "int",
+    "comment" : "\n     * The display upon which all Resources are based. Activity, window token, and display context\n     * resources apply their overrides to this display id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPendingAppInfoUpdates",
+    "type" : "ArrayList<Pair<String[], ApplicationInfo>>",
+    "comment" : "\n     * ApplicationInfo changes that need to be applied to Resources when the next configuration\n     * change occurs.\n     ",
     "links" : [ ]
   }, {
     "name" : "mResourceImpls",
@@ -44,37 +60,57 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "ENABLE_APK_ASSETS_CACHE",
-    "type" : "boolean",
+    "name" : "mAllResourceReferences",
+    "type" : "ArrayList<WeakReference<Resources>>",
+    "comment" : "\n     * A list of Resources references for all Resources instances created through Resources public\n     * constructor, only system Resources created by the private constructor are excluded.\n     * This addition is necessary due to certain Application Resources created by constructor\n     * directly which are not managed by ResourcesManager, hence we require a comprehensive\n     * collection of all Resources references to help with asset paths appending tasks when shared\n     * libraries are registered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mAllResourceReferencesQueue",
+    "type" : "ReferenceQueue<Resources>",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "mLoadedApkAssets",
-    "type" : "LruCache<ApkKey, ApkAssets>",
-    "comment" : "\n     * The ApkAssets we are caching and intend to hold strong references to.\n     ",
+    "name" : "mLocaleConfig",
+    "type" : "LocaleConfig",
+    "comment" : "\n     * The localeConfig of the app.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSharedLibAssetsMap",
+    "type" : "ArrayMap<String, SharedLibraryAssets>",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "mCachedApkAssets",
     "type" : "ArrayMap<ApkKey, WeakReference<ApkAssets>>",
-    "comment" : "\n     * The ApkAssets that are being referenced in the wild that we can reuse, even if they aren't\n     * in our LRU cache. Bonus resources :)\n     ",
+    "comment" : "\n     * The ApkAssets that are being referenced in the wild that we can reuse.\n     * Used as a lock for itself as well.\n     ",
     "links" : [ ]
   }, {
     "name" : "mActivityResourceReferences",
     "type" : "WeakHashMap<IBinder, ActivityResources>",
-    "comment" : "\n     * Each Activity may has a base override configuration that is applied to each Resources object,\n     * which in turn may have their own override configuration specified.\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "mAdjustedDisplays",
-    "type" : "ArrayMap<Pair<Integer, DisplayAdjustments>, WeakReference<Display>>",
-    "comment" : "\n     * A cache of DisplayId, DisplayAdjustments to Display.\n     ",
+    "comment" : "\n     * Each Activity or WindowToken may has a base override configuration that is applied to each\n     * Resources object, which in turn may have their own override configuration specified.\n     ",
     "links" : [ ]
   }, {
     "name" : "mUpdateCallbacks",
     "type" : "UpdateHandler",
     "comment" : "\n     * Callback implementation for handling updates to Resources objects.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "mApplicationOwnedApks",
+    "type" : "ArraySet<String>",
+    "comment" : "\n     * The set of APK paths belonging to this process. This is used to disable incremental\n     * installation crash protections on these APKs so the app either behaves as expects or crashes.\n     ",
+    "links" : [ ]
   } ],
   "methods" : [ {
+    "name" : "public void registerResourcePaths(@NonNull String uniqueId, @NonNull ApplicationInfo appInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * The internal function to register the resources paths of a package (e.g. a shared library).\n     * This will collect the package resources' paths from its ApplicationInfo and add them to all\n     * existing and future contexts while the application is running.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ResourcesManager setInstance(ResourcesManager resourcesManager)",
+    "returnType" : "ResourcesManager",
+    "comment" : "\n     * Inject a customized ResourcesManager instance for testing, return the old ResourcesManager\n     * instance.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public static ResourcesManager getInstance()",
     "returnType" : "ResourcesManager",
     "comment" : "",
@@ -90,7 +126,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : " DisplayMetrics getDisplayMetrics()",
+    "name" : "public DisplayMetrics getDisplayMetrics()",
     "returnType" : "DisplayMetrics",
     "comment" : "",
     "links" : [ ]
@@ -100,39 +136,59 @@
     "comment" : "\n     * Protected so that tests can override and returns something a fixed value.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private static void applyNonDefaultDisplayMetricsToConfiguration(@NonNull DisplayMetrics dm, @NonNull Configuration config)",
+    "name" : "private DisplayMetrics getDisplayMetrics(Configuration config)",
+    "returnType" : "DisplayMetrics",
+    "comment" : "\n     * Like getDisplayMetrics, but will adjust the result based on the display information in\n     * config. This is used to make sure that the global configuration matches the activity's\n     * apparent display.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void applyDisplayMetricsToConfiguration(@NonNull DisplayMetrics dm, @NonNull Configuration config)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean applyCompatConfigurationLocked(int displayDensity, @NonNull Configuration compatConfiguration)",
+    "name" : "public boolean applyCompatConfiguration(int displayDensity, @NonNull Configuration compatConfiguration)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
-  }, {
-    "name" : "private Display getAdjustedDisplay(final int displayId, @Nullable DisplayAdjustments displayAdjustments)",
-    "returnType" : "Display",
-    "comment" : "\n     * Returns an adjusted {@link Display} object based on the inputs or null if display isn't\n     * available. This method is only used within {@link ResourcesManager} to calculate display\n     * metrics based on a set {@link DisplayAdjustments}. All other usages should instead call\n     * {@link ResourcesManager#getAdjustedDisplay(int, Resources)}.\n     *\n     * @param displayId display Id.\n     * @param displayAdjustments display adjustments.\n     ",
-    "links" : [ "android.app.ResourcesManager", "android.app.ResourcesManager#getAdjustedDisplay(int", "android.view.Display", "android.view.DisplayAdjustments" ]
   }, {
     "name" : "public Display getAdjustedDisplay(final int displayId, Resources resources)",
     "returnType" : "Display",
     "comment" : "\n     * Returns an adjusted {@link Display} object based on the inputs or null if display isn't\n     * available.\n     *\n     * @param displayId display Id.\n     * @param resources The {@link Resources} backing the display adjustments.\n     ",
     "links" : [ "android.view.Display", "android.content.res.CompatResources" ]
   }, {
+    "name" : "public void initializeApplicationPaths(@NonNull String sourceDir, @Nullable String[] splitDirs)",
+    "returnType" : "void",
+    "comment" : "\n     * Initializes the set of APKs owned by the application running in this process.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addApplicationPathsLocked(@NonNull String sourceDir, @Nullable String[] splitDirs)",
+    "returnType" : "void",
+    "comment" : "\n     * Updates the set of APKs owned by the application running in this process.\n     *\n     * This method only appends to the set of APKs owned by this process because the previous APKs\n     * paths still belong to the application running in this process.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "private static String overlayPathToIdmapPath(String path)",
     "returnType" : "String",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private ApkAssets loadApkAssets(String path, boolean sharedLib, boolean overlay) throws IOException",
+    "name" : "private ApkAssets loadApkAssets(@NonNull final ApkKey key) throws IOException",
     "returnType" : "ApkAssets",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static ArrayList<ApkKey> extractApkKeys(@NonNull final ResourcesKey key)",
+    "returnType" : "ArrayList<ApkKey>",
+    "comment" : "\n     * Retrieves a list of apk keys representing the ApkAssets that should be loaded for\n     * AssetManagers mapped to the {@param key}.\n     ",
     "links" : [ ]
   }, {
     "name" : "protected AssetManager createAssetManager(@NonNull final ResourcesKey key)",
     "returnType" : "AssetManager",
     "comment" : "\n     * Creates an AssetManager from the paths within the ResourcesKey.\n     *\n     * This can be overridden in tests so as to avoid creating a real AssetManager with\n     * real APK paths.\n     * @param key The key containing the resource paths to add to the AssetManager.\n     * @return a new AssetManager.\n    ",
+    "links" : [ ]
+  }, {
+    "name" : "protected AssetManager createAssetManager(@NonNull final ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)",
+    "returnType" : "AssetManager",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "private static int countLiveReferences(Collection<WeakReference<T>> collection)",
@@ -145,12 +201,17 @@
     "comment" : "\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "private Configuration generateConfig(@NonNull ResourcesKey key, @NonNull DisplayMetrics dm)",
+    "name" : "private Configuration generateConfig(@NonNull ResourcesKey key)",
     "returnType" : "Configuration",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private ResourcesImpl createResourcesImpl(@NonNull ResourcesKey key)",
+    "name" : "private int generateDisplayId(@NonNull ResourcesKey key)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ResourcesImpl createResourcesImpl(@NonNull ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)",
     "returnType" : "ResourcesImpl",
     "comment" : "",
     "links" : [ ]
@@ -165,12 +226,17 @@
     "comment" : "\n     * Finds a cached ResourcesImpl object that matches the given ResourcesKey, or\n     * creates a new one and caches it for future use.\n     * @param key The key to match.\n     * @return a ResourcesImpl object matching the key.\n     ",
     "links" : [ ]
   }, {
+    "name" : "private ResourcesImpl findOrCreateResourcesImplForKeyLocked(@NonNull ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)",
+    "returnType" : "ResourcesImpl",
+    "comment" : "\n     * Variant of {@link #findOrCreateResourcesImplForKeyLocked(ResourcesKey)} that attempts to\n     * load ApkAssets from a {@link ApkAssetsSupplier} when creating a new ResourcesImpl.\n     ",
+    "links" : [ "#findOrCreateResourcesImplForKeyLocked(ResourcesKey)", "ApkAssetsSupplier" ]
+  }, {
     "name" : "private ResourcesKey findKeyForResourceImplLocked(@NonNull ResourcesImpl resourceImpl)",
     "returnType" : "ResourcesKey",
     "comment" : "\n     * Find the ResourcesKey that this ResourcesImpl object is associated with.\n     * @return the ResourcesKey or null if none was found.\n     ",
     "links" : [ ]
   }, {
-    "name" : " boolean isSameResourcesOverrideConfig(@Nullable IBinder activityToken, @Nullable Configuration overrideConfig)",
+    "name" : "public boolean isSameResourcesOverrideConfig(@Nullable IBinder activityToken, @Nullable Configuration overrideConfig)",
     "returnType" : "boolean",
     "comment" : "\n     * Check if activity resources have same override config as the provided on.\n     * @param activityToken The Activity that resources should be associated with.\n     * @param overrideConfig The override configuration to be checked for equality with.\n     * @return true if activity resources override config matches the provided one or they are both\n     *         null, false otherwise.\n     ",
     "links" : [ ]
@@ -185,7 +251,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private Resources createResourcesForActivityLocked(@NonNull IBinder activityToken, @NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)",
+    "name" : "private Resources createResourcesForActivityLocked(@NonNull IBinder activityToken, @NonNull Configuration initialOverrideConfig, @Nullable Integer overrideDisplayId, @NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)",
     "returnType" : "Resources",
     "comment" : "",
     "links" : [ ]
@@ -195,14 +261,19 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public Resources createBaseTokenResources(@NonNull IBinder token, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] overlayDirs, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)",
+    "name" : "public Resources createBaseTokenResources(@NonNull IBinder token, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] legacyOverlayDirs, @Nullable String[] overlayPaths, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)",
     "returnType" : "Resources",
-    "comment" : "\n     * Creates base resources for a binder token. Calls to\n     * {@link #getResources(IBinder, String, String[], String[], String[], int, Configuration,\n     * CompatibilityInfo, ClassLoader, List)} with the same binder token will have their override\n     * configurations merged with the one specified here.\n     *\n     * @param token Represents an {@link Activity} or {@link WindowContext}.\n     * @param resDir The base resource path. Can be null (only framework resources will be loaded).\n     * @param splitResDirs An array of split resource paths. Can be null.\n     * @param overlayDirs An array of overlay paths. Can be null.\n     * @param libDirs An array of resource library paths. Can be null.\n     * @param displayId The ID of the display for which to create the resources.\n     * @param overrideConfig The configuration to apply on top of the base configuration. Can be\n     *                       {@code null}. This provides the base override for this token.\n     * @param compatInfo The compatibility settings to use. Cannot be null. A default to use is\n     *                   {@link CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO}.\n     * @param classLoader The class loader to use when inflating Resources. If null, the\n     *                    {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return a Resources object from which to access resources.\n     ",
-    "links" : [ "android.app.WindowContext", "android.content.res.CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO", "#getSystemClassLoader()", "#getResources(IBinder", "android.app.Activity" ]
+    "comment" : "\n     * Creates base resources for a binder token. Calls to\n     *\n     * {@link #getResources(IBinder, String, String[], String[], String[], String[], Integer,\n     * Configuration, CompatibilityInfo, ClassLoader, List)} with the same binder token will have\n     * their override configurations merged with the one specified here.\n     *\n     * @param token Represents an {@link Activity} or {@link WindowContext}.\n     * @param resDir The base resource path. Can be null (only framework resources will be loaded).\n     * @param splitResDirs An array of split resource paths. Can be null.\n     * @param legacyOverlayDirs An array of overlay APK paths. Can be null.\n     * @param overlayPaths An array of overlay APK and non-APK paths. Can be null.\n     * @param libDirs An array of resource library paths. Can be null.\n     * @param displayId The ID of the display for which to create the resources.\n     * @param overrideConfig The configuration to apply on top of the base configuration. Can be\n     *                       {@code null}. This provides the base override for this token.\n     * @param compatInfo The compatibility settings to use. Cannot be null. A default to use is\n     *                   {@link CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO}.\n     * @param classLoader The class loader to use when inflating Resources. If null, the\n     *                    {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return a Resources object from which to access resources.\n     ",
+    "links" : [ "android.content.res.CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO", "#getSystemClassLoader()", "#getResources(IBinder", "android.window.WindowContext", "android.app.Activity" ]
   }, {
-    "name" : "private void rebaseKeyForActivity(IBinder activityToken, ResourcesKey key)",
+    "name" : "private void rebaseKeyForActivity(IBinder activityToken, ResourcesKey key, boolean overridesActivityDisplay)",
     "returnType" : "void",
-    "comment" : "\n     * Rebases a key's override config on top of the Activity's base override.\n     ",
+    "comment" : "\n     * Rebases a key's override config on top of the Activity's base override.\n     *\n     * @param activityToken the token the supplied {@code key} is derived from.\n     * @param key the key to rebase\n     * @param overridesActivityDisplay whether this key is overriding the display from the token\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void rebaseKeyForDisplay(ResourcesKey key, int overrideDisplay)",
+    "returnType" : "void",
+    "comment" : "\n     * Rebases a key's override config with display metrics of the {@code overrideDisplay} paired\n     * with the {code displayAdjustments}.\n     *\n     * @see #applyDisplayMetricsToConfiguration(DisplayMetrics, Configuration)\n     ",
     "links" : [ ]
   }, {
     "name" : "private static void cleanupReferences(ArrayList<WeakReference<T>> references, ReferenceQueue<T> referenceQueue)",
@@ -210,37 +281,52 @@
     "comment" : "\n     * Check WeakReferences and remove any dead references so they don't pile up.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private Resources createResources(@Nullable IBinder activityToken, @NonNull ResourcesKey key, @NonNull ClassLoader classLoader)",
-    "returnType" : "Resources",
-    "comment" : "\n     * Creates a Resources object set with a ResourcesImpl object matching the given key.\n     *\n     * @param activityToken The Activity this Resources object should be associated with.\n     * @param key The key describing the parameters of the ResourcesImpl object.\n     * @param classLoader The classloader to use for the Resources object.\n     *                    If null, {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return A Resources object that gets updated when\n     *         {@link #applyConfigurationToResourcesLocked(Configuration, CompatibilityInfo)}\n     *         is called.\n     ",
-    "links" : [ "#getSystemClassLoader()", "#applyConfigurationToResourcesLocked(Configuration" ]
+    "name" : "private static void cleanupReferences(ArrayList<C> referenceContainers, ReferenceQueue<T> referenceQueue, Function<C, WeakReference<T>> unwrappingFunction)",
+    "returnType" : "void",
+    "comment" : "\n     * Check WeakReferences and remove any dead references so they don't pile up.\n     ",
+    "links" : [ ]
   }, {
-    "name" : "public Resources getResources(@Nullable IBinder activityToken, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] overlayDirs, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)",
+    "name" : "private ApkAssetsSupplier createApkAssetsSupplierNotLocked(@NonNull ResourcesKey key)",
+    "returnType" : "ApkAssetsSupplier",
+    "comment" : "\n     * Creates an {@link ApkAssetsSupplier} and loads all the ApkAssets required by the {@param key}\n     * into the supplier. This should be done while the lock is not held to prevent performing I/O\n     * while holding the lock.\n     ",
+    "links" : [ "ApkAssetsSupplier" ]
+  }, {
+    "name" : "private Resources createResources(@NonNull ResourcesKey key, @NonNull ClassLoader classLoader, @Nullable ApkAssetsSupplier apkSupplier)",
     "returnType" : "Resources",
-    "comment" : "\n     * Gets or creates a new Resources object associated with the IBinder token. References returned\n     * by this method live as long as the Activity, meaning they can be cached and used by the\n     * Activity even after a configuration change. If any other parameter is changed\n     * (resDir, splitResDirs, overrideConfig) for a given Activity, the same Resources object\n     * is updated and handed back to the caller. However, changing the class loader will result in a\n     * new Resources object.\n     * <p/>\n     * If activityToken is null, a cached Resources object will be returned if it matches the\n     * input parameters. Otherwise a new Resources object that satisfies these parameters is\n     * returned.\n     *\n     * @param activityToken Represents an Activity. If null, global resources are assumed.\n     * @param resDir The base resource path. Can be null (only framework resources will be loaded).\n     * @param splitResDirs An array of split resource paths. Can be null.\n     * @param overlayDirs An array of overlay paths. Can be null.\n     * @param libDirs An array of resource library paths. Can be null.\n     * @param displayId The ID of the display for which to create the resources.\n     * @param overrideConfig The configuration to apply on top of the base configuration. Can be\n     * null. Mostly used with Activities that are in multi-window which may override width and\n     * height properties from the base config.\n     * @param compatInfo The compatibility settings to use. Cannot be null. A default to use is\n     * {@link CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO}.\n     * @param classLoader The class loader to use when inflating Resources. If null, the\n     * {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return a Resources object from which to access resources.\n     ",
+    "comment" : "\n     * Creates a Resources object set with a ResourcesImpl object matching the given key.\n     *\n     * @param key The key describing the parameters of the ResourcesImpl object.\n     * @param classLoader The classloader to use for the Resources object.\n     *                    If null, {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return A Resources object that gets updated when\n     *         {@link #applyConfigurationToResources(Configuration, CompatibilityInfo)}\n     *         is called.\n     ",
+    "links" : [ "#getSystemClassLoader()", "#applyConfigurationToResources(Configuration" ]
+  }, {
+    "name" : "private Resources createResourcesForActivity(@NonNull IBinder activityToken, @NonNull ResourcesKey key, @NonNull Configuration initialOverrideConfig, @Nullable Integer overrideDisplayId, @NonNull ClassLoader classLoader, @Nullable ApkAssetsSupplier apkSupplier)",
+    "returnType" : "Resources",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Resources getResources(@Nullable IBinder activityToken, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] legacyOverlayDirs, @Nullable String[] overlayPaths, @Nullable String[] libDirs, @Nullable Integer overrideDisplayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)",
+    "returnType" : "Resources",
+    "comment" : "\n     * Gets or creates a new Resources object associated with the IBinder token. References returned\n     * by this method live as long as the Activity, meaning they can be cached and used by the\n     * Activity even after a configuration change. If any other parameter is changed\n     * (resDir, splitResDirs, overrideConfig) for a given Activity, the same Resources object\n     * is updated and handed back to the caller. However, changing the class loader will result in a\n     * new Resources object.\n     * <p/>\n     * If activityToken is null, a cached Resources object will be returned if it matches the\n     * input parameters. Otherwise a new Resources object that satisfies these parameters is\n     * returned.\n     *\n     * @param activityToken Represents an Activity. If null, global resources are assumed.\n     * @param resDir The base resource path. Can be null (only framework resources will be loaded).\n     * @param splitResDirs An array of split resource paths. Can be null.\n     * @param legacyOverlayDirs An array of overlay APK paths. Can be null.\n     * @param overlayPaths An array of overlay APK and non-APK paths. Can be null.\n     * @param libDirs An array of resource library paths. Can be null.\n     * @param overrideDisplayId The ID of the display for which the returned Resources should be\n     * based. This will cause display-based configuration properties to override those of the base\n     * Resources for the {@code activityToken}, or the global configuration if {@code activityToken}\n     * is null.\n     * @param overrideConfig The configuration to apply on top of the base configuration. Can be\n     * null. Mostly used with Activities that are in multi-window which may override width and\n     * height properties from the base config.\n     * @param compatInfo The compatibility settings to use. Cannot be null. A default to use is\n     * {@link CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO}.\n     * @param classLoader The class loader to use when inflating Resources. If null, the\n     * {@link ClassLoader#getSystemClassLoader()} is used.\n     * @return a Resources object from which to access resources.\n     ",
     "links" : [ "android.content.res.CompatibilityInfo#DEFAULT_COMPATIBILITY_INFO", "#getSystemClassLoader()" ]
   }, {
-    "name" : "public void updateResourcesForActivity(@NonNull IBinder activityToken, @Nullable Configuration overrideConfig, int displayId, boolean movedToDifferentDisplay)",
+    "name" : "public void updateResourcesForActivity(@NonNull IBinder activityToken, @Nullable Configuration overrideConfig, int displayId)",
     "returnType" : "void",
-    "comment" : "\n     * Updates an Activity's Resources object with overrideConfig. The Resources object\n     * that was previously returned by {@link #getResources(IBinder, String, String[], String[],\n     * String[], int, Configuration, CompatibilityInfo, ClassLoader, List)} is still valid and will\n     * have the updated configuration.\n     *\n     * @param activityToken The Activity token.\n     * @param overrideConfig The configuration override to update.\n     * @param displayId Id of the display where activity currently resides.\n     * @param movedToDifferentDisplay Indicates if the activity was moved to different display.\n     ",
+    "comment" : "\n     * Updates an Activity's Resources object with overrideConfig. The Resources object\n     * that was previously returned by {@link #getResources(IBinder, String, String[], String[],\n     * String[], String[], Integer, Configuration, CompatibilityInfo, ClassLoader, List)} is still\n     * valid and will have the updated configuration.\n     *\n     * @param activityToken The Activity token.\n     * @param overrideConfig The configuration override to update.\n     * @param displayId Id of the display where activity currently resides.\n     ",
     "links" : [ "#getResources(IBinder" ]
   }, {
-    "name" : "private ResourcesKey rebaseActivityOverrideConfig(@NonNull Resources resources, @NonNull Configuration oldOverrideConfig, @Nullable Configuration newOverrideConfig, int displayId)",
+    "name" : "private ResourcesKey rebaseActivityOverrideConfig(@NonNull ActivityResource activityResource, @Nullable Configuration newOverrideConfig, int displayId)",
     "returnType" : "ResourcesKey",
     "comment" : "\n     * Rebases an updated override config over any old override config and returns the new one\n     * that an Activity's Resources should be set to.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private void updateActivityResources(Resources resources, ResourcesKey newKey, boolean hasLoader)",
+    "name" : "public void appendPendingAppInfoUpdate(@NonNull String[] oldSourceDirs, @NonNull ApplicationInfo appInfo)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void applyAllPendingAppInfoUpdates()",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
     "name" : "public final boolean applyConfigurationToResources(@NonNull Configuration config, @Nullable CompatibilityInfo compat)",
-    "returnType" : "boolean",
-    "comment" : "",
-    "links" : [ ]
-  }, {
-    "name" : "public final boolean applyConfigurationToResourcesLocked(@NonNull Configuration config, @Nullable CompatibilityInfo compat)",
     "returnType" : "boolean",
     "comment" : "",
     "links" : [ ]
@@ -260,21 +346,51 @@
     "comment" : "\n     * Appends the library asset paths to any ResourcesImpl object that contains the main\n     * assetPath.\n     * @param assetPath The main asset path for which to add the library asset path.\n     * @param libAssets The library asset paths to add.\n     ",
     "links" : [ ]
   }, {
-    "name" : " final void applyNewResourceDirsLocked(@NonNull final ApplicationInfo appInfo, @Nullable final String[] oldPaths)",
+    "name" : "private void appendLibAssetsLocked(String[] libAssets)",
     "returnType" : "void",
-    "comment" : " TODO(adamlesinski): Make this accept more than just overlay directories.",
+    "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "private void applyNewResourceDirsLocked(@Nullable final String[] oldSourceDirs, @NonNull final ApplicationInfo appInfo)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String[] combinedOverlayPaths(@Nullable String[] resourceDirs, @Nullable String[] overlayPaths)",
+    "returnType" : "String[]",
+    "comment" : "\n     * Creates an array with the contents of {@param overlayPaths} and the unique elements of\n     * {@param resourceDirs}.\n     *\n     * {@link ApplicationInfo#resourceDirs} only contains paths of overlays APKs.\n     * {@link ApplicationInfo#overlayPaths} was created to contain paths of overlay of varying file\n     * formats. It also contains the contents of {@code resourceDirs} because the order of loaded\n     * overlays matter. In case {@code resourceDirs} contains overlay APK paths that are not present\n     * in overlayPaths (perhaps an app inserted an additional overlay path into a\n     * {@code resourceDirs}), this method is used to combine the contents of {@code resourceDirs}\n     * that do not exist in {@code overlayPaths}} and {@code overlayPaths}}.\n     ",
+    "links" : [ "android.content.pm.ApplicationInfo#overlayPaths", "android.content.pm.ApplicationInfo#resourceDirs" ]
   }, {
     "name" : "private void redirectResourcesToNewImplLocked(@NonNull final ArrayMap<ResourcesImpl, ResourcesKey> updatedResourceKeys)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "public boolean overrideTokenDisplayAdjustments(IBinder token, @Nullable Consumer<DisplayAdjustments> override)",
-    "returnType" : "boolean",
-    "comment" : "\n     * Overrides the display adjustments of all resources which are associated with the given token.\n     *\n     * @param token The token that owns the resources.\n     * @param override The operation to override the existing display adjustments. If it is null,\n     *                 the override adjustments will be cleared.\n     * @return {@code true} if the override takes effect.\n     ",
+    "name" : "private void redirectAllResourcesToNewImplLocked(@NonNull final ArrayMap<ResourcesImpl, ResourcesKey> updatedResourceKeys)",
+    "returnType" : "void",
+    "comment" : " if it needs a shared library asset paths update.",
+    "links" : [ ]
+  }, {
+    "name" : "public LocaleConfig getLocaleConfig()",
+    "returnType" : "LocaleConfig",
+    "comment" : "\n     * Returns the LocaleConfig current set\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLocaleConfig(LocaleConfig localeConfig)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the LocaleConfig of the app\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ArrayMap<String, SharedLibraryAssets> getSharedLibAssetsMap()",
+    "returnType" : "ArrayMap<String, SharedLibraryAssets>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerAllResourcesReference(@NonNull Resources resources)",
+    "returnType" : "void",
+    "comment" : "\n     * Add all resources references to the list which is designed to help to append shared library\n     * asset paths. This is invoked in Resources constructor to include all Resources instances.\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "DEBUG", "sResourcesManager", "mResCompatibilityInfo", "mResConfiguration", "mResourceImpls", "mResourceReferences", "mResourcesReferencesQueue", "ENABLE_APK_ASSETS_CACHE", "mLoadedApkAssets", "mCachedApkAssets", "mActivityResourceReferences", "mAdjustedDisplays", "mUpdateCallbacks" ],
-  "methodNames" : [ "public static ResourcesManager getInstance()", "public void invalidatePath(String path)", "public Configuration getConfiguration()", " DisplayMetrics getDisplayMetrics()", "protected DisplayMetrics getDisplayMetrics(int displayId, DisplayAdjustments da)", "private static void applyNonDefaultDisplayMetricsToConfiguration(@NonNull DisplayMetrics dm, @NonNull Configuration config)", "public boolean applyCompatConfigurationLocked(int displayDensity, @NonNull Configuration compatConfiguration)", "private Display getAdjustedDisplay(final int displayId, @Nullable DisplayAdjustments displayAdjustments)", "public Display getAdjustedDisplay(final int displayId, Resources resources)", "private static String overlayPathToIdmapPath(String path)", "private ApkAssets loadApkAssets(String path, boolean sharedLib, boolean overlay) throws IOException", "protected AssetManager createAssetManager(@NonNull final ResourcesKey key)", "private static int countLiveReferences(Collection<WeakReference<T>> collection)", "public void dump(String prefix, PrintWriter printWriter)", "private Configuration generateConfig(@NonNull ResourcesKey key, @NonNull DisplayMetrics dm)", "private ResourcesImpl createResourcesImpl(@NonNull ResourcesKey key)", "private ResourcesImpl findResourcesImplForKeyLocked(@NonNull ResourcesKey key)", "private ResourcesImpl findOrCreateResourcesImplForKeyLocked(@NonNull ResourcesKey key)", "private ResourcesKey findKeyForResourceImplLocked(@NonNull ResourcesImpl resourceImpl)", " boolean isSameResourcesOverrideConfig(@Nullable IBinder activityToken, @Nullable Configuration overrideConfig)", "private ActivityResources getOrCreateActivityResourcesStructLocked(@NonNull IBinder activityToken)", "private Resources findResourcesForActivityLocked(@NonNull IBinder targetActivityToken, @NonNull ResourcesKey targetKey, @NonNull ClassLoader targetClassLoader)", "private Resources createResourcesForActivityLocked(@NonNull IBinder activityToken, @NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)", "private Resources createResourcesLocked(@NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)", "public Resources createBaseTokenResources(@NonNull IBinder token, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] overlayDirs, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)", "private void rebaseKeyForActivity(IBinder activityToken, ResourcesKey key)", "private static void cleanupReferences(ArrayList<WeakReference<T>> references, ReferenceQueue<T> referenceQueue)", "private Resources createResources(@Nullable IBinder activityToken, @NonNull ResourcesKey key, @NonNull ClassLoader classLoader)", "public Resources getResources(@Nullable IBinder activityToken, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] overlayDirs, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)", "public void updateResourcesForActivity(@NonNull IBinder activityToken, @Nullable Configuration overrideConfig, int displayId, boolean movedToDifferentDisplay)", "private ResourcesKey rebaseActivityOverrideConfig(@NonNull Resources resources, @NonNull Configuration oldOverrideConfig, @Nullable Configuration newOverrideConfig, int displayId)", "private void updateActivityResources(Resources resources, ResourcesKey newKey, boolean hasLoader)", "public final boolean applyConfigurationToResources(@NonNull Configuration config, @Nullable CompatibilityInfo compat)", "public final boolean applyConfigurationToResourcesLocked(@NonNull Configuration config, @Nullable CompatibilityInfo compat)", "private void applyConfigurationToResourcesLocked(@NonNull Configuration config, @Nullable CompatibilityInfo compat, Configuration tmpConfig, ResourcesKey key, ResourcesImpl resourcesImpl)", "public void appendLibAssetForMainAssetPath(String assetPath, String libAsset)", "public void appendLibAssetsForMainAssetPath(String assetPath, String[] libAssets)", " final void applyNewResourceDirsLocked(@NonNull final ApplicationInfo appInfo, @Nullable final String[] oldPaths)", "private void redirectResourcesToNewImplLocked(@NonNull final ArrayMap<ResourcesImpl, ResourcesKey> updatedResourceKeys)", "public boolean overrideTokenDisplayAdjustments(IBinder token, @Nullable Consumer<DisplayAdjustments> override)" ]
+  "methodNames" : [ "public void registerResourcePaths(@NonNull String uniqueId, @NonNull ApplicationInfo appInfo)", "public static ResourcesManager setInstance(ResourcesManager resourcesManager)", "public static ResourcesManager getInstance()", "public void invalidatePath(String path)", "public Configuration getConfiguration()", "public DisplayMetrics getDisplayMetrics()", "protected DisplayMetrics getDisplayMetrics(int displayId, DisplayAdjustments da)", "private DisplayMetrics getDisplayMetrics(Configuration config)", "private static void applyDisplayMetricsToConfiguration(@NonNull DisplayMetrics dm, @NonNull Configuration config)", "public boolean applyCompatConfiguration(int displayDensity, @NonNull Configuration compatConfiguration)", "public Display getAdjustedDisplay(final int displayId, Resources resources)", "public void initializeApplicationPaths(@NonNull String sourceDir, @Nullable String[] splitDirs)", "private void addApplicationPathsLocked(@NonNull String sourceDir, @Nullable String[] splitDirs)", "private static String overlayPathToIdmapPath(String path)", "private ApkAssets loadApkAssets(@NonNull final ApkKey key) throws IOException", "private static ArrayList<ApkKey> extractApkKeys(@NonNull final ResourcesKey key)", "protected AssetManager createAssetManager(@NonNull final ResourcesKey key)", "protected AssetManager createAssetManager(@NonNull final ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)", "private static int countLiveReferences(Collection<WeakReference<T>> collection)", "public void dump(String prefix, PrintWriter printWriter)", "private Configuration generateConfig(@NonNull ResourcesKey key)", "private int generateDisplayId(@NonNull ResourcesKey key)", "private ResourcesImpl createResourcesImpl(@NonNull ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)", "private ResourcesImpl findResourcesImplForKeyLocked(@NonNull ResourcesKey key)", "private ResourcesImpl findOrCreateResourcesImplForKeyLocked(@NonNull ResourcesKey key)", "private ResourcesImpl findOrCreateResourcesImplForKeyLocked(@NonNull ResourcesKey key, @Nullable ApkAssetsSupplier apkSupplier)", "private ResourcesKey findKeyForResourceImplLocked(@NonNull ResourcesImpl resourceImpl)", "public boolean isSameResourcesOverrideConfig(@Nullable IBinder activityToken, @Nullable Configuration overrideConfig)", "private ActivityResources getOrCreateActivityResourcesStructLocked(@NonNull IBinder activityToken)", "private Resources findResourcesForActivityLocked(@NonNull IBinder targetActivityToken, @NonNull ResourcesKey targetKey, @NonNull ClassLoader targetClassLoader)", "private Resources createResourcesForActivityLocked(@NonNull IBinder activityToken, @NonNull Configuration initialOverrideConfig, @Nullable Integer overrideDisplayId, @NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)", "private Resources createResourcesLocked(@NonNull ClassLoader classLoader, @NonNull ResourcesImpl impl, @NonNull CompatibilityInfo compatInfo)", "public Resources createBaseTokenResources(@NonNull IBinder token, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] legacyOverlayDirs, @Nullable String[] overlayPaths, @Nullable String[] libDirs, int displayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)", "private void rebaseKeyForActivity(IBinder activityToken, ResourcesKey key, boolean overridesActivityDisplay)", "private void rebaseKeyForDisplay(ResourcesKey key, int overrideDisplay)", "private static void cleanupReferences(ArrayList<WeakReference<T>> references, ReferenceQueue<T> referenceQueue)", "private static void cleanupReferences(ArrayList<C> referenceContainers, ReferenceQueue<T> referenceQueue, Function<C, WeakReference<T>> unwrappingFunction)", "private ApkAssetsSupplier createApkAssetsSupplierNotLocked(@NonNull ResourcesKey key)", "private Resources createResources(@NonNull ResourcesKey key, @NonNull ClassLoader classLoader, @Nullable ApkAssetsSupplier apkSupplier)", "private Resources createResourcesForActivity(@NonNull IBinder activityToken, @NonNull ResourcesKey key, @NonNull Configuration initialOverrideConfig, @Nullable Integer overrideDisplayId, @NonNull ClassLoader classLoader, @Nullable ApkAssetsSupplier apkSupplier)", "public Resources getResources(@Nullable IBinder activityToken, @Nullable String resDir, @Nullable String[] splitResDirs, @Nullable String[] legacyOverlayDirs, @Nullable String[] overlayPaths, @Nullable String[] libDirs, @Nullable Integer overrideDisplayId, @Nullable Configuration overrideConfig, @NonNull CompatibilityInfo compatInfo, @Nullable ClassLoader classLoader, @Nullable List<ResourcesLoader> loaders)", "public void updateResourcesForActivity(@NonNull IBinder activityToken, @Nullable Configuration overrideConfig, int displayId)", "private ResourcesKey rebaseActivityOverrideConfig(@NonNull ActivityResource activityResource, @Nullable Configuration newOverrideConfig, int displayId)", "public void appendPendingAppInfoUpdate(@NonNull String[] oldSourceDirs, @NonNull ApplicationInfo appInfo)", "public final void applyAllPendingAppInfoUpdates()", "public final boolean applyConfigurationToResources(@NonNull Configuration config, @Nullable CompatibilityInfo compat)", "private void applyConfigurationToResourcesLocked(@NonNull Configuration config, @Nullable CompatibilityInfo compat, Configuration tmpConfig, ResourcesKey key, ResourcesImpl resourcesImpl)", "public void appendLibAssetForMainAssetPath(String assetPath, String libAsset)", "public void appendLibAssetsForMainAssetPath(String assetPath, String[] libAssets)", "private void appendLibAssetsLocked(String[] libAssets)", "private void applyNewResourceDirsLocked(@Nullable final String[] oldSourceDirs, @NonNull final ApplicationInfo appInfo)", "private static String[] combinedOverlayPaths(@Nullable String[] resourceDirs, @Nullable String[] overlayPaths)", "private void redirectResourcesToNewImplLocked(@NonNull final ArrayMap<ResourcesImpl, ResourcesKey> updatedResourceKeys)", "private void redirectAllResourcesToNewImplLocked(@NonNull final ArrayMap<ResourcesImpl, ResourcesKey> updatedResourceKeys)", "public LocaleConfig getLocaleConfig()", "public void setLocaleConfig(LocaleConfig localeConfig)", "public ArrayMap<String, SharedLibraryAssets> getSharedLibAssetsMap()", "public void registerAllResourcesReference(@NonNull Resources resources)" ],
+  "variableNames" : [ "TAG", "DEBUG", "sResourcesManager", "mLock", "mResCompatibilityInfo", "mResConfiguration", "mResDisplayId", "mPendingAppInfoUpdates", "mResourceImpls", "mResourceReferences", "mResourcesReferencesQueue", "mAllResourceReferences", "mAllResourceReferencesQueue", "mLocaleConfig", "mSharedLibAssetsMap", "mCachedApkAssets", "mActivityResourceReferences", "mUpdateCallbacks", "mApplicationOwnedApks" ]
 }

@@ -1,0 +1,151 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/speech/tts/TextToSpeechService.java",
+  "packageName" : "android.speech.tts",
+  "className" : "TextToSpeechService",
+  "comment" : "\n * Abstract base class for TTS engine implementations. The following methods\n * need to be implemented:\n * <ul>\n * <li>{@link #onIsLanguageAvailable}</li>\n * <li>{@link #onLoadLanguage}</li>\n * <li>{@link #onGetLanguage}</li>\n * <li>{@link #onSynthesizeText}</li>\n * <li>{@link #onStop}</li>\n * </ul>\n * The first three deal primarily with language management, and are used to\n * query the engine for it's support for a given language and indicate to it\n * that requests in a given language are imminent.\n *\n * {@link #onSynthesizeText} is central to the engine implementation. The\n * implementation should synthesize text as per the request parameters and\n * return synthesized data via the supplied callback. This class and its helpers\n * will then consume that data, which might mean queuing it for playback or writing\n * it to a file or similar. All calls to this method will be on a single thread,\n * which will be different from the main thread of the service. Synthesis must be\n * synchronous which means the engine must NOT hold on to the callback or call any\n * methods on it after the method returns.\n *\n * {@link #onStop} tells the engine that it should stop\n * all ongoing synthesis, if any. Any pending data from the current synthesis\n * will be discarded.\n *\n * {@link #onGetLanguage} is not required as of JELLYBEAN_MR2 (API 18) and later, it is only\n * called on earlier versions of Android.\n *\n * API Level 20 adds support for Voice objects. Voices are an abstraction that allow the TTS\n * service to expose multiple backends for a single locale. Each one of them can have a different\n * features set. In order to fully take advantage of voices, an engine should implement\n * the following methods:\n * <ul>\n * <li>{@link #onGetVoices()}</li>\n * <li>{@link #onIsValidVoiceName(String)}</li>\n * <li>{@link #onLoadVoice(String)}</li>\n * <li>{@link #onGetDefaultVoiceNameFor(String, String, String)}</li>\n * </ul>\n * The first three methods are siblings of the {@link #onGetLanguage},\n * {@link #onIsLanguageAvailable} and {@link #onLoadLanguage} methods. The last one,\n * {@link #onGetDefaultVoiceNameFor(String, String, String)} is a link between locale and voice\n * based methods. Since API level 21 {@link TextToSpeech#setLanguage} is implemented by\n * calling {@link TextToSpeech#setVoice} with the voice returned by\n * {@link #onGetDefaultVoiceNameFor(String, String, String)}.\n *\n * If the client uses a voice instead of a locale, {@link SynthesisRequest} will contain the\n * requested voice name.\n *\n * The default implementations of Voice-related methods implement them using the\n * pre-existing locale-based implementation.\n ",
+  "links" : [ "#onGetLanguage", "#onLoadVoice(String)", "android.speech.tts.TextToSpeech#setVoice", "#onSynthesizeText", "#onGetDefaultVoiceNameFor(String", "android.speech.tts.TextToSpeech#setLanguage", "#onIsLanguageAvailable", "#onLoadLanguage", "#onIsValidVoiceName(String)", "#onStop", "android.speech.tts.SynthesisRequest", "#onGetVoices()" ],
+  "variables" : [ {
+    "name" : "DBG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SYNTH_THREAD_NAME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSynthHandler",
+    "type" : "SynthHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAudioPlaybackHandler",
+    "type" : "AudioPlaybackHandler",
+    "comment" : " to file requests, which occur on the synthesis thread.",
+    "links" : [ ]
+  }, {
+    "name" : "mEngineHelper",
+    "type" : "TtsEngines",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallbacks",
+    "type" : "CallbackMap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPackageName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mVoicesInfoLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBinder",
+    "type" : "ITextToSpeechService.Stub",
+    "comment" : " they can be used as message objects (which are tested for equality using ==).",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void onCreate()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDestroy()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int onIsLanguageAvailable(String lang, String country, String variant)",
+    "returnType" : "int",
+    "comment" : "\n     * Checks whether the engine supports a given language.\n     *\n     * Can be called on multiple threads.\n     *\n     * Its return values HAVE to be consistent with onLoadLanguage.\n     *\n     * @param lang ISO-3 language code.\n     * @param country ISO-3 country code. May be empty or null.\n     * @param variant Language variant. May be empty or null.\n     * @return Code indicating the support status for the locale.\n     *         One of {@link TextToSpeech#LANG_AVAILABLE},\n     *         {@link TextToSpeech#LANG_COUNTRY_AVAILABLE},\n     *         {@link TextToSpeech#LANG_COUNTRY_VAR_AVAILABLE},\n     *         {@link TextToSpeech#LANG_MISSING_DATA}\n     *         {@link TextToSpeech#LANG_NOT_SUPPORTED}.\n     ",
+    "links" : [ "android.speech.tts.TextToSpeech#LANG_COUNTRY_VAR_AVAILABLE", "android.speech.tts.TextToSpeech#LANG_COUNTRY_AVAILABLE", "android.speech.tts.TextToSpeech#LANG_MISSING_DATA", "android.speech.tts.TextToSpeech#LANG_NOT_SUPPORTED", "android.speech.tts.TextToSpeech#LANG_AVAILABLE" ]
+  }, {
+    "name" : "protected abstract String[] onGetLanguage()",
+    "returnType" : "String[]",
+    "comment" : "\n     * Returns the language, country and variant currently being used by the TTS engine.\n     *\n     * This method will be called only on Android 4.2 and before (API <= 17). In later versions\n     * this method is not called by the Android TTS framework.\n     *\n     * Can be called on multiple threads.\n     *\n     * @return A 3-element array, containing language (ISO 3-letter code),\n     *         country (ISO 3-letter code) and variant used by the engine.\n     *         The country and variant may be {@code \"\"}. If country is empty, then variant must\n     *         be empty too.\n     * @see Locale#getISO3Language()\n     * @see Locale#getISO3Country()\n     * @see Locale#getVariant()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int onLoadLanguage(String lang, String country, String variant)",
+    "returnType" : "int",
+    "comment" : "\n     * Notifies the engine that it should load a speech synthesis language. There is no guarantee\n     * that this method is always called before the language is used for synthesis. It is merely\n     * a hint to the engine that it will probably get some synthesis requests for this language\n     * at some point in the future.\n     *\n     * Can be called on multiple threads.\n     * In <= Android 4.2 (<= API 17) can be called on main and service binder threads.\n     * In > Android 4.2 (> API 17) can be called on main and synthesis threads.\n     *\n     * @param lang ISO-3 language code.\n     * @param country ISO-3 country code. May be empty or null.\n     * @param variant Language variant. May be empty or null.\n     * @return Code indicating the support status for the locale.\n     *         One of {@link TextToSpeech#LANG_AVAILABLE},\n     *         {@link TextToSpeech#LANG_COUNTRY_AVAILABLE},\n     *         {@link TextToSpeech#LANG_COUNTRY_VAR_AVAILABLE},\n     *         {@link TextToSpeech#LANG_MISSING_DATA}\n     *         {@link TextToSpeech#LANG_NOT_SUPPORTED}.\n     ",
+    "links" : [ "android.speech.tts.TextToSpeech#LANG_COUNTRY_VAR_AVAILABLE", "android.speech.tts.TextToSpeech#LANG_COUNTRY_AVAILABLE", "android.speech.tts.TextToSpeech#LANG_MISSING_DATA", "android.speech.tts.TextToSpeech#LANG_NOT_SUPPORTED", "android.speech.tts.TextToSpeech#LANG_AVAILABLE" ]
+  }, {
+    "name" : "protected abstract void onStop()",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies the service that it should stop any in-progress speech synthesis.\n     * This method can be called even if no speech synthesis is currently in progress.\n     *\n     * Can be called on multiple threads, but not on the synthesis thread.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void onSynthesizeText(SynthesisRequest request, SynthesisCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Tells the service to synthesize speech from the given text. This method should block until\n     * the synthesis is finished. Called on the synthesis thread.\n     *\n     * @param request The synthesis request.\n     * @param callback The callback that the engine must use to make data available for playback or\n     *     for writing to a file.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Set<String> onGetFeaturesForLanguage(String lang, String country, String variant)",
+    "returnType" : "Set<String>",
+    "comment" : "\n     * Queries the service for a set of features supported for a given language.\n     *\n     * Can be called on multiple threads.\n     *\n     * @param lang ISO-3 language code.\n     * @param country ISO-3 country code. May be empty or null.\n     * @param variant Language variant. May be empty or null.\n     * @return A list of features supported for the given language.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int getExpectedLanguageAvailableStatus(Locale locale)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public List<Voice> onGetVoices()",
+    "returnType" : "List<Voice>",
+    "comment" : "\n     * Queries the service for a set of supported voices.\n     *\n     * Can be called on multiple threads.\n     *\n     * The default implementation tries to enumerate all available locales, pass them to\n     * {@link #onIsLanguageAvailable(String, String, String)} and create Voice instances (using\n     * the locale's BCP-47 language tag as the voice name) for the ones that are supported.\n     * Note, that this implementation is suitable only for engines that don't have multiple voices\n     * for a single locale. Also, this implementation won't work with Locales not listed in the\n     * set returned by the {@link Locale#getAvailableLocales()} method.\n     *\n     * @return A list of voices supported.\n     ",
+    "links" : [ "java.util.Locale#getAvailableLocales()", "#onIsLanguageAvailable(String" ]
+  }, {
+    "name" : "public String onGetDefaultVoiceNameFor(String lang, String country, String variant)",
+    "returnType" : "String",
+    "comment" : "\n     * Return a name of the default voice for a given locale.\n     *\n     * This method provides a mapping between locales and available voices. This method is\n     * used in {@link TextToSpeech#setLanguage}, which calls this method and then calls\n     * {@link TextToSpeech#setVoice} with the voice returned by this method.\n     *\n     * Also, it's used by {@link TextToSpeech#getDefaultVoice()} to find a default voice for\n     * the default locale.\n     *\n     * @param lang ISO-3 language code.\n     * @param country ISO-3 country code. May be empty or null.\n     * @param variant Language variant. May be empty or null.\n\n     * @return A name of the default voice for a given locale.\n     ",
+    "links" : [ "android.speech.tts.TextToSpeech#setVoice", "android.speech.tts.TextToSpeech#setLanguage", "android.speech.tts.TextToSpeech#getDefaultVoice()" ]
+  }, {
+    "name" : "public int onLoadVoice(String voiceName)",
+    "returnType" : "int",
+    "comment" : "\n     * Notifies the engine that it should load a speech synthesis voice. There is no guarantee\n     * that this method is always called before the voice is used for synthesis. It is merely\n     * a hint to the engine that it will probably get some synthesis requests for this voice\n     * at some point in the future.\n     *\n     * Will be called only on synthesis thread.\n     *\n     * The default implementation creates a Locale from the voice name (by interpreting the name as\n     * a BCP-47 tag for the locale), and passes it to\n     * {@link #onLoadLanguage(String, String, String)}.\n     *\n     * @param voiceName Name of the voice.\n     * @return {@link TextToSpeech#ERROR} or {@link TextToSpeech#SUCCESS}.\n     ",
+    "links" : [ "android.speech.tts.TextToSpeech#SUCCESS", "#onLoadLanguage(String", "android.speech.tts.TextToSpeech#ERROR" ]
+  }, {
+    "name" : "public int onIsValidVoiceName(String voiceName)",
+    "returnType" : "int",
+    "comment" : "\n     * Checks whether the engine supports a voice with a given name.\n     *\n     * Can be called on multiple threads.\n     *\n     * The default implementation treats the voice name as a language tag, creating a Locale from\n     * the voice name, and passes it to {@link #onIsLanguageAvailable(String, String, String)}.\n     *\n     * @param voiceName Name of the voice.\n     * @return {@link TextToSpeech#ERROR} or {@link TextToSpeech#SUCCESS}.\n     ",
+    "links" : [ "#onIsLanguageAvailable(String", "android.speech.tts.TextToSpeech#SUCCESS", "android.speech.tts.TextToSpeech#ERROR" ]
+  }, {
+    "name" : "private int getDefaultSpeechRate()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getDefaultPitch()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String[] getSettingsLocale()",
+    "returnType" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getSecureSettingInt(String name, int defaultValue)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void onCreate()", "public void onDestroy()", "protected abstract int onIsLanguageAvailable(String lang, String country, String variant)", "protected abstract String[] onGetLanguage()", "protected abstract int onLoadLanguage(String lang, String country, String variant)", "protected abstract void onStop()", "protected abstract void onSynthesizeText(SynthesisRequest request, SynthesisCallback callback)", "protected Set<String> onGetFeaturesForLanguage(String lang, String country, String variant)", "private int getExpectedLanguageAvailableStatus(Locale locale)", "public List<Voice> onGetVoices()", "public String onGetDefaultVoiceNameFor(String lang, String country, String variant)", "public int onLoadVoice(String voiceName)", "public int onIsValidVoiceName(String voiceName)", "private int getDefaultSpeechRate()", "private int getDefaultPitch()", "private String[] getSettingsLocale()", "private int getSecureSettingInt(String name, int defaultValue)", "public IBinder onBind(Intent intent)" ],
+  "variableNames" : [ "DBG", "TAG", "SYNTH_THREAD_NAME", "mSynthHandler", "mAudioPlaybackHandler", "mEngineHelper", "mCallbacks", "mPackageName", "mVoicesInfoLock", "mBinder" ]
+}

@@ -1,0 +1,556 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/service/notification/NotificationListenerService.java",
+  "packageName" : "android.service.notification",
+  "className" : "NotificationListenerService",
+  "comment" : "\n * A service that receives calls from the system when new notifications are\n * posted or removed, or their ranking changed.\n * <p>To extend this class, you must declare the service in your manifest file with\n * the {@link android.Manifest.permission#BIND_NOTIFICATION_LISTENER_SERVICE} permission\n * and include an intent filter with the {@link #SERVICE_INTERFACE} action. For example:</p>\n * <pre>\n * &lt;service android:name=\".NotificationListener\"\n *          android:label=\"&#64;string/service_name\"\n *          android:exported=\"false\"\n *          android:permission=\"android.permission.BIND_NOTIFICATION_LISTENER_SERVICE\">\n *     &lt;intent-filter>\n *         &lt;action android:name=\"android.service.notification.NotificationListenerService\" />\n *     &lt;/intent-filter>\n *     &lt;meta-data\n *               android:name=\"android.service.notification.default_filter_types\"\n *               android:value=\"conversations|alerting\">\n *           &lt;/meta-data>\n *     &lt;meta-data\n *               android:name=\"android.service.notification.disabled_filter_types\"\n *               android:value=\"ongoing|silent\">\n *           &lt;/meta-data>\n * &lt;/service></pre>\n *\n * <p>The service should wait for the {@link #onListenerConnected()} event\n * before performing any operations. The {@link #requestRebind(ComponentName)}\n * method is the <i>only</i> one that is safe to call before {@link #onListenerConnected()}\n * or after {@link #onListenerDisconnected()}.\n * </p>\n * <p> Notification listeners cannot get notification access or be bound by the system on\n * {@linkplain ActivityManager#isLowRamDevice() low-RAM} devices running Android Q (and below).\n * The system also ignores notification listeners running in a work profile. A\n * {@link android.app.admin.DevicePolicyManager} might block notifications originating from a work\n * profile.</p>\n * <p>\n *     From {@link Build.VERSION_CODES#N} onward all callbacks are called on the main thread. Prior\n *     to N, there is no guarantee on what thread the callback will happen.\n * </p>\n ",
+  "links" : [ "#onListenerConnected()", "#SERVICE_INTERFACE", "Build.VERSION_CODES#N", "android.app.admin.DevicePolicyManager", "#onListenerDisconnected()", "android.Manifest.permission#BIND_NOTIFICATION_LISTENER_SERVICE", "#requestRebind(ComponentName)" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "META_DATA_DEFAULT_FILTER_TYPES",
+    "type" : "String",
+    "comment" : "\n     * The name of the {@code meta-data} tag containing a pipe separated list of default\n     * integer notification types or \"ongoing\", \"conversations\", \"alerting\", or \"silent\"\n     * that should be provided to this listener. See\n     * {@link #FLAG_FILTER_TYPE_ONGOING},\n     * {@link #FLAG_FILTER_TYPE_CONVERSATIONS}, {@link #FLAG_FILTER_TYPE_ALERTING),\n     * and {@link #FLAG_FILTER_TYPE_SILENT}.\n     * <p>This value will only be read if the app has not previously specified a default type list,\n     * and if the user has not overridden the allowed types.</p>\n     * <p>An absent value means 'allow all types'.\n     * A present but empty value means 'allow no types'.</p>\n     *\n     ",
+    "links" : [ "#FLAG_FILTER_TYPE_ONGOING", "#FLAG_FILTER_TYPE_CONVERSATIONS", "#FLAG_FILTER_TYPE_ALERTING)", "#FLAG_FILTER_TYPE_SILENT" ]
+  }, {
+    "name" : "META_DATA_DISABLED_FILTER_TYPES",
+    "type" : "String",
+    "comment" : "\n     * The name of the {@code meta-data} tag containing a comma separated list of default\n     * integer notification types that this listener never wants to receive. See\n     * {@link #FLAG_FILTER_TYPE_ONGOING},\n     * {@link #FLAG_FILTER_TYPE_CONVERSATIONS}, {@link #FLAG_FILTER_TYPE_ALERTING),\n     * and {@link #FLAG_FILTER_TYPE_SILENT}.\n     * <p>Types provided in this list will appear as 'off' and 'disabled' in the user interface,\n     * so users don't enable a type that the listener will never bridge to their paired devices.</p>\n     *\n     ",
+    "links" : [ "#FLAG_FILTER_TYPE_ONGOING", "#FLAG_FILTER_TYPE_CONVERSATIONS", "#FLAG_FILTER_TYPE_ALERTING)", "#FLAG_FILTER_TYPE_SILENT" ]
+  }, {
+    "name" : "META_DATA_DEFAULT_AUTOBIND",
+    "type" : "String",
+    "comment" : "\n     * The name of the {@code meta-data} tag containing a boolean value that is used to decide if\n     * this listener should be automatically bound by default.\n     * If the value is 'false', the listener can be bound on demand using {@link #requestRebind}\n     * <p>An absent value means that the default is 'true'</p>\n     *\n     ",
+    "links" : [ "#requestRebind" ]
+  }, {
+    "name" : "INTERRUPTION_FILTER_ALL",
+    "type" : "int",
+    "comment" : "\n     * {@link #getCurrentInterruptionFilter() Interruption filter} constant -\n     *     Normal interruption filter.\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "INTERRUPTION_FILTER_PRIORITY",
+    "type" : "int",
+    "comment" : "\n     * {@link #getCurrentInterruptionFilter() Interruption filter} constant -\n     *     Priority interruption filter.\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "INTERRUPTION_FILTER_NONE",
+    "type" : "int",
+    "comment" : "\n     * {@link #getCurrentInterruptionFilter() Interruption filter} constant -\n     *     No interruptions filter.\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "INTERRUPTION_FILTER_ALARMS",
+    "type" : "int",
+    "comment" : "\n     * {@link #getCurrentInterruptionFilter() Interruption filter} constant -\n     *     Alarms only interruption filter.\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "INTERRUPTION_FILTER_UNKNOWN",
+    "type" : "int",
+    "comment" : " {@link #getCurrentInterruptionFilter() Interruption filter} constant - returned when\n     * the value is unavailable for any reason.  For example, before the notification listener\n     * is connected.\n     *\n     * {@see #onListenerConnected()}\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "HINT_HOST_DISABLE_EFFECTS",
+    "type" : "int",
+    "comment" : " {@link #getCurrentListenerHints() Listener hints} constant - the primary device UI\n     * should disable notification sound, vibrating and other visual or aural effects.\n     * This does not change the interruption filter, only the effects. *",
+    "links" : [ "#getCurrentListenerHints()" ]
+  }, {
+    "name" : "HINT_HOST_DISABLE_NOTIFICATION_EFFECTS",
+    "type" : "int",
+    "comment" : " {@link #getCurrentListenerHints() Listener hints} constant - the primary device UI\n     * should disable notification sound, but not phone calls.\n     * This does not change the interruption filter, only the effects. *",
+    "links" : [ "#getCurrentListenerHints()" ]
+  }, {
+    "name" : "HINT_HOST_DISABLE_CALL_EFFECTS",
+    "type" : "int",
+    "comment" : " {@link #getCurrentListenerHints() Listener hints} constant - the primary device UI\n     * should disable phone call sounds, but not notification sound.\n     * This does not change the interruption filter, only the effects. *",
+    "links" : [ "#getCurrentListenerHints()" ]
+  }, {
+    "name" : "SUPPRESSED_EFFECT_SCREEN_OFF",
+    "type" : "int",
+    "comment" : "\n     * Whether notification suppressed by DND should not interruption visually when the screen is\n     * off.\n     *\n     * @deprecated Use the more specific visual effects in {@link NotificationManager.Policy}.\n     ",
+    "links" : [ "NotificationManager.Policy" ]
+  }, {
+    "name" : "SUPPRESSED_EFFECT_SCREEN_ON",
+    "type" : "int",
+    "comment" : "\n     * Whether notification suppressed by DND should not interruption visually when the screen is\n     * on.\n     *\n     * @deprecated Use the more specific visual effects in {@link NotificationManager.Policy}.\n     ",
+    "links" : [ "NotificationManager.Policy" ]
+  }, {
+    "name" : "REASON_CLICK",
+    "type" : "int",
+    "comment" : " Notification was canceled by the status bar reporting a notification click. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_CANCEL",
+    "type" : "int",
+    "comment" : " Notification was canceled by the status bar reporting a user dismissal. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_CANCEL_ALL",
+    "type" : "int",
+    "comment" : " Notification was canceled by the status bar reporting a user dismiss all. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_ERROR",
+    "type" : "int",
+    "comment" : " Notification was canceled by the status bar reporting an inflation error. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_PACKAGE_CHANGED",
+    "type" : "int",
+    "comment" : " Notification was canceled by the package manager modifying the package. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_USER_STOPPED",
+    "type" : "int",
+    "comment" : " Notification was canceled by the owning user context being stopped. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_PACKAGE_BANNED",
+    "type" : "int",
+    "comment" : " Notification was canceled by the user banning the package. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_APP_CANCEL",
+    "type" : "int",
+    "comment" : " Notification was canceled by the app canceling this specific notification. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_APP_CANCEL_ALL",
+    "type" : "int",
+    "comment" : " Notification was canceled by the app cancelling all its notifications. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_LISTENER_CANCEL",
+    "type" : "int",
+    "comment" : " Notification was canceled by a listener reporting a user dismissal. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_LISTENER_CANCEL_ALL",
+    "type" : "int",
+    "comment" : " Notification was canceled by a listener reporting a user dismiss all. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_GROUP_SUMMARY_CANCELED",
+    "type" : "int",
+    "comment" : " Notification was canceled because it was a member of a canceled group. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_GROUP_OPTIMIZATION",
+    "type" : "int",
+    "comment" : " Notification was canceled because it was an invisible member of a group. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_PACKAGE_SUSPENDED",
+    "type" : "int",
+    "comment" : " Notification was canceled by the device administrator suspending the package. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_PROFILE_TURNED_OFF",
+    "type" : "int",
+    "comment" : " Notification was canceled by the owning managed profile being turned off. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_UNAUTOBUNDLED",
+    "type" : "int",
+    "comment" : " Autobundled summary notification was canceled because its group was unbundled ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_CHANNEL_BANNED",
+    "type" : "int",
+    "comment" : " Notification was canceled by the user banning the channel. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_SNOOZED",
+    "type" : "int",
+    "comment" : " Notification was snoozed. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_TIMEOUT",
+    "type" : "int",
+    "comment" : " Notification was canceled due to timeout ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_CHANNEL_REMOVED",
+    "type" : "int",
+    "comment" : " Notification was canceled due to the backing channel being deleted ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_CLEAR_DATA",
+    "type" : "int",
+    "comment" : " Notification was canceled due to the app's storage being cleared ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_ASSISTANT_CANCEL",
+    "type" : "int",
+    "comment" : " Notification was canceled due to an assistant adjustment update. ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_LOCKDOWN",
+    "type" : "int",
+    "comment" : "\n     * Notification was canceled when entering lockdown mode, which turns off\n     * Smart Lock, fingerprint unlocking, and notifications on the lock screen.\n     * All the listeners shall ensure the canceled notifications are indeed removed\n     * on their end to prevent data leaking.\n     * When the user exits the lockdown mode, the removed notifications (due to lockdown)\n     * will be restored via NotificationListeners#notifyPostedLocked()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_FILTER_TYPE_CONVERSATIONS",
+    "type" : "int",
+    "comment" : "\n     * A flag value indicating that this notification listener can see conversation type\n     * notifications.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_FILTER_TYPE_ALERTING",
+    "type" : "int",
+    "comment" : "\n     * A flag value indicating that this notification listener can see altering type notifications.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_FILTER_TYPE_SILENT",
+    "type" : "int",
+    "comment" : "\n     * A flag value indicating that this notification listener can see silent type notifications.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLAG_FILTER_TYPE_ONGOING",
+    "type" : "int",
+    "comment" : "\n     * A flag value indicating that this notification listener can see important\n     * ( > {@link NotificationManager#IMPORTANCE_MIN}) ongoing type notifications.\n     ",
+    "links" : [ "android.app.INotificationManager#IMPORTANCE_MIN" ]
+  }, {
+    "name" : "TRIM_FULL",
+    "type" : "int",
+    "comment" : "\n     * The full trim of the StatusBarNotification including all its features.\n     *\n     * @hide\n     * @removed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TRIM_LIGHT",
+    "type" : "int",
+    "comment" : "\n     * A light trim of the StatusBarNotification excluding the following features:\n     *\n     * <ol>\n     *     <li>{@link Notification#tickerView tickerView}</li>\n     *     <li>{@link Notification#contentView contentView}</li>\n     *     <li>{@link Notification#largeIcon largeIcon}</li>\n     *     <li>{@link Notification#bigContentView bigContentView}</li>\n     *     <li>{@link Notification#headsUpContentView headsUpContentView}</li>\n     *     <li>{@link Notification#EXTRA_LARGE_ICON extras[EXTRA_LARGE_ICON]}</li>\n     *     <li>{@link Notification#EXTRA_LARGE_ICON_BIG extras[EXTRA_LARGE_ICON_BIG]}</li>\n     *     <li>{@link Notification#EXTRA_PICTURE extras[EXTRA_PICTURE]}</li>\n     *     <li>{@link Notification#EXTRA_BIG_TEXT extras[EXTRA_BIG_TEXT]}</li>\n     * </ol>\n     *\n     * @hide\n     * @removed\n     ",
+    "links" : [ "android.app.Notification#EXTRA_PICTURE", "android.app.Notification#EXTRA_BIG_TEXT", "android.app.Notification#bigContentView", "android.app.Notification#EXTRA_LARGE_ICON", "android.app.Notification#tickerView", "android.app.Notification#largeIcon", "android.app.Notification#headsUpContentView", "android.app.Notification#contentView", "android.app.Notification#EXTRA_LARGE_ICON_BIG" ]
+  }, {
+    "name" : "NOTIFICATION_CHANNEL_OR_GROUP_ADDED",
+    "type" : "int",
+    "comment" : "\n     * Channel or group modification reason provided to\n     * {@link #onNotificationChannelModified(String, UserHandle,NotificationChannel, int)} or\n     * {@link #onNotificationChannelGroupModified(String, UserHandle, NotificationChannelGroup,\n     * int)}- the provided object was created.\n     ",
+    "links" : [ "#onNotificationChannelGroupModified(String", "#onNotificationChannelModified(String" ]
+  }, {
+    "name" : "NOTIFICATION_CHANNEL_OR_GROUP_UPDATED",
+    "type" : "int",
+    "comment" : "\n     * Channel or group modification reason provided to\n     * {@link #onNotificationChannelModified(String, UserHandle, NotificationChannel, int)} or\n     * {@link #onNotificationChannelGroupModified(String, UserHandle,NotificationChannelGroup, int)}\n     * - the provided object was updated.\n     ",
+    "links" : [ "#onNotificationChannelGroupModified(String", "#onNotificationChannelModified(String" ]
+  }, {
+    "name" : "NOTIFICATION_CHANNEL_OR_GROUP_DELETED",
+    "type" : "int",
+    "comment" : "\n     * Channel or group modification reason provided to\n     * {@link #onNotificationChannelModified(String, UserHandle, NotificationChannel, int)} or\n     * {@link #onNotificationChannelGroupModified(String, UserHandle, NotificationChannelGroup,\n     * int)}- the provided object was deleted.\n     ",
+    "links" : [ "#onNotificationChannelGroupModified(String", "#onNotificationChannelModified(String" ]
+  }, {
+    "name" : "ACTION_SETTINGS_HOME",
+    "type" : "String",
+    "comment" : "\n     * An optional activity intent action that shows additional settings for what notifications\n     * should be processed by this notification listener service. If defined, the OS may link to\n     * this activity from the system notification listener service filter settings page.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWrapper",
+    "type" : "NotificationListenerWrapper",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "isConnected",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRankingMap",
+    "type" : "RankingMap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNoMan",
+    "type" : "INotificationManager",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentUser",
+    "type" : "int",
+    "comment" : "\n     * Only valid after a successful call to (@link registerAsService}.\n     * @hide\n     ",
+    "links" : [ "registerAsService" ]
+  }, {
+    "name" : "mSystemContext",
+    "type" : "Context",
+    "comment" : "\n     * This context is required for system services since NotificationListenerService isn't\n     * started as a real Service and hence no context is available..\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} that must be declared as handled by the service.\n     ",
+    "links" : [ "android.content.Intent" ]
+  } ],
+  "methods" : [ {
+    "name" : "protected void attachBaseContext(Context base)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onNotificationPosted(StatusBarNotification sbn)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about new notifications as they are posted by apps.\n     *\n     * @param sbn A data structure encapsulating the original {@link android.app.Notification}\n     *            object as well as its identifying information (tag and id) and source\n     *            (package name).\n     ",
+    "links" : [ "android.app.Notification" ]
+  }, {
+    "name" : "public void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about new notifications as they are posted by apps.\n     *\n     * @param sbn A data structure encapsulating the original {@link android.app.Notification}\n     *            object as well as its identifying information (tag and id) and source\n     *            (package name).\n     * @param rankingMap The current ranking map that can be used to retrieve ranking information\n     *                   for active notifications, including the newly posted one.\n     ",
+    "links" : [ "android.app.Notification" ]
+  }, {
+    "name" : "public void onNotificationRemoved(StatusBarNotification sbn)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn when notifications are removed.\n     * <p>\n     * NOTE: The {@link StatusBarNotification} object you receive will be \"light\"; that is, the\n     * result from {@link StatusBarNotification#getNotification} may be missing some heavyweight\n     * fields such as {@link android.app.Notification#contentView} and\n     * {@link android.app.Notification#largeIcon}. However, all other fields on\n     * {@link StatusBarNotification}, sufficient to match this call with a prior call to\n     * {@link #onNotificationPosted(StatusBarNotification)}, will be intact.\n     *\n     * @param sbn A data structure encapsulating at least the original information (tag and id)\n     *            and source (package name) used to post the {@link android.app.Notification} that\n     *            was just removed.\n     ",
+    "links" : [ "#onNotificationPosted(StatusBarNotification)", "android.app.Notification#largeIcon", "android.service.notification.StatusBarNotification#getNotification", "android.app.Notification", "android.app.Notification#contentView", "android.service.notification.StatusBarNotification" ]
+  }, {
+    "name" : "public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn when notifications are removed.\n     * <p>\n     * NOTE: The {@link StatusBarNotification} object you receive will be \"light\"; that is, the\n     * result from {@link StatusBarNotification#getNotification} may be missing some heavyweight\n     * fields such as {@link android.app.Notification#contentView} and\n     * {@link android.app.Notification#largeIcon}. However, all other fields on\n     * {@link StatusBarNotification}, sufficient to match this call with a prior call to\n     * {@link #onNotificationPosted(StatusBarNotification)}, will be intact.\n     *\n     * @param sbn A data structure encapsulating at least the original information (tag and id)\n     *            and source (package name) used to post the {@link android.app.Notification} that\n     *            was just removed.\n     * @param rankingMap The current ranking map that can be used to retrieve ranking information\n     *                   for active notifications.\n     *\n     ",
+    "links" : [ "#onNotificationPosted(StatusBarNotification)", "android.app.Notification#largeIcon", "android.service.notification.StatusBarNotification#getNotification", "android.app.Notification", "android.app.Notification#contentView", "android.service.notification.StatusBarNotification" ]
+  }, {
+    "name" : "public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap, @NotificationCancelReason int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn when notifications are removed and why.\n     * <p>\n     * NOTE: The {@link StatusBarNotification} object you receive will be \"light\"; that is, the\n     * result from {@link StatusBarNotification#getNotification} may be missing some heavyweight\n     * fields such as {@link android.app.Notification#contentView} and\n     * {@link android.app.Notification#largeIcon}. However, all other fields on\n     * {@link StatusBarNotification}, sufficient to match this call with a prior call to\n     * {@link #onNotificationPosted(StatusBarNotification)}, will be intact.\n     *\n     ** @param sbn A data structure encapsulating at least the original information (tag and id)\n     *            and source (package name) used to post the {@link android.app.Notification} that\n     *            was just removed.\n     * @param rankingMap The current ranking map that can be used to retrieve ranking information\n     *                   for active notifications.\n     ",
+    "links" : [ "#onNotificationPosted(StatusBarNotification)", "android.app.Notification#largeIcon", "android.service.notification.StatusBarNotification#getNotification", "android.app.Notification", "android.app.Notification#contentView", "android.service.notification.StatusBarNotification" ]
+  }, {
+    "name" : "public void onNotificationRemoved(@NonNull StatusBarNotification sbn, @NonNull RankingMap rankingMap, @NonNull NotificationStats stats, int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * NotificationStats are not populated for notification listeners, so fall back to\n     * {@link #onNotificationRemoved(StatusBarNotification, RankingMap, int)}.\n     *\n     * @hide\n     ",
+    "links" : [ "#onNotificationRemoved(StatusBarNotification" ]
+  }, {
+    "name" : "public void onListenerConnected()",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about when the listener is enabled and connected to\n     * the notification manager.  You are safe to call {@link #getActiveNotifications()}\n     * at this time.\n     ",
+    "links" : [ "#getActiveNotifications()" ]
+  }, {
+    "name" : "public void onListenerDisconnected()",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about when the listener is disconnected from the\n     * notification manager.You will not receive any events after this call, and may only\n     * call {@link #requestRebind(ComponentName)} at this time.\n     ",
+    "links" : [ "#requestRebind(ComponentName)" ]
+  }, {
+    "name" : "public void onNotificationRankingUpdate(RankingMap rankingMap)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to be notified when the notification ranking changes.\n     *\n     * @param rankingMap The current ranking map that can be used to retrieve ranking information\n     *                   for active notifications.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onListenerHintsChanged(int hints)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to be notified when the\n     * {@link #getCurrentListenerHints() Listener hints} change.\n     *\n     * @param hints The current {@link #getCurrentListenerHints() listener hints}.\n     ",
+    "links" : [ "#getCurrentListenerHints()" ]
+  }, {
+    "name" : "public void onSilentStatusBarIconsVisibilityChanged(boolean hideSilentStatusIcons)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to be notified when the behavior of silent notifications in the status\n     * bar changes. See {@link NotificationManager#shouldHideSilentStatusBarIcons()}.\n     *\n     * @param hideSilentStatusIcons whether or not status bar icons should be hidden for silent\n     *                              notifications\n     ",
+    "links" : [ "android.app.INotificationManager#shouldHideSilentStatusBarIcons()" ]
+  }, {
+    "name" : "public void onNotificationChannelModified(String pkg, UserHandle user, NotificationChannel channel, @ChannelOrGroupModificationTypes int modificationType)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about notification channel modifications.\n     *\n     * <p>The caller must have {@link CompanionDeviceManager#getAssociations() an associated\n     * device} in order to receive this callback.\n     *\n     * @param pkg The package the channel belongs to.\n     * @param user The user on which the change was made.\n     * @param channel The channel that has changed.\n     * @param modificationType One of {@link #NOTIFICATION_CHANNEL_OR_GROUP_ADDED},\n     *                   {@link #NOTIFICATION_CHANNEL_OR_GROUP_UPDATED},\n     *                   {@link #NOTIFICATION_CHANNEL_OR_GROUP_DELETED}.\n     ",
+    "links" : [ "#NOTIFICATION_CHANNEL_OR_GROUP_UPDATED", "android.companion.CompanionDeviceManager#getAssociations()", "#NOTIFICATION_CHANNEL_OR_GROUP_DELETED", "#NOTIFICATION_CHANNEL_OR_GROUP_ADDED" ]
+  }, {
+    "name" : "public void onNotificationChannelGroupModified(String pkg, UserHandle user, NotificationChannelGroup group, @ChannelOrGroupModificationTypes int modificationType)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to learn about notification channel group modifications.\n     *\n     * <p>The caller must have {@link CompanionDeviceManager#getAssociations() an associated\n     * device} in order to receive this callback.\n     *\n     * @param pkg The package the group belongs to.\n     * @param user The user on which the change was made.\n     * @param group The group that has changed.\n     * @param modificationType One of {@link #NOTIFICATION_CHANNEL_OR_GROUP_ADDED},\n     *                   {@link #NOTIFICATION_CHANNEL_OR_GROUP_UPDATED},\n     *                   {@link #NOTIFICATION_CHANNEL_OR_GROUP_DELETED}.\n     ",
+    "links" : [ "#NOTIFICATION_CHANNEL_OR_GROUP_UPDATED", "android.companion.CompanionDeviceManager#getAssociations()", "#NOTIFICATION_CHANNEL_OR_GROUP_DELETED", "#NOTIFICATION_CHANNEL_OR_GROUP_ADDED" ]
+  }, {
+    "name" : "public void onInterruptionFilterChanged(int interruptionFilter)",
+    "returnType" : "void",
+    "comment" : "\n     * Implement this method to be notified when the\n     * {@link #getCurrentInterruptionFilter() interruption filter} changed.\n     *\n     * @param interruptionFilter The current\n     *     {@link #getCurrentInterruptionFilter() interruption filter}.\n     ",
+    "links" : [ "#getCurrentInterruptionFilter()" ]
+  }, {
+    "name" : "protected final INotificationManager getNotificationInterface()",
+    "returnType" : "INotificationManager",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void cancelNotification(String pkg, String tag, int id)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about dismissal of a single notification.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to dismiss individual\n     * notifications, similar to the behavior of Android's status bar and notification panel.\n     * It should be called after the user dismisses a single notification using your UI;\n     * upon being informed, the notification manager will actually remove the notification\n     * and you will get an {@link #onNotificationRemoved(StatusBarNotification)} callback.\n     * <p>\n     * <b>Note:</b> If your listener allows the user to fire a notification's\n     * {@link android.app.Notification#contentIntent} by tapping/clicking/etc., you should call\n     * this method at that time <i>if</i> the Notification in question has the\n     * {@link android.app.Notification#FLAG_AUTO_CANCEL} flag set.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param pkg Package of the notifying app.\n     * @param tag Tag of the notification as specified by the notifying app in\n     *     {@link android.app.NotificationManager#notify(String, int, android.app.Notification)}.\n     * @param id  ID of the notification as specified by the notifying app in\n     *     {@link android.app.NotificationManager#notify(String, int, android.app.Notification)}.\n     * <p>\n     * @deprecated Use {@link #cancelNotification(String key)}\n     * instead. Beginning with {@link android.os.Build.VERSION_CODES#LOLLIPOP} this method will no longer\n     * cancel the notification. It will continue to cancel the notification for applications\n     * whose {@code targetSdkVersion} is earlier than {@link android.os.Build.VERSION_CODES#LOLLIPOP}.\n     ",
+    "links" : [ "#onListenerConnected()", "android.os.Build.VERSION_CODES#LOLLIPOP", "android.app.Notification#contentIntent", "#onNotificationRemoved(StatusBarNotification)", "#cancelNotification(String", "android.app.NotificationManager#notify(String", "android.app.Notification#FLAG_AUTO_CANCEL" ]
+  }, {
+    "name" : "public final void cancelNotification(String key)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about dismissal of a single notification.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to dismiss individual\n     * notifications, similar to the behavior of Android's status bar and notification panel.\n     * It should be called after the user dismisses a single notification using your UI;\n     * upon being informed, the notification manager will actually remove the notification\n     * and you will get an {@link #onNotificationRemoved(StatusBarNotification)} callback.\n     * <p>\n     * <b>Note:</b> If your listener allows the user to fire a notification's\n     * {@link android.app.Notification#contentIntent} by tapping/clicking/etc., you should call\n     * this method at that time <i>if</i> the Notification in question has the\n     * {@link android.app.Notification#FLAG_AUTO_CANCEL} flag set.\n     * <p>\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param key Notification to dismiss from {@link StatusBarNotification#getKey()}.\n     ",
+    "links" : [ "#onListenerConnected()", "android.service.notification.StatusBarNotification#getKey()", "android.app.Notification#contentIntent", "#onNotificationRemoved(StatusBarNotification)", "android.app.Notification#FLAG_AUTO_CANCEL" ]
+  }, {
+    "name" : "public final void cancelAllNotifications()",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about dismissal of all notifications.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to dismiss all\n     * notifications, similar to the behavior of Android's status bar and notification panel.\n     * It should be called after the user invokes the \"dismiss all\" function of your UI;\n     * upon being informed, the notification manager will actually remove all active notifications\n     * and you will get multiple {@link #onNotificationRemoved(StatusBarNotification)} callbacks.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * {@see #cancelNotification(String, String, int)}\n     ",
+    "links" : [ "#onListenerConnected()", "#onNotificationRemoved(StatusBarNotification)" ]
+  }, {
+    "name" : "public final void cancelNotifications(String[] keys)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about dismissal of specific notifications.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to dismiss\n     * multiple notifications at once.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param keys Notifications to dismiss, or {@code null} to dismiss all.\n     *\n     * {@see #cancelNotification(String, String, int)}\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public final void snoozeNotification(String key, String snoozeCriterionId)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about snoozing a specific notification.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to snooze a notification\n     * until a given {@link SnoozeCriterion}. It should be called after the user snoozes a single\n     * notification using your UI; upon being informed, the notification manager will actually\n     * remove the notification and you will get an\n     * {@link #onNotificationRemoved(StatusBarNotification)} callback. When the snoozing period\n     * expires, you will get a {@link #onNotificationPosted(StatusBarNotification, RankingMap)}\n     * callback for the notification.\n     * @param key The key of the notification to snooze\n     * @param snoozeCriterionId The{@link SnoozeCriterion#getId()} of a context to snooze the\n     *                          notification until.\n     * @hide\n     * @removed\n     ",
+    "links" : [ "#onNotificationPosted(StatusBarNotification", "android.service.notification.SnoozeCriterion", "#onNotificationRemoved(StatusBarNotification)", "android.service.notification.SnoozeCriterion#getId()" ]
+  }, {
+    "name" : "public final void snoozeNotification(String key, long durationMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager about snoozing a specific notification.\n     * <p>\n     * Use this if your listener has a user interface that allows the user to snooze a notification\n     * for a time. It should be called after the user snoozes a single notification using\n     * your UI; upon being informed, the notification manager will actually remove the notification\n     * and you will get an {@link #onNotificationRemoved(StatusBarNotification)} callback. When the\n     * snoozing period expires, you will get a\n     * {@link #onNotificationPosted(StatusBarNotification, RankingMap)} callback for the\n     * notification.\n     * @param key The key of the notification to snooze\n     * @param durationMs A duration to snooze the notification for, in milliseconds.\n     ",
+    "links" : [ "#onNotificationPosted(StatusBarNotification", "#onNotificationRemoved(StatusBarNotification)" ]
+  }, {
+    "name" : "public final void migrateNotificationFilter(@NotificationFilterTypes int defaultTypes, @Nullable List<String> disallowedPkgs)",
+    "returnType" : "void",
+    "comment" : "\n     * Lets an app migrate notification filters from its app into the OS.\n     *\n     * <p>This call will be ignored if the app has already migrated these settings or the user\n     * has set filters in the UI. This method is intended for user specific settings; if an app has\n     * already specified defaults types in its manifest with\n     * {@link #META_DATA_DEFAULT_FILTER_TYPES}, the defaultTypes option will be ignored.</p>\n     * @param defaultTypes A value representing the types of notifications that this listener should\n     * receive by default\n     * @param disallowedPkgs A list of package names whose notifications should not be seen by this\n     * listener, by default, because the listener does not process or display them, or because a\n     * user had previously disallowed these packages in the listener app's UI\n     ",
+    "links" : [ "#META_DATA_DEFAULT_FILTER_TYPES" ]
+  }, {
+    "name" : "public final void setNotificationsShown(String[] keys)",
+    "returnType" : "void",
+    "comment" : "\n     * Inform the notification manager that these notifications have been viewed by the\n     * user. This should only be called when there is sufficient confidence that the user is\n     * looking at the notifications, such as when the notifications appear on the screen due to\n     * an explicit user interaction.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param keys Notifications to mark as seen.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public final void updateNotificationChannel(@NonNull String pkg, @NonNull UserHandle user, @NonNull NotificationChannel channel)",
+    "returnType" : "void",
+    "comment" : "\n     * Updates a notification channel for a given package for a given user. This should only be used\n     * to reflect changes a user has made to the channel via the listener's user interface.\n     *\n     * <p>This method will throw a security exception if you don't have access to notifications\n     * for the given user.</p>\n     * <p>The caller must have {@link CompanionDeviceManager#getAssociations() an associated\n     * device} in order to use this method.\n     *\n     * @param pkg The package the channel belongs to.\n     * @param user The user the channel belongs to.\n     * @param channel the channel to update.\n     ",
+    "links" : [ "android.companion.CompanionDeviceManager#getAssociations()" ]
+  }, {
+    "name" : "public final List<NotificationChannel> getNotificationChannels(@NonNull String pkg, @NonNull UserHandle user)",
+    "returnType" : "List<NotificationChannel>",
+    "comment" : "\n     * Returns all notification channels belonging to the given package for a given user.\n     *\n     * <p>This method will throw a security exception if you don't have access to notifications\n     * for the given user.</p>\n     * <p>The caller must have {@link CompanionDeviceManager#getAssociations() an associated\n     * device} or be the notification assistant in order to use this method.\n     *\n     * @param pkg The package to retrieve channels for.\n     ",
+    "links" : [ "android.companion.CompanionDeviceManager#getAssociations()" ]
+  }, {
+    "name" : "public final List<NotificationChannelGroup> getNotificationChannelGroups(@NonNull String pkg, @NonNull UserHandle user)",
+    "returnType" : "List<NotificationChannelGroup>",
+    "comment" : "\n     * Returns all notification channel groups belonging to the given package for a given user.\n     *\n     * <p>This method will throw a security exception if you don't have access to notifications\n     * for the given user.</p>\n     * <p>The caller must have {@link CompanionDeviceManager#getAssociations() an associated\n     * device} or be the notification assistant in order to use this method.\n     *\n     * @param pkg The package to retrieve channel groups for.\n     ",
+    "links" : [ "android.companion.CompanionDeviceManager#getAssociations()" ]
+  }, {
+    "name" : "public final void setOnNotificationPostedTrim(int trim)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the notification trim that will be received via {@link #onNotificationPosted}.\n     *\n     * <p>\n     * Setting a trim other than {@link #TRIM_FULL} enables listeners that don't need access to the\n     * full notification features right away to reduce their memory footprint. Full notifications\n     * can be requested on-demand via {@link #getActiveNotifications(int)}.\n     *\n     * <p>\n     * Set to {@link #TRIM_FULL} initially.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @hide\n     * @removed\n     *\n     * @param trim trim of the notifications to be passed via {@link #onNotificationPosted}.\n     *             See <code>TRIM_*</code> constants.\n     ",
+    "links" : [ "#onListenerConnected()", "#getActiveNotifications(int)", "#onNotificationPosted", "#TRIM_FULL" ]
+  }, {
+    "name" : "public StatusBarNotification[] getActiveNotifications()",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "\n     * Request the list of outstanding notifications (that is, those that are visible to the\n     * current user). Useful when you don't know what's already been posted.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @return An array of active notifications, sorted in natural order.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public final StatusBarNotification[] getSnoozedNotifications()",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "\n     * Like {@link #getActiveNotifications()}, but returns the list of currently snoozed\n     * notifications, for all users this listener has access to.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @return An array of snoozed notifications, sorted in natural order.\n     ",
+    "links" : [ "#onListenerConnected()", "#getActiveNotifications()" ]
+  }, {
+    "name" : "public StatusBarNotification[] getActiveNotifications(int trim)",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "\n     * Request the list of outstanding notifications (that is, those that are visible to the\n     * current user). Useful when you don't know what's already been posted.\n     *\n     * @hide\n     * @removed\n     *\n     * @param trim trim of the notifications to be returned. See <code>TRIM_*</code> constants.\n     * @return An array of active notifications, sorted in natural order.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StatusBarNotification[] getActiveNotifications(String[] keys)",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "\n     * Request one or more notifications by key. Useful if you have been keeping track of\n     * notifications but didn't want to retain the bits, and now need to go back and extract\n     * more data out of those notifications.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param keys the keys of the notifications to request\n     * @return An array of notifications corresponding to the requested keys, in the\n     * same order as the key list.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public StatusBarNotification[] getActiveNotifications(String[] keys, int trim)",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "\n     * Request one or more notifications by key. Useful if you have been keeping track of\n     * notifications but didn't want to retain the bits, and now need to go back and extract\n     * more data out of those notifications.\n     *\n     * @hide\n     * @removed\n     *\n     * @param keys the keys of the notifications to request\n     * @param trim trim of the notifications to be returned. See <code>TRIM_*</code> constants.\n     * @return An array of notifications corresponding to the requested keys, in the\n     * same order as the key list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private StatusBarNotification[] cleanUpNotificationList(ParceledListSlice<StatusBarNotification> parceledList)",
+    "returnType" : "StatusBarNotification[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getCurrentListenerHints()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the set of hints representing current state.\n     *\n     * <p>\n     * The current state may differ from the requested state if the hint represents state\n     * shared across all listeners or a feature the notification host does not support or refuses\n     * to grant.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @return Zero or more of the HINT_ constants.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public final int getCurrentInterruptionFilter()",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the current notification interruption filter active on the host.\n     *\n     * <p>\n     * The interruption filter defines which notifications are allowed to interrupt the user\n     * (e.g. via sound &amp; vibration) and is applied globally. Listeners can find out whether\n     * a specific notification matched the interruption filter via\n     * {@link Ranking#matchesInterruptionFilter()}.\n     * <p>\n     * The current filter may differ from the previously requested filter if the notification host\n     * does not support or refuses to apply the requested filter, or if another component changed\n     * the filter in the meantime.\n     * <p>\n     * Listen for updates using {@link #onInterruptionFilterChanged(int)}.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @return One of the INTERRUPTION_FILTER_ constants, or INTERRUPTION_FILTER_UNKNOWN when\n     * unavailable.\n     ",
+    "links" : [ "#onListenerConnected()", "#matchesInterruptionFilter()", "#onInterruptionFilterChanged(int)" ]
+  }, {
+    "name" : "public final void clearRequestedListenerHints()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears listener hints set via {@link #getCurrentListenerHints()}.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     ",
+    "links" : [ "#onListenerConnected()", "#getCurrentListenerHints()" ]
+  }, {
+    "name" : "public final void requestListenerHints(int hints)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the desired {@link #getCurrentListenerHints() listener hints}.\n     *\n     * <p>\n     * This is merely a request, the host may or may not choose to take action depending\n     * on other listener requests or other global state.\n     * <p>\n     * Listen for updates using {@link #onListenerHintsChanged(int)}.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param hints One or more of the HINT_ constants.\n     ",
+    "links" : [ "#onListenerConnected()", "#getCurrentListenerHints()", "#onListenerHintsChanged(int)" ]
+  }, {
+    "name" : "public final void requestInterruptionFilter(int interruptionFilter)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the desired {@link #getCurrentInterruptionFilter() interruption filter}.\n     *\n     * <p>\n     * This is merely a request, the host may or may not choose to apply the requested\n     * interruption filter depending on other listener requests or other global state.\n     * <p>\n     * Listen for updates using {@link #onInterruptionFilterChanged(int)}.\n     *\n     * <p>Apps targeting {@link Build.VERSION_CODES#VANILLA_ICE_CREAM} and above (with some\n     * exceptions, such as companion device managers) cannot modify the global interruption filter.\n     * Calling this method will instead activate or deactivate an\n     * {@link android.app.AutomaticZenRule} associated to the app.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @param interruptionFilter One of the INTERRUPTION_FILTER_ constants.\n     ",
+    "links" : [ "Build.VERSION_CODES#VANILLA_ICE_CREAM", "#onListenerConnected()", "#onInterruptionFilterChanged(int)", "#getCurrentInterruptionFilter()", "android.app.AutomaticZenRule" ]
+  }, {
+    "name" : "public RankingMap getCurrentRanking()",
+    "returnType" : "RankingMap",
+    "comment" : "\n     * Returns current ranking information.\n     *\n     * <p>\n     * The returned object represents the current ranking snapshot and only\n     * applies for currently active notifications.\n     * <p>\n     * Generally you should use the RankingMap that is passed with events such\n     * as {@link #onNotificationPosted(StatusBarNotification, RankingMap)},\n     * {@link #onNotificationRemoved(StatusBarNotification, RankingMap)}, and\n     * so on. This method should only be used when needing access outside of\n     * such events, for example to retrieve the RankingMap right after\n     * initialization.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation.\n     *\n     * @return A {@link RankingMap} object providing access to ranking information\n     ",
+    "links" : [ "#onListenerConnected()", "#onNotificationPosted(StatusBarNotification", "RankingMap", "#onNotificationRemoved(StatusBarNotification" ]
+  }, {
+    "name" : "public IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "\n     * This is not the lifecycle event you are looking for.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing any operations.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "protected boolean isBound()",
+    "returnType" : "boolean",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDestroy()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerAsSystemService(Context context, ComponentName componentName, int currentUser) throws RemoteException",
+    "returnType" : "void",
+    "comment" : "\n     * Directly register this service with the Notification Manager.\n     *\n     * <p>Only system services may use this call. It will fail for non-system callers.\n     * Apps should ask the user to add their listener in Settings.\n     *\n     * @param context Context required for accessing resources. Since this service isn't\n     *    launched as a real Service when using this method, a context has to be passed in.\n     * @param componentName the component that will consume the notification information\n     * @param currentUser the user to use as the stream filter\n     * @hide\n     * @removed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void unregisterAsSystemService() throws RemoteException",
+    "returnType" : "void",
+    "comment" : "\n     * Directly unregister this service from the Notification Manager.\n     *\n     * <p>This method will fail for listeners that were not registered\n     * with (@link registerAsService).\n     * @hide\n     * @removed\n     ",
+    "links" : [ "registerAsService)." ]
+  }, {
+    "name" : "public static void requestRebind(ComponentName componentName)",
+    "returnType" : "void",
+    "comment" : "\n     * Request that the listener be rebound, after a previous call to {@link #requestUnbind}.\n     *\n     * <p>This method will fail for listeners that have\n     * not been granted the permission by the user.\n     ",
+    "links" : [ "#requestUnbind" ]
+  }, {
+    "name" : "public static void requestUnbind(@NonNull ComponentName componentName)",
+    "returnType" : "void",
+    "comment" : "\n     * Request that the service be unbound.\n     *\n     * <p>This method will fail for components that are not part of the calling app.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void requestUnbind()",
+    "returnType" : "void",
+    "comment" : "\n     * Request that the service be unbound.\n     *\n     * <p>Once this is called, you will no longer receive updates and no method calls are\n     * guaranteed to be successful, until you next receive the {@link #onListenerConnected()} event.\n     * The service will likely be killed by the system after this call.\n     *\n     * <p>The service should wait for the {@link #onListenerConnected()} event\n     * before performing this operation. I know it's tempting, but you must wait.\n     ",
+    "links" : [ "#onListenerConnected()" ]
+  }, {
+    "name" : "public final void createLegacyIconExtras(Notification n)",
+    "returnType" : "void",
+    "comment" : "\n     * Convert new-style Icons to legacy representations for pre-M clients.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void maybePopulateRemoteViews(Notification notification)",
+    "returnType" : "void",
+    "comment" : "\n     * Populates remote views for pre-N targeting apps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void maybePopulatePeople(Notification notification)",
+    "returnType" : "void",
+    "comment" : "\n     * Populates remote views for pre-P targeting apps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void applyUpdateLocked(NotificationRankingUpdate update)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Context getContext()",
+    "returnType" : "Context",
+    "comment" : " @hide ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected void attachBaseContext(Context base)", "public void onNotificationPosted(StatusBarNotification sbn)", "public void onNotificationPosted(StatusBarNotification sbn, RankingMap rankingMap)", "public void onNotificationRemoved(StatusBarNotification sbn)", "public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap)", "public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap, @NotificationCancelReason int reason)", "public void onNotificationRemoved(@NonNull StatusBarNotification sbn, @NonNull RankingMap rankingMap, @NonNull NotificationStats stats, int reason)", "public void onListenerConnected()", "public void onListenerDisconnected()", "public void onNotificationRankingUpdate(RankingMap rankingMap)", "public void onListenerHintsChanged(int hints)", "public void onSilentStatusBarIconsVisibilityChanged(boolean hideSilentStatusIcons)", "public void onNotificationChannelModified(String pkg, UserHandle user, NotificationChannel channel, @ChannelOrGroupModificationTypes int modificationType)", "public void onNotificationChannelGroupModified(String pkg, UserHandle user, NotificationChannelGroup group, @ChannelOrGroupModificationTypes int modificationType)", "public void onInterruptionFilterChanged(int interruptionFilter)", "protected final INotificationManager getNotificationInterface()", "public final void cancelNotification(String pkg, String tag, int id)", "public final void cancelNotification(String key)", "public final void cancelAllNotifications()", "public final void cancelNotifications(String[] keys)", "public final void snoozeNotification(String key, String snoozeCriterionId)", "public final void snoozeNotification(String key, long durationMs)", "public final void migrateNotificationFilter(@NotificationFilterTypes int defaultTypes, @Nullable List<String> disallowedPkgs)", "public final void setNotificationsShown(String[] keys)", "public final void updateNotificationChannel(@NonNull String pkg, @NonNull UserHandle user, @NonNull NotificationChannel channel)", "public final List<NotificationChannel> getNotificationChannels(@NonNull String pkg, @NonNull UserHandle user)", "public final List<NotificationChannelGroup> getNotificationChannelGroups(@NonNull String pkg, @NonNull UserHandle user)", "public final void setOnNotificationPostedTrim(int trim)", "public StatusBarNotification[] getActiveNotifications()", "public final StatusBarNotification[] getSnoozedNotifications()", "public StatusBarNotification[] getActiveNotifications(int trim)", "public StatusBarNotification[] getActiveNotifications(String[] keys)", "public StatusBarNotification[] getActiveNotifications(String[] keys, int trim)", "private StatusBarNotification[] cleanUpNotificationList(ParceledListSlice<StatusBarNotification> parceledList)", "public final int getCurrentListenerHints()", "public final int getCurrentInterruptionFilter()", "public final void clearRequestedListenerHints()", "public final void requestListenerHints(int hints)", "public final void requestInterruptionFilter(int interruptionFilter)", "public RankingMap getCurrentRanking()", "public IBinder onBind(Intent intent)", "protected boolean isBound()", "public void onDestroy()", "public void registerAsSystemService(Context context, ComponentName componentName, int currentUser) throws RemoteException", "public void unregisterAsSystemService() throws RemoteException", "public static void requestRebind(ComponentName componentName)", "public static void requestUnbind(@NonNull ComponentName componentName)", "public final void requestUnbind()", "public final void createLegacyIconExtras(Notification n)", "private void maybePopulateRemoteViews(Notification notification)", "private void maybePopulatePeople(Notification notification)", "public final void applyUpdateLocked(NotificationRankingUpdate update)", "protected Context getContext()" ],
+  "variableNames" : [ "TAG", "META_DATA_DEFAULT_FILTER_TYPES", "META_DATA_DISABLED_FILTER_TYPES", "META_DATA_DEFAULT_AUTOBIND", "INTERRUPTION_FILTER_ALL", "INTERRUPTION_FILTER_PRIORITY", "INTERRUPTION_FILTER_NONE", "INTERRUPTION_FILTER_ALARMS", "INTERRUPTION_FILTER_UNKNOWN", "HINT_HOST_DISABLE_EFFECTS", "HINT_HOST_DISABLE_NOTIFICATION_EFFECTS", "HINT_HOST_DISABLE_CALL_EFFECTS", "SUPPRESSED_EFFECT_SCREEN_OFF", "SUPPRESSED_EFFECT_SCREEN_ON", "REASON_CLICK", "REASON_CANCEL", "REASON_CANCEL_ALL", "REASON_ERROR", "REASON_PACKAGE_CHANGED", "REASON_USER_STOPPED", "REASON_PACKAGE_BANNED", "REASON_APP_CANCEL", "REASON_APP_CANCEL_ALL", "REASON_LISTENER_CANCEL", "REASON_LISTENER_CANCEL_ALL", "REASON_GROUP_SUMMARY_CANCELED", "REASON_GROUP_OPTIMIZATION", "REASON_PACKAGE_SUSPENDED", "REASON_PROFILE_TURNED_OFF", "REASON_UNAUTOBUNDLED", "REASON_CHANNEL_BANNED", "REASON_SNOOZED", "REASON_TIMEOUT", "REASON_CHANNEL_REMOVED", "REASON_CLEAR_DATA", "REASON_ASSISTANT_CANCEL", "REASON_LOCKDOWN", "FLAG_FILTER_TYPE_CONVERSATIONS", "FLAG_FILTER_TYPE_ALERTING", "FLAG_FILTER_TYPE_SILENT", "FLAG_FILTER_TYPE_ONGOING", "TRIM_FULL", "TRIM_LIGHT", "NOTIFICATION_CHANNEL_OR_GROUP_ADDED", "NOTIFICATION_CHANNEL_OR_GROUP_UPDATED", "NOTIFICATION_CHANNEL_OR_GROUP_DELETED", "ACTION_SETTINGS_HOME", "mLock", "mHandler", "mWrapper", "isConnected", "mRankingMap", "mNoMan", "mCurrentUser", "mSystemContext", "SERVICE_INTERFACE" ]
+}

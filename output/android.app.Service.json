@@ -1,0 +1,311 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/Service.java",
+  "packageName" : "android.app",
+  "className" : "Service",
+  "comment" : "\n * A Service is an application component representing either an application's desire\n * to perform a longer-running operation while not interacting with the user\n * or to supply functionality for other applications to use.  Each service\n * class must have a corresponding\n * {@link android.R.styleable#AndroidManifestService &lt;service&gt;}\n * declaration in its package's <code>AndroidManifest.xml</code>.  Services\n * can be started with\n * {@link android.content.Context#startService Context.startService()} and\n * {@link android.content.Context#bindService Context.bindService()}.\n * \n * <p>Note that services, like other application objects, run in the main\n * thread of their hosting process.  This means that, if your service is going\n * to do any CPU intensive (such as MP3 playback) or blocking (such as\n * networking) operations, it should spawn its own thread in which to do that\n * work.  More information on this can be found in\n * <a href=\"{@docRoot}guide/topics/fundamentals/processes-and-threads.html\">Processes and\n * Threads</a>.  The {@link androidx.core.app.JobIntentService} class is available\n * as a standard implementation of Service that has its own thread where it\n * schedules its work to be done.</p>\n * \n * <p>Topics covered here:\n * <ol>\n * <li><a href=\"#WhatIsAService\">What is a Service?</a>\n * <li><a href=\"#ServiceLifecycle\">Service Lifecycle</a>\n * <li><a href=\"#Permissions\">Permissions</a>\n * <li><a href=\"#ProcessLifecycle\">Process Lifecycle</a>\n * <li><a href=\"#LocalServiceSample\">Local Service Sample</a>\n * <li><a href=\"#RemoteMessengerServiceSample\">Remote Messenger Service Sample</a>\n * </ol>\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For a detailed discussion about how to create services, read the\n * <a href=\"{@docRoot}guide/topics/fundamentals/services.html\">Services</a> developer guide.</p>\n * </div>\n *\n * <a name=\"WhatIsAService\"></a>\n * <h3>What is a Service?</h3>\n * \n * <p>Most confusion about the Service class actually revolves around what\n * it is <em>not</em>:</p>\n * \n * <ul>\n * <li> A Service is <b>not</b> a separate process.  The Service object itself\n * does not imply it is running in its own process; unless otherwise specified,\n * it runs in the same process as the application it is part of.\n * <li> A Service is <b>not</b> a thread.  It is not a means itself to do work off\n * of the main thread (to avoid Application Not Responding errors).\n * </ul>\n * \n * <p>Thus a Service itself is actually very simple, providing two main features:</p>\n * \n * <ul>\n * <li>A facility for the application to tell the system <em>about</em>\n * something it wants to be doing in the background (even when the user is not\n * directly interacting with the application).  This corresponds to calls to\n * {@link android.content.Context#startService Context.startService()}, which\n * ask the system to schedule work for the service, to be run until the service\n * or someone else explicitly stop it.\n * <li>A facility for an application to expose some of its functionality to\n * other applications.  This corresponds to calls to\n * {@link android.content.Context#bindService Context.bindService()}, which\n * allows a long-standing connection to be made to the service in order to\n * interact with it.\n * </ul>\n * \n * <p>When a Service component is actually created, for either of these reasons,\n * all that the system actually does is instantiate the component\n * and call its {@link #onCreate} and any other appropriate callbacks on the\n * main thread.  It is up to the Service to implement these with the appropriate\n * behavior, such as creating a secondary thread in which it does its work.</p>\n * \n * <p>Note that because Service itself is so simple, you can make your\n * interaction with it as simple or complicated as you want: from treating it\n * as a local Java object that you make direct method calls on (as illustrated\n * by <a href=\"#LocalServiceSample\">Local Service Sample</a>), to providing\n * a full remoteable interface using AIDL.</p>\n * \n * <a name=\"ServiceLifecycle\"></a>\n * <h3>Service Lifecycle</h3>\n * \n * <p>There are two reasons that a service can be run by the system.  If someone\n * calls {@link android.content.Context#startService Context.startService()} then the system will\n * retrieve the service (creating it and calling its {@link #onCreate} method\n * if needed) and then call its {@link #onStartCommand} method with the\n * arguments supplied by the client.  The service will at this point continue\n * running until {@link android.content.Context#stopService Context.stopService()} or\n * {@link #stopSelf()} is called.  Note that multiple calls to\n * Context.startService() do not nest (though they do result in multiple corresponding\n * calls to onStartCommand()), so no matter how many times it is started a service\n * will be stopped once Context.stopService() or stopSelf() is called; however,\n * services can use their {@link #stopSelf(int)} method to ensure the service is\n * not stopped until started intents have been processed.\n * \n * <p>For started services, there are two additional major modes of operation\n * they can decide to run in, depending on the value they return from\n * onStartCommand(): {@link #START_STICKY} is used for services that are\n * explicitly started and stopped as needed, while {@link #START_NOT_STICKY}\n * or {@link #START_REDELIVER_INTENT} are used for services that should only\n * remain running while processing any commands sent to them.  See the linked\n * documentation for more detail on the semantics.\n * \n * <p>Clients can also use {@link android.content.Context#bindService Context.bindService()} to\n * obtain a persistent connection to a service.  This likewise creates the\n * service if it is not already running (calling {@link #onCreate} while\n * doing so), but does not call onStartCommand().  The client will receive the\n * {@link android.os.IBinder} object that the service returns from its\n * {@link #onBind} method, allowing the client to then make calls back\n * to the service.  The service will remain running as long as the connection\n * is established (whether or not the client retains a reference on the\n * service's IBinder).  Usually the IBinder returned is for a complex\n * interface that has been <a href=\"{@docRoot}guide/components/aidl.html\">written\n * in aidl</a>.\n * \n * <p>A service can be both started and have connections bound to it.  In such\n * a case, the system will keep the service running as long as either it is\n * started <em>or</em> there are one or more connections to it with the\n * {@link android.content.Context#BIND_AUTO_CREATE Context.BIND_AUTO_CREATE}\n * flag.  Once neither\n * of these situations hold, the service's {@link #onDestroy} method is called\n * and the service is effectively terminated.  All cleanup (stopping threads,\n * unregistering receivers) should be complete upon returning from onDestroy().\n * \n * <a name=\"Permissions\"></a>\n * <h3>Permissions</h3>\n * \n * <p>Global access to a service can be enforced when it is declared in its\n * manifest's {@link android.R.styleable#AndroidManifestService &lt;service&gt;}\n * tag.  By doing so, other applications will need to declare a corresponding\n * {@link android.R.styleable#AndroidManifestUsesPermission &lt;uses-permission&gt;}\n * element in their own manifest to be able to start, stop, or bind to\n * the service.\n *\n * <p>As of {@link android.os.Build.VERSION_CODES#GINGERBREAD}, when using\n * {@link Context#startService(Intent) Context.startService(Intent)}, you can\n * also set {@link Intent#FLAG_GRANT_READ_URI_PERMISSION\n * Intent.FLAG_GRANT_READ_URI_PERMISSION} and/or {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION\n * Intent.FLAG_GRANT_WRITE_URI_PERMISSION} on the Intent.  This will grant the\n * Service temporary access to the specific URIs in the Intent.  Access will\n * remain until the Service has called {@link #stopSelf(int)} for that start\n * command or a later one, or until the Service has been completely stopped.\n * This works for granting access to the other apps that have not requested\n * the permission protecting the Service, or even when the Service is not\n * exported at all.\n *\n * <p>In addition, a service can protect individual IPC calls into it with\n * permissions, by calling the\n * {@link #checkCallingPermission}\n * method before executing the implementation of that call.\n * \n * <p>See the <a href=\"{@docRoot}guide/topics/security/security.html\">Security and Permissions</a>\n * document for more information on permissions and security in general.\n * \n * <a name=\"ProcessLifecycle\"></a>\n * <h3>Process Lifecycle</h3>\n * \n * <p>The Android system will attempt to keep the process hosting a service\n * around as long as the service has been started or has clients bound to it.\n * When running low on memory and needing to kill existing processes, the\n * priority of a process hosting the service will be the higher of the\n * following possibilities:\n *\n * <ul>\n * <li><p>If the service is currently executing code in its\n * {@link #onCreate onCreate()}, {@link #onStartCommand onStartCommand()},\n * or {@link #onDestroy onDestroy()} methods, then the hosting process will\n * be a foreground process to ensure this code can execute without\n * being killed.\n * <li><p>If the service has been started, then its hosting process is considered\n * to be less important than any processes that are currently visible to the\n * user on-screen, but more important than any process not visible.  Because\n * only a few processes are generally visible to the user, this means that\n * the service should not be killed except in low memory conditions.  However, since\n * the user is not directly aware of a background service, in that state it <em>is</em>\n * considered a valid candidate to kill, and you should be prepared for this to\n * happen.  In particular, long-running services will be increasingly likely to\n * kill and are guaranteed to be killed (and restarted if appropriate) if they\n * remain started long enough.\n * <li><p>If there are clients bound to the service, then the service's hosting\n * process is never less important than the most important client.  That is,\n * if one of its clients is visible to the user, then the service itself is\n * considered to be visible.  The way a client's importance impacts the service's\n * importance can be adjusted through {@link Context#BIND_ABOVE_CLIENT},\n * {@link Context#BIND_ALLOW_OOM_MANAGEMENT}, {@link Context#BIND_WAIVE_PRIORITY},\n * {@link Context#BIND_IMPORTANT}, and {@link Context#BIND_ADJUST_WITH_ACTIVITY}.\n * <li><p>A started service can use the {@link #startForeground(int, Notification)}\n * API to put the service in a foreground state, where the system considers\n * it to be something the user is actively aware of and thus not a candidate\n * for killing when low on memory.  (It is still theoretically possible for\n * the service to be killed under extreme memory pressure from the current\n * foreground application, but in practice this should not be a concern.)\n * </ul>\n * \n * <p>Note this means that most of the time your service is running, it may\n * be killed by the system if it is under heavy memory pressure.  If this\n * happens, the system will later try to restart the service.  An important\n * consequence of this is that if you implement {@link #onStartCommand onStartCommand()}\n * to schedule work to be done asynchronously or in another thread, then you\n * may want to use {@link #START_FLAG_REDELIVERY} to have the system\n * re-deliver an Intent for you so that it does not get lost if your service\n * is killed while processing it.\n * \n * <p>Other application components running in the same process as the service\n * (such as an {@link android.app.Activity}) can, of course, increase the\n * importance of the overall\n * process beyond just the importance of the service itself.\n * \n * <a name=\"LocalServiceSample\"></a>\n * <h3>Local Service Sample</h3>\n * \n * <p>One of the most common uses of a Service is as a secondary component\n * running alongside other parts of an application, in the same process as\n * the rest of the components.  All components of an .apk run in the same\n * process unless explicitly stated otherwise, so this is a typical situation.\n * \n * <p>When used in this way, by assuming the\n * components are in the same process, you can greatly simplify the interaction\n * between them: clients of the service can simply cast the IBinder they\n * receive from it to a concrete class published by the service.\n * \n * <p>An example of this use of a Service is shown here.  First is the Service\n * itself, publishing a custom class when bound:\n * \n * {@sample development/samples/ApiDemos/src/com/example/android/apis/app/LocalService.java\n *      service}\n * \n * <p>With that done, one can now write client code that directly accesses the\n * running service, such as:\n * \n * {@sample development/samples/ApiDemos/src/com/example/android/apis/app/LocalServiceActivities.java\n *      bind}\n * \n * <a name=\"RemoteMessengerServiceSample\"></a>\n * <h3>Remote Messenger Service Sample</h3>\n * \n * <p>If you need to be able to write a Service that can perform complicated\n * communication with clients in remote processes (beyond simply the use of\n * {@link Context#startService(Intent) Context.startService} to send\n * commands to it), then you can use the {@link android.os.Messenger} class\n * instead of writing full AIDL files.\n * \n * <p>An example of a Service that uses Messenger as its client interface\n * is shown here.  First is the Service itself, publishing a Messenger to\n * an internal Handler when bound:\n * \n * {@sample development/samples/ApiDemos/src/com/example/android/apis/app/MessengerService.java\n *      service}\n * \n * <p>If we want to make this service run in a remote process (instead of the\n * standard one for its .apk), we can use <code>android:process</code> in its\n * manifest tag to specify one:\n * \n * {@sample development/samples/ApiDemos/AndroidManifest.xml remote_service_declaration}\n * \n * <p>Note that the name \"remote\" chosen here is arbitrary, and you can use\n * other names if you want additional processes.  The ':' prefix appends the\n * name to your package's standard process name.\n * \n * <p>With that done, clients can now bind to the service and send messages\n * to it.  Note that this allows clients to register with it to receive\n * messages back as well:\n * \n * {@sample development/samples/ApiDemos/src/com/example/android/apis/app/MessengerServiceActivities.java\n *      bind}\n ",
+  "links" : [ "#stopSelf(int)", "android.content.Context#BIND_ABOVE_CLIENT", "android.content.Context#BIND_AUTO_CREATE", "android.R.styleable#AndroidManifestService", "android.os.Build.VERSION_CODES#GINGERBREAD", "android.content.Context#BIND_WAIVE_PRIORITY", "android.os.IBinder", "#onBind", "#onStartCommand", "android.content.Intent#FLAG_GRANT_WRITE_URI_PERMISSIONIntent.FLAG_GRANT_WRITE_URI_PERMISSION", "android.content.Intent#FLAG_GRANT_READ_URI_PERMISSIONIntent.FLAG_GRANT_READ_URI_PERMISSION", "android.content.Context#startService(Intent)", "androidx.core.app.JobIntentService", "android.content.Context#BIND_ADJUST_WITH_ACTIVITY", "#stopSelf()", "#START_NOT_STICKY", "#onDestroy", "#START_FLAG_REDELIVERY", "android.content.Context#startService", "#START_REDELIVER_INTENT", "#checkCallingPermission", "#onCreate", "android.os.Messenger", "android.R.styleable#AndroidManifestUsesPermission", "#startForeground(int", "android.content.Context#bindService", "android.content.Context#stopService", "android.content.Context#BIND_ALLOW_OOM_MANAGEMENT", "android.content.Context#BIND_IMPORTANT", "#START_STICKY", "android.app.Activity" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STOP_FOREGROUND_LEGACY",
+    "type" : "int",
+    "comment" : "\n     * Selector for {@link #stopForeground(int)}:  equivalent to passing {@code false}\n     * to the legacy API {@link #stopForeground(boolean)}.\n     *\n     * @deprecated Use {@link #STOP_FOREGROUND_DETACH} instead.  The legacy\n     * behavior was inconsistent, leading to bugs around unpredictable results.\n     ",
+    "links" : [ "#stopForeground(int)", "#STOP_FOREGROUND_DETACH", "#stopForeground(boolean)" ]
+  }, {
+    "name" : "STOP_FOREGROUND_REMOVE",
+    "type" : "int",
+    "comment" : "\n     * Selector for {@link #stopForeground(int)}: if supplied, the notification previously\n     * supplied to {@link #startForeground} will be cancelled and removed from display.\n     ",
+    "links" : [ "#stopForeground(int)", "#startForeground" ]
+  }, {
+    "name" : "STOP_FOREGROUND_DETACH",
+    "type" : "int",
+    "comment" : "\n     * Selector for {@link #stopForeground(int)}: if set, the notification previously supplied\n     * to {@link #startForeground} will be detached from the service's lifecycle.  The notification\n     * will remain shown even after the service is stopped and destroyed.\n     ",
+    "links" : [ "#stopForeground(int)", "#startForeground" ]
+  }, {
+    "name" : "START_CONTINUATION_MASK",
+    "type" : "int",
+    "comment" : "\n     * Bits returned by {@link #onStartCommand} describing how to continue\n     * the service if it is killed.  May be {@link #START_STICKY},\n     * {@link #START_NOT_STICKY}, {@link #START_REDELIVER_INTENT},\n     * or {@link #START_STICKY_COMPATIBILITY}.\n     ",
+    "links" : [ "#START_STICKY_COMPATIBILITY", "#START_REDELIVER_INTENT", "#START_STICKY", "#START_NOT_STICKY", "#onStartCommand" ]
+  }, {
+    "name" : "START_STICKY_COMPATIBILITY",
+    "type" : "int",
+    "comment" : "\n     * Constant to return from {@link #onStartCommand}: compatibility\n     * version of {@link #START_STICKY} that does not guarantee that\n     * {@link #onStartCommand} will be called again after being killed.\n     ",
+    "links" : [ "#START_STICKY", "#onStartCommand" ]
+  }, {
+    "name" : "START_STICKY",
+    "type" : "int",
+    "comment" : "\n     * Constant to return from {@link #onStartCommand}: if this service's\n     * process is killed while it is started (after returning from\n     * {@link #onStartCommand}), then leave it in the started state but\n     * don't retain this delivered intent.  Later the system will try to\n     * re-create the service.  Because it is in the started state, it will\n     * guarantee to call {@link #onStartCommand} after creating the new\n     * service instance; if there are not any pending start commands to be\n     * delivered to the service, it will be called with a null intent\n     * object, so you must take care to check for this.\n     * \n     * <p>This mode makes sense for things that will be explicitly started\n     * and stopped to run for arbitrary periods of time, such as a service\n     * performing background music playback.\n     *\n     * <p>Since Android version {@link Build.VERSION_CODES#S}, apps\n     * targeting {@link Build.VERSION_CODES#S} or above are disallowed\n     * to start a foreground service from the background, but the restriction\n     * doesn't impact <em>restarts</em> of a sticky foreground service. However,\n     * when apps start a sticky foreground service from the background,\n     * the same restriction still applies.\n     ",
+    "links" : [ "Build.VERSION_CODES#S", "#onStartCommand" ]
+  }, {
+    "name" : "START_NOT_STICKY",
+    "type" : "int",
+    "comment" : "\n     * Constant to return from {@link #onStartCommand}: if this service's\n     * process is killed while it is started (after returning from\n     * {@link #onStartCommand}), and there are no new start intents to\n     * deliver to it, then take the service out of the started state and\n     * don't recreate until a future explicit call to\n     * {@link Context#startService Context.startService(Intent)}.  The\n     * service will not receive a {@link #onStartCommand(Intent, int, int)}\n     * call with a null Intent because it will not be restarted if there\n     * are no pending Intents to deliver.\n     * \n     * <p>This mode makes sense for things that want to do some work as a\n     * result of being started, but can be stopped when under memory pressure\n     * and will explicit start themselves again later to do more work.  An\n     * example of such a service would be one that polls for data from\n     * a server: it could schedule an alarm to poll every N minutes by having\n     * the alarm start its service.  When its {@link #onStartCommand} is\n     * called from the alarm, it schedules a new alarm for N minutes later,\n     * and spawns a thread to do its networking.  If its process is killed\n     * while doing that check, the service will not be restarted until the\n     * alarm goes off.\n     ",
+    "links" : [ "android.content.Context#startService", "#onStartCommand(Intent", "#onStartCommand" ]
+  }, {
+    "name" : "START_REDELIVER_INTENT",
+    "type" : "int",
+    "comment" : "\n     * Constant to return from {@link #onStartCommand}: if this service's\n     * process is killed while it is started (after returning from\n     * {@link #onStartCommand}), then it will be scheduled for a restart\n     * and the last delivered Intent re-delivered to it again via\n     * {@link #onStartCommand}.  This Intent will remain scheduled for\n     * redelivery until the service calls {@link #stopSelf(int)} with the\n     * start ID provided to {@link #onStartCommand}.  The\n     * service will not receive a {@link #onStartCommand(Intent, int, int)}\n     * call with a null Intent because it will only be restarted if\n     * it is not finished processing all Intents sent to it (and any such\n     * pending events will be delivered at the point of restart).\n     ",
+    "links" : [ "#stopSelf(int)", "#onStartCommand(Intent", "#onStartCommand" ]
+  }, {
+    "name" : "START_TASK_REMOVED_COMPLETE",
+    "type" : "int",
+    "comment" : "\n     * Special constant for reporting that we are done processing\n     * {@link #onTaskRemoved(Intent)}.\n     * @hide\n     ",
+    "links" : [ "#onTaskRemoved(Intent)" ]
+  }, {
+    "name" : "START_FLAG_REDELIVERY",
+    "type" : "int",
+    "comment" : "\n     * This flag is set in {@link #onStartCommand} if the Intent is a\n     * re-delivery of a previously delivered intent, because the service\n     * had previously returned {@link #START_REDELIVER_INTENT} but had been\n     * killed before calling {@link #stopSelf(int)} for that Intent.\n     ",
+    "links" : [ "#stopSelf(int)", "#START_REDELIVER_INTENT", "#onStartCommand" ]
+  }, {
+    "name" : "START_FLAG_RETRY",
+    "type" : "int",
+    "comment" : "\n     * This flag is set in {@link #onStartCommand} if the Intent is a\n     * retry because the original attempt never got to or returned from\n     * {@link #onStartCommand(Intent, int, int)}.\n     ",
+    "links" : [ "#onStartCommand(Intent", "#onStartCommand" ]
+  }, {
+    "name" : "mThread",
+    "type" : "ActivityThread",
+    "comment" : " set by the thread after the constructor and before onCreate(Bundle icicle) is called.",
+    "links" : [ ]
+  }, {
+    "name" : "mClassName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mToken",
+    "type" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mApplication",
+    "type" : "Application",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActivityManager",
+    "type" : "IActivityManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStartCompatibility",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mForegroundServiceTraceTitle",
+    "type" : "String",
+    "comment" : "\n     * This will be set to the title of the system trace when this service is started as\n     * a foreground service, and will be set to null when it's no longer in foreground\n     * service state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mForegroundServiceTraceTitleLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TRACE_TRACK_NAME_FOREGROUND_SERVICE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sStartForegroundServiceStackTraces",
+    "type" : "ArrayMap<String, StackTrace>",
+    "comment" : "\n     * This keeps track of the stacktrace where Context.startForegroundService() was called\n     * for each service class. We use that when we crash the app for not calling\n     * {@link #startForeground} in time, in {@link ActivityThread#throwRemoteServiceException}.\n     ",
+    "links" : [ "android.app.ActivityThread#throwRemoteServiceException", "#startForeground" ]
+  } ],
+  "methods" : [ {
+    "name" : "public final Application getApplication()",
+    "returnType" : "Application",
+    "comment" : " Return the application that owns this service. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onCreate()",
+    "returnType" : "void",
+    "comment" : "\n     * Called by the system when the service is first created.  Do not call this method directly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onStart(Intent intent, int startId)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated Implement {@link #onStartCommand(Intent, int, int)} instead.\n     ",
+    "links" : [ "#onStartCommand(Intent" ]
+  }, {
+    "name" : "public int onStartCommand(Intent intent, @StartArgFlags int flags, int startId)",
+    "returnType" : "int",
+    "comment" : "\n     * Called by the system every time a client explicitly starts the service by calling \n     * {@link android.content.Context#startService}, providing the arguments it supplied and a \n     * unique integer token representing the start request.  Do not call this method directly.\n     * \n     * <p>For backwards compatibility, the default implementation calls\n     * {@link #onStart} and returns either {@link #START_STICKY}\n     * or {@link #START_STICKY_COMPATIBILITY}.\n     * \n     * <p class=\"caution\">Note that the system calls this on your\n     * service's main thread.  A service's main thread is the same\n     * thread where UI operations take place for Activities running in the\n     * same process.  You should always avoid stalling the main\n     * thread's event loop.  When doing long-running operations,\n     * network calls, or heavy disk I/O, you should kick off a new\n     * thread, or use {@link android.os.AsyncTask}.</p>\n     *\n     * @param intent The Intent supplied to {@link android.content.Context#startService}, \n     * as given.  This may be null if the service is being restarted after\n     * its process has gone away, and it had previously returned anything\n     * except {@link #START_STICKY_COMPATIBILITY}.\n     * @param flags Additional data about this start request.\n     * @param startId A unique integer representing this specific request to \n     * start.  Use with {@link #stopSelfResult(int)}.\n     * \n     * @return The return value indicates what semantics the system should\n     * use for the service's current started state.  It may be one of the\n     * constants associated with the {@link #START_CONTINUATION_MASK} bits.\n     * \n     * @see #stopSelfResult(int)\n     ",
+    "links" : [ "android.content.Context#startService", "android.os.AsyncTask", "#START_STICKY_COMPATIBILITY", "#onStart", "#START_CONTINUATION_MASK", "#START_STICKY", "#stopSelfResult(int)" ]
+  }, {
+    "name" : "public void onDestroy()",
+    "returnType" : "void",
+    "comment" : "\n     * Called by the system to notify a Service that it is no longer used and is being removed.  The\n     * service should clean up any resources it holds (threads, registered\n     * receivers, etc) at this point.  Upon return, there will be no more calls\n     * in to this Service object and it is effectively dead.  Do not call this method directly.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onConfigurationChanged(Configuration newConfig)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onLowMemory()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onTrimMemory(int level)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "\n     * Return the communication channel to the service.  May return null if \n     * clients can not bind to the service.  The returned\n     * {@link android.os.IBinder} is usually for a complex interface\n     * that has been <a href=\"{@docRoot}guide/components/aidl.html\">described using\n     * aidl</a>.\n     * \n     * <p><em>Note that unlike other application components, calls on to the\n     * IBinder interface returned here may not happen on the main thread\n     * of the process</em>.  More information about the main thread can be found in\n     * <a href=\"{@docRoot}guide/topics/fundamentals/processes-and-threads.html\">Processes and\n     * Threads</a>.</p>\n     * \n     * @param intent The Intent that was used to bind to this service,\n     * as given to {@link android.content.Context#bindService\n     * Context.bindService}.  Note that any extras that were included with\n     * the Intent at that point will <em>not</em> be seen here.\n     * \n     * @return Return an IBinder through which clients can call on to the \n     *         service.\n     ",
+    "links" : [ "android.content.Context#bindServiceContext.bindService", "android.os.IBinder" ]
+  }, {
+    "name" : "public boolean onUnbind(Intent intent)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called when all clients have disconnected from a particular interface\n     * published by the service.  The default implementation does nothing and\n     * returns false.\n     * \n     * @param intent The Intent that was used to bind to this service,\n     * as given to {@link android.content.Context#bindService\n     * Context.bindService}.  Note that any extras that were included with\n     * the Intent at that point will <em>not</em> be seen here.\n     * \n     * @return Return true if you would like to have the service's\n     * {@link #onRebind} method later called when new clients bind to it.\n     ",
+    "links" : [ "#onRebind", "android.content.Context#bindServiceContext.bindService" ]
+  }, {
+    "name" : "public void onRebind(Intent intent)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when new clients have connected to the service, after it had\n     * previously been notified that all had disconnected in its\n     * {@link #onUnbind}.  This will only be called if the implementation\n     * of {@link #onUnbind} was overridden to return true.\n     * \n     * @param intent The Intent that was used to bind to this service,\n     * as given to {@link android.content.Context#bindService\n     * Context.bindService}.  Note that any extras that were included with\n     * the Intent at that point will <em>not</em> be seen here.\n     ",
+    "links" : [ "android.content.Context#bindServiceContext.bindService", "#onUnbind" ]
+  }, {
+    "name" : "public void onTaskRemoved(Intent rootIntent)",
+    "returnType" : "void",
+    "comment" : "\n     * This is called if the service is currently running and the user has\n     * removed a task that comes from the service's application.  If you have\n     * set {@link android.content.pm.ServiceInfo#FLAG_STOP_WITH_TASK ServiceInfo.FLAG_STOP_WITH_TASK}\n     * then you will not receive this callback; instead, the service will simply\n     * be stopped.\n     *\n     * @param rootIntent The original root Intent that was used to launch\n     * the task that is being removed.\n     ",
+    "links" : [ "android.content.pm.ServiceInfo#FLAG_STOP_WITH_TASK" ]
+  }, {
+    "name" : "public final void stopSelf()",
+    "returnType" : "void",
+    "comment" : "\n     * Stop the service, if it was previously started.  This is the same as\n     * calling {@link android.content.Context#stopService} for this particular service.\n     *  \n     * @see #stopSelfResult(int)\n     ",
+    "links" : [ "android.content.Context#stopService" ]
+  }, {
+    "name" : "public final void stopSelf(int startId)",
+    "returnType" : "void",
+    "comment" : "\n     * Old version of {@link #stopSelfResult} that doesn't return a result.\n     *  \n     * @see #stopSelfResult\n     ",
+    "links" : [ "#stopSelfResult" ]
+  }, {
+    "name" : "public final boolean stopSelfResult(int startId)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Stop the service if the most recent time it was started was \n     * <var>startId</var>.  This is the same as calling {@link \n     * android.content.Context#stopService} for this particular service but allows you to \n     * safely avoid stopping if there is a start request from a client that you \n     * haven't yet seen in {@link #onStart}. \n     * \n     * <p><em>Be careful about ordering of your calls to this function.</em>.\n     * If you call this function with the most-recently received ID before\n     * you have called it for previously received IDs, the service will be\n     * immediately stopped anyway.  If you may end up processing IDs out\n     * of order (such as by dispatching them on separate threads), then you\n     * are responsible for stopping them in the same order you received them.</p>\n     * \n     * @param startId The most recent start identifier received in {@link \n     *                #onStart}.\n     * @return Returns true if the startId matches the last start request\n     * and the service will be stopped, else false.\n     *  \n     * @see #stopSelf()\n     ",
+    "links" : [ "android.content.Context#stopService", "#onStart" ]
+  }, {
+    "name" : "public final void setForeground(boolean isForeground)",
+    "returnType" : "void",
+    "comment" : "\n     * @deprecated This is a now a no-op, use\n     * {@link #startForeground(int, Notification)} instead.  This method\n     * has been turned into a no-op rather than simply being deprecated\n     * because analysis of numerous poorly behaving devices has shown that\n     * increasingly often the trouble is being caused in part by applications\n     * that are abusing it.  Thus, given a choice between introducing\n     * problems in existing applications using this API (by allowing them to\n     * be killed when they would like to avoid it), vs allowing the performance\n     * of the entire system to be decreased, this method was deemed less\n     * important.\n     * \n     * @hide\n     ",
+    "links" : [ "#startForeground(int" ]
+  }, {
+    "name" : "public final void startForeground(int id, Notification notification)",
+    "returnType" : "void",
+    "comment" : "\n     * If your service is started (running through {@link Context#startService(Intent)}), then\n     * also make this service run in the foreground, supplying the ongoing\n     * notification to be shown to the user while in this state.\n     * By default started services are background, meaning that their process won't be given\n     * foreground CPU scheduling (unless something else in that process is foreground) and,\n     * if the system needs to kill them to reclaim more memory (such as to display a large page in a\n     * web browser), they can be killed without too much harm.  You use\n     * {@link #startForeground} if killing your service would be disruptive to the user, such as\n     * if your service is performing background music playback, so the user\n     * would notice if their music stopped playing.\n     *\n     * <p>Note that calling this method does <em>not</em> put the service in the started state\n     * itself, even though the name sounds like it.  You must always call\n     * {@link #startService(Intent)} first to tell the system it should keep the service running,\n     * and then use this method to tell it to keep it running harder.</p>\n     *\n     * <p>Apps targeting API {@link android.os.Build.VERSION_CODES#P} or later must request\n     * the permission {@link android.Manifest.permission#FOREGROUND_SERVICE} in order to use\n     * this API.</p>\n     *\n     * <p>Apps built with SDK version {@link android.os.Build.VERSION_CODES#Q} or later can specify\n     * the foreground service types using attribute {@link android.R.attr#foregroundServiceType} in\n     * service element of manifest file. The value of attribute\n     * {@link android.R.attr#foregroundServiceType} can be multiple flags ORed together.</p>\n     *\n     * <div class=\"caution\">\n     * <p><strong>Note:</strong>\n     * Beginning with SDK Version {@link android.os.Build.VERSION_CODES#S},\n     * apps targeting SDK Version {@link android.os.Build.VERSION_CODES#S}\n     * or higher are not allowed to start foreground services from the background.\n     * See\n     * <a href=\"{@docRoot}about/versions/12/behavior-changes-12\">\n     * Behavior changes: Apps targeting Android 12\n     * </a>\n     * for more details.\n     * </div>\n     *\n     * <div class=\"caution\">\n     * <p><strong>Note:</strong>\n     * Beginning with SDK Version {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE},\n     * apps targeting SDK Version {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE}\n     * or higher are not allowed to start foreground services without specifying a valid\n     * foreground service type in the manifest attribute\n     * {@link android.R.attr#foregroundServiceType}.\n     * See\n     * <a href=\"{@docRoot}about/versions/14/behavior-changes-14\">\n     * Behavior changes: Apps targeting Android 14\n     * </a>\n     * for more details.\n     * </div>\n     *\n     * @throws ForegroundServiceStartNotAllowedException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#S} or later, and the service is restricted from\n     * becoming foreground service due to background restriction.\n     * @throws InvalidForegroundServiceTypeException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later, and the manifest attribute\n     * {@link android.R.attr#foregroundServiceType} is set to invalid types(i.e.\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE}).\n     * @throws MissingForegroundServiceTypeException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later, and the manifest attribute\n     * {@link android.R.attr#foregroundServiceType} is not set.\n     * @throws SecurityException If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later and doesn't have the\n     * permission to start the foreground service with the specified type in the manifest attribute\n     * {@link android.R.attr#foregroundServiceType}.\n     *\n     * @param id The identifier for this notification as per\n     * {@link NotificationManager#notify(int, Notification)\n     * NotificationManager.notify(int, Notification)}; must not be 0.\n     * @param notification The Notification to be displayed.\n     *\n     * @see #stopForeground(boolean)\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#P", "android.content.Context#startService(Intent)", "android.os.Build.VERSION_CODES#Q", "android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE", "android.os.Build.VERSION_CODES#S", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE", "android.R.attr#foregroundServiceType", "android.app.NotificationManager#notify(int", "#startService(Intent)", "#startForeground", "android.Manifest.permission#FOREGROUND_SERVICE" ]
+  }, {
+    "name" : "public final void startForeground(int id, @NonNull Notification notification, @RequiresPermission @ForegroundServiceType int foregroundServiceType)",
+    "returnType" : "void",
+    "comment" : "\n     * An overloaded version of {@link #startForeground(int, Notification)} with additional\n     * foregroundServiceType parameter.\n     *\n     * <p>Apps built with SDK version {@link android.os.Build.VERSION_CODES#Q} or later can specify\n     * the foreground service types using attribute {@link android.R.attr#foregroundServiceType} in\n     * service element of manifest file. The value of attribute\n     * {@link android.R.attr#foregroundServiceType} can be multiple flags ORed together.</p>\n     *\n     * <p>The foregroundServiceType parameter must be a subset flags of what is specified in\n     * manifest attribute {@link android.R.attr#foregroundServiceType}, if not, an\n     * IllegalArgumentException is thrown. Specify foregroundServiceType parameter as\n     * {@link android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_MANIFEST} to use all flags that\n     * is specified in manifest attribute foregroundServiceType.</p>\n     *\n     * <div class=\"caution\">\n     * <p><strong>Note:</strong>\n     * Beginning with SDK Version {@link android.os.Build.VERSION_CODES#S},\n     * apps targeting SDK Version {@link android.os.Build.VERSION_CODES#S}\n     * or higher are not allowed to start foreground services from the background.\n     * See\n     * <a href=\"{@docRoot}about/versions/12/behavior-changes-12\">\n     * Behavior changes: Apps targeting Android 12\n     * </a>\n     * for more details.\n     * </div>\n     *\n     * <div class=\"caution\">\n     * <p><strong>Note:</strong>\n     * Beginning with SDK Version {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE},\n     * apps targeting SDK Version {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE}\n     * or higher are not allowed to start foreground services without specifying a valid\n     * foreground service type in the manifest attribute\n     * {@link android.R.attr#foregroundServiceType}, and the parameter {@code foregroundServiceType}\n     * here must not be the {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE}.\n     * See\n     * <a href=\"{@docRoot}about/versions/14/behavior-changes-14\">\n     * Behavior changes: Apps targeting Android 14\n     * </a>\n     * for more details.\n     * </div>\n     *\n     * @param id The identifier for this notification as per\n     * {@link NotificationManager#notify(int, Notification)\n     * NotificationManager.notify(int, Notification)}; must not be 0.\n     * @param notification The Notification to be displayed.\n     * @param foregroundServiceType must be a subset flags of manifest attribute\n     * {@link android.R.attr#foregroundServiceType} flags; must not be\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE}.\n     *\n     * @throws IllegalArgumentException if param foregroundServiceType is not subset of manifest\n     *     attribute {@link android.R.attr#foregroundServiceType}.\n     * @throws ForegroundServiceStartNotAllowedException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#S} or later, and the service is restricted from\n     * becoming foreground service due to background restriction.\n     * @throws InvalidForegroundServiceTypeException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later, and the manifest attribute\n     * {@link android.R.attr#foregroundServiceType} or the param {@code foregroundServiceType}\n     * is set to invalid types(i.e.{@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE}).\n     * @throws MissingForegroundServiceTypeException\n     * If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later, and the manifest attribute\n     * {@link android.R.attr#foregroundServiceType} is not set and the param\n     * {@code foregroundServiceType} is set to {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_MANIFEST}.\n     * @throws SecurityException If the app targeting API is\n     * {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE} or later and doesn't have the\n     * permission to start the foreground service with the specified type in\n     * {@code foregroundServiceType}.\n     * {@link android.R.attr#foregroundServiceType}.\n     *\n     * @see android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_MANIFEST\n     ",
+    "links" : [ "#startForeground(int", "android.os.Build.VERSION_CODES#Q", "android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE", "android.os.Build.VERSION_CODES#S", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_MANIFEST", "android.R.attr#foregroundServiceType", "android.app.NotificationManager#notify(int" ]
+  }, {
+    "name" : "public final void stopForeground(boolean removeNotification)",
+    "returnType" : "void",
+    "comment" : "\n     * Legacy version of {@link #stopForeground(int)}.\n     * @param removeNotification If true, the {@link #STOP_FOREGROUND_REMOVE}\n     * selector will be passed to {@link #stopForeground(int)}; otherwise\n     * {@link #STOP_FOREGROUND_LEGACY} will be passed.\n     * @see #stopForeground(int)\n     * @see #startForeground(int, Notification)\n     *\n     * @deprecated call {@link #stopForeground(int)} and pass either\n     * {@link #STOP_FOREGROUND_REMOVE} or {@link #STOP_FOREGROUND_DETACH}\n     * explicitly instead.\n     ",
+    "links" : [ "#stopForeground(int)", "#STOP_FOREGROUND_REMOVE", "#STOP_FOREGROUND_DETACH", "#STOP_FOREGROUND_LEGACY" ]
+  }, {
+    "name" : "public final void stopForeground(@StopForegroundSelector int notificationBehavior)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove this service from foreground state, allowing it to be killed if\n     * more memory is needed.  This does not stop the service from running (for that\n     * you use {@link #stopSelf()} or related methods), just takes it out of the\n     * foreground state.\n     *\n     * <p>If {@link #STOP_FOREGROUND_REMOVE} is supplied, the service's associated\n     * notification will be cancelled immediately.</p>\n     * <p>If {@link #STOP_FOREGROUND_DETACH} is supplied, the service's association\n     * with the notification will be severed.  If the notification had not yet been\n     * shown, due to foreground-service notification deferral policy, it is\n     * immediately posted when {@code stopForeground(STOP_FOREGROUND_DETACH)}\n     * is called.  In all cases, the notification remains shown\n     * even after this service is stopped fully and destroyed.</p>\n     * <p>If {@code zero} is passed as the argument, the result will be the legacy\n     * behavior as defined prior to Android L: the notification will remain posted until\n     * the service is fully stopped, at which time it will automatically be cancelled.</p>\n     *\n     * @param notificationBehavior the intended behavior for the service's associated\n     * notification\n     * @see #startForeground(int, Notification)\n     * @see #STOP_FOREGROUND_DETACH\n     * @see #STOP_FOREGROUND_REMOVE\n     ",
+    "links" : [ "#STOP_FOREGROUND_REMOVE", "#STOP_FOREGROUND_DETACH", "#stopSelf()" ]
+  }, {
+    "name" : "public final int getForegroundServiceType()",
+    "returnType" : "int",
+    "comment" : "\n     * If the service has become a foreground service by calling\n     * {@link #startForeground(int, Notification)}\n     * or {@link #startForeground(int, Notification, int)}, {@link #getForegroundServiceType()}\n     * returns the current foreground service type.\n     *\n     * <p>If there is no foregroundServiceType specified\n     * in manifest, {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE} is returned. </p>\n     *\n     * <p>If the service is not a foreground service,\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE} is returned.</p>\n     *\n     * @return current foreground service type flags.\n     ",
+    "links" : [ "#startForeground(int", "#getForegroundServiceType()", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_NONE" ]
+  }, {
+    "name" : "protected void dump(FileDescriptor fd, PrintWriter writer, String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Print the Service's state into the given stream.  This gets invoked if\n     * you run \"adb shell dumpsys activity service &lt;yourservicename&gt;\"\n     * (note that for this command to work, the service must be running, and\n     * you must specify a fully-qualified service name).\n     * This is distinct from \"dumpsys &lt;servicename&gt;\", which only works for\n     * named system services and which invokes the {@link IBinder#dump} method\n     * on the {@link IBinder} interface registered with ServiceManager.\n     *\n     * @param fd The raw file descriptor that the dump is being sent to.\n     * @param writer The PrintWriter to which you should dump your state.  This will be\n     * closed for you after you return.\n     * @param args additional arguments to the dump request.\n     ",
+    "links" : [ "android.os.IBinder#dump", "android.os.IBinder" ]
+  }, {
+    "name" : "protected void attachBaseContext(Context newBase)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void attach(Context context, ActivityThread thread, String className, IBinder token, Application application, Object activityManager)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Context createServiceBaseContext(ActivityThread mainThread, LoadedApk packageInfo)",
+    "returnType" : "Context",
+    "comment" : "\n     * Creates the base {@link Context} of this {@link Service}.\n     * Users may override this API to create customized base context.\n     *\n     * @see android.window.WindowProviderService WindowProviderService class for example\n     * @see ContextWrapper#attachBaseContext(Context)\n     *\n     * @hide\n     ",
+    "links" : [ "android.content.Context", "android.app.Service" ]
+  }, {
+    "name" : "public final void detachAndCleanUp()",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     * Clean up any references to avoid leaks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final String getClassName()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final ContentCaptureManager.ContentCaptureClient getContentCaptureClient()",
+    "returnType" : "ContentCaptureManager.ContentCaptureClient",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ComponentName contentCaptureClientGetComponentName()",
+    "returnType" : "ComponentName",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logForegroundServiceStart(ComponentName comp, @ForegroundServiceType int foregroundServiceType)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void logForegroundServiceStopIfNecessary()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setStartForegroundServiceStackTrace(@NonNull String className, @NonNull StackTrace stacktrace)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "private void clearStartForegroundServiceStackTrace()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static StackTrace getStartForegroundServiceStackTrace(@NonNull String className)",
+    "returnType" : "StackTrace",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void callOnTimeout(int startId)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onTimeout(int startId)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback called on timeout for {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE}.\n     * See {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE} for more details.\n     *\n     * <p>If the foreground service of type\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE}\n     * doesn't finish even after it's timed out,\n     * the app will be declared an ANR after a short grace period of several seconds.\n     *\n     * <p>Starting from Android version {@link android.os.Build.VERSION_CODES#VANILLA_ICE_CREAM},\n     * {@link #onTimeout(int, int)} will also be called when a foreground service of type\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE} times out.\n     * Developers do not need to implement both of the callbacks on\n     * {@link android.os.Build.VERSION_CODES#VANILLA_ICE_CREAM} and onwards.\n     *\n     * <p>Note, even though\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE}\n     * was added\n     * on Android version {@link android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE},\n     * it can be also used on\n     * on prior android versions (just like other new foreground service types can be used).\n     * However, because {@link android.app.Service#onTimeout(int)} did not exist on prior versions,\n     * it will never called on such versions.\n     * Because of this, developers must make sure to stop the foreground service even if\n     * {@link android.app.Service#onTimeout(int)} is not called on such versions.\n     *\n     * @param startId the startId passed to {@link #onStartCommand(Intent, int, int)} when\n     * the service started.\n     ",
+    "links" : [ "#onStartCommand(Intent", "android.os.Build.VERSION_CODES#VANILLA_ICE_CREAM", "android.os.Build.VERSION_CODES#UPSIDE_DOWN_CAKE", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_SHORT_SERVICE", "android.app.Service#onTimeout(int)", "#onTimeout(int" ]
+  }, {
+    "name" : "public final void callOnTimeLimitExceeded(int startId, @ForegroundServiceType int fgsType)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onTimeout(int startId, @ForegroundServiceType int fgsType)",
+    "returnType" : "void",
+    "comment" : "\n     * Callback called when a particular foreground service type has timed out.\n     *\n     * <p>This callback is meant to give the app a small grace period of a few seconds to finish\n     * the foreground service of the associated type - if it fails to do so, the app will crash.\n     *\n     * <p>The foreground service of the associated type can be stopped within the time limit by\n     * {@link android.app.Service#stopSelf()},\n     * {@link android.content.Context#stopService(android.content.Intent)} or their overloads.\n     * {@link android.app.Service#stopForeground(int)} can be used as well, which demotes the\n     * service to a \"background\" service, which will soon be stopped by the system.\n     *\n     * <p>The specific time limit for each type (if one exists) is mentioned in the documentation\n     * for that foreground service type. See\n     * {@link ServiceInfo#FOREGROUND_SERVICE_TYPE_DATA_SYNC dataSync} for example.\n     *\n     * <p>Note: time limits are restricted to a rolling 24-hour window - for example, if a\n     * foreground service type has a time limit of 6 hours, that time counter begins as soon as the\n     * foreground service starts. This time limit will only be reset once every 24 hours or if the\n     * app comes into the foreground state.\n     *\n     * @param startId the startId passed to {@link #onStartCommand(Intent, int, int)} when\n     *                the service started.\n     * @param fgsType the {@link ServiceInfo.ForegroundServiceType foreground service type} which\n     *                caused the timeout.\n     ",
+    "links" : [ "android.app.Service#stopSelf()", "#onStartCommand(Intent", "android.content.Context#stopService(android.content.Intent)", "ServiceInfo.ForegroundServiceType", "android.app.Service#stopForeground(int)", "android.content.pm.ServiceInfo#FOREGROUND_SERVICE_TYPE_DATA_SYNC" ]
+  } ],
+  "methodNames" : [ "public final Application getApplication()", "public void onCreate()", "public void onStart(Intent intent, int startId)", "public int onStartCommand(Intent intent, @StartArgFlags int flags, int startId)", "public void onDestroy()", "public void onConfigurationChanged(Configuration newConfig)", "public void onLowMemory()", "public void onTrimMemory(int level)", "public abstract IBinder onBind(Intent intent)", "public boolean onUnbind(Intent intent)", "public void onRebind(Intent intent)", "public void onTaskRemoved(Intent rootIntent)", "public final void stopSelf()", "public final void stopSelf(int startId)", "public final boolean stopSelfResult(int startId)", "public final void setForeground(boolean isForeground)", "public final void startForeground(int id, Notification notification)", "public final void startForeground(int id, @NonNull Notification notification, @RequiresPermission @ForegroundServiceType int foregroundServiceType)", "public final void stopForeground(boolean removeNotification)", "public final void stopForeground(@StopForegroundSelector int notificationBehavior)", "public final int getForegroundServiceType()", "protected void dump(FileDescriptor fd, PrintWriter writer, String[] args)", "protected void attachBaseContext(Context newBase)", "public final void attach(Context context, ActivityThread thread, String className, IBinder token, Application application, Object activityManager)", "public Context createServiceBaseContext(ActivityThread mainThread, LoadedApk packageInfo)", "public final void detachAndCleanUp()", " final String getClassName()", "public final ContentCaptureManager.ContentCaptureClient getContentCaptureClient()", "public final ComponentName contentCaptureClientGetComponentName()", "private void logForegroundServiceStart(ComponentName comp, @ForegroundServiceType int foregroundServiceType)", "private void logForegroundServiceStopIfNecessary()", "public static void setStartForegroundServiceStackTrace(@NonNull String className, @NonNull StackTrace stacktrace)", "private void clearStartForegroundServiceStackTrace()", "public static StackTrace getStartForegroundServiceStackTrace(@NonNull String className)", "public final void callOnTimeout(int startId)", "public void onTimeout(int startId)", "public final void callOnTimeLimitExceeded(int startId, @ForegroundServiceType int fgsType)", "public void onTimeout(int startId, @ForegroundServiceType int fgsType)" ],
+  "variableNames" : [ "TAG", "STOP_FOREGROUND_LEGACY", "STOP_FOREGROUND_REMOVE", "STOP_FOREGROUND_DETACH", "START_CONTINUATION_MASK", "START_STICKY_COMPATIBILITY", "START_STICKY", "START_NOT_STICKY", "START_REDELIVER_INTENT", "START_TASK_REMOVED_COMPLETE", "START_FLAG_REDELIVERY", "START_FLAG_RETRY", "mThread", "mClassName", "mToken", "mApplication", "mActivityManager", "mStartCompatibility", "mForegroundServiceTraceTitle", "mForegroundServiceTraceTitleLock", "TRACE_TRACK_NAME_FOREGROUND_SERVICE", "sStartForegroundServiceStackTraces" ]
+}

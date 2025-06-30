@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/MediaParser.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/MediaParser.java",
   "packageName" : "android.media",
   "className" : "MediaParser",
   "comment" : "\n * Parses media container formats and extracts contained media samples and metadata.\n *\n * <p>This class provides access to a battery of low-level media container parsers. Each instance of\n * this class is associated to a specific media parser implementation which is suitable for\n * extraction from a specific media container format. The media parser implementation assignment\n * depends on the factory method (see {@link #create} and {@link #createByName}) used to create the\n * instance.\n *\n * <p>Users must implement the following to use this class.\n *\n * <ul>\n *   <li>{@link InputReader}: Provides the media container's bytes to parse.\n *   <li>{@link OutputConsumer}: Provides a sink for all extracted data and metadata.\n * </ul>\n *\n * <p>The following code snippet includes a usage example:\n *\n * <pre>\n * MyOutputConsumer myOutputConsumer = new MyOutputConsumer();\n * MyInputReader myInputReader = new MyInputReader(\"www.example.com\");\n * MediaParser mediaParser = MediaParser.create(myOutputConsumer);\n *\n * while (mediaParser.advance(myInputReader)) {}\n *\n * mediaParser.release();\n * mediaParser = null;\n * </pre>\n *\n * <p>The following code snippet provides a rudimentary {@link OutputConsumer} sample implementation\n * which extracts and publishes all video samples:\n *\n * <pre>\n * class VideoOutputConsumer implements MediaParser.OutputConsumer {\n *\n *     private byte[] sampleDataBuffer = new byte[4096];\n *     private byte[] discardedDataBuffer = new byte[4096];\n *     private int videoTrackIndex = -1;\n *     private int bytesWrittenCount = 0;\n *\n *     &#64;Override\n *     public void onSeekMapFound(int i, &#64;NonNull MediaFormat mediaFormat) {\n *       // Do nothing.\n *     }\n *\n *     &#64;Override\n *     public void onTrackDataFound(int i, &#64;NonNull TrackData trackData) {\n *       MediaFormat mediaFormat = trackData.mediaFormat;\n *       if (videoTrackIndex == -1 &amp;&amp;\n *           mediaFormat\n *               .getString(MediaFormat.KEY_MIME, &#47;* defaultValue= *&#47; \"\")\n *               .startsWith(\"video/\")) {\n *         videoTrackIndex = i;\n *       }\n *     }\n *\n *     &#64;Override\n *     public void onSampleDataFound(int trackIndex, &#64;NonNull InputReader inputReader)\n *         throws IOException {\n *       int numberOfBytesToRead = (int) inputReader.getLength();\n *       if (videoTrackIndex != trackIndex) {\n *         // Discard contents.\n *         inputReader.read(\n *             discardedDataBuffer,\n *             &#47;* offset= *&#47; 0,\n *             Math.min(discardDataBuffer.length, numberOfBytesToRead));\n *       } else {\n *         ensureSpaceInBuffer(numberOfBytesToRead);\n *         int bytesRead = inputReader.read(\n *             sampleDataBuffer, bytesWrittenCount, numberOfBytesToRead);\n *         bytesWrittenCount += bytesRead;\n *       }\n *     }\n *\n *     &#64;Override\n *     public void onSampleCompleted(\n *         int trackIndex,\n *         long timeMicros,\n *         int flags,\n *         int size,\n *         int offset,\n *         &#64;Nullable CryptoInfo cryptoData) {\n *       if (videoTrackIndex != trackIndex) {\n *         return; // It's not the video track. Ignore.\n *       }\n *       byte[] sampleData = new byte[size];\n *       int sampleStartOffset = bytesWrittenCount - size - offset;\n *       System.arraycopy(\n *           sampleDataBuffer,\n *           sampleStartOffset,\n *           sampleData,\n *           &#47;* destPos= *&#47; 0,\n *           size);\n *       // Place trailing bytes at the start of the buffer.\n *       System.arraycopy(\n *           sampleDataBuffer,\n *           bytesWrittenCount - offset,\n *           sampleDataBuffer,\n *           &#47;* destPos= *&#47; 0,\n *           &#47;* size= *&#47; offset);\n *       bytesWrittenCount = bytesWrittenCount - offset;\n *       publishSample(sampleData, timeMicros, flags);\n *     }\n *\n *    private void ensureSpaceInBuffer(int numberOfBytesToRead) {\n *      int requiredLength = bytesWrittenCount + numberOfBytesToRead;\n *      if (requiredLength &gt; sampleDataBuffer.length) {\n *        sampleDataBuffer = Arrays.copyOf(sampleDataBuffer, requiredLength);\n *      }\n *    }\n *\n *   }\n *\n * </pre>\n ",
+  "links" : [ "#create", "InputReader", "OutputConsumer", "#createByName" ],
   "variables" : [ {
     "name" : "SAMPLE_FLAG_KEY_FRAME",
     "type" : "int",
@@ -239,6 +240,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "JNI_LIBRARY_NAME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "EXTRACTOR_FACTORIES_BY_NAME",
     "type" : "Map<String, ExtractorFactory>",
     "comment" : "",
@@ -272,6 +278,26 @@
     "name" : "EMPTY_BYTE_ARRAY",
     "type" : "byte[]",
     "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIAMETRICS_ELEMENT_SEPARATOR",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIAMETRICS_MAX_STRING_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIAMETRICS_PARAMETER_LIST_MAX_LENGTH",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIAMETRICS_DITHER",
+    "type" : "float",
+    "comment" : "\n     * Intentional error introduced to reported metrics to prevent identification of the parsed\n     * media. Note: Increasing this value may cause older hostside CTS tests to fail.\n     ",
     "links" : [ ]
   }, {
     "name" : "STATE_READING_SIGNAL_BYTE",
@@ -403,6 +429,41 @@
     "type" : "boolean",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "mReleased",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLogSessionId",
+    "type" : "LogSessionId",
+    "comment" : " MediaMetrics fields.",
+    "links" : [ ]
+  }, {
+    "name" : "mCreatedByName",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTrackFormats",
+    "type" : "SparseArray<Format>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastObservedExceptionName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDurationMillis",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mResourceByteCount",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public static MediaParser createByName(@NonNull @ParserName String name, @NonNull OutputConsumer outputConsumer)",
@@ -450,6 +511,21 @@
     "comment" : "\n     * Releases any acquired resources.\n     *\n     * <p>After calling this method, this instance becomes unusable and no other methods should be\n     * invoked.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public void setLogSessionId(@NonNull LogSessionId logSessionId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public LogSessionId getLogSessionId()",
+    "returnType" : "LogSessionId",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String buildMediaMetricsString(Function<Format, String> formatFieldGetter)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private void setMuxedCaptionFormats(List<MediaFormat> mediaFormats)",
     "returnType" : "void",
     "comment" : "",
@@ -476,6 +552,11 @@
     "links" : [ ]
   }, {
     "name" : "private String getStringParameter(String name, String defaultValue)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String getLogSessionIdStringV31()",
     "returnType" : "String",
     "comment" : "",
     "links" : [ ]
@@ -530,6 +611,11 @@
     "comment" : " Returns a new {@link SeekPoint} equivalent to the given {@code exoPlayerSeekPoint}. ",
     "links" : [ "SeekPoint" ]
   }, {
+    "name" : "private static long addDither(long value)",
+    "returnType" : "long",
+    "comment" : "\n     * Introduces random error to the given metric value in order to prevent the identification of\n     * the parsed media.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "private static void assertValidNames(@NonNull String[] names)",
     "returnType" : "void",
     "comment" : "",
@@ -544,7 +630,12 @@
     "returnType" : "Constructor<DrmInitData.SchemeInitData>",
     "comment" : "",
     "links" : [ ]
+  }, {
+    "name" : "private native void nativeSubmitMetrics(String logSessionId, String parserName, boolean createdByName, String parserPool, String lastObservedExceptionName, long resourceByteCount, long durationMillis, String trackMimeTypes, String trackCodecs, String alteredParameters, int videoWidth, int videoHeight)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "SAMPLE_FLAG_KEY_FRAME", "SAMPLE_FLAG_HAS_SUPPLEMENTAL_DATA", "SAMPLE_FLAG_LAST_SAMPLE", "SAMPLE_FLAG_ENCRYPTED", "SAMPLE_FLAG_DECODE_ONLY", "PARSER_NAME_UNKNOWN", "PARSER_NAME_MATROSKA", "PARSER_NAME_FMP4", "PARSER_NAME_MP4", "PARSER_NAME_MP3", "PARSER_NAME_ADTS", "PARSER_NAME_AC3", "PARSER_NAME_TS", "PARSER_NAME_FLV", "PARSER_NAME_OGG", "PARSER_NAME_PS", "PARSER_NAME_WAV", "PARSER_NAME_AMR", "PARSER_NAME_AC4", "PARSER_NAME_FLAC", "PARAMETER_ADTS_ENABLE_CBR_SEEKING", "PARAMETER_AMR_ENABLE_CBR_SEEKING", "PARAMETER_FLAC_DISABLE_ID3", "PARAMETER_MP4_IGNORE_EDIT_LISTS", "PARAMETER_MP4_IGNORE_TFDT_BOX", "PARAMETER_MP4_TREAT_VIDEO_FRAMES_AS_KEYFRAMES", "PARAMETER_MATROSKA_DISABLE_CUES_SEEKING", "PARAMETER_MP3_DISABLE_ID3", "PARAMETER_MP3_ENABLE_CBR_SEEKING", "PARAMETER_MP3_ENABLE_INDEX_SEEKING", "PARAMETER_TS_MODE", "PARAMETER_TS_ALLOW_NON_IDR_AVC_KEYFRAMES", "PARAMETER_TS_IGNORE_AAC_STREAM", "PARAMETER_TS_IGNORE_AVC_STREAM", "PARAMETER_TS_IGNORE_SPLICE_INFO_STREAM", "PARAMETER_TS_DETECT_ACCESS_UNITS", "PARAMETER_TS_ENABLE_HDMV_DTS_AUDIO_STREAMS", "PARAMETER_IN_BAND_CRYPTO_INFO", "PARAMETER_INCLUDE_SUPPLEMENTAL_DATA", "PARAMETER_IGNORE_TIMESTAMP_OFFSET", "PARAMETER_EAGERLY_EXPOSE_TRACKTYPE", "PARAMETER_EXPOSE_DUMMY_SEEKMAP", "PARAMETER_EXPOSE_CHUNK_INDEX_AS_MEDIA_FORMAT", "PARAMETER_EXPOSE_CAPTION_FORMATS", "PARAMETER_OVERRIDE_IN_BAND_CAPTION_DECLARATIONS", "PARAMETER_EXPOSE_EMSG_TRACK", "TAG", "EXTRACTOR_FACTORIES_BY_NAME", "EXPECTED_TYPE_BY_PARAMETER_NAME", "TS_MODE_SINGLE_PMT", "TS_MODE_MULTI_PMT", "TS_MODE_HLS", "BYTES_PER_SUBSAMPLE_ENCRYPTION_ENTRY", "EMPTY_BYTE_ARRAY", "STATE_READING_SIGNAL_BYTE", "STATE_READING_INIT_VECTOR", "STATE_READING_SUBSAMPLE_ENCRYPTION_SIZE", "STATE_READING_SUBSAMPLE_ENCRYPTION_DATA", "mParserParameters", "mOutputConsumer", "mParserNamesPool", "mPositionHolder", "mExoDataReader", "mScratchDataReaderAdapter", "mScratchParsableByteArrayAdapter", "mSchemeInitDataConstructor", "mMuxedCaptionFormats", "mInBandCryptoInfo", "mIncludeSupplementalData", "mIgnoreTimestampOffset", "mEagerlyExposeTrackType", "mExposeDummySeekMap", "mExposeChunkIndexAsMediaFormat", "mParserName", "mExtractor", "mExtractorInput", "mPendingExtractorInit", "mPendingSeekPosition", "mPendingSeekTimeMicros", "mLoggedSchemeInitDataCreationException" ],
-  "methodNames" : [ "public static MediaParser createByName(@NonNull @ParserName String name, @NonNull OutputConsumer outputConsumer)", "public static MediaParser create(@NonNull OutputConsumer outputConsumer, @NonNull @ParserName String... parserNames)", "public static List<String> getParserNames(@NonNull MediaFormat mediaFormat)", "public MediaParser setParameter(@NonNull @ParameterName String parameterName, @NonNull Object value)", "public boolean supportsParameter(@NonNull @ParameterName String parameterName)", "public String getParserName()", "public boolean advance(@NonNull SeekableInputReader seekableInputReader) throws IOException", "public void seek(@NonNull SeekPoint seekPoint)", "public void release()", "private void setMuxedCaptionFormats(List<MediaFormat> mediaFormats)", "private boolean isPendingSeek()", "private void removePendingSeek()", "private Extractor createExtractor(String parserName)", "private boolean getBooleanParameter(String name)", "private String getStringParameter(String name, String defaultValue)", "private static Format toExoPlayerCaptionFormat(MediaFormat mediaFormat)", "private static MediaFormat toMediaFormat(Format format)", "private static ByteBuffer toByteBuffer(long[] longArray)", "private static ByteBuffer toByteBuffer(int[] intArray)", "private static String toTypeString(int type)", "private static void setPcmEncoding(Format format, MediaFormat result)", "private static void setOptionalMediaFormatInt(MediaFormat mediaFormat, String key, int value)", "private static void setOptionalMediaFormatString(MediaFormat mediaFormat, String key, @Nullable String value)", "private DrmInitData toFrameworkDrmInitData(com.google.android.exoplayer2.drm.DrmInitData exoDrmInitData)", "private static SeekPoint toSeekPoint(com.google.android.exoplayer2.extractor.SeekPoint exoPlayerSeekPoint)", "private static void assertValidNames(@NonNull String[] names)", "private int getMediaParserFlags(int flags)", "private static Constructor<DrmInitData.SchemeInitData> getSchemeInitDataConstructor()" ]
+  "methodNames" : [ "public static MediaParser createByName(@NonNull @ParserName String name, @NonNull OutputConsumer outputConsumer)", "public static MediaParser create(@NonNull OutputConsumer outputConsumer, @NonNull @ParserName String... parserNames)", "public static List<String> getParserNames(@NonNull MediaFormat mediaFormat)", "public MediaParser setParameter(@NonNull @ParameterName String parameterName, @NonNull Object value)", "public boolean supportsParameter(@NonNull @ParameterName String parameterName)", "public String getParserName()", "public boolean advance(@NonNull SeekableInputReader seekableInputReader) throws IOException", "public void seek(@NonNull SeekPoint seekPoint)", "public void release()", "public void setLogSessionId(@NonNull LogSessionId logSessionId)", "public LogSessionId getLogSessionId()", "private String buildMediaMetricsString(Function<Format, String> formatFieldGetter)", "private void setMuxedCaptionFormats(List<MediaFormat> mediaFormats)", "private boolean isPendingSeek()", "private void removePendingSeek()", "private Extractor createExtractor(String parserName)", "private boolean getBooleanParameter(String name)", "private String getStringParameter(String name, String defaultValue)", "private String getLogSessionIdStringV31()", "private static Format toExoPlayerCaptionFormat(MediaFormat mediaFormat)", "private static MediaFormat toMediaFormat(Format format)", "private static ByteBuffer toByteBuffer(long[] longArray)", "private static ByteBuffer toByteBuffer(int[] intArray)", "private static String toTypeString(int type)", "private static void setPcmEncoding(Format format, MediaFormat result)", "private static void setOptionalMediaFormatInt(MediaFormat mediaFormat, String key, int value)", "private static void setOptionalMediaFormatString(MediaFormat mediaFormat, String key, @Nullable String value)", "private DrmInitData toFrameworkDrmInitData(com.google.android.exoplayer2.drm.DrmInitData exoDrmInitData)", "private static SeekPoint toSeekPoint(com.google.android.exoplayer2.extractor.SeekPoint exoPlayerSeekPoint)", "private static long addDither(long value)", "private static void assertValidNames(@NonNull String[] names)", "private int getMediaParserFlags(int flags)", "private static Constructor<DrmInitData.SchemeInitData> getSchemeInitDataConstructor()", "private native void nativeSubmitMetrics(String logSessionId, String parserName, boolean createdByName, String parserPool, String lastObservedExceptionName, long resourceByteCount, long durationMillis, String trackMimeTypes, String trackCodecs, String alteredParameters, int videoWidth, int videoHeight)" ],
+  "variableNames" : [ "SAMPLE_FLAG_KEY_FRAME", "SAMPLE_FLAG_HAS_SUPPLEMENTAL_DATA", "SAMPLE_FLAG_LAST_SAMPLE", "SAMPLE_FLAG_ENCRYPTED", "SAMPLE_FLAG_DECODE_ONLY", "PARSER_NAME_UNKNOWN", "PARSER_NAME_MATROSKA", "PARSER_NAME_FMP4", "PARSER_NAME_MP4", "PARSER_NAME_MP3", "PARSER_NAME_ADTS", "PARSER_NAME_AC3", "PARSER_NAME_TS", "PARSER_NAME_FLV", "PARSER_NAME_OGG", "PARSER_NAME_PS", "PARSER_NAME_WAV", "PARSER_NAME_AMR", "PARSER_NAME_AC4", "PARSER_NAME_FLAC", "PARAMETER_ADTS_ENABLE_CBR_SEEKING", "PARAMETER_AMR_ENABLE_CBR_SEEKING", "PARAMETER_FLAC_DISABLE_ID3", "PARAMETER_MP4_IGNORE_EDIT_LISTS", "PARAMETER_MP4_IGNORE_TFDT_BOX", "PARAMETER_MP4_TREAT_VIDEO_FRAMES_AS_KEYFRAMES", "PARAMETER_MATROSKA_DISABLE_CUES_SEEKING", "PARAMETER_MP3_DISABLE_ID3", "PARAMETER_MP3_ENABLE_CBR_SEEKING", "PARAMETER_MP3_ENABLE_INDEX_SEEKING", "PARAMETER_TS_MODE", "PARAMETER_TS_ALLOW_NON_IDR_AVC_KEYFRAMES", "PARAMETER_TS_IGNORE_AAC_STREAM", "PARAMETER_TS_IGNORE_AVC_STREAM", "PARAMETER_TS_IGNORE_SPLICE_INFO_STREAM", "PARAMETER_TS_DETECT_ACCESS_UNITS", "PARAMETER_TS_ENABLE_HDMV_DTS_AUDIO_STREAMS", "PARAMETER_IN_BAND_CRYPTO_INFO", "PARAMETER_INCLUDE_SUPPLEMENTAL_DATA", "PARAMETER_IGNORE_TIMESTAMP_OFFSET", "PARAMETER_EAGERLY_EXPOSE_TRACKTYPE", "PARAMETER_EXPOSE_DUMMY_SEEKMAP", "PARAMETER_EXPOSE_CHUNK_INDEX_AS_MEDIA_FORMAT", "PARAMETER_EXPOSE_CAPTION_FORMATS", "PARAMETER_OVERRIDE_IN_BAND_CAPTION_DECLARATIONS", "PARAMETER_EXPOSE_EMSG_TRACK", "TAG", "JNI_LIBRARY_NAME", "EXTRACTOR_FACTORIES_BY_NAME", "EXPECTED_TYPE_BY_PARAMETER_NAME", "TS_MODE_SINGLE_PMT", "TS_MODE_MULTI_PMT", "TS_MODE_HLS", "BYTES_PER_SUBSAMPLE_ENCRYPTION_ENTRY", "EMPTY_BYTE_ARRAY", "MEDIAMETRICS_ELEMENT_SEPARATOR", "MEDIAMETRICS_MAX_STRING_SIZE", "MEDIAMETRICS_PARAMETER_LIST_MAX_LENGTH", "MEDIAMETRICS_DITHER", "STATE_READING_SIGNAL_BYTE", "STATE_READING_INIT_VECTOR", "STATE_READING_SUBSAMPLE_ENCRYPTION_SIZE", "STATE_READING_SUBSAMPLE_ENCRYPTION_DATA", "mParserParameters", "mOutputConsumer", "mParserNamesPool", "mPositionHolder", "mExoDataReader", "mScratchDataReaderAdapter", "mScratchParsableByteArrayAdapter", "mSchemeInitDataConstructor", "mMuxedCaptionFormats", "mInBandCryptoInfo", "mIncludeSupplementalData", "mIgnoreTimestampOffset", "mEagerlyExposeTrackType", "mExposeDummySeekMap", "mExposeChunkIndexAsMediaFormat", "mParserName", "mExtractor", "mExtractorInput", "mPendingExtractorInit", "mPendingSeekPosition", "mPendingSeekTimeMicros", "mLoggedSchemeInitDataCreationException", "mReleased", "mLogSessionId", "mCreatedByName", "mTrackFormats", "mLastObservedExceptionName", "mDurationMillis", "mResourceByteCount" ]
 }

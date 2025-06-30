@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/view/ThreadedRenderer.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/view/ThreadedRenderer.java",
   "packageName" : "android.view",
   "className" : "ThreadedRenderer",
   "comment" : "\n * Threaded renderer that proxies the rendering to a render thread. Most calls\n * are currently synchronous.\n *\n * The UI thread can block on the RenderThread, but RenderThread must never\n * block on the UI thread.\n *\n * ThreadedRenderer creates an instance of RenderProxy. RenderProxy in turn creates\n * and manages a CanvasContext on the RenderThread. The CanvasContext is fully managed\n * by the lifecycle of the RenderProxy.\n *\n * Note that although currently the EGL context & surfaces are created & managed\n * by the render thread, the goal is to move that into a shared structure that can\n * be managed by both threads. EGLSurface creation & deletion should ideally be\n * done on the UI thread and not the RenderThread to avoid stalling the\n * RenderThread with surface buffer allocation.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "PROFILE_PROPERTY",
     "type" : "String",
@@ -59,6 +60,11 @@
     "comment" : "\n     * Forces smart-dark to be always on.\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "EGL_CONTEXT_PRIORITY_REALTIME_NV",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "EGL_CONTEXT_PRIORITY_HIGH_IMG",
     "type" : "int",
     "comment" : "",
@@ -74,19 +80,9 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "sRendererDisabled",
-    "type" : "boolean",
-    "comment" : "\n     * A process can set this flag to false to prevent the use of threaded\n     * rendering.\n     *\n     * @hide\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "sSystemRendererDisabled",
+    "name" : "sRendererEnabled",
     "type" : "boolean",
     "comment" : "\n     * Further threaded renderer disabling for the system process.\n     *\n     * @hide\n     ",
-    "links" : [ ]
-  }, {
-    "name" : "sTrimForeground",
-    "type" : "boolean",
-    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "VISUALIZERS",
@@ -159,25 +155,30 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mWebViewOverlayProvider",
+    "type" : "WebViewOverlayProvider",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWebViewOverlaysEnabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mNextRtFrameCallbacks",
     "type" : "ArrayList<FrameDrawingCallback>",
     "comment" : "",
     "links" : [ ]
   } ],
   "methods" : [ {
-    "name" : "public static void disable(boolean system)",
-    "returnType" : "void",
-    "comment" : "\n     * Invoke this method to disable threaded rendering in the current process.\n     *\n     * @hide\n     ",
-    "links" : [ ]
-  }, {
     "name" : "public static void enableForegroundTrimming()",
     "returnType" : "void",
     "comment" : "\n     * Controls whether or not the renderer should aggressively trim\n     * memory. Note that this must not be set for any process that uses\n     * WebView! This should be only used by system_process or similar\n     * that do not go into the background.\n     ",
     "links" : [ ]
   }, {
-    "name" : "public static boolean isAvailable()",
-    "returnType" : "boolean",
-    "comment" : "\n     * Indicates whether threaded rendering is available under any form for\n     * the view hierarchy.\n     *\n     * @return True if the view hierarchy can potentially be defer rendered,\n     *         false otherwise\n     ",
+    "name" : "public static void initForSystemProcess()",
+    "returnType" : "void",
+    "comment" : "\n     * Initialize HWUI for being in a system process like system_server\n     * Should not be called in non-system processes\n     ",
     "links" : [ ]
   }, {
     "name" : "public static ThreadedRenderer create(Context context, boolean translucent, String name)",
@@ -240,6 +241,11 @@
     "comment" : "\n     * Registers a callback to be executed when the next frame is being drawn on RenderThread. This\n     * callback will be executed on a RenderThread worker thread, and only used for the next frame\n     * and thus it will only fire once.\n     *\n     * @param callback The callback to register.\n     ",
     "links" : [ ]
   }, {
+    "name" : " void unregisterRtFrameCallback(@NonNull FrameDrawingCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a frame drawing callback that was added via\n     * {@link #registerRtFrameCallback(FrameDrawingCallback)}\n     *\n     * @param callback The callback to unregister.\n     ",
+    "links" : [ "#registerRtFrameCallback(FrameDrawingCallback)" ]
+  }, {
     "name" : " void destroyHardwareResources(View view)",
     "returnType" : "void",
     "comment" : "\n     * Destroys all hardware rendering resources associated with the specified\n     * view hierarchy.\n     *\n     * @param view The root of the view hierarchy\n     ",
@@ -253,6 +259,36 @@
     "name" : " void setup(int width, int height, AttachInfo attachInfo, Rect surfaceInsets)",
     "returnType" : "void",
     "comment" : "\n     * Sets up the renderer for drawing.\n     *\n     * @param width The width of the drawing surface.\n     * @param height The height of the drawing surface.\n     * @param attachInfo Information about the window.\n     * @param surfaceInsets The drawing surface insets to apply\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean rendererOwnsSurfaceControlOpacity()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Whether or not the renderer owns the SurfaceControl's opacity. If true, use\n     * {@link #setSurfaceControlOpaque(boolean)} to update the opacity\n     ",
+    "links" : [ "#setSurfaceControlOpaque(boolean)" ]
+  }, {
+    "name" : "public boolean setSurfaceControlOpaque(boolean opaque)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Sets the SurfaceControl's opacity that this HardwareRenderer is rendering onto. The renderer\n     * may opt to override the opacity, and will return the value that is ultimately set\n     *\n     * @return true if the surface is opaque, false otherwise\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateWebViewOverlayCallbacks()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSurfaceControl(@Nullable SurfaceControl surfaceControl, @Nullable BLASTBufferQueue blastBufferQueue)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyCallbackPending()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyExpensiveFrame()",
+    "returnType" : "void",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : " void setLightCenter(AttachInfo attachInfo)",
@@ -269,6 +305,16 @@
     "returnType" : "int",
     "comment" : "\n     * Gets the current height of the surface. This is the height that the surface\n     * was last set to in a call to {@link #setup(int, int, View.AttachInfo, Rect)}.\n     *\n     * @return the current width of the surface\n     ",
     "links" : [ "#setup(int" ]
+  }, {
+    "name" : "private static int dumpArgsToFlags(String[] args)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void handleDumpGfxInfo(FileDescriptor fd, String[] args)",
+    "returnType" : "void",
+    "comment" : " @hide ",
+    "links" : [ ]
   }, {
     "name" : " void dumpGfxInfo(PrintWriter pw, FileDescriptor fd, String[] args)",
     "returnType" : "void",
@@ -310,6 +356,6 @@
     "comment" : " The root of everything ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "PROFILE_PROPERTY", "PROFILE_PROPERTY_VISUALIZE_BARS", "PROFILE_MAXFRAMES_PROPERTY", "PRINT_CONFIG_PROPERTY", "DEBUG_DIRTY_REGIONS_PROPERTY", "DEBUG_SHOW_LAYERS_UPDATES_PROPERTY", "DEBUG_OVERDRAW_PROPERTY", "OVERDRAW_PROPERTY_SHOW", "DEBUG_SHOW_NON_RECTANGULAR_CLIP_PROPERTY", "DEBUG_FPS_DIVISOR", "DEBUG_FORCE_DARK", "EGL_CONTEXT_PRIORITY_HIGH_IMG", "EGL_CONTEXT_PRIORITY_MEDIUM_IMG", "EGL_CONTEXT_PRIORITY_LOW_IMG", "sRendererDisabled", "sSystemRendererDisabled", "sTrimForeground", "VISUALIZERS", "mWidth", "mHeight", "mSurfaceWidth", "mSurfaceHeight", "mInsetTop", "mInsetLeft", "mLightY", "mLightZ", "mLightRadius", "mInitialized", "mRootNodeNeedsUpdate", "mEnabled", "mRequested", "mNextRtFrameCallbacks" ],
-  "methodNames" : [ "public static void disable(boolean system)", "public static void enableForegroundTrimming()", "public static boolean isAvailable()", "public static ThreadedRenderer create(Context context, boolean translucent, String name)", "public void destroy()", " boolean isEnabled()", " void setEnabled(boolean enabled)", " boolean isRequested()", " void setRequested(boolean requested)", "private void updateEnabledState(Surface surface)", " boolean initialize(Surface surface) throws OutOfResourcesException", " boolean initializeIfNeeded(int width, int height, View.AttachInfo attachInfo, Surface surface, Rect surfaceInsets) throws OutOfResourcesException", " void updateSurface(Surface surface) throws OutOfResourcesException", "public void setSurface(Surface surface)", " void registerRtFrameCallback(@NonNull FrameDrawingCallback callback)", " void destroyHardwareResources(View view)", "private static void destroyResources(View view)", " void setup(int width, int height, AttachInfo attachInfo, Rect surfaceInsets)", " void setLightCenter(AttachInfo attachInfo)", " int getWidth()", " int getHeight()", " void dumpGfxInfo(PrintWriter pw, FileDescriptor fd, String[] args)", " Picture captureRenderingCommands()", "public boolean loadSystemProperties()", "private void updateViewTreeDisplayList(View view)", "private void updateRootDisplayList(View view, DrawCallbacks callbacks)", " void invalidateRoot()", " void draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks)", "public RenderNode getRootNode()" ]
+  "methodNames" : [ "public static void enableForegroundTrimming()", "public static void initForSystemProcess()", "public static ThreadedRenderer create(Context context, boolean translucent, String name)", "public void destroy()", " boolean isEnabled()", " void setEnabled(boolean enabled)", " boolean isRequested()", " void setRequested(boolean requested)", "private void updateEnabledState(Surface surface)", " boolean initialize(Surface surface) throws OutOfResourcesException", " boolean initializeIfNeeded(int width, int height, View.AttachInfo attachInfo, Surface surface, Rect surfaceInsets) throws OutOfResourcesException", " void updateSurface(Surface surface) throws OutOfResourcesException", "public void setSurface(Surface surface)", " void registerRtFrameCallback(@NonNull FrameDrawingCallback callback)", " void unregisterRtFrameCallback(@NonNull FrameDrawingCallback callback)", " void destroyHardwareResources(View view)", "private static void destroyResources(View view)", " void setup(int width, int height, AttachInfo attachInfo, Rect surfaceInsets)", "public boolean rendererOwnsSurfaceControlOpacity()", "public boolean setSurfaceControlOpaque(boolean opaque)", "private void updateWebViewOverlayCallbacks()", "public void setSurfaceControl(@Nullable SurfaceControl surfaceControl, @Nullable BLASTBufferQueue blastBufferQueue)", "public void notifyCallbackPending()", "public void notifyExpensiveFrame()", " void setLightCenter(AttachInfo attachInfo)", " int getWidth()", " int getHeight()", "private static int dumpArgsToFlags(String[] args)", "public static void handleDumpGfxInfo(FileDescriptor fd, String[] args)", " void dumpGfxInfo(PrintWriter pw, FileDescriptor fd, String[] args)", " Picture captureRenderingCommands()", "public boolean loadSystemProperties()", "private void updateViewTreeDisplayList(View view)", "private void updateRootDisplayList(View view, DrawCallbacks callbacks)", " void invalidateRoot()", " void draw(View view, AttachInfo attachInfo, DrawCallbacks callbacks)", "public RenderNode getRootNode()" ],
+  "variableNames" : [ "PROFILE_PROPERTY", "PROFILE_PROPERTY_VISUALIZE_BARS", "PROFILE_MAXFRAMES_PROPERTY", "PRINT_CONFIG_PROPERTY", "DEBUG_DIRTY_REGIONS_PROPERTY", "DEBUG_SHOW_LAYERS_UPDATES_PROPERTY", "DEBUG_OVERDRAW_PROPERTY", "OVERDRAW_PROPERTY_SHOW", "DEBUG_SHOW_NON_RECTANGULAR_CLIP_PROPERTY", "DEBUG_FPS_DIVISOR", "DEBUG_FORCE_DARK", "EGL_CONTEXT_PRIORITY_REALTIME_NV", "EGL_CONTEXT_PRIORITY_HIGH_IMG", "EGL_CONTEXT_PRIORITY_MEDIUM_IMG", "EGL_CONTEXT_PRIORITY_LOW_IMG", "sRendererEnabled", "VISUALIZERS", "mWidth", "mHeight", "mSurfaceWidth", "mSurfaceHeight", "mInsetTop", "mInsetLeft", "mLightY", "mLightZ", "mLightRadius", "mInitialized", "mRootNodeNeedsUpdate", "mEnabled", "mRequested", "mWebViewOverlayProvider", "mWebViewOverlaysEnabled", "mNextRtFrameCallbacks" ]
 }

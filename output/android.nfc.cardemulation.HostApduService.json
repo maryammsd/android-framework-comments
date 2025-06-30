@@ -1,0 +1,111 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/nfc/cardemulation/HostApduService.java",
+  "packageName" : "android.nfc.cardemulation",
+  "className" : "HostApduService",
+  "comment" : "\n * <p>HostApduService is a convenience {@link Service} class that can be\n * extended to emulate an NFC card inside an Android\n * service component.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guide</h3>\n * For a general introduction to card emulation, see\n * <a href=\"{@docRoot}guide/topics/connectivity/nfc/hce.html\">\n * Host-based Card Emulation</a>.</p>\n * </div>\n *\n * <h3>NFC Protocols</h3>\n * <p>Cards emulated by this class are based on the NFC-Forum ISO-DEP\n * protocol (based on ISO/IEC 14443-4) and support processing\n * command Application Protocol Data Units (APDUs) as\n * defined in the ISO/IEC 7816-4 specification.\n *\n * <h3>Service selection</h3>\n * <p>When a remote NFC device wants to talk to your\n * service, it sends a so-called\n * \"SELECT AID\" APDU as defined in the ISO/IEC 7816-4 specification.\n * The AID is an application identifier defined in ISO/IEC 7816-4.\n *\n * <p>The registration procedure for AIDs is defined in the\n * ISO/IEC 7816-5 specification. If you don't want to register an\n * AID, you are free to use AIDs in the proprietary range:\n * bits 8-5 of the first byte must each be set to '1'. For example,\n * \"0xF00102030405\" is a proprietary AID. If you do use proprietary\n * AIDs, it is recommended to choose an AID of at least 6 bytes,\n * to reduce the risk of collisions with other applications that\n * might be using proprietary AIDs as well.\n *\n * <h3>AID groups</h3>\n * <p>In some cases, a service may need to register multiple AIDs\n * to implement a certain application, and it needs to be sure\n * that it is the default handler for all of these AIDs (as opposed\n * to some AIDs in the group going to another service).\n *\n * <p>An AID group is a list of AIDs that should be considered as\n * belonging together by the OS. For all AIDs in an AID group, the\n * OS will guarantee one of the following:\n * <ul>\n * <li>All AIDs in the group are routed to this service\n * <li>No AIDs in the group are routed to this service\n * </ul>\n * In other words, there is no in-between state, where some AIDs\n * in the group can be routed to this service, and some to another.\n * <h3>AID groups and categories</h3>\n * <p>Each AID group can be associated with a category. This allows\n * the Android OS to classify services, and it allows the user to\n * set defaults at the category level instead of the AID level.\n *\n * <p>You can use\n * {@link CardEmulation#isDefaultServiceForCategory(android.content.ComponentName, String)}\n * to determine if your service is the default handler for a category.\n *\n * <p>In this version of the platform, the only known categories\n * are {@link CardEmulation#CATEGORY_PAYMENT} and {@link CardEmulation#CATEGORY_OTHER}.\n * AID groups without a category, or with a category that is not recognized\n * by the current platform version, will automatically be\n * grouped into the {@link CardEmulation#CATEGORY_OTHER} category.\n * <h3>Service AID registration</h3>\n * <p>To tell the platform which AIDs groups\n * are requested by this service, a {@link #SERVICE_META_DATA}\n * entry must be included in the declaration of the service. An\n * example of a HostApduService manifest declaration is shown below:\n * <pre> &lt;service android:name=\".MyHostApduService\" android:exported=\"true\" android:permission=\"android.permission.BIND_NFC_SERVICE\"&gt;\n *     &lt;intent-filter&gt;\n *         &lt;action android:name=\"android.nfc.cardemulation.action.HOST_APDU_SERVICE\"/&gt;\n *     &lt;/intent-filter&gt;\n *     &lt;meta-data android:name=\"android.nfc.cardemulation.host_apdu_ervice\" android:resource=\"@xml/apduservice\"/&gt;\n * &lt;/service&gt;</pre>\n *\n * This meta-data tag points to an apduservice.xml file.\n * An example of this file with a single AID group declaration is shown below:\n * <pre>\n * &lt;host-apdu-service xmlns:android=\"http://schemas.android.com/apk/res/android\"\n *           android:description=\"@string/servicedesc\" android:requireDeviceUnlock=\"false\"&gt;\n *       &lt;aid-group android:description=\"@string/aiddescription\" android:category=\"other\">\n *           &lt;aid-filter android:name=\"F0010203040506\"/&gt;\n *           &lt;aid-filter android:name=\"F0394148148100\"/&gt;\n *       &lt;/aid-group&gt;\n * &lt;/host-apdu-service&gt;\n * </pre>\n *\n * <p>The {@link android.R.styleable#HostApduService &lt;host-apdu-service&gt;} is required\n * to contain a\n * {@link android.R.styleable#HostApduService_description &lt;android:description&gt;}\n * attribute that contains a user-friendly description of the service that may be shown in UI.\n * The\n * {@link android.R.styleable#HostApduService_requireDeviceUnlock &lt;requireDeviceUnlock&gt;}\n * attribute can be used to specify that the device must be unlocked before this service\n * can be invoked to handle APDUs.\n * <p>The {@link android.R.styleable#HostApduService &lt;host-apdu-service&gt;} must\n * contain one or more {@link android.R.styleable#AidGroup &lt;aid-group&gt;} tags.\n * Each {@link android.R.styleable#AidGroup &lt;aid-group&gt;} must contain one or\n * more {@link android.R.styleable#AidFilter &lt;aid-filter&gt;} tags, each of which\n * contains a single AID. The AID must be specified in hexadecimal format, and contain\n * an even number of characters.\n * <h3>AID conflict resolution</h3>\n * Multiple HostApduServices may be installed on a single device, and the same AID\n * can be registered by more than one service. The Android platform resolves AID\n * conflicts depending on which category an AID belongs to. Each category may\n * have a different conflict resolution policy. For example, for some categories\n * the user may be able to select a default service in the Android settings UI.\n * For other categories, to policy may be to always ask the user which service\n * is to be invoked in case of conflict.\n *\n * To query the conflict resolution policy for a certain category, see\n * {@link CardEmulation#getSelectionModeForCategory(String)}.\n *\n * <h3>Data exchange</h3>\n * <p>Once the platform has resolved a \"SELECT AID\" command APDU to a specific\n * service component, the \"SELECT AID\" command APDU and all subsequent\n * command APDUs will be sent to that service through\n * {@link #processCommandApdu(byte[], Bundle)}, until either:\n * <ul>\n * <li>The NFC link is broken</li>\n * <li>A \"SELECT AID\" APDU is received which resolves to another service</li>\n * </ul>\n * These two scenarios are indicated by a call to {@link #onDeactivated(int)}.\n *\n * <p class=\"note\">Use of this class requires the\n * {@link PackageManager#FEATURE_NFC_HOST_CARD_EMULATION} to be present\n * on the device.\n *\n ",
+  "links" : [ "#SERVICE_META_DATA", "android.R.styleable#AidFilter", "android.nfc.cardemulation.CardEmulation#getSelectionModeForCategory(String)", "android.nfc.cardemulation.CardEmulation#isDefaultServiceForCategory(android.content.ComponentName", "android.app.Service", "#processCommandApdu(byte", "android.R.styleable#AidGroup", "android.R.styleable#HostApduService_requireDeviceUnlock", "android.nfc.cardemulation.CardEmulation#CATEGORY_OTHER", "android.content.pm.PackageManager#FEATURE_NFC_HOST_CARD_EMULATION", "android.R.styleable#HostApduService", "android.R.styleable#HostApduService_description", "android.nfc.cardemulation.CardEmulation#CATEGORY_PAYMENT", "#onDeactivated(int)" ],
+  "variables" : [ {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * The {@link Intent} action that must be declared as handled by the service.\n     ",
+    "links" : [ "android.content.Intent" ]
+  }, {
+    "name" : "SERVICE_META_DATA",
+    "type" : "String",
+    "comment" : "\n     * The name of the meta-data element that contains\n     * more information about this service.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEACTIVATION_LINK_LOSS",
+    "type" : "int",
+    "comment" : "\n     * Reason for {@link #onDeactivated(int)}.\n     * Indicates deactivation was due to the NFC link\n     * being lost.\n     ",
+    "links" : [ "#onDeactivated(int)" ]
+  }, {
+    "name" : "DEACTIVATION_DESELECTED",
+    "type" : "int",
+    "comment" : "\n     * Reason for {@link #onDeactivated(int)}.\n     *\n     * <p>Indicates deactivation was due to a different AID\n     * being selected (which implicitly deselects the AID\n     * currently active on the logical channel).\n     *\n     * <p>Note that this next AID may still be resolved to this\n     * service, in which case {@link #processCommandApdu(byte[], Bundle)}\n     * will be called again.\n     ",
+    "links" : [ "#processCommandApdu(byte", "#onDeactivated(int)" ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_COMMAND_APDU",
+    "type" : "int",
+    "comment" : "\n     * MSG_COMMAND_APDU is sent by NfcService when\n     * a 7816-4 command APDU has been received.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_RESPONSE_APDU",
+    "type" : "int",
+    "comment" : "\n     * MSG_RESPONSE_APDU is sent to NfcService to send\n     * a response APDU back to the remote device.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_DEACTIVATED",
+    "type" : "int",
+    "comment" : "\n     * MSG_DEACTIVATED is sent by NfcService when\n     * the current session is finished; either because\n     * another AID was selected that resolved to\n     * another service, or because the NFC link\n     * was deactivated.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_UNHANDLED",
+    "type" : "int",
+    "comment" : "\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MSG_POLLING_LOOP",
+    "type" : "int",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_DATA",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEY_POLLING_LOOP_FRAMES_BUNDLE",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mNfcService",
+    "type" : "Messenger",
+    "comment" : "\n     * Messenger interface to NfcService for sending responses.\n     * Only accessed on main thread by the message handler.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mMessenger",
+    "type" : "Messenger",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public final IBinder onBind(Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void sendResponseApdu(byte[] responseApdu)",
+    "returnType" : "void",
+    "comment" : "\n     * Sends a response APDU back to the remote device.\n     *\n     * <p>Note: this method may be called from any thread and will not block.\n     * @param responseApdu A byte-array containing the reponse APDU.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void notifyUnhandled()",
+    "returnType" : "void",
+    "comment" : "\n     * Calling this method allows the service to tell the OS\n     * that it won't be able to complete this transaction -\n     * for example, because it requires data connectivity\n     * that is not present at that moment.\n     *\n     * The OS may use this indication to give the user a list\n     * of alternative applications that can handle the last\n     * AID that was selected. If the user would select an\n     * application from the list, that action by itself\n     * will not cause the default to be changed; the selected\n     * application will be invoked for the next tap only.\n     *\n     * If there are no other applications that can handle\n     * this transaction, the OS will show an error dialog\n     * indicating your service could not complete the\n     * transaction.\n     *\n     * <p>Note: this method may be called anywhere between\n     *    the first {@link #processCommandApdu(byte[], Bundle)}\n     *    call and a {@link #onDeactivated(int)} call.\n     ",
+    "links" : [ "#processCommandApdu(byte", "#onDeactivated(int)" ]
+  }, {
+    "name" : "public void processPollingFrames(@NonNull List<PollingFrame> frame)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called when polling frames have been received from a\n     * remote device. If the device is in observe mode, the service should\n     * call {@link NfcAdapter#allowTransaction()} once it is ready to proceed\n     * with the transaction. If the device is not in observe mode, the service\n     * can use this polling frame information to determine how to proceed if it\n     * subsequently has {@link #processCommandApdu(byte[], Bundle)} called. The\n     * service must override this method inorder to receive polling frames,\n     * otherwise the base implementation drops the frame.\n     *\n     * @param frame A description of the polling frame.\n     ",
+    "links" : [ "#processCommandApdu(byte", "android.nfc.NfcAdapter#allowTransaction()" ]
+  }, {
+    "name" : "public abstract byte[] processCommandApdu(byte[] commandApdu, Bundle extras)",
+    "returnType" : "byte[]",
+    "comment" : "\n     * <p>This method will be called when a command APDU has been received\n     * from a remote device. A response APDU can be provided directly\n     * by returning a byte-array in this method. Note that in general\n     * response APDUs must be sent as quickly as possible, given the fact\n     * that the user is likely holding their device over an NFC reader\n     * when this method is called.\n     *\n     * <p class=\"note\">If there are multiple services that have registered for the same\n     * AIDs in their meta-data entry, you will only get called if the user has\n     * explicitly selected your service, either as a default or just for the next tap.\n     *\n     * <p class=\"note\">This method is running on the main thread of your application.\n     * If you cannot return a response APDU immediately, return null\n     * and use the {@link #sendResponseApdu(byte[])} method later.\n     *\n     * @param commandApdu The APDU that was received from the remote device\n     * @param extras A bundle containing extra data. May be null.\n     * @return a byte-array containing the response APDU, or null if no\n     *         response APDU can be sent at this point.\n     ",
+    "links" : [ "#sendResponseApdu(byte" ]
+  }, {
+    "name" : "public abstract void onDeactivated(int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * This method will be called in two possible scenarios:\n     * <li>The NFC link has been deactivated or lost\n     * <li>A different AID has been selected and was resolved to a different\n     *     service component\n     * @param reason Either {@link #DEACTIVATION_LINK_LOSS} or {@link #DEACTIVATION_DESELECTED}\n     ",
+    "links" : [ "#DEACTIVATION_LINK_LOSS", "#DEACTIVATION_DESELECTED" ]
+  } ],
+  "methodNames" : [ "public final IBinder onBind(Intent intent)", "public final void sendResponseApdu(byte[] responseApdu)", "public final void notifyUnhandled()", "public void processPollingFrames(@NonNull List<PollingFrame> frame)", "public abstract byte[] processCommandApdu(byte[] commandApdu, Bundle extras)", "public abstract void onDeactivated(int reason)" ],
+  "variableNames" : [ "SERVICE_INTERFACE", "SERVICE_META_DATA", "DEACTIVATION_LINK_LOSS", "DEACTIVATION_DESELECTED", "TAG", "MSG_COMMAND_APDU", "MSG_RESPONSE_APDU", "MSG_DEACTIVATED", "MSG_UNHANDLED", "MSG_POLLING_LOOP", "KEY_DATA", "KEY_POLLING_LOOP_FRAMES_BUNDLE", "mNfcService", "mMessenger" ]
+}

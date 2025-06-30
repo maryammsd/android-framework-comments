@@ -1,0 +1,326 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/apache/xpath/NodeSet.java",
+  "packageName" : "org.apache.xpath",
+  "className" : "NodeSet",
+  "comment" : "\n * <p>The NodeSet class can act as either a NodeVector,\n * NodeList, or NodeIterator.  However, in order for it to\n * act as a NodeVector or NodeList, it's required that\n * setShouldCacheNodes(true) be called before the first\n * nextNode() is called, in order that nodes can be added\n * as they are fetched.  Derived classes that implement iterators\n * must override runTo(int index), in order that they may\n * run the iteration to the given index. </p>\n * \n * <p>Note that we directly implement the DOM's NodeIterator\n * interface. We do not emulate all the behavior of the\n * standard NodeIterator. In particular, we do not guarantee\n * to present a \"live view\" of the document ... but in XSLT,\n * the source document should never be mutated, so this should\n * never be an issue.</p>\n * \n * <p>Thought: Should NodeSet really implement NodeList and NodeIterator,\n * or should there be specific subclasses of it which do so? The\n * advantage of doing it all here is that all NodeSets will respond\n * to the same calls; the disadvantage is that some of them may return\n * less-than-enlightening results when you do so.</p>\n * @xsl.usage advanced\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "m_next",
+    "type" : "int",
+    "comment" : " If this node is being used as an iterator, the next index that nextNode()\n   *  will return.  ",
+    "links" : [ ]
+  }, {
+    "name" : "m_mutable",
+    "type" : "boolean",
+    "comment" : " True if this list can be mutated.  ",
+    "links" : [ ]
+  }, {
+    "name" : "m_cacheNodes",
+    "type" : "boolean",
+    "comment" : " True if this list is cached.\n   *  @serial  ",
+    "links" : [ ]
+  }, {
+    "name" : "m_last",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "m_blocksize",
+    "type" : "int",
+    "comment" : " Size of blocks to allocate.\n   *  @serial          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_map",
+    "type" : "Node[]",
+    "comment" : " Array of nodes this points to.\n   *  @serial          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_firstFree",
+    "type" : "int",
+    "comment" : " Number of nodes in this NodeVector.\n   *  @serial          ",
+    "links" : [ ]
+  }, {
+    "name" : "m_mapSize",
+    "type" : "int",
+    "comment" : " lazy initialization",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public Node getRoot()",
+    "returnType" : "Node",
+    "comment" : "\n   * @return The root node of the Iterator, as specified when it was created.\n   * For non-Iterator NodeSets, this will be null.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public NodeIterator cloneWithReset() throws CloneNotSupportedException",
+    "returnType" : "NodeIterator",
+    "comment" : "\n   * Get a cloned Iterator, and reset its state to the beginning of the\n   * iteration.\n   *\n   * @return a new NodeSet of the same type, having the same state...\n   * except that the reset() operation has been called.\n   *\n   * @throws CloneNotSupportedException if this subclass of NodeSet\n   * does not support the clone() operation.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : "\n   * Reset the iterator. May have no effect on non-iterator Nodesets.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWhatToShow()",
+    "returnType" : "int",
+    "comment" : "\n   *  This attribute determines which node types are presented via the\n   * iterator. The available set of constants is defined in the\n   * <code>NodeFilter</code> interface. For NodeSets, the mask has been\n   * hardcoded to show all nodes except EntityReference nodes, which have\n   * no equivalent in the XPath data model.\n   *\n   * @return integer used as a bit-array, containing flags defined in\n   * the DOM's NodeFilter class. The value will be \n   * <code>SHOW_ALL & ~SHOW_ENTITY_REFERENCE</code>, meaning that\n   * only entity references are suppressed.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public NodeFilter getFilter()",
+    "returnType" : "NodeFilter",
+    "comment" : "\n   * The filter object used to screen nodes. Filters are applied to\n   * further reduce (and restructure) the NodeIterator's view of the\n   * document. In our case, we will be using hardcoded filters built\n   * into our iterators... but getFilter() is part of the DOM's \n   * NodeIterator interface, so we have to support it.\n   *\n   * @return null, which is slightly misleading. True, there is no\n   * user-written filter object, but in fact we are doing some very\n   * sophisticated custom filtering. A DOM purist might suggest\n   * returning a placeholder object just to indicate that this is\n   * not going to return all nodes selected by whatToShow.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getExpandEntityReferences()",
+    "returnType" : "boolean",
+    "comment" : "\n   *  The value of this flag determines whether the children of entity\n   * reference nodes are visible to the iterator. If false, they will be\n   * skipped over.\n   * <br> To produce a view of the document that has entity references\n   * expanded and does not expose the entity reference node itself, use the\n   * whatToShow flags to hide the entity reference node and set\n   * expandEntityReferences to true when creating the iterator. To produce\n   * a view of the document that has entity reference nodes but no entity\n   * expansion, use the whatToShow flags to show the entity reference node\n   * and set expandEntityReferences to false.\n   *\n   * @return true for all iterators based on NodeSet, meaning that the\n   * contents of EntityRefrence nodes may be returned (though whatToShow\n   * says that the EntityReferences themselves are not shown.)\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Node nextNode() throws DOMException",
+    "returnType" : "Node",
+    "comment" : "\n   *  Returns the next node in the set and advances the position of the\n   * iterator in the set. After a NodeIterator is created, the first call\n   * to nextNode() returns the first node in the set.\n   * @return  The next <code>Node</code> in the set being iterated over, or\n   *   <code>null</code> if there are no more members in that set.\n   * @throws DOMException\n   *    INVALID_STATE_ERR: Raised if this method is called after the\n   *   <code>detach</code> method was invoked.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Node previousNode() throws DOMException",
+    "returnType" : "Node",
+    "comment" : "\n   *  Returns the previous node in the set and moves the position of the\n   * iterator backwards in the set.\n   * @return  The previous <code>Node</code> in the set being iterated over,\n   *   or<code>null</code> if there are no more members in that set.\n   * @throws DOMException\n   *    INVALID_STATE_ERR: Raised if this method is called after the\n   *   <code>detach</code> method was invoked.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a cached type, and hence doesn't know what the previous node was.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void detach()",
+    "returnType" : "void",
+    "comment" : "\n   * Detaches the iterator from the set which it iterated over, releasing\n   * any computational resources and placing the iterator in the INVALID\n   * state. After<code>detach</code> has been invoked, calls to\n   * <code>nextNode</code> or<code>previousNode</code> will raise the\n   * exception INVALID_STATE_ERR.\n   * <p>\n   * This operation is a no-op in NodeSet, and will not cause \n   * INVALID_STATE_ERR to be raised by later operations.\n   * </p>\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFresh()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tells if this NodeSet is \"fresh\", in other words, if\n   * the first nextNode() that is called will return the\n   * first node in the set.\n   *\n   * @return true if nextNode() would return the first node in the set,\n   * false if it would return a later one.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void runTo(int index)",
+    "returnType" : "void",
+    "comment" : "\n   * If an index is requested, NodeSet will call this method\n   * to run the iterator to the index.  By default this sets\n   * m_next to the index.  If the index argument is -1, this\n   * signals that the iterator should be run to the end.\n   *\n   * @param index Position to advance (or retreat) to, with\n   * 0 requesting the reset (\"fresh\") position and -1 (or indeed\n   * any out-of-bounds value) requesting the final position.\n   * @throws RuntimeException thrown if this NodeSet is not\n   * one of the types which supports indexing/counting.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Node item(int index)",
+    "returnType" : "Node",
+    "comment" : "\n   * Returns the <code>index</code>th item in the collection. If\n   * <code>index</code> is greater than or equal to the number of nodes in\n   * the list, this returns <code>null</code>.\n   * \n   * TODO: What happens if index is out of range?\n   * \n   * @param index Index into the collection.\n   * @return The node at the <code>index</code>th position in the\n   *   <code>NodeList</code>, or <code>null</code> if that is not a valid\n   *   index.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getLength()",
+    "returnType" : "int",
+    "comment" : "\n   * The number of nodes in the list. The range of valid child node indices is\n   * 0 to <code>length-1</code> inclusive. Note that this operation requires\n   * finding all the matching nodes, which may defeat attempts to defer\n   * that work.\n   *\n   * @return integer indicating how many nodes are represented by this list.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNode(Node n)",
+    "returnType" : "void",
+    "comment" : "\n   * Add a node to the NodeSet. Not all types of NodeSets support this\n   * operation\n   *\n   * @param n Node to be added\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void insertNode(Node n, int pos)",
+    "returnType" : "void",
+    "comment" : "\n   * Insert a node at a given position.\n   *\n   * @param n Node to be added\n   * @param pos Offset at which the node is to be inserted,\n   * with 0 being the first position.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeNode(Node n)",
+    "returnType" : "void",
+    "comment" : "\n   * Remove a node.\n   *\n   * @param n Node to be added\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodes(NodeList nodelist)",
+    "returnType" : "void",
+    "comment" : "\n   * Copy NodeList members into this nodelist, adding in\n   * document order.  If a node is null, don't add it.\n   *\n   * @param nodelist List of nodes which should now be referenced by\n   * this NodeSet.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodes(NodeSet ns)",
+    "returnType" : "void",
+    "comment" : "\n   * <p>Copy NodeList members into this nodelist, adding in\n   * document order.  Only genuine node references will be copied;\n   * nulls appearing in the source NodeSet will\n   * not be added to this one. </p>\n   * \n   * <p> In case you're wondering why this function is needed: NodeSet\n   * implements both NodeIterator and NodeList. If this method isn't\n   * provided, Java can't decide which of those to use when addNodes()\n   * is invoked. Providing the more-explicit match avoids that\n   * ambiguity.)</p>\n   *\n   * @param ns NodeSet whose members should be merged into this NodeSet.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodes(NodeIterator iterator)",
+    "returnType" : "void",
+    "comment" : "\n   * Copy NodeList members into this nodelist, adding in\n   * document order.  Null references are not added.\n   *\n   * @param iterator NodeIterator which yields the nodes to be added.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodesInDocOrder(NodeList nodelist, XPathContext support)",
+    "returnType" : "void",
+    "comment" : "\n   * Copy NodeList members into this nodelist, adding in\n   * document order.  If a node is null, don't add it.\n   *\n   * @param nodelist List of nodes to be added\n   * @param support The XPath runtime context.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addNodesInDocOrder(NodeIterator iterator, XPathContext support)",
+    "returnType" : "void",
+    "comment" : "\n   * Copy NodeList members into this nodelist, adding in\n   * document order.  If a node is null, don't add it.\n   *\n   * @param iterator NodeIterator which yields the nodes to be added.\n   * @param support The XPath runtime context.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean addNodesInDocOrder(int start, int end, int testIndex, NodeList nodelist, XPathContext support)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Add the node list to this node set in document order.\n   *\n   * @param start index.\n   * @param end index.\n   * @param testIndex index.\n   * @param nodelist The nodelist to add.\n   * @param support The XPath runtime context.\n   *\n   * @return false always.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int addNodeInDocOrder(Node node, boolean test, XPathContext support)",
+    "returnType" : "int",
+    "comment" : "\n   * Add the node into a vector of nodes where it should occur in\n   * document order.\n   * @param node The node to be added.\n   * @param test true if we should test for doc order\n   * @param support The XPath runtime context.\n   * @return insertIndex.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int addNodeInDocOrder(Node node, XPathContext support)",
+    "returnType" : "int",
+    "comment" : "\n   * Add the node into a vector of nodes where it should occur in\n   * document order.\n   * @param node The node to be added.\n   * @param support The XPath runtime context.\n   *\n   * @return The index where it was inserted.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a mutable type.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCurrentPos()",
+    "returnType" : "int",
+    "comment" : "\n   * Get the current position, which is one less than\n   * the next nextNode() call will retrieve.  i.e. if\n   * you call getCurrentPos() and the return is 0, the next\n   * fetch will take place at index 1.\n   *\n   * @return The the current position index.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCurrentPos(int i)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the current position in the node set.\n   * @param i Must be a valid index.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a cached type, and thus doesn't permit indexed access.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Node getCurrentNode()",
+    "returnType" : "Node",
+    "comment" : "\n   * Return the last fetched node.  Needed to support the UnionPathIterator.\n   *\n   * @return the last fetched node.\n   * @throws RuntimeException thrown if this NodeSet is not of \n   * a cached type, and thus doesn't permit indexed access.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getShouldCacheNodes()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Get whether or not this is a cached node set.\n   *\n   *\n   * @return True if this list is cached.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setShouldCacheNodes(boolean b)",
+    "returnType" : "void",
+    "comment" : "\n   * If setShouldCacheNodes(true) is called, then nodes will\n   * be cached.  They are not cached by default. This switch must\n   * be set before the first call to nextNode is made, to ensure\n   * that all nodes are cached.\n   *\n   * @param b true if this node set should be cached.\n   * @throws RuntimeException thrown if an attempt is made to\n   * request caching after we've already begun stepping through the\n   * nodes in this set.\n  ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getLast()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLast(int last)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone() throws CloneNotSupportedException",
+    "returnType" : "Object",
+    "comment" : "\n   * Get a cloned LocPathIterator.\n   *\n   * @return A clone of this\n   *\n   * @throws CloneNotSupportedException\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n   * Get the length of the list.\n   *\n   * @return Number of nodes in this NodeVector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addElement(Node value)",
+    "returnType" : "void",
+    "comment" : "\n   * Append a Node onto the vector.\n   *\n   * @param value Node to add to the vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void push(Node value)",
+    "returnType" : "void",
+    "comment" : "\n   * Append a Node onto the vector.\n   *\n   * @param value Node to add to the vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Node pop()",
+    "returnType" : "Node",
+    "comment" : "\n   * Pop a node from the tail of the vector and return the result.\n   *\n   * @return the node at the tail of the vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Node popAndTop()",
+    "returnType" : "Node",
+    "comment" : "\n   * Pop a node from the tail of the vector and return the\n   * top of the stack after the pop.\n   *\n   * @return The top of the stack after it's been popped \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void popQuick()",
+    "returnType" : "void",
+    "comment" : "\n   * Pop a node from the tail of the vector.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Node peepOrNull()",
+    "returnType" : "Node",
+    "comment" : "\n   * Return the node at the top of the stack without popping the stack.\n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @return Node at the top of the stack or null if stack is empty.  \n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void pushPair(Node v1, Node v2)",
+    "returnType" : "void",
+    "comment" : "\n   * Push a pair of nodes into the stack.  \n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @param v1 First node to add to vector\n   * @param v2 Second node to add to vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void popPair()",
+    "returnType" : "void",
+    "comment" : "\n   * Pop a pair of nodes from the tail of the stack. \n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setTail(Node n)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the tail of the stack to the given node.\n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @param n Node to set at the tail of vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setTailSub1(Node n)",
+    "returnType" : "void",
+    "comment" : "\n   * Set the given node one position from the tail.\n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @param n Node to set\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Node peepTail()",
+    "returnType" : "Node",
+    "comment" : "\n   * Return the node at the tail of the vector without popping\n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @return Node at the tail of the vector\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Node peepTailSub1()",
+    "returnType" : "Node",
+    "comment" : "\n   * Return the node one position from the tail without popping.\n   * Special purpose method for TransformerImpl, pushElemTemplateElement.\n   * Performance critical.\n   *\n   * @return Node one away from the tail\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void insertElementAt(Node value, int at)",
+    "returnType" : "void",
+    "comment" : "\n   * Inserts the specified node in this vector at the specified index.\n   * Each component in this vector with an index greater or equal to\n   * the specified index is shifted upward to have an index one greater\n   * than the value it had previously.\n   *\n   * @param value Node to insert\n   * @param at Position where to insert\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void appendNodes(NodeSet nodes)",
+    "returnType" : "void",
+    "comment" : "\n   * Append the nodes to the list.\n   *\n   * @param nodes NodeVector to append to this list\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeAllElements()",
+    "returnType" : "void",
+    "comment" : "\n   * Inserts the specified node in this vector at the specified index.\n   * Each component in this vector with an index greater or equal to\n   * the specified index is shifted upward to have an index one greater\n   * than the value it had previously.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean removeElement(Node s)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Removes the first occurrence of the argument from this vector.\n   * If the object is found in this vector, each component in the vector\n   * with an index greater or equal to the object's index is shifted\n   * downward to have an index one smaller than the value it had\n   * previously.\n   *\n   * @param s Node to remove from the list\n   *\n   * @return True if the node was successfully removed\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeElementAt(int i)",
+    "returnType" : "void",
+    "comment" : "\n   * Deletes the component at the specified index. Each component in\n   * this vector with an index greater or equal to the specified\n   * index is shifted downward to have an index one smaller than\n   * the value it had previously.\n   *\n   * @param i Index of node to remove\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setElementAt(Node node, int index)",
+    "returnType" : "void",
+    "comment" : "\n   * Sets the component at the specified index of this vector to be the\n   * specified object. The previous component at that position is discarded.\n   *\n   * The index must be a value greater than or equal to 0 and less\n   * than the current size of the vector.\n   *\n   * @param node Node to set\n   * @param index Index of where to set the node\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Node elementAt(int i)",
+    "returnType" : "Node",
+    "comment" : "\n   * Get the nth element.\n   *\n   * @param i Index of node to get\n   *\n   * @return Node at specified index\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean contains(Node s)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tell if the table contains the given node.\n   *\n   * @param s Node to look for\n   *\n   * @return True if the given node was found.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int indexOf(Node elem, int index)",
+    "returnType" : "int",
+    "comment" : "\n   * Searches for the first occurence of the given argument,\n   * beginning the search at index, and testing for equality\n   * using the equals method.\n   *\n   * @param elem Node to look for\n   * @param index Index of where to start the search\n   * @return the index of the first occurrence of the object\n   * argument in this vector at position index or later in the\n   * vector; returns -1 if the object is not found.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public int indexOf(Node elem)",
+    "returnType" : "int",
+    "comment" : "\n   * Searches for the first occurence of the given argument,\n   * beginning the search at index, and testing for equality\n   * using the equals method.\n   *\n   * @param elem Node to look for \n   * @return the index of the first occurrence of the object\n   * argument in this vector at position index or later in the\n   * vector; returns -1 if the object is not found.\n   ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public Node getRoot()", "public NodeIterator cloneWithReset() throws CloneNotSupportedException", "public void reset()", "public int getWhatToShow()", "public NodeFilter getFilter()", "public boolean getExpandEntityReferences()", "public Node nextNode() throws DOMException", "public Node previousNode() throws DOMException", "public void detach()", "public boolean isFresh()", "public void runTo(int index)", "public Node item(int index)", "public int getLength()", "public void addNode(Node n)", "public void insertNode(Node n, int pos)", "public void removeNode(Node n)", "public void addNodes(NodeList nodelist)", "public void addNodes(NodeSet ns)", "public void addNodes(NodeIterator iterator)", "public void addNodesInDocOrder(NodeList nodelist, XPathContext support)", "public void addNodesInDocOrder(NodeIterator iterator, XPathContext support)", "private boolean addNodesInDocOrder(int start, int end, int testIndex, NodeList nodelist, XPathContext support)", "public int addNodeInDocOrder(Node node, boolean test, XPathContext support)", "public int addNodeInDocOrder(Node node, XPathContext support)", "public int getCurrentPos()", "public void setCurrentPos(int i)", "public Node getCurrentNode()", "public boolean getShouldCacheNodes()", "public void setShouldCacheNodes(boolean b)", "public int getLast()", "public void setLast(int last)", "public Object clone() throws CloneNotSupportedException", "public int size()", "public void addElement(Node value)", "public final void push(Node value)", "public final Node pop()", "public final Node popAndTop()", "public final void popQuick()", "public final Node peepOrNull()", "public final void pushPair(Node v1, Node v2)", "public final void popPair()", "public final void setTail(Node n)", "public final void setTailSub1(Node n)", "public final Node peepTail()", "public final Node peepTailSub1()", "public void insertElementAt(Node value, int at)", "public void appendNodes(NodeSet nodes)", "public void removeAllElements()", "public boolean removeElement(Node s)", "public void removeElementAt(int i)", "public void setElementAt(Node node, int index)", "public Node elementAt(int i)", "public boolean contains(Node s)", "public int indexOf(Node elem, int index)", "public int indexOf(Node elem)" ],
+  "variableNames" : [ "m_next", "m_mutable", "m_cacheNodes", "m_last", "m_blocksize", "m_map", "m_firstFree", "m_mapSize" ]
+}

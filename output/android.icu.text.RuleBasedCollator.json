@@ -1,0 +1,411 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/RuleBasedCollator.java",
+  "packageName" : "android.icu.text",
+  "className" : "RuleBasedCollator",
+  "comment" : "\n * <p>\n * RuleBasedCollator is a concrete subclass of Collator. It allows customization of the Collator via user-specified rule\n * sets. RuleBasedCollator is designed to be fully compliant to the <a\n * href=\"https://www.unicode.org/reports/tr10/\">Unicode Collation Algorithm (UCA)</a> and conforms to ISO 14651.\n *\n * <p>A Collator is thread-safe only when frozen. See {@link #isFrozen()} and {@link android.icu.util.Freezable}.\n *\n * <p>\n * Users are strongly encouraged to read the <a href=\"https://unicode-org.github.io/icu/userguide/collation\">User\n * Guide</a> for more information about the collation service before using this class.\n *\n * <p>\n * Create a RuleBasedCollator from a locale by calling the getInstance(Locale) factory method in the base class\n * Collator. Collator.getInstance(Locale) creates a RuleBasedCollator object based on the collation rules defined by the\n * argument locale. If a customized collation ordering or attributes is required, use the RuleBasedCollator(String)\n * constructor with the appropriate rules. The customized RuleBasedCollator will base its ordering on the CLDR root collation, while\n * re-adjusting the attributes and orders of the characters in the specified rule accordingly.\n *\n * <p>\n * RuleBasedCollator provides correct collation orders for most locales supported in ICU. If specific data for a locale\n * is not available, the orders eventually falls back to the\n * <a href=\"http://www.unicode.org/reports/tr35/tr35-collation.html#Root_Collation\">CLDR root sort order</a>.\n *\n * <p>\n * For information about the collation rule syntax and details about customization, please refer to the <a\n * href=\"https://unicode-org.github.io/icu/userguide/collation/customization\">Collation customization</a>\n * section of the User Guide.\n *\n * <p>\n * <strong>Note</strong> that there are some differences between the Collation rule syntax used in Java and ICU4J:\n *\n * <ul>\n * <li>According to the JDK documentation: <br>\n * <i>Modifier '!' : Turns on Thai/Lao vowel-consonant swapping. If this rule is in force when a Thai vowel of the range\n * &#92;U0E40-&#92;U0E44 precedes a Thai consonant of the range &#92;U0E01-&#92;U0E2E OR a Lao vowel of the range\n * &#92;U0EC0-&#92;U0EC4 precedes a Lao consonant of the range &#92;U0E81-&#92;U0EAE then the vowel is placed after the\n * consonant for collation purposes.\n * <br>\n * If a rule is without the modifier '!', the Thai/Lao vowel-consonant swapping is not turned on.\n * </i>\n * <br>\n * ICU4J's RuleBasedCollator does not support turning off the Thai/Lao vowel-consonant swapping, since the UCA clearly\n * states that it has to be supported to ensure a correct sorting order. If a '!' is encountered, it is ignored.</li>\n * <li>As mentioned in the documentation of the base class Collator, compatibility decomposition mode is not supported.</li>\n * </ul>\n * <p>\n * <strong>Examples</strong>\n * <p>\n * Creating Customized RuleBasedCollators: <blockquote>\n *\n * <pre>\n * String simple = \"&amp; a &lt; b &lt; c &lt; d\";\n * RuleBasedCollator simpleCollator = new RuleBasedCollator(simple);\n *\n * String norwegian = \"&amp; a , A &lt; b , B &lt; c , C &lt; d , D &lt; e , E \"\n *                    + \"&lt; f , F &lt; g , G &lt; h , H &lt; i , I &lt; j , \"\n *                    + \"J &lt; k , K &lt; l , L &lt; m , M &lt; n , N &lt; \"\n *                    + \"o , O &lt; p , P &lt; q , Q &lt;r , R &lt;s , S &lt; \"\n *                    + \"t , T &lt; u , U &lt; v , V &lt; w , W &lt; x , X \"\n *                    + \"&lt; y , Y &lt; z , Z &lt; &#92;u00E5 = a&#92;u030A \"\n *                    + \", &#92;u00C5 = A&#92;u030A ; aa , AA &lt; &#92;u00E6 \"\n *                    + \", &#92;u00C6 &lt; &#92;u00F8 , &#92;u00D8\";\n * RuleBasedCollator norwegianCollator = new RuleBasedCollator(norwegian);\n * </pre>\n *\n * </blockquote>\n *\n * Concatenating rules to combine <code>Collator</code>s: <blockquote>\n *\n * <pre>\n * // Create an en_US Collator object\n * RuleBasedCollator en_USCollator = (RuleBasedCollator)\n *     Collator.getInstance(new Locale(\"en\", \"US\", \"\"));\n * // Create a da_DK Collator object\n * RuleBasedCollator da_DKCollator = (RuleBasedCollator)\n *     Collator.getInstance(new Locale(\"da\", \"DK\", \"\"));\n * // Combine the two\n * // First, get the collation rules from en_USCollator\n * String en_USRules = en_USCollator.getRules();\n * // Second, get the collation rules from da_DKCollator\n * String da_DKRules = da_DKCollator.getRules();\n * RuleBasedCollator newCollator =\n *                             new RuleBasedCollator(en_USRules + da_DKRules);\n * // newCollator has the combined rules\n * </pre>\n *\n * </blockquote>\n *\n * Making changes to an existing RuleBasedCollator to create a new <code>Collator</code> object, by appending changes to\n * the existing rule: <blockquote>\n *\n * <pre>\n * // Create a new Collator object with additional rules\n * String addRules = \"&amp; C &lt; ch, cH, Ch, CH\";\n * RuleBasedCollator myCollator =\n *     new RuleBasedCollator(en_USCollator.getRules() + addRules);\n * // myCollator contains the new rules\n * </pre>\n *\n * </blockquote>\n *\n * How to change the order of non-spacing accents: <blockquote>\n *\n * <pre>\n * // old rule with main accents\n * String oldRules = \"= &#92;u0301 ; &#92;u0300 ; &#92;u0302 ; &#92;u0308 \"\n *                 + \"; &#92;u0327 ; &#92;u0303 ; &#92;u0304 ; &#92;u0305 \"\n *                 + \"; &#92;u0306 ; &#92;u0307 ; &#92;u0309 ; &#92;u030A \"\n *                 + \"; &#92;u030B ; &#92;u030C ; &#92;u030D ; &#92;u030E \"\n *                 + \"; &#92;u030F ; &#92;u0310 ; &#92;u0311 ; &#92;u0312 \"\n *                 + \"&lt; a , A ; ae, AE ; &#92;u00e6 , &#92;u00c6 \"\n *                 + \"&lt; b , B &lt; c, C &lt; e, E &amp; C &lt; d , D\";\n * // change the order of accent characters\n * String addOn = \"&amp; &#92;u0300 ; &#92;u0308 ; &#92;u0302\";\n * RuleBasedCollator myCollator = new RuleBasedCollator(oldRules + addOn);\n * </pre>\n *\n * </blockquote>\n *\n * Putting in a new primary ordering before the default setting, e.g. sort English characters before or after Japanese\n * characters in the Japanese <code>Collator</code>: <blockquote>\n *\n * <pre>\n * // get en_US Collator rules\n * RuleBasedCollator en_USCollator\n *                        = (RuleBasedCollator)Collator.getInstance(Locale.US);\n * // add a few Japanese characters to sort before English characters\n * // suppose the last character before the first base letter 'a' in\n * // the English collation rule is &#92;u2212\n * String jaString = \"&amp; &#92;u2212 &lt;&#92;u3041, &#92;u3042 &lt;&#92;u3043, \"\n *                   + \"&#92;u3044\";\n * RuleBasedCollator myJapaneseCollator\n *              = new RuleBasedCollator(en_USCollator.getRules() + jaString);\n * </pre>\n *\n * </blockquote>\n * <p>\n * This class is not subclassable\n *\n * @author Syn Wee Quek\n ",
+  "links" : [ "android.icu.util.Freezable", "#isFrozen()" ],
+  "variables" : [ {
+    "name" : "frozenLock",
+    "type" : "Lock",
+    "comment" : "\n     * Frozen state of the collator.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "collationBuffer",
+    "type" : "CollationBuffer",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "data",
+    "type" : "CollationData",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "settings",
+    "type" : "SharedObject.Reference<CollationSettings>",
+    "comment" : " reference-counted",
+    "links" : [ ]
+  }, {
+    "name" : "tailoring",
+    "type" : "CollationTailoring",
+    "comment" : " C++: reference-counted",
+    "links" : [ ]
+  }, {
+    "name" : "validLocale",
+    "type" : "ULocale",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "actualLocaleIsSameAsValid",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private final void internalBuildTailoring(String rules) throws Exception",
+    "returnType" : "void",
+    "comment" : "\n     * Implements from-rule constructors.\n     * @param rules rule string\n     * @throws Exception\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone() throws CloneNotSupportedException",
+    "returnType" : "Object",
+    "comment" : "\n     * Clones the RuleBasedCollator\n     *\n     * @return a new instance of this RuleBasedCollator object\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void initMaxExpansions()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CollationElementIterator getCollationElementIterator(String source)",
+    "returnType" : "CollationElementIterator",
+    "comment" : "\n     * Return a CollationElementIterator for the given String.\n     *\n     * @see CollationElementIterator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CollationElementIterator getCollationElementIterator(CharacterIterator source)",
+    "returnType" : "CollationElementIterator",
+    "comment" : "\n     * Return a CollationElementIterator for the given CharacterIterator. The source iterator's integrity will be\n     * preserved since a new copy will be created for use.\n     *\n     * @see CollationElementIterator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CollationElementIterator getCollationElementIterator(UCharacterIterator source)",
+    "returnType" : "CollationElementIterator",
+    "comment" : "\n     * Return a CollationElementIterator for the given UCharacterIterator. The source iterator's integrity will be\n     * preserved since a new copy will be created for use.\n     *\n     * @see CollationElementIterator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFrozen()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines whether the object has been frozen or not.\n     *\n     * <p>An unfrozen Collator is mutable and not thread-safe.\n     * A frozen Collator is immutable and thread-safe.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collator freeze()",
+    "returnType" : "Collator",
+    "comment" : "\n     * Freezes the collator.\n     * @return the collator itself.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RuleBasedCollator cloneAsThawed()",
+    "returnType" : "RuleBasedCollator",
+    "comment" : "\n     * Provides for the clone operation. Any clone is initially unfrozen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkNotFrozen()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final CollationSettings getOwnedSettings()",
+    "returnType" : "CollationSettings",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final CollationSettings getDefaultSettings()",
+    "returnType" : "CollationSettings",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHiraganaQuaternary(boolean flag)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the Hiragana Quaternary mode to be on or off. When the Hiragana Quaternary mode is turned on, the collator\n     * positions Hiragana characters before all non-ignorable characters in QUATERNARY strength. This is to produce a\n     * correct JIS collation order, distinguishing between Katakana and Hiragana characters.\n     *\n     * <p>This attribute was an implementation detail of the CLDR Japanese tailoring.\n     * Since ICU 50, this attribute is not settable any more via API functions.\n     * Since CLDR 25/ICU 53, explicit quaternary relations are used\n     * to achieve the same Japanese sort order.\n     *\n     * @param flag\n     *            true if Hiragana Quaternary mode is to be on, false otherwise\n     * @see #setHiraganaQuaternaryDefault\n     * @see #isHiraganaQuaternary\n     * @deprecated ICU 50 Implementation detail, cannot be set via API, was removed from implementation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHiraganaQuaternaryDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the Hiragana Quaternary mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setHiraganaQuaternary(boolean) for more details.\n     *\n     * <p>This attribute was an implementation detail of the CLDR Japanese tailoring.\n     * Since ICU 50, this attribute is not settable any more via API functions.\n     * Since CLDR 25/ICU 53, explicit quaternary relations are used\n     * to achieve the same Japanese sort order.\n     *\n     * @see #setHiraganaQuaternary(boolean)\n     * @see #isHiraganaQuaternary\n     * @deprecated ICU 50 Implementation detail, cannot be set via API, was removed from implementation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUpperCaseFirst(boolean upperfirst)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets whether uppercase characters sort before lowercase characters or vice versa, in strength TERTIARY.\n     * If false, lowercase characters sort before uppercase characters. If true, sort upper case\n     * characters first. The default setting in a Collator object depends on the\n     * locale data loaded from the resources. For most locales, the default is false,\n     * but for others, such as \"da\" or \"mt\", the default could be true.\n     *\n     * @param upperfirst\n     *            true to sort uppercase characters before lowercase characters, false to sort lowercase characters\n     *            before uppercase characters\n     * @see #isLowerCaseFirst\n     * @see #isUpperCaseFirst\n     * @see #setLowerCaseFirst\n     * @see #setCaseFirstDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLowerCaseFirst(boolean lowerfirst)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the orders of lower cased characters to sort before upper cased characters, in strength TERTIARY.\n     * If true is set, the RuleBasedCollator will sort lower cased characters before the upper\n     * cased ones. Otherwise, if false is set, the RuleBasedCollator will ignore case preferences.\n     * The default default setting in a Collator object depends on the locale data loaded from\n     * the resources.\n     *\n     * @param lowerfirst\n     *            true for sorting lower cased characters before upper cased characters, false to ignore case\n     *            preferences.\n     * @see #isLowerCaseFirst\n     * @see #isUpperCaseFirst\n     * @see #setUpperCaseFirst\n     * @see #setCaseFirstDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setCaseFirstDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the case first mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setUpperCaseFirst(boolean) and setLowerCaseFirst(boolean) for more details.\n     *\n     * @see #isLowerCaseFirst\n     * @see #isUpperCaseFirst\n     * @see #setLowerCaseFirst(boolean)\n     * @see #setUpperCaseFirst(boolean)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAlternateHandlingDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the alternate handling mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setAlternateHandling(boolean) for more details.\n     *\n     * @see #setAlternateHandlingShifted(boolean)\n     * @see #isAlternateHandlingShifted()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCaseLevelDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the case level mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setCaseLevel(boolean) for more details.\n     *\n     * @see #setCaseLevel(boolean)\n     * @see #isCaseLevel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDecompositionDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the decomposition mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setDecomposition(int) for more details.\n     *\n     * @see #getDecomposition\n     * @see #setDecomposition(int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFrenchCollationDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the French collation mode to the initial mode set during construction of the RuleBasedCollator. See\n     * setFrenchCollation(boolean) for more details.\n     *\n     * @see #isFrenchCollation\n     * @see #setFrenchCollation(boolean)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setStrengthDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the collation strength to the initial mode set during the construction of the RuleBasedCollator. See\n     * setStrength(int) for more details.\n     *\n     * @see #setStrength(int)\n     * @see #getStrength\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumericCollationDefault()",
+    "returnType" : "void",
+    "comment" : "\n     * Method to set numeric collation to its default value.\n     *\n     * @see #getNumericCollation\n     * @see #setNumericCollation\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFrenchCollation(boolean flag)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the mode for the direction of SECONDARY weights to be used in French collation. If set to false,\n     * which treats SECONDARY weights in the order they appear. If set to true, the SECONDARY weights will be sorted\n     * backwards. See the section on <a href=\"https://unicode-org.github.io/icu/userguide/collation/architecture\">\n     * French collation</a> for more information. The default setting in a Collator object depends on the\n     * locale data loaded from the resources. For example, for \"fr_CA\" locale, the default is true.\n     *\n     * @param flag\n     *            true to set the French collation on, false to set it off\n     * @see #isFrenchCollation\n     * @see #setFrenchCollationDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAlternateHandlingShifted(boolean shifted)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the alternate handling for QUATERNARY strength to be either shifted or non-ignorable. See the UCA definition\n     * on <a href=\"https://www.unicode.org/reports/tr10/#Variable_Weighting\">Variable Weighting</a>. This\n     * attribute will only be effective when QUATERNARY strength is set. If the mode is set to\n     * false, it corresponds to the NON_IGNORABLE mode in UCA. In the NON_IGNORABLE mode, the RuleBasedCollator treats all\n     * the code points with non-ignorable primary weights in the same way. If the mode is set to true, the behavior\n     * corresponds to SHIFTED defined in UCA, this causes code points with PRIMARY orders that are equal or below the\n     * variable top value to be ignored in PRIMARY order and moved to the QUATERNARY order.\n     * The default setting in a Collator object depends on the locale data loaded from the\n     * resources. For most locales, the default is false, but for others, such as \"th\",\n      * the default could be true.\n     *\n     * @param shifted\n     *            true if SHIFTED behavior for alternate handling is desired, false for the NON_IGNORABLE behavior.\n     * @see #isAlternateHandlingShifted\n     * @see #setAlternateHandlingDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCaseLevel(boolean flag)",
+    "returnType" : "void",
+    "comment" : "\n     * <p>\n     * When case level is set to true, an additional weight is formed between the SECONDARY and TERTIARY weight, known\n     * as the case level. The case level is used to distinguish large and small Japanese Kana characters. Case level\n     * could also be used in other situations. For example to distinguish certain Pinyin characters. If the value\n     * is false, it means the case level is not generated. The contents of the case level are affected by the case\n     * first mode. A simple way to ignore accent differences in a string is to set the strength to PRIMARY and enable\n     * case level. The default setting in a Collator object depends\n     * on the locale data loaded from the resources.\n     * <p>\n     * See the section on <a href=\"https://unicode-org.github.io/icu/userguide/collation/architecture\">case\n     * level</a> for more information.\n     *\n     * @param flag\n     *            true if case level sorting is required, false otherwise\n     * @see #setCaseLevelDefault\n     * @see #isCaseLevel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDecomposition(int decomposition)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the decomposition mode of this Collator.  Setting this\n     * decomposition attribute with CANONICAL_DECOMPOSITION allows the\n     * Collator to handle un-normalized text properly, producing the\n     * same results as if the text were normalized. If\n     * NO_DECOMPOSITION is set, it is the user's responsibility to\n     * insure that all text is already in the appropriate form before\n     * a comparison or before getting a CollationKey. Adjusting\n     * decomposition mode allows the user to select between faster and\n     * more complete collation behavior.\n     *\n     * <p>Since a great many of the world's languages do not require\n     * text normalization, most locales set NO_DECOMPOSITION as the\n     * default decomposition mode.\n     *\n     * The default decompositon mode for the Collator is\n     * NO_DECOMPOSITON, unless specified otherwise by the locale used\n     * to create the Collator.\n     *\n     * <p>See getDecomposition for a description of decomposition\n     * mode.\n     *\n     * @param decomposition the new decomposition mode\n     * @see #getDecomposition\n     * @see #NO_DECOMPOSITION\n     * @see #CANONICAL_DECOMPOSITION\n     * @throws IllegalArgumentException If the given value is not a valid\n     *            decomposition mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setStrength(int newStrength)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets this Collator's strength attribute. The strength attribute determines the minimum level of difference\n     * considered significant during comparison.\n     *\n     * <p>See the Collator class description for an example of use.\n     *\n     * @param newStrength\n     *            the new strength value.\n     * @see #getStrength\n     * @see #setStrengthDefault\n     * @see #PRIMARY\n     * @see #SECONDARY\n     * @see #TERTIARY\n     * @see #QUATERNARY\n     * @see #IDENTICAL\n     * @exception IllegalArgumentException\n     *                If the new strength value is not one of PRIMARY, SECONDARY, TERTIARY, QUATERNARY or IDENTICAL.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RuleBasedCollator setMaxVariable(int group)",
+    "returnType" : "RuleBasedCollator",
+    "comment" : "\n     * <strong>[icu]</strong> Sets the variable top to the top of the specified reordering group.\n     * The variable top determines the highest-sorting character\n     * which is affected by the alternate handling behavior.\n     * If that attribute is set to NON_IGNORABLE, then the variable top has no effect.\n     * @param group one of Collator.ReorderCodes.SPACE, Collator.ReorderCodes.PUNCTUATION,\n     *              Collator.ReorderCodes.SYMBOL, Collator.ReorderCodes.CURRENCY;\n     *              or Collator.ReorderCodes.DEFAULT to restore the default max variable group\n     * @return this\n     * @see #getMaxVariable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMaxVariable()",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the maximum reordering group whose characters are affected by\n     * the alternate handling behavior.\n     * @return the maximum variable reordering group.\n     * @see #setMaxVariable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int setVariableTop(String varTop)",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Sets the variable top to the primary weight of the specified string.\n     *\n     * <p>Beginning with ICU 53, the variable top is pinned to\n     * the top of one of the supported reordering groups,\n     * and it must not be beyond the last of those groups.\n     * See {@link #setMaxVariable(int)}.\n     *\n     * @param varTop\n     *            one or more (if contraction) characters to which the variable top should be set\n     * @return variable top primary weight\n     * @exception IllegalArgumentException\n     *                is thrown if varTop argument is not a valid variable top element. A variable top element is\n     *                invalid when\n     *                <ul>\n     *                <li>it is a contraction that does not exist in the Collation order\n     *                <li>the variable top is beyond\n     *                    the last reordering group supported by setMaxVariable()\n     *                <li>when the varTop argument is null or zero in length.\n     *                </ul>\n     * @see #getVariableTop\n     * @see RuleBasedCollator#setAlternateHandlingShifted\n     * @deprecated ICU 53 Call {@link #setMaxVariable(int)} instead.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setMaxVariable(int)" ]
+  }, {
+    "name" : "public void setVariableTop(int varTop)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong> Sets the variable top to the specified primary weight.\n     *\n     * <p>Beginning with ICU 53, the variable top is pinned to\n     * the top of one of the supported reordering groups,\n     * and it must not be beyond the last of those groups.\n     * See {@link #setMaxVariable(int)}.\n     *\n     * @param varTop primary weight, as returned by setVariableTop or getVariableTop\n     * @see #getVariableTop\n     * @see #setVariableTop(String)\n     * @deprecated ICU 53 Call setMaxVariable() instead.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#setMaxVariable(int)" ]
+  }, {
+    "name" : "private void internalSetVariableTop(long varTop)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumericCollation(boolean flag)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong> When numeric collation is turned on, this Collator makes\n     * substrings of digits sort according to their numeric values.\n     *\n     * <p>This is a way to get '100' to sort AFTER '2'. Note that the longest\n     * digit substring that can be treated as a single unit is\n     * 254 digits (not counting leading zeros). If a digit substring is\n     * longer than that, the digits beyond the limit will be treated as a\n     * separate digit substring.\n     *\n     * <p>A \"digit\" in this sense is a code point with General_Category=Nd,\n     * which does not include circled numbers, roman numerals, etc.\n     * Only a contiguous digit substring is considered, that is,\n     * non-negative integers without separators.\n     * There is no support for plus/minus signs, decimals, exponents, etc.\n     *\n     * @param flag\n     *            true to turn numeric collation on and false to turn it off\n     * @see #getNumericCollation\n     * @see #setNumericCollationDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setReorderCodes(int... order)",
+    "returnType" : "void",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @param order the reordering codes to apply to this collator; if this is null or an empty array\n     * then this clears any existing reordering\n     * @throws IllegalArgumentException if the reordering codes are malformed in any way (e.g. duplicates, multiple reset codes, overlapping equivalent scripts)\n     * @see #getReorderCodes\n     * @see Collator#getEquivalentReorderCodes\n     * @see Collator.ReorderCodes\n     * @see UScript\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setFastLatinOptions(CollationSettings ownedSettings)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String getRules()",
+    "returnType" : "String",
+    "comment" : "\n     * Gets the collation tailoring rules for this RuleBasedCollator.\n     * Equivalent to String getRules(false).\n     *\n     * <p>On Android, the returned string will be empty unless this instance was\n     * constructed using {@link #RuleBasedCollator(String)}.\n     *\n     * @return the collation tailoring rules\n     * @see #getRules(boolean)\n     ",
+    "links" : [ "#RuleBasedCollator(String)" ]
+  }, {
+    "name" : "public String getRules(boolean fullrules)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns current rules.\n     * The argument defines whether full rules (root collation + tailored) rules are returned\n     * or just the tailoring.\n     *\n     * <p>The root collation rules are an <i>approximation</i> of the root collator's sort order.\n     * They are almost never used or useful at runtime and can be removed from the data.\n     * See <a href=\"https://unicode-org.github.io/icu/userguide/collation/customization#building-on-existing-locales\">User Guide:\n     * Collation Customization, Building on Existing Locales</a>\n     *\n     * <p>{@link #getRules()} should normally be used instead.\n     * @param fullrules\n     *            true if the rules that defines the full set of collation order is required, otherwise false for\n     *            returning only the tailored rules\n     * @return the current rules that defines this Collator.\n     * @see #getRules()\n     ",
+    "links" : [ "#getRules()" ]
+  }, {
+    "name" : "public UnicodeSet getTailoredSet()",
+    "returnType" : "UnicodeSet",
+    "comment" : "\n     * Get a UnicodeSet that contains all the characters and sequences tailored in this collator.\n     *\n     * @return a pointer to a UnicodeSet object containing all the code points and sequences that may sort differently\n     *         than in the root collator.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getContractionsAndExpansions(UnicodeSet contractions, UnicodeSet expansions, boolean addPrefixes) throws Exception",
+    "returnType" : "void",
+    "comment" : "\n     * Gets unicode sets containing contractions and/or expansions of a collator\n     *\n     * @param contractions\n     *            if not null, set to contain contractions\n     * @param expansions\n     *            if not null, set to contain expansions\n     * @param addPrefixes\n     *            add the prefix contextual elements to contractions\n     * @throws Exception\n     *             Throws an exception if any errors occurs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void internalAddContractions(int c, UnicodeSet set)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds the contractions that start with character c to the set.\n     * Ignores prefixes. Used by AlphabeticIndex.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public CollationKey getCollationKey(String source)",
+    "returnType" : "CollationKey",
+    "comment" : "\n     * <p>\n     * Get a Collation key for the argument String source from this RuleBasedCollator.\n     * <p>\n     * General recommendation: <br>\n     * If comparison are to be done to the same String multiple times, it would be more efficient to generate\n     * CollationKeys for the Strings and use CollationKey.compareTo(CollationKey) for the comparisons. If the each\n     * Strings are compared to only once, using the method RuleBasedCollator.compare(String, String) will have a better\n     * performance.\n     * <p>\n     * See the class documentation for an explanation about CollationKeys.\n     *\n     * @param source\n     *            the text String to be transformed into a collation key.\n     * @return the CollationKey for the given String based on this RuleBasedCollator's collation rules. If the source\n     *         String is null, a null CollationKey is returned.\n     * @see CollationKey\n     * @see #compare(String, String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private CollationKey getCollationKey(String source, CollationBuffer buffer)",
+    "returnType" : "CollationKey",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public RawCollationKey getRawCollationKey(String source, RawCollationKey key)",
+    "returnType" : "RawCollationKey",
+    "comment" : "\n     * Gets the simpler form of a CollationKey for the String source following the rules of this Collator and stores the\n     * result into the user provided argument key. If key has a internal byte array of length that's too small for the\n     * result, the internal byte array will be grown to the exact required size.\n     *\n     * @param source the text String to be transformed into a RawCollationKey\n     * @param key output RawCollationKey to store results\n     * @return If key is null, a new instance of RawCollationKey will be created and returned, otherwise the user\n     *         provided key will be returned.\n     * @see #getCollationKey\n     * @see #compare(String, String)\n     * @see RawCollationKey\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private RawCollationKey getRawCollationKey(CharSequence source, RawCollationKey key, CollationBuffer buffer)",
+    "returnType" : "RawCollationKey",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int simpleKeyLengthEstimate(CharSequence source)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeSortKey(CharSequence s, CollationKeyByteSink sink, CollationBuffer buffer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeIdenticalLevel(CharSequence s, CollationKeyByteSink sink)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public long[] internalGetCEs(CharSequence str)",
+    "returnType" : "long[]",
+    "comment" : "\n     * Returns the CEs for the string.\n     * @param str the string\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getStrength()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns this Collator's strength attribute. The strength attribute\n     * determines the minimum level of difference considered significant.\n     *\n     * <p><strong>[icu] Note:</strong> This can return QUATERNARY strength, which is not supported by the\n     * JDK version.\n     *\n     * <p>See the Collator class description for more details.\n     *\n     * @return this Collator's current strength attribute.\n     * @see #setStrength\n     * @see #PRIMARY\n     * @see #SECONDARY\n     * @see #TERTIARY\n     * @see #QUATERNARY\n     * @see #IDENTICAL\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getDecomposition()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the decomposition mode of this Collator. The decomposition mode\n     * determines how Unicode composed characters are handled.\n     *\n     * <p>See the Collator class description for more details.\n     *\n     * @return the decomposition mode\n     * @see #setDecomposition\n     * @see #NO_DECOMPOSITION\n     * @see #CANONICAL_DECOMPOSITION\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isUpperCaseFirst()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if an uppercase character is sorted before the corresponding lowercase character. See\n     * setCaseFirst(boolean) for details.\n     *\n     * @see #setUpperCaseFirst\n     * @see #setLowerCaseFirst\n     * @see #isLowerCaseFirst\n     * @see #setCaseFirstDefault\n     * @return true if upper cased characters are sorted before lower cased characters, false otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLowerCaseFirst()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if a lowercase character is sorted before the corresponding uppercase character. See\n     * setCaseFirst(boolean) for details.\n     *\n     * @see #setUpperCaseFirst\n     * @see #setLowerCaseFirst\n     * @see #isUpperCaseFirst\n     * @see #setCaseFirstDefault\n     * @return true lower cased characters are sorted before upper cased characters, false otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isAlternateHandlingShifted()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the alternate handling behavior is the UCA defined SHIFTED or NON_IGNORABLE. If return value is true,\n     * then the alternate handling attribute for the Collator is SHIFTED. Otherwise if return value is false, then the\n     * alternate handling attribute for the Collator is NON_IGNORABLE See setAlternateHandlingShifted(boolean) for more\n     * details.\n     *\n     * @return true or false\n     * @see #setAlternateHandlingShifted(boolean)\n     * @see #setAlternateHandlingDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isCaseLevel()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if case level is set to true. See setCaseLevel(boolean) for details.\n     *\n     * @return the case level mode\n     * @see #setCaseLevelDefault\n     * @see #isCaseLevel\n     * @see #setCaseLevel(boolean)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFrenchCollation()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if French Collation is set to true. See setFrenchCollation(boolean) for details.\n     *\n     * @return true if French Collation is set to true, false otherwise\n     * @see #setFrenchCollation(boolean)\n     * @see #setFrenchCollationDefault\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isHiraganaQuaternary()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks if the Hiragana Quaternary mode is set on. See setHiraganaQuaternary(boolean) for more details.\n     *\n     * <p>This attribute was an implementation detail of the CLDR Japanese tailoring.\n     * Since ICU 50, this attribute is not settable any more via API functions.\n     * Since CLDR 25/ICU 53, explicit quaternary relations are used\n     * to achieve the same Japanese sort order.\n     *\n     * @return false\n     * @see #setHiraganaQuaternaryDefault\n     * @see #setHiraganaQuaternary(boolean)\n     * @deprecated ICU 50 Implementation detail, cannot be set via API, was removed from implementation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getVariableTop()",
+    "returnType" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Gets the variable top value of a Collator.\n     *\n     * @return the variable top primary weight\n     * @see #getMaxVariable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getNumericCollation()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Method to retrieve the numeric collation value. When numeric collation is turned on, this Collator generates a\n     * collation key for the numeric value of substrings of digits. This is a way to get '100' to sort AFTER '2'\n     *\n     * @see #setNumericCollation\n     * @see #setNumericCollationDefault\n     * @return true if numeric collation is turned on, false otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int[] getReorderCodes()",
+    "returnType" : "int[]",
+    "comment" : "\n     * Retrieves the reordering codes for this collator.\n     * These reordering codes are a combination of UScript codes and ReorderCodes.\n     * @return a copy of the reordering codes for this collator;\n     * if none are set then returns an empty array\n     * @see #setReorderCodes\n     * @see Collator#getEquivalentReorderCodes\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Generates a unique hash code for this RuleBasedCollator.\n     *\n     * @return the unique hash code for this Collator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int compare(String source, String target)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares the source text String to the target text String according to the collation rules, strength and\n     * decomposition mode for this RuleBasedCollator. Returns an integer less than, equal to or greater than zero\n     * depending on whether the source String is less than, equal to or greater than the target String. See the Collator\n     * class description for an example of use.\n     * <p>\n     * General recommendation: <br>\n     * If comparison are to be done to the same String multiple times, it would be more efficient to generate\n     * CollationKeys for the Strings and use CollationKey.compareTo(CollationKey) for the comparisons. If speed\n     * performance is critical and object instantiation is to be reduced, further optimization may be achieved by\n     * generating a simpler key of the form RawCollationKey and reusing this RawCollationKey object with the method\n     * RuleBasedCollator.getRawCollationKey. Internal byte representation can be directly accessed via RawCollationKey\n     * and stored for future use. Like CollationKey, RawCollationKey provides a method RawCollationKey.compareTo for key\n     * comparisons. If the each Strings are compared to only once, using the method RuleBasedCollator.compare(String,\n     * String) will have a better performance.\n     *\n     * @param source\n     *            the source text String.\n     * @param target\n     *            the target text String.\n     * @return Returns an integer value. Value is less than zero if source is less than target, value is zero if source\n     *         and target are equal, value is greater than zero if source is greater than target.\n     * @see CollationKey\n     * @see #getCollationKey\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final int compareNFDIter(Normalizer2Impl nfcImpl, NFDIterator left, NFDIterator right)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected int doCompare(CharSequence left, CharSequence right)",
+    "returnType" : "int",
+    "comment" : "\n     * Compares two CharSequences.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void adoptTailoring(CollationTailoring t)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " final boolean isUnsafe(int c)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tests whether a character is \"unsafe\" for use as a collation starting point.\n     *\n     * @param c code point or code unit\n     * @return true if c is unsafe\n     * @see CollationElementIterator#setOffset(int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VersionInfo getVersion()",
+    "returnType" : "VersionInfo",
+    "comment" : "\n     * Get the version of this collator object.\n     *\n     * @return the version object associated with this collator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public VersionInfo getUCAVersion()",
+    "returnType" : "VersionInfo",
+    "comment" : "\n     * Get the UCA version of this collator object.\n     *\n     * @return the version object associated with this collator\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final CollationBuffer getCollationBuffer()",
+    "returnType" : "CollationBuffer",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void releaseCollationBuffer(CollationBuffer buffer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ULocale getLocale(ULocale.Type type)",
+    "returnType" : "ULocale",
+    "comment" : "\n     * {@inheritDoc}\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " void setLocale(ULocale valid, ULocale actual)",
+    "returnType" : "void",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private final void internalBuildTailoring(String rules) throws Exception", "public Object clone() throws CloneNotSupportedException", "private final void initMaxExpansions()", "public CollationElementIterator getCollationElementIterator(String source)", "public CollationElementIterator getCollationElementIterator(CharacterIterator source)", "public CollationElementIterator getCollationElementIterator(UCharacterIterator source)", "public boolean isFrozen()", "public Collator freeze()", "public RuleBasedCollator cloneAsThawed()", "private void checkNotFrozen()", "private final CollationSettings getOwnedSettings()", "private final CollationSettings getDefaultSettings()", "public void setHiraganaQuaternary(boolean flag)", "public void setHiraganaQuaternaryDefault()", "public void setUpperCaseFirst(boolean upperfirst)", "public void setLowerCaseFirst(boolean lowerfirst)", "public final void setCaseFirstDefault()", "public void setAlternateHandlingDefault()", "public void setCaseLevelDefault()", "public void setDecompositionDefault()", "public void setFrenchCollationDefault()", "public void setStrengthDefault()", "public void setNumericCollationDefault()", "public void setFrenchCollation(boolean flag)", "public void setAlternateHandlingShifted(boolean shifted)", "public void setCaseLevel(boolean flag)", "public void setDecomposition(int decomposition)", "public void setStrength(int newStrength)", "public RuleBasedCollator setMaxVariable(int group)", "public int getMaxVariable()", "public int setVariableTop(String varTop)", "public void setVariableTop(int varTop)", "private void internalSetVariableTop(long varTop)", "public void setNumericCollation(boolean flag)", "public void setReorderCodes(int... order)", "private void setFastLatinOptions(CollationSettings ownedSettings)", "public String getRules()", "public String getRules(boolean fullrules)", "public UnicodeSet getTailoredSet()", "public void getContractionsAndExpansions(UnicodeSet contractions, UnicodeSet expansions, boolean addPrefixes) throws Exception", " void internalAddContractions(int c, UnicodeSet set)", "public CollationKey getCollationKey(String source)", "private CollationKey getCollationKey(String source, CollationBuffer buffer)", "public RawCollationKey getRawCollationKey(String source, RawCollationKey key)", "private RawCollationKey getRawCollationKey(CharSequence source, RawCollationKey key, CollationBuffer buffer)", "private int simpleKeyLengthEstimate(CharSequence source)", "private void writeSortKey(CharSequence s, CollationKeyByteSink sink, CollationBuffer buffer)", "private void writeIdenticalLevel(CharSequence s, CollationKeyByteSink sink)", "public long[] internalGetCEs(CharSequence str)", "public int getStrength()", "public int getDecomposition()", "public boolean isUpperCaseFirst()", "public boolean isLowerCaseFirst()", "public boolean isAlternateHandlingShifted()", "public boolean isCaseLevel()", "public boolean isFrenchCollation()", "public boolean isHiraganaQuaternary()", "public int getVariableTop()", "public boolean getNumericCollation()", "public int[] getReorderCodes()", "public boolean equals(Object obj)", "public int hashCode()", "public int compare(String source, String target)", "private static final int compareNFDIter(Normalizer2Impl nfcImpl, NFDIterator left, NFDIterator right)", "protected int doCompare(CharSequence left, CharSequence right)", "private void adoptTailoring(CollationTailoring t)", " final boolean isUnsafe(int c)", "public VersionInfo getVersion()", "public VersionInfo getUCAVersion()", "private final CollationBuffer getCollationBuffer()", "private final void releaseCollationBuffer(CollationBuffer buffer)", "public ULocale getLocale(ULocale.Type type)", " void setLocale(ULocale valid, ULocale actual)" ],
+  "variableNames" : [ "frozenLock", "collationBuffer", "data", "settings", "tailoring", "validLocale", "actualLocaleIsSameAsValid" ]
+}

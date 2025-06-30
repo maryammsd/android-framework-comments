@@ -1,0 +1,636 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/util/concurrent/ConcurrentHashMap.java",
+  "packageName" : "java.util.concurrent",
+  "className" : "ConcurrentHashMap",
+  "comment" : "\n * A hash table supporting full concurrency of retrievals and\n * high expected concurrency for updates. This class obeys the\n * same functional specification as {@link java.util.Hashtable}, and\n * includes versions of methods corresponding to each method of\n * {@code Hashtable}. However, even though all operations are\n * thread-safe, retrieval operations do <em>not</em> entail locking,\n * and there is <em>not</em> any support for locking the entire table\n * in a way that prevents all access.  This class is fully\n * interoperable with {@code Hashtable} in programs that rely on its\n * thread safety but not on its synchronization details.\n *\n * <p>Retrieval operations (including {@code get}) generally do not\n * block, so may overlap with update operations (including {@code put}\n * and {@code remove}). Retrievals reflect the results of the most\n * recently <em>completed</em> update operations holding upon their\n * onset. (More formally, an update operation for a given key bears a\n * <em>happens-before</em> relation with any (non-null) retrieval for\n * that key reporting the updated value.)  For aggregate operations\n * such as {@code putAll} and {@code clear}, concurrent retrievals may\n * reflect insertion or removal of only some entries.  Similarly,\n * Iterators, Spliterators and Enumerations return elements reflecting the\n * state of the hash table at some point at or since the creation of the\n * iterator/enumeration.  They do <em>not</em> throw {@link\n * java.util.ConcurrentModificationException ConcurrentModificationException}.\n * However, iterators are designed to be used by only one thread at a time.\n * Bear in mind that the results of aggregate status methods including\n * {@code size}, {@code isEmpty}, and {@code containsValue} are typically\n * useful only when a map is not undergoing concurrent updates in other threads.\n * Otherwise the results of these methods reflect transient states\n * that may be adequate for monitoring or estimation purposes, but not\n * for program control.\n *\n * <p>The table is dynamically expanded when there are too many\n * collisions (i.e., keys that have distinct hash codes but fall into\n * the same slot modulo the table size), with the expected average\n * effect of maintaining roughly two bins per mapping (corresponding\n * to a 0.75 load factor threshold for resizing). There may be much\n * variance around this average as mappings are added and removed, but\n * overall, this maintains a commonly accepted time/space tradeoff for\n * hash tables.  However, resizing this or any other kind of hash\n * table may be a relatively slow operation. When possible, it is a\n * good idea to provide a size estimate as an optional {@code\n * initialCapacity} constructor argument. An additional optional\n * {@code loadFactor} constructor argument provides a further means of\n * customizing initial table capacity by specifying the table density\n * to be used in calculating the amount of space to allocate for the\n * given number of elements.  Also, for compatibility with previous\n * versions of this class, constructors may optionally specify an\n * expected {@code concurrencyLevel} as an additional hint for\n * internal sizing.  Note that using many keys with exactly the same\n * {@code hashCode()} is a sure way to slow down performance of any\n * hash table. To ameliorate impact, when keys are {@link Comparable},\n * this class may use comparison order among keys to help break ties.\n *\n * <p>A {@link Set} projection of a ConcurrentHashMap may be created\n * (using {@link #newKeySet()} or {@link #newKeySet(int)}), or viewed\n * (using {@link #keySet(Object)} when only keys are of interest, and the\n * mapped values are (perhaps transiently) not used or all take the\n * same mapping value.\n *\n * <p>A ConcurrentHashMap can be used as a scalable frequency map (a\n * form of histogram or multiset) by using {@link\n * java.util.concurrent.atomic.LongAdder} values and initializing via\n * {@link #computeIfAbsent computeIfAbsent}. For example, to add a count\n * to a {@code ConcurrentHashMap<String,LongAdder> freqs}, you can use\n * {@code freqs.computeIfAbsent(key, k -> new LongAdder()).increment();}\n *\n * <p>This class and its views and iterators implement all of the\n * <em>optional</em> methods of the {@link Map} and {@link Iterator}\n * interfaces.\n *\n * <p>Like {@link Hashtable} but unlike {@link HashMap}, this class\n * does <em>not</em> allow {@code null} to be used as a key or value.\n *\n * <p>ConcurrentHashMaps support a set of sequential and parallel bulk\n * operations that, unlike most {@link Stream} methods, are designed\n * to be safely, and often sensibly, applied even with maps that are\n * being concurrently updated by other threads; for example, when\n * computing a snapshot summary of the values in a shared registry.\n * There are three kinds of operation, each with four forms, accepting\n * functions with keys, values, entries, and (key, value) pairs as\n * arguments and/or return values. Because the elements of a\n * ConcurrentHashMap are not ordered in any particular way, and may be\n * processed in different orders in different parallel executions, the\n * correctness of supplied functions should not depend on any\n * ordering, or on any other objects or values that may transiently\n * change while computation is in progress; and except for forEach\n * actions, should ideally be side-effect-free. Bulk operations on\n * {@link Map.Entry} objects do not support method {@code setValue}.\n *\n * <ul>\n * <li>forEach: Performs a given action on each element.\n * A variant form applies a given transformation on each element\n * before performing the action.\n *\n * <li>search: Returns the first available non-null result of\n * applying a given function on each element; skipping further\n * search when a result is found.\n *\n * <li>reduce: Accumulates each element.  The supplied reduction\n * function cannot rely on ordering (more formally, it should be\n * both associative and commutative).  There are five variants:\n *\n * <ul>\n *\n * <li>Plain reductions. (There is not a form of this method for\n * (key, value) function arguments since there is no corresponding\n * return type.)\n *\n * <li>Mapped reductions that accumulate the results of a given\n * function applied to each element.\n *\n * <li>Reductions to scalar doubles, longs, and ints, using a\n * given basis value.\n *\n * </ul>\n * </ul>\n *\n * <p>These bulk operations accept a {@code parallelismThreshold}\n * argument. Methods proceed sequentially if the current map size is\n * estimated to be less than the given threshold. Using a value of\n * {@code Long.MAX_VALUE} suppresses all parallelism.  Using a value\n * of {@code 1} results in maximal parallelism by partitioning into\n * enough subtasks to fully utilize the {@link\n * ForkJoinPool#commonPool()} that is used for all parallel\n * computations. Normally, you would initially choose one of these\n * extreme values, and then measure performance of using in-between\n * values that trade off overhead versus throughput.\n *\n * <p>The concurrency properties of bulk operations follow\n * from those of ConcurrentHashMap: Any non-null result returned\n * from {@code get(key)} and related access methods bears a\n * happens-before relation with the associated insertion or\n * update.  The result of any bulk operation reflects the\n * composition of these per-element relations (but is not\n * necessarily atomic with respect to the map as a whole unless it\n * is somehow known to be quiescent).  Conversely, because keys\n * and values in the map are never null, null serves as a reliable\n * atomic indicator of the current lack of any result.  To\n * maintain this property, null serves as an implicit basis for\n * all non-scalar reduction operations. For the double, long, and\n * int versions, the basis should be one that, when combined with\n * any other value, returns that other value (more formally, it\n * should be the identity element for the reduction). Most common\n * reductions have these properties; for example, computing a sum\n * with basis 0 or a minimum with basis MAX_VALUE.\n *\n * <p>Search and transformation functions provided as arguments\n * should similarly return null to indicate the lack of any result\n * (in which case it is not used). In the case of mapped\n * reductions, this also enables transformations to serve as\n * filters, returning null (or, in the case of primitive\n * specializations, the identity basis) if the element should not\n * be combined. You can create compound transformations and\n * filterings by composing them yourself under this \"null means\n * there is nothing there now\" rule before using them in search or\n * reduce operations.\n *\n * <p>Methods accepting and/or returning Entry arguments maintain\n * key-value associations. They may be useful for example when\n * finding the key for the greatest value. Note that \"plain\" Entry\n * arguments can be supplied using {@code new\n * AbstractMap.SimpleEntry(k,v)}.\n *\n * <p>Bulk operations may complete abruptly, throwing an\n * exception encountered in the application of a supplied\n * function. Bear in mind when handling such exceptions that other\n * concurrently executing functions could also have thrown\n * exceptions, or would have done so if the first exception had\n * not occurred.\n *\n * <p>Speedups for parallel compared to sequential forms are common\n * but not guaranteed.  Parallel operations involving brief functions\n * on small maps may execute more slowly than sequential forms if the\n * underlying work to parallelize the computation is more expensive\n * than the computation itself.  Similarly, parallelization may not\n * lead to much actual parallelism if all processors are busy\n * performing unrelated tasks.\n *\n * <p>All arguments to all task methods must be non-null.\n *\n * <p>This class is a member of the\n * <a href=\"{@docRoot}/java.base/java/util/package-summary.html#CollectionsFramework\">\n * Java Collections Framework</a>.\n *\n * @since 1.5\n * @author Doug Lea\n * @param <K> the type of keys maintained by this map\n * @param <V> the type of mapped values\n ",
+  "links" : [ "Map.Entry", "#newKeySet()", "java.util.concurrent.atomic.LongAdder", "Comparable", "java.util.Iterator", "java.util.Set", "java.util.HashMap", "#newKeySet(int)", "#keySet(Object)", "#computeIfAbsent", "java.util.AbstractMap", "java.util.stream.Stream", "java.util.ConcurrentModificationException", "java.util.Hashtable", "java.util.concurrent.ForkJoinPool#commonPool()" ],
+  "variables" : [ {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAXIMUM_CAPACITY",
+    "type" : "int",
+    "comment" : "\n     * The largest possible table capacity.  This value must be\n     * exactly 1<<30 to stay within Java array allocation and indexing\n     * bounds for power of two table sizes, and is further required\n     * because the top two bits of 32bit hash fields are used for\n     * control purposes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_CAPACITY",
+    "type" : "int",
+    "comment" : "\n     * The default initial table capacity.  Must be a power of 2\n     * (i.e., at least 1) and at most MAXIMUM_CAPACITY.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_ARRAY_SIZE",
+    "type" : "int",
+    "comment" : "\n     * The largest possible (non-power of two) array size.\n     * Needed by toArray and related methods.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_CONCURRENCY_LEVEL",
+    "type" : "int",
+    "comment" : "\n     * The default concurrency level for this table. Unused but\n     * defined for compatibility with previous versions of this class.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LOAD_FACTOR",
+    "type" : "float",
+    "comment" : "\n     * The load factor for this table. Overrides of this value in\n     * constructors affect only the initial table capacity.  The\n     * actual floating point value isn't normally used -- it is\n     * simpler to use expressions such as {@code n - (n >>> 2)} for\n     * the associated resizing threshold.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TREEIFY_THRESHOLD",
+    "type" : "int",
+    "comment" : "\n     * The bin count threshold for using a tree rather than list for a\n     * bin.  Bins are converted to trees when adding an element to a\n     * bin with at least this many nodes. The value must be greater\n     * than 2, and should be at least 8 to mesh with assumptions in\n     * tree removal about conversion back to plain bins upon\n     * shrinkage.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNTREEIFY_THRESHOLD",
+    "type" : "int",
+    "comment" : "\n     * The bin count threshold for untreeifying a (split) bin during a\n     * resize operation. Should be less than TREEIFY_THRESHOLD, and at\n     * most 6 to mesh with shrinkage detection under removal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_TREEIFY_CAPACITY",
+    "type" : "int",
+    "comment" : "\n     * The smallest table capacity for which bins may be treeified.\n     * (Otherwise the table is resized if too many nodes in a bin.)\n     * The value should be at least 4 * TREEIFY_THRESHOLD to avoid\n     * conflicts between resizing and treeification thresholds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_TRANSFER_STRIDE",
+    "type" : "int",
+    "comment" : "\n     * Minimum number of rebinnings per transfer step. Ranges are\n     * subdivided to allow multiple resizer threads.  This value\n     * serves as a lower bound to avoid resizers encountering\n     * excessive memory contention.  The value should be at least\n     * DEFAULT_CAPACITY.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESIZE_STAMP_BITS",
+    "type" : "int",
+    "comment" : "\n     * The number of bits used for generation stamp in sizeCtl.\n     * Must be at least 6 for 32bit arrays.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_RESIZERS",
+    "type" : "int",
+    "comment" : "\n     * The maximum number of threads that can help resize.\n     * Must fit in 32 - RESIZE_STAMP_BITS bits.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RESIZE_STAMP_SHIFT",
+    "type" : "int",
+    "comment" : "\n     * The bit shift for recording size stamp in sizeCtl.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MOVED",
+    "type" : "int",
+    "comment" : " hash for forwarding nodes",
+    "links" : [ ]
+  }, {
+    "name" : "TREEBIN",
+    "type" : "int",
+    "comment" : " hash for roots of trees",
+    "links" : [ ]
+  }, {
+    "name" : "RESERVED",
+    "type" : "int",
+    "comment" : " hash for transient reservations",
+    "links" : [ ]
+  }, {
+    "name" : "HASH_BITS",
+    "type" : "int",
+    "comment" : " usable bits of normal node hash",
+    "links" : [ ]
+  }, {
+    "name" : "NCPU",
+    "type" : "int",
+    "comment" : " Number of CPUS, to place bounds on some sizings ",
+    "links" : [ ]
+  }, {
+    "name" : "serialPersistentFields",
+    "type" : "ObjectStreamField[]",
+    "comment" : "\n     * Serialized pseudo-fields, provided only for jdk7 compatibility.\n     * @serialField segments Segment[]\n     *   The segments, each of which is a specialized hash table.\n     * @serialField segmentMask int\n     *   Mask value for indexing into segments. The upper bits of a\n     *   key's hash code are used to choose the segment.\n     * @serialField segmentShift int\n     *   Shift value for indexing within segments.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "table",
+    "type" : "Node<K, V>[]",
+    "comment" : "\n     * The array of bins. Lazily initialized upon first insertion.\n     * Size is always a power of two. Accessed directly by iterators.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "nextTable",
+    "type" : "Node<K, V>[]",
+    "comment" : "\n     * The next table to use; non-null only while resizing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "baseCount",
+    "type" : "long",
+    "comment" : "\n     * Base counter value, used mainly when there is no contention,\n     * but also as a fallback during table initialization\n     * races. Updated via CAS.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "sizeCtl",
+    "type" : "int",
+    "comment" : "\n     * Table initialization and resizing control.  When negative, the\n     * table is being initialized or resized: -1 for initialization,\n     * else -(1 + the number of active resizing threads).  Otherwise,\n     * when table is null, holds the initial table size to use upon\n     * creation, or 0 for default. After initialization, holds the\n     * next element count value upon which to resize the table.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "transferIndex",
+    "type" : "int",
+    "comment" : "\n     * The next table index (plus one) to split while resizing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "cellsBusy",
+    "type" : "int",
+    "comment" : "\n     * Spinlock (locked via CAS) used when resizing and/or creating CounterCells.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "counterCells",
+    "type" : "CounterCell[]",
+    "comment" : "\n     * Table of counter cells. When non-null, size is a power of 2.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "keySet",
+    "type" : "KeySetView<K, V>",
+    "comment" : " views",
+    "links" : [ ]
+  }, {
+    "name" : "values",
+    "type" : "ValuesView<K, V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "entrySet",
+    "type" : "EntrySetView<K, V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "U",
+    "type" : "Unsafe",
+    "comment" : " Unsafe mechanics",
+    "links" : [ ]
+  }, {
+    "name" : "SIZECTL",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TRANSFERINDEX",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BASECOUNT",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CELLSBUSY",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CELLVALUE",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ABASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ASHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static final int spread(int h)",
+    "returnType" : "int",
+    "comment" : "\n     * Spreads (XORs) higher bits of hash to lower and also forces top\n     * bit to 0. Because the table uses power-of-two masking, sets of\n     * hashes that vary only in bits above the current mask will\n     * always collide. (Among known examples are sets of Float keys\n     * holding consecutive whole numbers in small tables.)  So we\n     * apply a transform that spreads the impact of higher bits\n     * downward. There is a tradeoff between speed, utility, and\n     * quality of bit-spreading. Because many common sets of hashes\n     * are already reasonably distributed (so don't benefit from\n     * spreading), and because we use trees to handle large sets of\n     * collisions in bins, we just XOR some shifted bits in the\n     * cheapest possible way to reduce systematic lossage, as well as\n     * to incorporate impact of the highest bits that would otherwise\n     * never be used in index calculations because of table bounds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static final int tableSizeFor(int c)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns a power of two table size for the given desired capacity.\n     * See Hackers Delight, sec 3.2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static Class<?> comparableClassFor(Object x)",
+    "returnType" : "Class<?>",
+    "comment" : "\n     * Returns x's Class if it is of the form \"class C implements\n     * Comparable<C>\", else null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static int compareComparables(Class<?> kc, Object k, Object x)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns k.compareTo(x) if x matches kc (k's screened comparable\n     * class), else 0.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static final Node<K, V> tabAt(Node<K, V>[] tab, int i)",
+    "returnType" : "Node<K, V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static final boolean casTabAt(Node<K, V>[] tab, int i, Node<K, V> c, Node<K, V> v)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static final void setTabAt(Node<K, V>[] tab, int i, Node<K, V> v)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int size()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V get(Object key)",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the value to which the specified key is mapped,\n     * or {@code null} if this map contains no mapping for the key.\n     *\n     * <p>More formally, if this map contains a mapping from a key\n     * {@code k} to a value {@code v} such that {@code key.equals(k)},\n     * then this method returns {@code v}; otherwise it returns\n     * {@code null}.  (There can be at most one such mapping.)\n     *\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsKey(Object key)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tests if the specified object is a key in this table.\n     *\n     * @param  key possible key\n     * @return {@code true} if and only if the specified object\n     *         is a key in this table, as determined by the\n     *         {@code equals} method; {@code false} otherwise\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean containsValue(Object value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if this map maps one or more keys to the\n     * specified value. Note: This method may require a full traversal\n     * of the map, and is much slower than method {@code containsKey}.\n     *\n     * @param value value whose presence in this map is to be tested\n     * @return {@code true} if this map maps one or more keys to the\n     *         specified value\n     * @throws NullPointerException if the specified value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V put(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * Maps the specified key to the specified value in this table.\n     * Neither the key nor the value can be null.\n     *\n     * <p>The value can be retrieved by calling the {@code get} method\n     * with a key that is equal to the original key.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param value value to be associated with the specified key\n     * @return the previous value associated with {@code key}, or\n     *         {@code null} if there was no mapping for {@code key}\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final V putVal(K key, V value, boolean onlyIfAbsent)",
+    "returnType" : "V",
+    "comment" : " Implementation for put and putIfAbsent ",
+    "links" : [ ]
+  }, {
+    "name" : "public void putAll(Map<? extends K, ? extends V> m)",
+    "returnType" : "void",
+    "comment" : "\n     * Copies all of the mappings from the specified map to this one.\n     * These mappings replace any mappings that this map had for any of the\n     * keys currently in the specified map.\n     *\n     * @param m mappings to be stored in this map\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V remove(Object key)",
+    "returnType" : "V",
+    "comment" : "\n     * Removes the key (and its corresponding value) from this map.\n     * This method does nothing if the key is not in the map.\n     *\n     * @param  key the key that needs to be removed\n     * @return the previous value associated with {@code key}, or\n     *         {@code null} if there was no mapping for {@code key}\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final V replaceNode(Object key, V value, Object cv)",
+    "returnType" : "V",
+    "comment" : "\n     * Implementation for the four public remove/replace methods:\n     * Replaces node value with v, conditional upon match of cv if\n     * non-null.  If resulting value is null, delete.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes all of the mappings from this map.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Set<K> keySet()",
+    "returnType" : "Set<K>",
+    "comment" : " Android-changed: Return type for backwards compat. Was KeySetView<K,V>. http://b/28099367",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<V> values()",
+    "returnType" : "Collection<V>",
+    "comment" : "\n     * Returns a {@link Collection} view of the values contained in this map.\n     * The collection is backed by the map, so changes to the map are\n     * reflected in the collection, and vice-versa.  The collection\n     * supports element removal, which removes the corresponding\n     * mapping from this map, via the {@code Iterator.remove},\n     * {@code Collection.remove}, {@code removeAll},\n     * {@code retainAll}, and {@code clear} operations.  It does not\n     * support the {@code add} or {@code addAll} operations.\n     *\n     * <p>The view's iterators and spliterators are\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * <p>The view's {@code spliterator} reports {@link Spliterator#CONCURRENT}\n     * and {@link Spliterator#NONNULL}.\n     *\n     * @return the collection view\n     ",
+    "links" : [ "java.util.Collection", "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT" ]
+  }, {
+    "name" : "public Set<Map.Entry<K, V>> entrySet()",
+    "returnType" : "Set<Map.Entry<K, V>>",
+    "comment" : "\n     * Returns a {@link Set} view of the mappings contained in this map.\n     * The set is backed by the map, so changes to the map are\n     * reflected in the set, and vice-versa.  The set supports element\n     * removal, which removes the corresponding mapping from the map,\n     * via the {@code Iterator.remove}, {@code Set.remove},\n     * {@code removeAll}, {@code retainAll}, and {@code clear}\n     * operations.\n     *\n     * <p>The view's iterators and spliterators are\n     * <a href=\"package-summary.html#Weakly\"><i>weakly consistent</i></a>.\n     *\n     * <p>The view's {@code spliterator} reports {@link Spliterator#CONCURRENT},\n     * {@link Spliterator#DISTINCT}, and {@link Spliterator#NONNULL}.\n     *\n     * @return the set view\n     ",
+    "links" : [ "java.util.Set", "java.util.Spliterator#DISTINCT", "java.util.Spliterator#NONNULL", "java.util.Spliterator#CONCURRENT" ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the hash code value for this {@link Map}, i.e.,\n     * the sum of, for each key-value pair in the map,\n     * {@code key.hashCode() ^ value.hashCode()}.\n     *\n     * @return the hash code value for this map\n     ",
+    "links" : [ "java.util.AbstractMap" ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string representation of this map.  The string\n     * representation consists of a list of key-value mappings (in no\n     * particular order) enclosed in braces (\"{@code {}}\").  Adjacent\n     * mappings are separated by the characters {@code \", \"} (comma\n     * and space).  Each key-value mapping is rendered as the key\n     * followed by an equals sign (\"{@code =}\") followed by the\n     * associated value.\n     *\n     * @return a string representation of this map\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object o)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the specified object with this map for equality.\n     * Returns {@code true} if the given object is a map with the same\n     * mappings as this map.  This operation may return misleading\n     * results if either map is concurrently modified during execution\n     * of this method.\n     *\n     * @param o object to be compared for equality with this map\n     * @return {@code true} if the specified object is equal to this map\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Saves this map to a stream (that is, serializes it).\n     *\n     * @param s the stream\n     * @throws java.io.IOException if an I/O error occurs\n     * @serialData\n     * the serialized fields, followed by the key (Object) and value\n     * (Object) for each key-value mapping, followed by a null pair.\n     * The key-value mappings are emitted in no particular order.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reconstitutes this map from a stream (that is, deserializes it).\n     * @param s the stream\n     * @throws ClassNotFoundException if the class of a serialized object\n     *         could not be found\n     * @throws java.io.IOException if an I/O error occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V putIfAbsent(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @return the previous value associated with the specified key,\n     *         or {@code null} if there was no mapping for the key\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean remove(Object key, Object value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean replace(K key, V oldValue, V newValue)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @throws NullPointerException if any of the arguments are null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V replace(K key, V value)",
+    "returnType" : "V",
+    "comment" : "\n     * {@inheritDoc}\n     *\n     * @return the previous value associated with the specified key,\n     *         or {@code null} if there was no mapping for the key\n     * @throws NullPointerException if the specified key or value is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V getOrDefault(Object key, V defaultValue)",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the value to which the specified key is mapped, or the\n     * given default value if this map contains no mapping for the\n     * key.\n     *\n     * @param key the key whose associated value is to be returned\n     * @param defaultValue the value to return if this map contains\n     * no mapping for the given key\n     * @return the mapping for the key, if present; else the default value\n     * @throws NullPointerException if the specified key is null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEach(BiConsumer<? super K, ? super V> action)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean removeEntryIf(Predicate<? super Entry<K, V>> function)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper method for EntrySetView.removeIf.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean removeValueIf(Predicate<? super V> function)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Helper method for ValuesView.removeIf.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the specified key is not already associated with a value,\n     * attempts to compute its value using the given mapping function\n     * and enters it into this map unless {@code null}.  The entire\n     * method invocation is performed atomically.  The supplied\n     * function is invoked exactly once per invocation of this method\n     * if the key is absent, else not at all.  Some attempted update\n     * operations on this map by other threads may be blocked while\n     * computation is in progress, so the computation should be short\n     * and simple.\n     *\n     * <p>The mapping function must not modify this map during computation.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param mappingFunction the function to compute a value\n     * @return the current (existing or computed) value associated with\n     *         the specified key, or null if the computed value is null\n     * @throws NullPointerException if the specified key or mappingFunction\n     *         is null\n     * @throws IllegalStateException if the computation detectably\n     *         attempts a recursive update to this map that would\n     *         otherwise never complete\n     * @throws RuntimeException or Error if the mappingFunction does so,\n     *         in which case the mapping is left unestablished\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the value for the specified key is present, attempts to\n     * compute a new mapping given the key and its current mapped\n     * value.  The entire method invocation is performed atomically.\n     * The supplied function is invoked exactly once per invocation of\n     * this method if the key is present, else not at all.  Some\n     * attempted update operations on this map by other threads may be\n     * blocked while computation is in progress, so the computation\n     * should be short and simple.\n     *\n     * <p>The remapping function must not modify this map during computation.\n     *\n     * @param key key with which a value may be associated\n     * @param remappingFunction the function to compute a value\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key or remappingFunction\n     *         is null\n     * @throws IllegalStateException if the computation detectably\n     *         attempts a recursive update to this map that would\n     *         otherwise never complete\n     * @throws RuntimeException or Error if the remappingFunction does so,\n     *         in which case the mapping is unchanged\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * Attempts to compute a mapping for the specified key and its\n     * current mapped value (or {@code null} if there is no current\n     * mapping). The entire method invocation is performed atomically.\n     * The supplied function is invoked exactly once per invocation of\n     * this method.  Some attempted update operations on this map by\n     * other threads may be blocked while computation is in progress,\n     * so the computation should be short and simple.\n     *\n     * <p>The remapping function must not modify this map during computation.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param remappingFunction the function to compute a value\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key or remappingFunction\n     *         is null\n     * @throws IllegalStateException if the computation detectably\n     *         attempts a recursive update to this map that would\n     *         otherwise never complete\n     * @throws RuntimeException or Error if the remappingFunction does so,\n     *         in which case the mapping is unchanged\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction)",
+    "returnType" : "V",
+    "comment" : "\n     * If the specified key is not already associated with a\n     * (non-null) value, associates it with the given value.\n     * Otherwise, replaces the value with the results of the given\n     * remapping function, or removes if {@code null}. The entire\n     * method invocation is performed atomically.  Some attempted\n     * update operations on this map by other threads may be blocked\n     * while computation is in progress, so the computation should be\n     * short and simple, and must not attempt to update any other\n     * mappings of this Map.\n     *\n     * @param key key with which the specified value is to be associated\n     * @param value the value to use if absent\n     * @param remappingFunction the function to recompute a value if present\n     * @return the new value associated with the specified key, or null if none\n     * @throws NullPointerException if the specified key or the\n     *         remappingFunction is null\n     * @throws RuntimeException or Error if the remappingFunction does so,\n     *         in which case the mapping is unchanged\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean contains(Object value)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tests if some key maps into the specified value in this table.\n     *\n     * <p>Note that this method is identical in functionality to\n     * {@link #containsValue(Object)}, and exists solely to ensure\n     * full compatibility with class {@link java.util.Hashtable},\n     * which supported this method prior to introduction of the\n     * Java Collections Framework.\n     *\n     * @param  value a value to search for\n     * @return {@code true} if and only if some key maps to the\n     *         {@code value} argument in this table as\n     *         determined by the {@code equals} method;\n     *         {@code false} otherwise\n     * @throws NullPointerException if the specified value is null\n     ",
+    "links" : [ "#containsValue(Object)", "java.util.Hashtable" ]
+  }, {
+    "name" : "public Enumeration<K> keys()",
+    "returnType" : "Enumeration<K>",
+    "comment" : "\n     * Returns an enumeration of the keys in this table.\n     *\n     * @return an enumeration of the keys in this table\n     * @see #keySet()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Enumeration<V> elements()",
+    "returnType" : "Enumeration<V>",
+    "comment" : "\n     * Returns an enumeration of the values in this table.\n     *\n     * @return an enumeration of the values in this table\n     * @see #values()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long mappingCount()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the number of mappings. This method should be used\n     * instead of {@link #size} because a ConcurrentHashMap may\n     * contain more mappings than can be represented as an int. The\n     * value returned is an estimate; the actual count may differ if\n     * there are concurrent insertions or removals.\n     *\n     * @return the number of mappings\n     * @since 1.8\n     ",
+    "links" : [ "#size" ]
+  }, {
+    "name" : "public static KeySetView<K, Boolean> newKeySet()",
+    "returnType" : "KeySetView<K, Boolean>",
+    "comment" : "\n     * Creates a new {@link Set} backed by a ConcurrentHashMap\n     * from the given type to {@code Boolean.TRUE}.\n     *\n     * @param <K> the element type of the returned set\n     * @return the new set\n     * @since 1.8\n     ",
+    "links" : [ "java.util.Set" ]
+  }, {
+    "name" : "public static KeySetView<K, Boolean> newKeySet(int initialCapacity)",
+    "returnType" : "KeySetView<K, Boolean>",
+    "comment" : "\n     * Creates a new {@link Set} backed by a ConcurrentHashMap\n     * from the given type to {@code Boolean.TRUE}.\n     *\n     * @param initialCapacity The implementation performs internal\n     * sizing to accommodate this many elements.\n     * @param <K> the element type of the returned set\n     * @return the new set\n     * @throws IllegalArgumentException if the initial capacity of\n     * elements is negative\n     * @since 1.8\n     ",
+    "links" : [ "java.util.Set" ]
+  }, {
+    "name" : "public KeySetView<K, V> keySet(V mappedValue)",
+    "returnType" : "KeySetView<K, V>",
+    "comment" : "\n     * Returns a {@link Set} view of the keys in this map, using the\n     * given common mapped value for any additions (i.e., {@link\n     * Collection#add} and {@link Collection#addAll(Collection)}).\n     * This is of course only appropriate if it is acceptable to use\n     * the same value for all additions from this view.\n     *\n     * @param mappedValue the mapped value to use for any additions\n     * @return the set view\n     * @throws NullPointerException if the mappedValue is null\n     ",
+    "links" : [ "java.util.Set", "java.util.Collection#add", "java.util.Collection#addAll(Collection)" ]
+  }, {
+    "name" : " static final int resizeStamp(int n)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the stamp bits for resizing a table of size n.\n     * Must be negative when shifted left by RESIZE_STAMP_SHIFT.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final Node<K, V>[] initTable()",
+    "returnType" : "Node<K, V>[]",
+    "comment" : "\n     * Initializes table, using the size recorded in sizeCtl.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void addCount(long x, int check)",
+    "returnType" : "void",
+    "comment" : "\n     * Adds to count, and if table is too small and not already\n     * resizing, initiates transfer. If already resizing, helps\n     * perform transfer if work is available.  Rechecks occupancy\n     * after a transfer to see if another resize is already needed\n     * because resizings are lagging additions.\n     *\n     * @param x the count to add\n     * @param check if <0, don't check resize, if <= 1 only check if uncontended\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final Node<K, V>[] helpTransfer(Node<K, V>[] tab, Node<K, V> f)",
+    "returnType" : "Node<K, V>[]",
+    "comment" : "\n     * Helps transfer if a resize is in progress.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void tryPresize(int size)",
+    "returnType" : "void",
+    "comment" : "\n     * Tries to presize table to accommodate the given number of elements.\n     *\n     * @param size number of elements (doesn't need to be perfectly accurate)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab)",
+    "returnType" : "void",
+    "comment" : "\n     * Moves and/or copies the nodes in each bin to new table. See\n     * above for explanation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final long sumCount()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private final void fullAddCount(long x, boolean wasUncontended)",
+    "returnType" : "void",
+    "comment" : " See LongAdder version for explanation",
+    "links" : [ ]
+  }, {
+    "name" : "private final void treeifyBin(Node<K, V>[] tab, int index)",
+    "returnType" : "void",
+    "comment" : "\n     * Replaces all linked nodes in bin at given index unless table is\n     * too small, in which case resizes instead.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static Node<K, V> untreeify(Node<K, V> b)",
+    "returnType" : "Node<K, V>",
+    "comment" : "\n     * Returns a list of non-TreeNodes replacing those in given list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " final int batchFor(long b)",
+    "returnType" : "int",
+    "comment" : "\n     * Computes initial batch value for bulk tasks. The returned value\n     * is approximately exp2 of the number of times (minus one) to\n     * split task by two before executing leaf action. This value is\n     * faster to compute and more convenient to use as a guide to\n     * splitting than is the depth, since it is used while dividing by\n     * two anyway.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEach(long parallelismThreshold, BiConsumer<? super K, ? super V> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each (key, value).\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param action the action\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEach(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> transformer, Consumer<? super U> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each non-null transformation\n     * of each (key, value).\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case the action is not applied)\n     * @param action the action\n     * @param <U> the return type of the transformer\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U search(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> searchFunction)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns a non-null result from applying the given search\n     * function on each (key, value), or null if none.  Upon\n     * success, further element processing is suppressed and the\n     * results of any other parallel invocations of the search\n     * function are ignored.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param searchFunction a function returning a non-null\n     * result on success, else null\n     * @param <U> the return type of the search function\n     * @return a non-null result from applying the given search\n     * function on each (key, value), or null if none\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U reduce(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all (key, value) pairs using the given reducer to\n     * combine values, or null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case it is not combined)\n     * @param reducer a commutative associative combining function\n     * @param <U> the return type of the transformer\n     * @return the result of accumulating the given transformation\n     * of all (key, value) pairs\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double reduceToDouble(long parallelismThreshold, ToDoubleBiFunction<? super K, ? super V> transformer, double basis, DoubleBinaryOperator reducer)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all (key, value) pairs using the given reducer to\n     * combine values, and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all (key, value) pairs\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long reduceToLong(long parallelismThreshold, ToLongBiFunction<? super K, ? super V> transformer, long basis, LongBinaryOperator reducer)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all (key, value) pairs using the given reducer to\n     * combine values, and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all (key, value) pairs\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int reduceToInt(long parallelismThreshold, ToIntBiFunction<? super K, ? super V> transformer, int basis, IntBinaryOperator reducer)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all (key, value) pairs using the given reducer to\n     * combine values, and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all (key, value) pairs\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachKey(long parallelismThreshold, Consumer<? super K> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each key.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param action the action\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachKey(long parallelismThreshold, Function<? super K, ? extends U> transformer, Consumer<? super U> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each non-null transformation\n     * of each key.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case the action is not applied)\n     * @param action the action\n     * @param <U> the return type of the transformer\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U searchKeys(long parallelismThreshold, Function<? super K, ? extends U> searchFunction)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns a non-null result from applying the given search\n     * function on each key, or null if none. Upon success,\n     * further element processing is suppressed and the results of\n     * any other parallel invocations of the search function are\n     * ignored.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param searchFunction a function returning a non-null\n     * result on success, else null\n     * @param <U> the return type of the search function\n     * @return a non-null result from applying the given search\n     * function on each key, or null if none\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public K reduceKeys(long parallelismThreshold, BiFunction<? super K, ? super K, ? extends K> reducer)",
+    "returnType" : "K",
+    "comment" : "\n     * Returns the result of accumulating all keys using the given\n     * reducer to combine values, or null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating all keys using the given\n     * reducer to combine values, or null if none\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U reduceKeys(long parallelismThreshold, Function<? super K, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all keys using the given reducer to combine values, or\n     * null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case it is not combined)\n     * @param reducer a commutative associative combining function\n     * @param <U> the return type of the transformer\n     * @return the result of accumulating the given transformation\n     * of all keys\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double reduceKeysToDouble(long parallelismThreshold, ToDoubleFunction<? super K> transformer, double basis, DoubleBinaryOperator reducer)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all keys using the given reducer to combine values, and\n     * the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all keys\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long reduceKeysToLong(long parallelismThreshold, ToLongFunction<? super K> transformer, long basis, LongBinaryOperator reducer)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all keys using the given reducer to combine values, and\n     * the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all keys\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int reduceKeysToInt(long parallelismThreshold, ToIntFunction<? super K> transformer, int basis, IntBinaryOperator reducer)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all keys using the given reducer to combine values, and\n     * the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all keys\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachValue(long parallelismThreshold, Consumer<? super V> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param action the action\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachValue(long parallelismThreshold, Function<? super V, ? extends U> transformer, Consumer<? super U> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each non-null transformation\n     * of each value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case the action is not applied)\n     * @param action the action\n     * @param <U> the return type of the transformer\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U searchValues(long parallelismThreshold, Function<? super V, ? extends U> searchFunction)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns a non-null result from applying the given search\n     * function on each value, or null if none.  Upon success,\n     * further element processing is suppressed and the results of\n     * any other parallel invocations of the search function are\n     * ignored.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param searchFunction a function returning a non-null\n     * result on success, else null\n     * @param <U> the return type of the search function\n     * @return a non-null result from applying the given search\n     * function on each value, or null if none\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public V reduceValues(long parallelismThreshold, BiFunction<? super V, ? super V, ? extends V> reducer)",
+    "returnType" : "V",
+    "comment" : "\n     * Returns the result of accumulating all values using the\n     * given reducer to combine values, or null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating all values\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U reduceValues(long parallelismThreshold, Function<? super V, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all values using the given reducer to combine values, or\n     * null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case it is not combined)\n     * @param reducer a commutative associative combining function\n     * @param <U> the return type of the transformer\n     * @return the result of accumulating the given transformation\n     * of all values\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double reduceValuesToDouble(long parallelismThreshold, ToDoubleFunction<? super V> transformer, double basis, DoubleBinaryOperator reducer)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all values using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all values\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long reduceValuesToLong(long parallelismThreshold, ToLongFunction<? super V> transformer, long basis, LongBinaryOperator reducer)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all values using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all values\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int reduceValuesToInt(long parallelismThreshold, ToIntFunction<? super V> transformer, int basis, IntBinaryOperator reducer)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all values using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all values\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachEntry(long parallelismThreshold, Consumer<? super Map.Entry<K, V>> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each entry.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param action the action\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forEachEntry(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> transformer, Consumer<? super U> action)",
+    "returnType" : "void",
+    "comment" : "\n     * Performs the given action for each non-null transformation\n     * of each entry.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case the action is not applied)\n     * @param action the action\n     * @param <U> the return type of the transformer\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U searchEntries(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> searchFunction)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns a non-null result from applying the given search\n     * function on each entry, or null if none.  Upon success,\n     * further element processing is suppressed and the results of\n     * any other parallel invocations of the search function are\n     * ignored.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param searchFunction a function returning a non-null\n     * result on success, else null\n     * @param <U> the return type of the search function\n     * @return a non-null result from applying the given search\n     * function on each entry, or null if none\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Map.Entry<K, V> reduceEntries(long parallelismThreshold, BiFunction<Map.Entry<K, V>, Map.Entry<K, V>, ? extends Map.Entry<K, V>> reducer)",
+    "returnType" : "Map.Entry<K, V>",
+    "comment" : "\n     * Returns the result of accumulating all entries using the\n     * given reducer to combine values, or null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating all entries\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public U reduceEntries(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)",
+    "returnType" : "U",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all entries using the given reducer to combine values,\n     * or null if none.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element, or null if there is no transformation (in\n     * which case it is not combined)\n     * @param reducer a commutative associative combining function\n     * @param <U> the return type of the transformer\n     * @return the result of accumulating the given transformation\n     * of all entries\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double reduceEntriesToDouble(long parallelismThreshold, ToDoubleFunction<Map.Entry<K, V>> transformer, double basis, DoubleBinaryOperator reducer)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all entries using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all entries\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long reduceEntriesToLong(long parallelismThreshold, ToLongFunction<Map.Entry<K, V>> transformer, long basis, LongBinaryOperator reducer)",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all entries using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all entries\n     * @since 1.8\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int reduceEntriesToInt(long parallelismThreshold, ToIntFunction<Map.Entry<K, V>> transformer, int basis, IntBinaryOperator reducer)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the result of accumulating the given transformation\n     * of all entries using the given reducer to combine values,\n     * and the given basis as an identity value.\n     *\n     * @param parallelismThreshold the (estimated) number of elements\n     * needed for this operation to be executed in parallel\n     * @param transformer a function returning the transformation\n     * for an element\n     * @param basis the identity (initial default value) for the reduction\n     * @param reducer a commutative associative combining function\n     * @return the result of accumulating the given transformation\n     * of all entries\n     * @since 1.8\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " static final int spread(int h)", "private static final int tableSizeFor(int c)", " static Class<?> comparableClassFor(Object x)", " static int compareComparables(Class<?> kc, Object k, Object x)", " static final Node<K, V> tabAt(Node<K, V>[] tab, int i)", " static final boolean casTabAt(Node<K, V>[] tab, int i, Node<K, V> c, Node<K, V> v)", " static final void setTabAt(Node<K, V>[] tab, int i, Node<K, V> v)", "public int size()", "public boolean isEmpty()", "public V get(Object key)", "public boolean containsKey(Object key)", "public boolean containsValue(Object value)", "public V put(K key, V value)", " final V putVal(K key, V value, boolean onlyIfAbsent)", "public void putAll(Map<? extends K, ? extends V> m)", "public V remove(Object key)", " final V replaceNode(Object key, V value, Object cv)", "public void clear()", "public Set<K> keySet()", "public Collection<V> values()", "public Set<Map.Entry<K, V>> entrySet()", "public int hashCode()", "public String toString()", "public boolean equals(Object o)", "private void writeObject(java.io.ObjectOutputStream s) throws java.io.IOException", "private void readObject(java.io.ObjectInputStream s) throws java.io.IOException, ClassNotFoundException", "public V putIfAbsent(K key, V value)", "public boolean remove(Object key, Object value)", "public boolean replace(K key, V oldValue, V newValue)", "public V replace(K key, V value)", "public V getOrDefault(Object key, V defaultValue)", "public void forEach(BiConsumer<? super K, ? super V> action)", "public void replaceAll(BiFunction<? super K, ? super V, ? extends V> function)", " boolean removeEntryIf(Predicate<? super Entry<K, V>> function)", " boolean removeValueIf(Predicate<? super V> function)", "public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction)", "public V computeIfPresent(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)", "public V compute(K key, BiFunction<? super K, ? super V, ? extends V> remappingFunction)", "public V merge(K key, V value, BiFunction<? super V, ? super V, ? extends V> remappingFunction)", "public boolean contains(Object value)", "public Enumeration<K> keys()", "public Enumeration<V> elements()", "public long mappingCount()", "public static KeySetView<K, Boolean> newKeySet()", "public static KeySetView<K, Boolean> newKeySet(int initialCapacity)", "public KeySetView<K, V> keySet(V mappedValue)", " static final int resizeStamp(int n)", "private final Node<K, V>[] initTable()", "private final void addCount(long x, int check)", " final Node<K, V>[] helpTransfer(Node<K, V>[] tab, Node<K, V> f)", "private final void tryPresize(int size)", "private final void transfer(Node<K, V>[] tab, Node<K, V>[] nextTab)", " final long sumCount()", "private final void fullAddCount(long x, boolean wasUncontended)", "private final void treeifyBin(Node<K, V>[] tab, int index)", " static Node<K, V> untreeify(Node<K, V> b)", " final int batchFor(long b)", "public void forEach(long parallelismThreshold, BiConsumer<? super K, ? super V> action)", "public void forEach(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> transformer, Consumer<? super U> action)", "public U search(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> searchFunction)", "public U reduce(long parallelismThreshold, BiFunction<? super K, ? super V, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)", "public double reduceToDouble(long parallelismThreshold, ToDoubleBiFunction<? super K, ? super V> transformer, double basis, DoubleBinaryOperator reducer)", "public long reduceToLong(long parallelismThreshold, ToLongBiFunction<? super K, ? super V> transformer, long basis, LongBinaryOperator reducer)", "public int reduceToInt(long parallelismThreshold, ToIntBiFunction<? super K, ? super V> transformer, int basis, IntBinaryOperator reducer)", "public void forEachKey(long parallelismThreshold, Consumer<? super K> action)", "public void forEachKey(long parallelismThreshold, Function<? super K, ? extends U> transformer, Consumer<? super U> action)", "public U searchKeys(long parallelismThreshold, Function<? super K, ? extends U> searchFunction)", "public K reduceKeys(long parallelismThreshold, BiFunction<? super K, ? super K, ? extends K> reducer)", "public U reduceKeys(long parallelismThreshold, Function<? super K, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)", "public double reduceKeysToDouble(long parallelismThreshold, ToDoubleFunction<? super K> transformer, double basis, DoubleBinaryOperator reducer)", "public long reduceKeysToLong(long parallelismThreshold, ToLongFunction<? super K> transformer, long basis, LongBinaryOperator reducer)", "public int reduceKeysToInt(long parallelismThreshold, ToIntFunction<? super K> transformer, int basis, IntBinaryOperator reducer)", "public void forEachValue(long parallelismThreshold, Consumer<? super V> action)", "public void forEachValue(long parallelismThreshold, Function<? super V, ? extends U> transformer, Consumer<? super U> action)", "public U searchValues(long parallelismThreshold, Function<? super V, ? extends U> searchFunction)", "public V reduceValues(long parallelismThreshold, BiFunction<? super V, ? super V, ? extends V> reducer)", "public U reduceValues(long parallelismThreshold, Function<? super V, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)", "public double reduceValuesToDouble(long parallelismThreshold, ToDoubleFunction<? super V> transformer, double basis, DoubleBinaryOperator reducer)", "public long reduceValuesToLong(long parallelismThreshold, ToLongFunction<? super V> transformer, long basis, LongBinaryOperator reducer)", "public int reduceValuesToInt(long parallelismThreshold, ToIntFunction<? super V> transformer, int basis, IntBinaryOperator reducer)", "public void forEachEntry(long parallelismThreshold, Consumer<? super Map.Entry<K, V>> action)", "public void forEachEntry(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> transformer, Consumer<? super U> action)", "public U searchEntries(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> searchFunction)", "public Map.Entry<K, V> reduceEntries(long parallelismThreshold, BiFunction<Map.Entry<K, V>, Map.Entry<K, V>, ? extends Map.Entry<K, V>> reducer)", "public U reduceEntries(long parallelismThreshold, Function<Map.Entry<K, V>, ? extends U> transformer, BiFunction<? super U, ? super U, ? extends U> reducer)", "public double reduceEntriesToDouble(long parallelismThreshold, ToDoubleFunction<Map.Entry<K, V>> transformer, double basis, DoubleBinaryOperator reducer)", "public long reduceEntriesToLong(long parallelismThreshold, ToLongFunction<Map.Entry<K, V>> transformer, long basis, LongBinaryOperator reducer)", "public int reduceEntriesToInt(long parallelismThreshold, ToIntFunction<Map.Entry<K, V>> transformer, int basis, IntBinaryOperator reducer)" ],
+  "variableNames" : [ "serialVersionUID", "MAXIMUM_CAPACITY", "DEFAULT_CAPACITY", "MAX_ARRAY_SIZE", "DEFAULT_CONCURRENCY_LEVEL", "LOAD_FACTOR", "TREEIFY_THRESHOLD", "UNTREEIFY_THRESHOLD", "MIN_TREEIFY_CAPACITY", "MIN_TRANSFER_STRIDE", "RESIZE_STAMP_BITS", "MAX_RESIZERS", "RESIZE_STAMP_SHIFT", "MOVED", "TREEBIN", "RESERVED", "HASH_BITS", "NCPU", "serialPersistentFields", "table", "nextTable", "baseCount", "sizeCtl", "transferIndex", "cellsBusy", "counterCells", "keySet", "values", "entrySet", "U", "SIZECTL", "TRANSFERINDEX", "BASECOUNT", "CELLSBUSY", "CELLVALUE", "ABASE", "ASHIFT" ]
+}

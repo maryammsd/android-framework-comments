@@ -1,0 +1,271 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/AlphabeticIndex.java",
+  "packageName" : "android.icu.text",
+  "className" : "AlphabeticIndex",
+  "comment" : "\n * AlphabeticIndex supports the creation of a UI index appropriate for a given language.\n * It can support either direct use, or use with a client that doesn't support localized collation.\n * The following is an example of what an index might look like in a UI:\n *\n * <pre>\n *  <b>... A B C D E F G H I J K L M N O P Q R S T U V W X Y Z  ...</b>\n *\n *  <b>A</b>\n *     Addison\n *     Albertson\n *     Azensky\n *  <b>B</b>\n *     Baecker\n *  ...\n * </pre>\n *\n * The class can generate a list of labels for use as a UI \"index\", that is, a list of\n * clickable characters (or character sequences) that allow the user to see a segment\n * (bucket) of a larger \"target\" list. That is, each label corresponds to a bucket in\n * the target list, where everything in the bucket is greater than or equal to the character\n * (according to the locale's collation). Strings can be added to the index;\n * they will be in sorted order in the right bucket.\n * <p>\n * The class also supports having buckets for strings before the first (underflow),\n * after the last (overflow), and between scripts (inflow). For example, if the index\n * is constructed with labels for Russian and English, Greek characters would fall\n * into an inflow bucket between the other two scripts.\n *\n * <p><em>Note:</em> If you expect to have a lot of ASCII or Latin characters\n * as well as characters from the user's language,\n * then it is a good idea to call addLabels(ULocale.English).\n *\n * <h2>Direct Use</h2>\n * <p>The following shows an example of building an index directly.\n *  The \"show...\" methods below are just to illustrate usage.\n *\n * <pre>\n * // Create a simple index where the values for the strings are Integers, and add the strings\n *\n * AlphabeticIndex&lt;Integer&gt; index = new AlphabeticIndex&lt;Integer&gt;(desiredLocale).addLabels(additionalLocale);\n * int counter = 0;\n * for (String item : test) {\n *     index.addRecord(item, counter++);\n * }\n * ...\n * // Show index at top. We could skip or gray out empty buckets\n *\n * for (AlphabeticIndex.Bucket&lt;Integer&gt; bucket : index) {\n *     if (showAll || bucket.size() != 0) {\n *         showLabelAtTop(UI, bucket.getLabel());\n *     }\n * }\n *  ...\n * // Show the buckets with their contents, skipping empty buckets\n *\n * for (AlphabeticIndex.Bucket&lt;Integer&gt; bucket : index) {\n *     if (bucket.size() != 0) {\n *         showLabelInList(UI, bucket.getLabel());\n *         for (AlphabeticIndex.Record&lt;Integer&gt; item : bucket) {\n *             showIndexedItem(UI, item.getName(), item.getData());\n *         }\n * </pre>\n *\n * The caller can build different UIs using this class.\n * For example, an index character could be omitted or grayed-out\n * if its bucket is empty. Small buckets could also be combined based on size, such as:\n *\n * <pre>\n * <b>... A-F G-N O-Z ...</b>\n * </pre>\n *\n * <h2>Client Support</h2>\n * <p>Callers can also use the {@link AlphabeticIndex.ImmutableIndex}, or the AlphabeticIndex itself,\n * to support sorting on a client that doesn't support AlphabeticIndex functionality.\n *\n * <p>The ImmutableIndex is both immutable and thread-safe.\n * The corresponding AlphabeticIndex methods are not thread-safe because\n * they \"lazily\" build the index buckets.\n * <ul>\n * <li>ImmutableIndex.getBucket(index) provides random access to all\n *     buckets and their labels and label types.\n * <li>AlphabeticIndex.getBucketLabels() or the bucket iterator on either class\n *     can be used to get a list of the labels,\n *     such as \"...\", \"A\", \"B\",..., and send that list to the client.\n * <li>When the client has a new name, it sends that name to the server.\n * The server needs to call the following methods,\n * and communicate the bucketIndex and collationKey back to the client.\n *\n * <pre>\n * int bucketIndex = index.getBucketIndex(name);\n * String label = immutableIndex.getBucket(bucketIndex).getLabel();  // optional\n * RawCollationKey collationKey = collator.getRawCollationKey(name, null);\n * </pre>\n *\n * <li>The client would put the name (and associated information) into its bucket for bucketIndex. The collationKey is a\n * sequence of bytes that can be compared with a binary compare, and produce the right localized result.</li>\n * </ul>\n *\n * @author Mark Davis\n ",
+  "links" : [ "AlphabeticIndex.ImmutableIndex" ],
+  "variables" : [ {
+    "name" : "BASE",
+    "type" : "String",
+    "comment" : "\n     * Prefix string for Chinese index buckets.\n     * See http://unicode.org/repos/cldr/trunk/specs/ldml/tr35-collation.html#Collation_Indexes\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CGJ",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "binaryCmp",
+    "type" : "Comparator<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "collatorOriginal",
+    "type" : "RuleBasedCollator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "collatorPrimaryOnly",
+    "type" : "RuleBasedCollator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "collatorExternal",
+    "type" : "RuleBasedCollator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "recordComparator",
+    "type" : "Comparator<Record<V>>",
+    "comment" : " Comparator for records, so that the Record class can be static.",
+    "links" : [ ]
+  }, {
+    "name" : "firstCharsInScripts",
+    "type" : "List<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "initialLabels",
+    "type" : "UnicodeSet",
+    "comment" : " We accumulate these as we build up the input parameters",
+    "links" : [ ]
+  }, {
+    "name" : "inputList",
+    "type" : "List<Record<V>>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "buckets",
+    "type" : "BucketList<V>",
+    "comment" : " Lazy evaluated: null means that we have not built yet.",
+    "links" : [ ]
+  }, {
+    "name" : "overflowLabel",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "underflowLabel",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "inflowLabel",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "maxLabelCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_LU_MASK",
+    "type" : "int",
+    "comment" : " TODO: Surely we have at least a ticket for porting these mask values to UCharacter.java?!",
+    "links" : [ ]
+  }, {
+    "name" : "GC_LL_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_LT_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_LM_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_LO_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_L_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "GC_CN_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public AlphabeticIndex<V> addLabels(UnicodeSet additions)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Add more index characters (aside from what are in the locale)\n     * @param additions additional characters to add to the index, such as A-Z.\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> addLabels(ULocale... additions)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Add more index characters (aside from what are in the locale)\n     * @param additions additional characters to add to the index, such as those in Swedish.\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> addLabels(Locale... additions)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Add more index characters (aside from what are in the locale)\n     * @param additions additional characters to add to the index, such as those in Swedish.\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> setOverflowLabel(String overflowLabel)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Set the overflow label\n     * @param overflowLabel see class description\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getUnderflowLabel()",
+    "returnType" : "String",
+    "comment" : "\n     * Get the default label used in the IndexCharacters' locale for underflow, eg the last item in: X Y Z ...\n     *\n     * @return underflow label\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> setUnderflowLabel(String underflowLabel)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Set the underflowLabel label\n     * @param underflowLabel see class description\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getOverflowLabel()",
+    "returnType" : "String",
+    "comment" : "\n     * Get the default label used in the IndexCharacters' locale for overflow, eg the first item in: ... A B C\n     *\n     * @return overflow label\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> setInflowLabel(String inflowLabel)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Set the inflowLabel label\n     * @param inflowLabel see class description\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getInflowLabel()",
+    "returnType" : "String",
+    "comment" : "\n     * Get the default label used for abbreviated buckets <i>between</i> other labels. For example, consider the labels\n     * for Latin and Greek are used: X Y Z ... &#x0391; &#x0392; &#x0393;.\n     *\n     * @return inflow label\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMaxLabelCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Get the limit on the number of labels in the index. The number of buckets can be slightly larger: see getBucketCount().\n     *\n     * @return maxLabelCount maximum number of labels.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> setMaxLabelCount(int maxLabelCount)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Set a limit on the number of labels in the index. The number of buckets can be slightly larger: see\n     * getBucketCount().\n     *\n     * @param maxLabelCount Set the maximum number of labels. Currently, if the number is exceeded, then every\n     *         nth item is removed to bring the count down. A more sophisticated mechanism may be available in the\n     *         future.\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private List<String> initLabels()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Determine the best labels to use. This is based on the exemplars, but we also process to make sure that they are unique,\n     * and sort differently, and that the overall list is small enough.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String fixLabel(String current)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addIndexExemplars(ULocale locale)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called to get the index exemplars. Normally these come from the locale directly,\n     * but if they aren't available, we have to synthesize them.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean addChineseIndexCharacters()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Add Chinese index characters from the tailoring.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String separated(String item)",
+    "returnType" : "String",
+    "comment" : "\n     * Return the string with interspersed CGJs. Input must have more than 2 codepoints.\n     * <p>This is used to test whether contractions sort differently from their components.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ImmutableIndex<V> buildImmutableIndex()",
+    "returnType" : "ImmutableIndex<V>",
+    "comment" : "\n     * Builds an immutable, thread-safe version of this instance, without data records.\n     *\n     * @return an immutable index instance\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getBucketLabels()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Get the labels.\n     *\n     * @return The list of bucket labels, after processing.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public RuleBasedCollator getCollator()",
+    "returnType" : "RuleBasedCollator",
+    "comment" : "\n     * Get a clone of the collator used internally. Note that for performance reasons, the clone is only done once, and\n     * then stored. The next time it is accessed, the same instance is returned.\n     * <p>\n     * <b><i>Don't use this method across threads if you are changing the settings on the collator, at least not without\n     * synchronizing.</i></b>\n     *\n     * @return a clone of the collator used internally\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> addRecord(CharSequence name, V data)",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Add a record (name and data) to the index. The name will be used to sort the items into buckets, and to sort\n     * within the bucket. Two records may have the same name. When they do, the sort order is according to the order added:\n     * the first added comes first.\n     *\n     * @param name\n     *            Name, such as a name\n     * @param data\n     *            Data, such as an address or link\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getBucketIndex(CharSequence name)",
+    "returnType" : "int",
+    "comment" : "\n     * Get the bucket number for the given name. This routine permits callers to implement their own bucket handling\n     * mechanisms, including client-server handling. For example, when a new name is created on the client, it can ask\n     * the server for the bucket for that name, and the sortkey (using getCollator). Once the client has that\n     * information, it can put the name into the right bucket, and sort it within that bucket, without having access to\n     * the index or collator.\n     * <p>\n     * Note that the bucket number (and sort key) are only valid for the settings of the current AlphabeticIndex; if\n     * those are changed, then the bucket number and sort key must be regenerated.\n     *\n     * @param name\n     *            Name, such as a name\n     * @return the bucket index for the name\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public AlphabeticIndex<V> clearRecords()",
+    "returnType" : "AlphabeticIndex<V>",
+    "comment" : "\n     * Clear the index.\n     *\n     * @return this, for chaining\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getBucketCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of buckets in the index. This will be the same as the number of labels, plus buckets for the underflow, overflow, and inflow(s).\n     *\n     * @return number of buckets\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRecordCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Return the number of records in the index: that is, the total number of distinct &lt;name,data&gt; pairs added with addRecord(...), over all the buckets.\n     *\n     * @return total number of records in buckets\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Iterator<Bucket<V>> iterator()",
+    "returnType" : "Iterator<Bucket<V>>",
+    "comment" : "\n     * Return an iterator over the buckets.\n     *\n     * @return iterator over buckets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initBuckets()",
+    "returnType" : "void",
+    "comment" : "\n     * Creates an index, and buckets and sorts the list of records into the index.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isOneLabelBetterThanOther(Normalizer2 nfkdNormalizer, String one, String other)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if one index character string is \"better\" than the other.\n     * Shorter NFKD is better, and otherwise NFKD-binary-less-than is\n     * better, and otherwise binary-less-than is better.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private BucketList<V> createBucketList()",
+    "returnType" : "BucketList<V>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean hasMultiplePrimaryWeights(RuleBasedCollator coll, long variableTop, String s)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getFirstCharactersInScripts()",
+    "returnType" : "List<String>",
+    "comment" : "\n     * Return a list of the first character in each script. Only exposed for testing.\n     *\n     * @return list of first characters in each script\n     * @deprecated This API is ICU internal, only for testing.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public AlphabeticIndex<V> addLabels(UnicodeSet additions)", "public AlphabeticIndex<V> addLabels(ULocale... additions)", "public AlphabeticIndex<V> addLabels(Locale... additions)", "public AlphabeticIndex<V> setOverflowLabel(String overflowLabel)", "public String getUnderflowLabel()", "public AlphabeticIndex<V> setUnderflowLabel(String underflowLabel)", "public String getOverflowLabel()", "public AlphabeticIndex<V> setInflowLabel(String inflowLabel)", "public String getInflowLabel()", "public int getMaxLabelCount()", "public AlphabeticIndex<V> setMaxLabelCount(int maxLabelCount)", "private List<String> initLabels()", "private static String fixLabel(String current)", "private void addIndexExemplars(ULocale locale)", "private boolean addChineseIndexCharacters()", "private String separated(String item)", "public ImmutableIndex<V> buildImmutableIndex()", "public List<String> getBucketLabels()", "public RuleBasedCollator getCollator()", "public AlphabeticIndex<V> addRecord(CharSequence name, V data)", "public int getBucketIndex(CharSequence name)", "public AlphabeticIndex<V> clearRecords()", "public int getBucketCount()", "public int getRecordCount()", "public Iterator<Bucket<V>> iterator()", "private void initBuckets()", "private static boolean isOneLabelBetterThanOther(Normalizer2 nfkdNormalizer, String one, String other)", "private BucketList<V> createBucketList()", "private static boolean hasMultiplePrimaryWeights(RuleBasedCollator coll, long variableTop, String s)", "public List<String> getFirstCharactersInScripts()" ],
+  "variableNames" : [ "BASE", "CGJ", "binaryCmp", "collatorOriginal", "collatorPrimaryOnly", "collatorExternal", "recordComparator", "firstCharsInScripts", "initialLabels", "inputList", "buckets", "overflowLabel", "underflowLabel", "inflowLabel", "maxLabelCount", "GC_LU_MASK", "GC_LL_MASK", "GC_LT_MASK", "GC_LM_MASK", "GC_LO_MASK", "GC_L_MASK", "GC_CN_MASK" ]
+}

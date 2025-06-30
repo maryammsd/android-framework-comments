@@ -1,0 +1,151 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/chromium/base/metrics/CachingUmaRecorder.java",
+  "packageName" : "org.chromium.base.metrics",
+  "className" : "CachingUmaRecorder",
+  "comment" : " package ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_HISTOGRAM_COUNT",
+    "type" : "int",
+    "comment" : "\n     * Maximum number of histograms cached at the same time. It is better to drop some samples\n     * rather than have a bug cause the cache to grow without limit.\n     * <p>\n     * Each sample uses 4 bytes, each histogram uses approx. 12 references (at least 4 bytes each).\n     * With {@code MAX_HISTOGRAM_COUNT = 256} and {@code MAX_SAMPLE_COUNT = 256} this limits cache\n     * size to 270KiB. Changing either value by one, adds or removes approx. 1KiB.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_USER_ACTION_COUNT",
+    "type" : "int",
+    "comment" : "\n     * Maximum number of user actions cached at the same time. It is better to drop some samples\n     * rather than have a bug cause the cache to grow without limit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mRwLock",
+    "type" : "ReentrantReadWriteLock",
+    "comment" : "\n     * The lock doesn't need to be fair - in the worst case a writing record*Histogram call will be\n     * starved until reading calls reach cache size limits.\n     *\n     * <p>A read-write lock is used rather than {@code synchronized} blocks to the limit\n     * opportunities for stutter on the UI thread when waiting for this shared resource.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHistogramByName",
+    "type" : "Map<String, Histogram>",
+    "comment" : " Cached histograms keyed by histogram name. ",
+    "links" : [ ]
+  }, {
+    "name" : "mDroppedHistogramSampleCount",
+    "type" : "AtomicInteger",
+    "comment" : "\n     * Number of histogram samples that couldn't be cached, because some limit of cache size been\n     * reached.\n     * <p>\n     * Using {@link AtomicInteger} because the value may need to be updated with a read lock held.\n     ",
+    "links" : [ "java.util.concurrent.atomic.AtomicInteger" ]
+  }, {
+    "name" : "mUserActions",
+    "type" : "List<UserAction>",
+    "comment" : " Cache of user actions. ",
+    "links" : [ ]
+  }, {
+    "name" : "mDroppedUserActionCount",
+    "type" : "int",
+    "comment" : "\n     * Number of user actions that couldn't be cached, because the number of user actions in cache\n     * has reached its limit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mDelegate",
+    "type" : "UmaRecorder",
+    "comment" : "\n     * If not {@code null}, all metrics are forwarded to this {@link UmaRecorder}.\n     * <p>\n     * The read lock must be held while invoking methods on {@code mDelegate}.\n     ",
+    "links" : [ "org.chromium.base.metrics.UmaRecorder" ]
+  }, {
+    "name" : "mUserActionCallbacksForTesting",
+    "type" : "List<Callback<String>>",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public UmaRecorder setDelegate(@Nullable final UmaRecorder recorder)",
+    "returnType" : "UmaRecorder",
+    "comment" : "\n     * Sets the current delegate to {@code recorder}. Forwards and clears all cached metrics if\n     * {@code recorder} is not {@code null}.\n     *\n     * @param recorder new delegate.\n     * @return the previous delegate.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void flushHistogramsAlreadyLocked(Map<String, Histogram> cache, int droppedHistogramSampleCount)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes histogram samples from {@code cache} to the delegate. Assumes that a read lock is held\n     * by the current thread.\n     *\n     * @param cache the cache to be flushed.\n     * @param droppedHistogramSampleCount number of histogram samples that were not recorded due to\n     *         cache size limits.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void flushUserActionsAlreadyLocked(List<UserAction> cache, int droppedUserActionCount)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes user actions from {@code cache} to the delegate. Assumes that a read lock is held by\n     * the current thread.\n     *\n     * @param cache the cache to be flushed.\n     * @param droppedUserActionCount number of user actions that were not recorded in {@code cache}\n     *         to stay within {@link MAX_USER_ACTION_COUNT}.\n     ",
+    "links" : [ "MAX_USER_ACTION_COUNT" ]
+  }, {
+    "name" : "private void cacheOrRecordHistogramSample(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "void",
+    "comment" : "\n     * Forwards or stores a histogram sample. Stores samples iff there is no delegate {@link\n     * UmaRecorder} set.\n     *\n     * @param type histogram type.\n     * @param name histogram name.\n     * @param sample sample value.\n     * @param min histogram min value.\n     * @param max histogram max value.\n     * @param numBuckets number of histogram buckets.\n     ",
+    "links" : [ "org.chromium.base.metrics.UmaRecorder" ]
+  }, {
+    "name" : "private boolean tryAppendOrRecordSample(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Tries to cache or record a histogram sample without creating a new {@link Histogram}.\n     *\n     * @param type histogram type.\n     * @param name histogram name.\n     * @param sample sample value.\n     * @param min histogram min value.\n     * @param max histogram max value.\n     * @param numBuckets number of histogram buckets.\n     * @return {@code false} if the sample needs to be recorded with a write lock.\n     ",
+    "links" : [ "Histogram" ]
+  }, {
+    "name" : "private void cacheHistogramSampleAlreadyWriteLocked(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "void",
+    "comment" : "\n     * Appends a histogram {@code sample} to a cached {@link Histogram}. Creates the {@code\n     * Histogram} if needed. Assumes that the <b>write lock</b> is held by the current thread.\n     *\n     * @param type histogram type.\n     * @param name histogram name.\n     * @param sample sample value.\n     * @param min histogram min value.\n     * @param max histogram max value.\n     * @param numBuckets number of histogram buckets.\n     ",
+    "links" : [ "Histogram" ]
+  }, {
+    "name" : "private void recordHistogramSampleAlreadyLocked(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "void",
+    "comment" : "\n     * Forwards a histogram sample to the delegate. Assumes that a read lock is held by the current\n     * thread. Shouldn't be called with a write lock held.\n     *\n     * @param type histogram type.\n     * @param name histogram name.\n     * @param sample sample value.\n     * @param min histogram min value.\n     * @param max histogram max value.\n     * @param numBuckets number of histogram buckets.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordBooleanHistogram(String name, boolean boolSample)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordExponentialHistogram(String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordLinearHistogram(String name, int sample, int min, int max, int numBuckets)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordSparseHistogram(String name, int sample)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordUserAction(String name, long elapsedRealtimeMillis)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistogramValueCountForTesting(String name, int sample)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistogramTotalCountForTesting(String name)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public List<HistogramBucket> getHistogramSamplesForTesting(String name)",
+    "returnType" : "List<HistogramBucket>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void addUserActionCallbackForTesting(Callback<String> callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeUserActionCallbackForTesting(Callback<String> callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void swapUserActionCallbacksForTesting(@Nullable UmaRecorder previousRecorder, @Nullable UmaRecorder newRecorder)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public UmaRecorder setDelegate(@Nullable final UmaRecorder recorder)", "private void flushHistogramsAlreadyLocked(Map<String, Histogram> cache, int droppedHistogramSampleCount)", "private void flushUserActionsAlreadyLocked(List<UserAction> cache, int droppedUserActionCount)", "private void cacheOrRecordHistogramSample(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)", "private boolean tryAppendOrRecordSample(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)", "private void cacheHistogramSampleAlreadyWriteLocked(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)", "private void recordHistogramSampleAlreadyLocked(@Histogram.Type int type, String name, int sample, int min, int max, int numBuckets)", "public void recordBooleanHistogram(String name, boolean boolSample)", "public void recordExponentialHistogram(String name, int sample, int min, int max, int numBuckets)", "public void recordLinearHistogram(String name, int sample, int min, int max, int numBuckets)", "public void recordSparseHistogram(String name, int sample)", "public void recordUserAction(String name, long elapsedRealtimeMillis)", "public int getHistogramValueCountForTesting(String name, int sample)", "public int getHistogramTotalCountForTesting(String name)", "public List<HistogramBucket> getHistogramSamplesForTesting(String name)", "public void addUserActionCallbackForTesting(Callback<String> callback)", "public void removeUserActionCallbackForTesting(Callback<String> callback)", "private void swapUserActionCallbacksForTesting(@Nullable UmaRecorder previousRecorder, @Nullable UmaRecorder newRecorder)" ],
+  "variableNames" : [ "TAG", "MAX_HISTOGRAM_COUNT", "MAX_USER_ACTION_COUNT", "mRwLock", "mHistogramByName", "mDroppedHistogramSampleCount", "mUserActions", "mDroppedUserActionCount", "mDelegate", "mUserActionCallbacksForTesting" ]
+}

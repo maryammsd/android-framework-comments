@@ -1,0 +1,146 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/content/BroadcastReceiver.java",
+  "packageName" : "android.content",
+  "className" : "BroadcastReceiver",
+  "comment" : "\n * Base class for code that receives and handles broadcast intents sent by\n * {@link android.content.Context#sendBroadcast(Intent)}.\n *\n * <p>You can either dynamically register an instance of this class with\n * {@link Context#registerReceiver Context.registerReceiver()}\n * or statically declare an implementation with the\n * {@link android.R.styleable#AndroidManifestReceiver &lt;receiver&gt;}\n * tag in your <code>AndroidManifest.xml</code>.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about using BroadcastReceiver, read the\n * <a href=\"{@docRoot}guide/components/broadcasts.html\">Broadcasts</a> developer guide.</p></div>\n *\n ",
+  "links" : [ "android.R.styleable#AndroidManifestReceiver", "android.content.Context#sendBroadcast(Intent)", "android.content.Context#registerReceiver" ],
+  "variables" : [ {
+    "name" : "mPendingResult",
+    "type" : "PendingResult",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDebugUnregister",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public abstract void onReceive(Context context, Intent intent)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called when the BroadcastReceiver is receiving an Intent\n     * broadcast.  During this time you can use the other methods on\n     * BroadcastReceiver to view/modify the current result values.  This method\n     * is always called within the main thread of its process, unless you\n     * explicitly asked for it to be scheduled on a different thread using\n     * {@link android.content.Context#registerReceiver(BroadcastReceiver,\n     * IntentFilter, String, android.os.Handler)}. When it runs on the main\n     * thread you should\n     * never perform long-running operations in it (there is a timeout of\n     * 10 seconds that the system allows before considering the receiver to\n     * be blocked and a candidate to be killed). You cannot launch a popup dialog\n     * in your implementation of onReceive().\n     *\n     * <p><b>If this BroadcastReceiver was launched through a &lt;receiver&gt; tag,\n     * then the object is no longer alive after returning from this\n     * function.</b> This means you should not perform any operations that\n     * return a result to you asynchronously. If you need to perform any follow up\n     * background work, schedule a {@link android.app.job.JobService} with\n     * {@link android.app.job.JobScheduler}.\n     *\n     * If you wish to interact with a service that is already running and previously\n     * bound using {@link android.content.Context#bindService(Intent, ServiceConnection, int) bindService()},\n     * you can use {@link #peekService}.\n     *\n     * <p>The Intent filters used in {@link android.content.Context#registerReceiver}\n     * and in application manifests are <em>not</em> guaranteed to be exclusive. They\n     * are hints to the operating system about how to find suitable recipients. It is\n     * possible for senders to force delivery to specific recipients, bypassing filter\n     * resolution.  For this reason, {@link #onReceive(Context, Intent) onReceive()}\n     * implementations should respond only to known actions, ignoring any unexpected\n     * Intents that they may receive.\n     *\n     * @param context The Context in which the receiver is running.\n     * @param intent The Intent being received.\n     ",
+    "links" : [ "android.app.job.JobService", "android.app.job.JobScheduler", "android.content.Context#registerReceiver", "android.content.Context#registerReceiver(BroadcastReceiver", "android.content.Context#bindService(Intent", "#peekService", "#onReceive(Context" ]
+  }, {
+    "name" : "public final PendingResult goAsync()",
+    "returnType" : "PendingResult",
+    "comment" : "\n     * This can be called by an application in {@link #onReceive} to allow\n     * it to keep the broadcast active after returning from that function.\n     * This does <em>not</em> change the expectation of being relatively\n     * responsive to the broadcast, but does allow\n     * the implementation to move work related to it over to another thread\n     * to avoid glitching the main UI thread due to disk IO.\n     *\n     * <p>As a general rule, broadcast receivers are allowed to run for up to 10 seconds\n     * before the system will consider them non-responsive and ANR the app.  Since these usually\n     * execute on the app's main thread, they are already bound by the ~5 second time limit\n     * of various operations that can happen there (not to mention just avoiding UI jank), so\n     * the receive limit is generally not of concern.  However, once you use {@code goAsync}, though\n     * able to be off the main thread, the broadcast execution limit still applies, and that\n     * includes the time spent between calling this method and ultimately\n     * {@link PendingResult#finish() PendingResult.finish()}.</p>\n     *\n     * <p>If you are taking advantage of this method to have more time to execute, it is useful\n     * to know that the available time can be longer in certain situations.  In particular, if\n     * the broadcast you are receiving is not a foreground broadcast (that is, the sender has not\n     * used {@link Intent#FLAG_RECEIVER_FOREGROUND}), then more time is allowed for the receivers\n     * to run, allowing them to execute for 30 seconds or even a bit more.  This is something that\n     * receivers should rarely take advantage of (long work should be punted to another system\n     * facility such as {@link android.app.job.JobScheduler}, {@link android.app.Service}, or\n     * see especially {@link androidx.core.app.JobIntentService}), but can be useful in\n     * certain rare cases where it is necessary to do some work as soon as the broadcast is\n     * delivered.  Keep in mind that the work you do here will block further broadcasts until\n     * it completes, so taking advantage of this at all excessively can be counter-productive\n     * and cause later events to be received more slowly.</p>\n     *\n     * @return Returns a {@link PendingResult} representing the result of\n     * the active broadcast.  The BroadcastRecord itself is no longer active;\n     * all data and other interaction must go through {@link PendingResult}\n     * APIs.  The {@link PendingResult#finish PendingResult.finish()} method\n     * must be called once processing of the broadcast is done.\n     ",
+    "links" : [ "PendingResult", "#onReceive", "#finish()", "androidx.core.app.JobIntentService", "#finish", "android.app.job.JobScheduler", "android.app.Service", "android.content.Intent#FLAG_RECEIVER_FOREGROUND" ]
+  }, {
+    "name" : "public IBinder peekService(Context myContext, Intent service)",
+    "returnType" : "IBinder",
+    "comment" : "\n     * Provide a binder to an already-bound service.  This method is synchronous\n     * and will not start the target service if it is not present, so it is safe\n     * to call from {@link #onReceive}.\n     *\n     * For peekService() to return a non null {@link android.os.IBinder} interface\n     * the service must have published it before. In other words some component\n     * must have called {@link android.content.Context#bindService(Intent, ServiceConnection, int)} on it.\n     *\n     * @param myContext The Context that had been passed to {@link #onReceive(Context, Intent)}\n     * @param service Identifies the already-bound service you wish to use. See\n     * {@link android.content.Context#bindService(Intent, ServiceConnection, int)}\n     * for more information.\n     ",
+    "links" : [ "#onReceive", "android.content.Context#bindService(Intent", "android.os.IBinder", "#onReceive(Context" ]
+  }, {
+    "name" : "public final void setResultCode(int code)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the current result code of this broadcast; only works with\n     * broadcasts sent through\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast}.  Often uses the\n     * Activity {@link android.app.Activity#RESULT_CANCELED} and\n     * {@link android.app.Activity#RESULT_OK} constants, though the\n     * actual meaning of this value is ultimately up to the broadcaster.\n     *\n     * <p class=\"note\">This method does not work with non-ordered broadcasts such\n     * as those sent with {@link Context#sendBroadcast(Intent)\n     * Context.sendBroadcast}</p>\n     *\n     * @param code The new result code.\n     *\n     * @see #setResult(int, String, Bundle)\n     ",
+    "links" : [ "android.app.Activity#RESULT_CANCELED", "android.app.Activity#RESULT_OK", "android.content.Context#sendBroadcast(Intent)", "android.content.Context#sendOrderedBroadcast(Intent" ]
+  }, {
+    "name" : "public final int getResultCode()",
+    "returnType" : "int",
+    "comment" : "\n     * Retrieve the current result code, as set by the previous receiver.\n     *\n     * @return int The current result code.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setResultData(String data)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the current result data of this broadcast; only works with\n     * broadcasts sent through\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast}.  This is an arbitrary\n     * string whose interpretation is up to the broadcaster.\n     *\n     * <p><strong>This method does not work with non-ordered broadcasts such\n     * as those sent with {@link Context#sendBroadcast(Intent)\n     * Context.sendBroadcast}</strong></p>\n     *\n     * @param data The new result data; may be null.\n     *\n     * @see #setResult(int, String, Bundle)\n     ",
+    "links" : [ "android.content.Context#sendBroadcast(Intent)", "android.content.Context#sendOrderedBroadcast(Intent" ]
+  }, {
+    "name" : "public final String getResultData()",
+    "returnType" : "String",
+    "comment" : "\n     * Retrieve the current result data, as set by the previous receiver.\n     * Often this is null.\n     *\n     * @return String The current result data; may be null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setResultExtras(Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Change the current result extras of this broadcast; only works with\n     * broadcasts sent through\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast}.  This is a Bundle\n     * holding arbitrary data, whose interpretation is up to the\n     * broadcaster.  Can be set to null.  Calling this method completely\n     * replaces the current map (if any).\n     *\n     * <p><strong>This method does not work with non-ordered broadcasts such\n     * as those sent with {@link Context#sendBroadcast(Intent)\n     * Context.sendBroadcast}</strong></p>\n     *\n     * @param extras The new extra data map; may be null.\n     *\n     * @see #setResult(int, String, Bundle)\n     ",
+    "links" : [ "android.content.Context#sendBroadcast(Intent)", "android.content.Context#sendOrderedBroadcast(Intent" ]
+  }, {
+    "name" : "public final Bundle getResultExtras(boolean makeMap)",
+    "returnType" : "Bundle",
+    "comment" : "\n     * Retrieve the current result extra data, as set by the previous receiver.\n     * Any changes you make to the returned Map will be propagated to the next\n     * receiver.\n     *\n     * @param makeMap If true then a new empty Map will be made for you if the\n     *                current Map is null; if false you should be prepared to\n     *                receive a null Map.\n     *\n     * @return Map The current extras map.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setResult(int code, String data, Bundle extras)",
+    "returnType" : "void",
+    "comment" : "\n     * Change all of the result data returned from this broadcasts; only works\n     * with broadcasts sent through\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast}.  All current result data is replaced\n     * by the value given to this method.\n     *\n     * <p><strong>This method does not work with non-ordered broadcasts such\n     * as those sent with {@link Context#sendBroadcast(Intent)\n     * Context.sendBroadcast}</strong></p>\n     *\n     * @param code The new result code.  Often uses the\n     * Activity {@link android.app.Activity#RESULT_CANCELED} and\n     * {@link android.app.Activity#RESULT_OK} constants, though the\n     * actual meaning of this value is ultimately up to the broadcaster.\n     * @param data The new result data.  This is an arbitrary\n     * string whose interpretation is up to the broadcaster; may be null.\n     * @param extras The new extra data map.  This is a Bundle\n     * holding arbitrary data, whose interpretation is up to the\n     * broadcaster.  Can be set to null.  This completely\n     * replaces the current map (if any).\n     ",
+    "links" : [ "android.app.Activity#RESULT_CANCELED", "android.app.Activity#RESULT_OK", "android.content.Context#sendBroadcast(Intent)", "android.content.Context#sendOrderedBroadcast(Intent" ]
+  }, {
+    "name" : "public final boolean getAbortBroadcast()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns the flag indicating whether or not this receiver should\n     * abort the current broadcast.\n     *\n     * @return True if the broadcast should be aborted.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void abortBroadcast()",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the flag indicating that this receiver should abort the\n     * current broadcast; only works with broadcasts sent through\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast}.  This will prevent\n     * any other broadcast receivers from receiving the broadcast. It will still\n     * call {@link #onReceive} of the BroadcastReceiver that the caller of\n     * {@link Context#sendOrderedBroadcast(Intent, String)\n     * Context.sendOrderedBroadcast} passed in.\n     *\n     * <p><strong>This method does not work with non-ordered broadcasts such\n     * as those sent with {@link Context#sendBroadcast(Intent)\n     * Context.sendBroadcast}</strong></p>\n     ",
+    "links" : [ "#onReceive", "android.content.Context#sendBroadcast(Intent)", "android.content.Context#sendOrderedBroadcast(Intent" ]
+  }, {
+    "name" : "public final void clearAbortBroadcast()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears the flag indicating that this receiver should abort the current\n     * broadcast.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isOrderedBroadcast()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the receiver is currently processing an ordered\n     * broadcast.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isInitialStickyBroadcast()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the receiver is currently processing the initial\n     * value of a sticky broadcast -- that is, the value that was last\n     * broadcast and is currently held in the sticky cache, so this is\n     * not directly the result of a broadcast right now.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setOrderedHint(boolean isOrdered)",
+    "returnType" : "void",
+    "comment" : "\n     * For internal use, sets the hint about whether this BroadcastReceiver is\n     * running in ordered mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setPendingResult(PendingResult result)",
+    "returnType" : "void",
+    "comment" : "\n     * For internal use to set the result data that is active. @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final PendingResult getPendingResult()",
+    "returnType" : "PendingResult",
+    "comment" : "\n     * For internal use to set the result data that is active. @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final UserHandle getSendingUser()",
+    "returnType" : "UserHandle",
+    "comment" : "\n     * Returns the user that the broadcast was sent to.\n     *\n     * <p>It can be used in a receiver registered by\n     * {@link Context#registerReceiverForAllUsers Context.registerReceiverForAllUsers()}\n     * to determine on which user the broadcast was sent.\n     *\n     * @hide\n     ",
+    "links" : [ "android.content.Context#registerReceiverForAllUsers" ]
+  }, {
+    "name" : "public int getSendingUserId()",
+    "returnType" : "int",
+    "comment" : " @hide ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSentFromUid()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the uid of the app that initially sent this broadcast.\n     *\n     * @return the uid of the broadcasting app or {@link Process#INVALID_UID} if the current\n     * receiver cannot access the identity of the broadcasting app\n     ",
+    "links" : [ "android.os.Process#INVALID_UID" ]
+  }, {
+    "name" : "public String getSentFromPackage()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the package name of the app that initially sent this broadcast.\n     *\n     * @return the package name of the broadcasting app or {@code null} if the current\n     * receiver cannot access the identity of the broadcasting app\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setDebugUnregister(boolean debug)",
+    "returnType" : "void",
+    "comment" : "\n     * Control inclusion of debugging help for mismatched\n     * calls to {@link Context#registerReceiver(BroadcastReceiver, IntentFilter)\n     * Context.registerReceiver()}.\n     * If called with true, before given to registerReceiver(), then the\n     * callstack of the following {@link Context#unregisterReceiver(BroadcastReceiver)\n     * Context.unregisterReceiver()} call is retained, to be printed if a later\n     * incorrect unregister call is made.  Note that doing this requires retaining\n     * information about the BroadcastReceiver for the lifetime of the app,\n     * resulting in a leak -- this should only be used for debugging.\n     ",
+    "links" : [ "android.content.Context#unregisterReceiver(BroadcastReceiver)", "android.content.Context#registerReceiver(BroadcastReceiver" ]
+  }, {
+    "name" : "public final boolean getDebugUnregister()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return the last value given to {@link #setDebugUnregister}.\n     ",
+    "links" : [ "#setDebugUnregister" ]
+  }, {
+    "name" : " void checkSynchronousHint()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public abstract void onReceive(Context context, Intent intent)", "public final PendingResult goAsync()", "public IBinder peekService(Context myContext, Intent service)", "public final void setResultCode(int code)", "public final int getResultCode()", "public final void setResultData(String data)", "public final String getResultData()", "public final void setResultExtras(Bundle extras)", "public final Bundle getResultExtras(boolean makeMap)", "public final void setResult(int code, String data, Bundle extras)", "public final boolean getAbortBroadcast()", "public final void abortBroadcast()", "public final void clearAbortBroadcast()", "public final boolean isOrderedBroadcast()", "public final boolean isInitialStickyBroadcast()", "public final void setOrderedHint(boolean isOrdered)", "public final void setPendingResult(PendingResult result)", "public final PendingResult getPendingResult()", "public final UserHandle getSendingUser()", "public int getSendingUserId()", "public int getSentFromUid()", "public String getSentFromPackage()", "public final void setDebugUnregister(boolean debug)", "public final boolean getDebugUnregister()", " void checkSynchronousHint()" ],
+  "variableNames" : [ "mPendingResult", "mDebugUnregister" ]
+}

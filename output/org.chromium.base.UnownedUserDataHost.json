@@ -1,0 +1,71 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/org/chromium/base/UnownedUserDataHost.java",
+  "packageName" : "org.chromium.base",
+  "className" : "UnownedUserDataHost",
+  "comment" : "\n * UnownedUserDataHost is a type-safe and heterogeneous container that does not own the objects that\n * are stored within. It has the ability to associate a key of type {@code UnownedUserDataKey<T>},\n * where {@code T extends UnownedUserData}, with an instance of {@code T}.\n * <p>\n * Mismatch of types between key and value type information can be checked at compile time, which\n * ensures it is not possible to insert or retrieve data where the types do not match. Neither the\n * key nor the object is allowed to be {@code null}.\n * <p>\n * Value objects are held using {@link WeakReference} in the container, which means that they can be\n * garbage collected once the last strong reference has been removed. The {@link UnownedUserDataKey}\n * is still a strong reference, so it is important that it does not have a reference to the object\n * it is used as a key for. When trying to retrieve a garbage collected item for which a key is\n * still held, the entry in the map is removed during the invocation.\n * <p>\n * Invoking {@link #destroy()} clears out the map, including both keys and the {@link\n * WeakReference}s to the {@link UnownedUserData}s, making them available for garbage collection.\n * This enables the garbage collector to not be blocked on this class for continuing the garbage\n * collection cycle. During this process, all {@link UnownedUserData} objects are informed that they\n * have been detached.\n * <p>\n * All interaction with the UnownedUserDataHost must be performed on the same thread.\n * <p>\n * {@link UnownedUserData} is somewhat similar to {@link org.chromium.base.UserData}, except that it\n * is not owned by the host. The structure is also a bit different since the instances are retrieved\n * through a {@link UnownedUserDataKey} instead of the class type itself. The reason for this is to\n * ensure that we protect against accidental incorrect usage where something has been made\n * accessible through misconfigured GN visibility rules, incorrect package visibility or\n * misconfigured DEPS rules. In addition, it enforces clients to go through the from-method to\n * retrieve the object, ensuring that control stays with the object itself.\n * <p>\n * All methods on UnownedUserDataHost except {@link #destroy()} is package protected to ensure all\n * interaction with the host goes through the {@link UnownedUserDataKey}.\n * <p>\n * Example usage:\n * <pre>{@code\n * public class HolderClass {\n *     // Defines the container.\n *     private final UnownedUserDataHost mUnownedUserDataHost = new UnownedUserDataHost();\n *\n *     public UnownedUserDataHost getUnownedUserDataHost() {\n *         return mUnownedUserDataHost;\n *     }\n * }\n *\n * public class Foo implements UnownedUserData {\n *     // Keeping KEY private enforces acquisition by calling #from(), therefore Foo is in control\n *     // of getting the instance.\n *     private static final UnownedUserDataKey<Foo> KEY = new UnownedUserDataKey<>(Foo.class);\n *\n *     // The UnownedUserData framework enables this method in particular.\n *     public static Foo from(HolderClass holder) {\n *         return KEY.retrieveDataFromHost(holderClass.getUnownedUserDataHost());\n *     }\n *\n *     public void initialize(HolderClass holderClass) {\n *         // This could also be in the constructor or somewhere else that is reasonable for a\n *         // particular object.\n *         KEY.attachToHost(holderClass.getUnownedUserDataHost(), this);\n *     }\n *\n *     public void destroy() {\n *         // This ensures that the UnownedUserData can not be resurrected through any\n *         // UnownedUserDataHost after this.\n *         // For detaching from a particular host, use KEY.detachFromHost(host) instead.\n *         KEY.detachFromAllHosts(this);\n *     }\n * }\n *\n *\n *    // After construction, `foo` needs to attach itself to the HolderClass instance of the\n *    // UnownedUserDataHost.\n *    // Depending on who owns Foo, this could be its factory, or some other ownership model. Foo\n *    // does not need to hold on to the HolderClass, as that is taken care of by the key during\n *    // attachment. It is up to the implementor to decide whether this is in the constructor, or\n *    // in a separate initialize step.\n *    Foo foo = new Foo();\n *    foo.initialize(holderClass);\n *\n *    ...\n *\n *    // Now that the instance of Foo is attached to the particular instance of Holder, it\n *    // can be retrieved using just the HolderClass instance.\n *    Foo sameFoo = Foo.from(holderClass);\n *\n *    ...\n *\n *    // During destruction of `foo`, it must remove itself from the instance of HolderClass to\n *    // ensure that it can not be retrieved using that path any longer.\n *    foo.destroy();\n * }\n * </pre>\n * <p>\n * The code snippet above uses a {@code static} key to be able to facilitate the method {@code\n * public static Foo from(HolderClass holderClass)}, since it would not be possible to retrieve the\n * private key from that method if it was an instance member.\n * <p>\n * The code snippet above also assumes that {@code Foo} has knowledge about the {@code HolderClass},\n * instead of taking in a {@link UnownedUserDataHost} in the {@code from} method, since that\n * typically provides a more pleasant experience for users.\n * <p>\n * There is also another common pattern for retrieving an attached object, and that is to do it\n * lazily:\n * <pre>{@code\n * public static Foo from(HolderClass holderClass) {\n *     Foo foo = KEY.retrieveDataFromHost(holderClass.getUnownedUserDataHost());\n *     if (foo == null) {\n *         foo = new Foo();\n *         KEY.attachToHost(holderClass.getUnownedUserDataHost(), foo);\n *     }\n *     return foo;\n * }\n * }\n * </pre>\n * <p>\n * However, it is important to note that in this scenario, as soon as the code that invokes\n * from(...) drops the reference, Foo will be eligible for garbage collection since the host only\n * holds a {@link WeakReference}. This means that Foo could end up being constructed and garbage\n * collected often, depending on whether the caller holds on to a strong reference or not.\n *\n * @see UnownedUserDataKey for information about the type of key that is required.\n * @see UnownedUserData for the marker interface used for this type of data.\n ",
+  "links" : [ "org.chromium.base.UnownedUserData", "org.chromium.base.UnownedUserDataKey", "org.chromium.base.UnownedUserDataHost", "java.lang.ref.WeakReference", "org.chromium.base.UserData", "#destroy()" ],
+  "variables" : [ {
+    "name" : "mThreadChecker",
+    "type" : "ThreadUtils.ThreadChecker",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDestroyChecker",
+    "type" : "DestroyChecker",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHandler",
+    "type" : "Handler",
+    "comment" : "\n     * Handler to use to post {@link UnownedUserData#onDetachedFromHost(UnownedUserDataHost)}\n     * invocations to.\n     ",
+    "links" : [ "org.chromium.base.UnownedUserData#onDetachedFromHost(UnownedUserDataHost)" ]
+  }, {
+    "name" : "mUnownedUserDataMap",
+    "type" : "HashMap<UnownedUserDataKey<?>, WeakReference<? extends UnownedUserData>>",
+    "comment" : " The core data structure within this host. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static Looper retrieveNonNullLooperOrThrow()",
+    "returnType" : "Looper",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void set(@NonNull UnownedUserDataKey<T> key, @NonNull T newValue)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : " T get(@NonNull UnownedUserDataKey<T> key)",
+    "returnType" : "T",
+    "comment" : "\n     * Retrieves the {@link UnownedUserData} object stored under the given key.\n     *\n     * @param key the key to use for the object.\n     * @param <T> the type of {@link UnownedUserData}.\n     * @return the stored version or {@code null} if it is not stored or has been garbage collected.\n     ",
+    "links" : [ "org.chromium.base.UnownedUserData" ]
+  }, {
+    "name" : " void remove(@NonNull UnownedUserDataKey<T> key)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "public void destroy()",
+    "returnType" : "void",
+    "comment" : "\n     * Destroys the UnownedUserDataHost by clearing out the map, making the objects stored within\n     * available for garbage collection as early as possible, in case the object owning the\n     * UnownedUserDataHost stays alive for a while after destroy() has been invoked.\n     * <p>\n     * Objects stored within the UnownedUserDataHost are informed of this destroy() call through\n     * {@link UnownedUserData#onDetachedFromHost(UnownedUserDataHost)}, and the {@link\n     * UnownedUserDataKey} instances are updated to not refer to this host anymore.\n     ",
+    "links" : [ "org.chromium.base.UnownedUserData#onDetachedFromHost(UnownedUserDataHost)", "org.chromium.base.UnownedUserDataKey" ]
+  }, {
+    "name" : " int getMapSize()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isDestroyed()",
+    "returnType" : "boolean",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkState()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static Looper retrieveNonNullLooperOrThrow()", " void set(@NonNull UnownedUserDataKey<T> key, @NonNull T newValue)", " T get(@NonNull UnownedUserDataKey<T> key)", " void remove(@NonNull UnownedUserDataKey<T> key)", "public void destroy()", " int getMapSize()", " boolean isDestroyed()", "private void checkState()" ],
+  "variableNames" : [ "mThreadChecker", "mDestroyChecker", "mHandler", "mUnownedUserDataMap" ]
+}

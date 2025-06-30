@@ -1,0 +1,366 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/MessagePattern.java",
+  "packageName" : "android.icu.text",
+  "className" : "MessagePattern",
+  "comment" : "\n * Parses and represents ICU MessageFormat patterns.\n * Also handles patterns for ChoiceFormat, PluralFormat and SelectFormat.\n * Used in the implementations of those classes as well as in tools\n * for message validation, translation and format conversion.\n * <p>\n * The parser handles all syntax relevant for identifying message arguments.\n * This includes \"complex\" arguments whose style strings contain\n * nested MessageFormat pattern substrings.\n * For \"simple\" arguments (with no nested MessageFormat pattern substrings),\n * the argument style is not parsed any further.\n * <p>\n * The parser handles named and numbered message arguments and allows both in one message.\n * <p>\n * Once a pattern has been parsed successfully, iterate through the parsed data\n * with countParts(), getPart() and related methods.\n * <p>\n * The data logically represents a parse tree, but is stored and accessed\n * as a list of \"parts\" for fast and simple parsing and to minimize object allocations.\n * Arguments and nested messages are best handled via recursion.\n * For every _START \"part\", {@link #getLimitPartIndex(int)} efficiently returns\n * the index of the corresponding _LIMIT \"part\".\n * <p>\n * List of \"parts\":\n * <pre>\n * message = MSG_START (SKIP_SYNTAX | INSERT_CHAR | REPLACE_NUMBER | argument)* MSG_LIMIT\n * argument = noneArg | simpleArg | complexArg\n * complexArg = choiceArg | pluralArg | selectArg\n *\n * noneArg = ARG_START.NONE (ARG_NAME | ARG_NUMBER) ARG_LIMIT.NONE\n * simpleArg = ARG_START.SIMPLE (ARG_NAME | ARG_NUMBER) ARG_TYPE [ARG_STYLE] ARG_LIMIT.SIMPLE\n * choiceArg = ARG_START.CHOICE (ARG_NAME | ARG_NUMBER) choiceStyle ARG_LIMIT.CHOICE\n * pluralArg = ARG_START.PLURAL (ARG_NAME | ARG_NUMBER) pluralStyle ARG_LIMIT.PLURAL\n * selectArg = ARG_START.SELECT (ARG_NAME | ARG_NUMBER) selectStyle ARG_LIMIT.SELECT\n *\n * choiceStyle = ((ARG_INT | ARG_DOUBLE) ARG_SELECTOR message)+\n * pluralStyle = [ARG_INT | ARG_DOUBLE] (ARG_SELECTOR [ARG_INT | ARG_DOUBLE] message)+\n * selectStyle = (ARG_SELECTOR message)+\n * </pre>\n * <ul>\n *   <li>Literal output text is not represented directly by \"parts\" but accessed\n *       between parts of a message, from one part's getLimit() to the next part's getIndex().\n *   <li><code>ARG_START.CHOICE</code> stands for an ARG_START Part with ArgType CHOICE.\n *   <li>In the choiceStyle, the ARG_SELECTOR has the '&lt;', the '#' or\n *       the less-than-or-equal-to sign (U+2264).\n *   <li>In the pluralStyle, the first, optional numeric Part has the \"offset:\" value.\n *       The optional numeric Part between each (ARG_SELECTOR, message) pair\n *       is the value of an explicit-number selector like \"=2\",\n *       otherwise the selector is a non-numeric identifier.\n *   <li>The REPLACE_NUMBER Part can occur only in an immediate sub-message of the pluralStyle.\n * </ul>\n * <p>\n * This class is not intended for public subclassing.\n *\n * @author Markus Scherer\n ",
+  "links" : [ "#getLimitPartIndex(int)" ],
+  "variables" : [ {
+    "name" : "ARG_NAME_NOT_NUMBER",
+    "type" : "int",
+    "comment" : "\n     * Return value from {@link #validateArgumentName(String)} for when\n     * the string is a valid \"pattern identifier\" but not a number.\n     ",
+    "links" : [ "#validateArgumentName(String)" ]
+  }, {
+    "name" : "ARG_NAME_NOT_VALID",
+    "type" : "int",
+    "comment" : "\n     * Return value from {@link #validateArgumentName(String)} for when\n     * the string is invalid.\n     * It might not be a valid \"pattern identifier\",\n     * or it have only ASCII digits but there is a leading zero or the number is too large.\n     ",
+    "links" : [ "#validateArgumentName(String)" ]
+  }, {
+    "name" : "NO_NUMERIC_VALUE",
+    "type" : "double",
+    "comment" : "\n     * Special value that is returned by getNumericValue(Part) when no\n     * numeric value is defined for a part.\n     * @see #getNumericValue\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_PREFIX_LENGTH",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "aposMode",
+    "type" : "ApostropheMode",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "msg",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "parts",
+    "type" : "ArrayList<Part>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "numericValues",
+    "type" : "ArrayList<Double>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hasArgNames",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hasArgNumbers",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "needsAutoQuoting",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "frozen",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "defaultAposMode",
+    "type" : "ApostropheMode",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "argTypes",
+    "type" : "ArgType[]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public MessagePattern parse(String pattern)",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Parses a MessageFormat pattern string.\n     * @param pattern a MessageFormat pattern string\n     * @return this\n     * @throws IllegalArgumentException for syntax errors in the pattern string\n     * @throws IndexOutOfBoundsException if certain limits are exceeded\n     *         (e.g., argument number too high, argument name too long, etc.)\n     * @throws NumberFormatException if a number could not be parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MessagePattern parseChoiceStyle(String pattern)",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Parses a ChoiceFormat pattern string.\n     * @param pattern a ChoiceFormat pattern string\n     * @return this\n     * @throws IllegalArgumentException for syntax errors in the pattern string\n     * @throws IndexOutOfBoundsException if certain limits are exceeded\n     *         (e.g., argument number too high, argument name too long, etc.)\n     * @throws NumberFormatException if a number could not be parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MessagePattern parsePluralStyle(String pattern)",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Parses a PluralFormat pattern string.\n     * @param pattern a PluralFormat pattern string\n     * @return this\n     * @throws IllegalArgumentException for syntax errors in the pattern string\n     * @throws IndexOutOfBoundsException if certain limits are exceeded\n     *         (e.g., argument number too high, argument name too long, etc.)\n     * @throws NumberFormatException if a number could not be parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MessagePattern parseSelectStyle(String pattern)",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Parses a SelectFormat pattern string.\n     * @param pattern a SelectFormat pattern string\n     * @return this\n     * @throws IllegalArgumentException for syntax errors in the pattern string\n     * @throws IndexOutOfBoundsException if certain limits are exceeded\n     *         (e.g., argument number too high, argument name too long, etc.)\n     * @throws NumberFormatException if a number could not be parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears this MessagePattern.\n     * countParts() will return 0.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void clearPatternAndSetApostropheMode(ApostropheMode mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Clears this MessagePattern and sets the ApostropheMode.\n     * countParts() will return 0.\n     * @param mode The new ApostropheMode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object other)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @param other another object to compare with.\n     * @return true if this object is equivalent to the other one.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ApostropheMode getApostropheMode()",
+    "returnType" : "ApostropheMode",
+    "comment" : "\n     * @return this instance's ApostropheMode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean jdkAposMode()",
+    "returnType" : "boolean",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getPatternString()",
+    "returnType" : "String",
+    "comment" : "\n     * @return the parsed pattern string (null if none was parsed).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasNamedArguments()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Does the parsed pattern have named arguments like {first_name}?\n     * @return true if the parsed pattern has at least one named argument.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasNumberedArguments()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Does the parsed pattern have numbered arguments like {2}?\n     * @return true if the parsed pattern has at least one numbered argument.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int validateArgumentName(String name)",
+    "returnType" : "int",
+    "comment" : "\n     * Validates and parses an argument name or argument number string.\n     * An argument name must be a \"pattern identifier\", that is, it must contain\n     * no Unicode Pattern_Syntax or Pattern_White_Space characters.\n     * If it only contains ASCII digits, then it must be a small integer with no leading zero.\n     * @param name Input string.\n     * @return &gt;=0 if the name is a valid number,\n     *         ARG_NAME_NOT_NUMBER (-1) if it is a \"pattern identifier\" but not all ASCII digits,\n     *         ARG_NAME_NOT_VALID (-2) if it is neither.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String autoQuoteApostropheDeep()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a version of the parsed pattern string where each ASCII apostrophe\n     * is doubled (escaped) if it is not already, and if it is not interpreted as quoting syntax.\n     * <p>\n     * For example, this turns \"I don't '{know}' {gender,select,female{h''er}other{h'im}}.\"\n     * into \"I don''t '{know}' {gender,select,female{h''er}other{h''im}}.\"\n     * @return the deep-auto-quoted version of the parsed pattern string.\n     * @see MessageFormat#autoQuoteApostrophe(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int countParts()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of \"parts\" created by parsing the pattern string.\n     * Returns 0 if no pattern has been parsed or clear() was called.\n     * @return the number of pattern parts.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Part getPart(int i)",
+    "returnType" : "Part",
+    "comment" : "\n     * Gets the i-th pattern \"part\".\n     * @param i The index of the Part data. (0..countParts()-1)\n     * @return the i-th pattern \"part\".\n     * @throws IndexOutOfBoundsException if i is outside the (0..countParts()-1) range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Part.Type getPartType(int i)",
+    "returnType" : "Part.Type",
+    "comment" : "\n     * Returns the Part.Type of the i-th pattern \"part\".\n     * Convenience method for getPart(i).getType().\n     * @param i The index of the Part data. (0..countParts()-1)\n     * @return The Part.Type of the i-th Part.\n     * @throws IndexOutOfBoundsException if i is outside the (0..countParts()-1) range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getPatternIndex(int partIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the pattern index of the specified pattern \"part\".\n     * Convenience method for getPart(partIndex).getIndex().\n     * @param partIndex The index of the Part data. (0..countParts()-1)\n     * @return The pattern index of this Part.\n     * @throws IndexOutOfBoundsException if partIndex is outside the (0..countParts()-1) range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getSubstring(Part part)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the substring of the pattern string indicated by the Part.\n     * Convenience method for getPatternString().substring(part.getIndex(), part.getLimit()).\n     * @param part a part of this MessagePattern.\n     * @return the substring associated with part.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean partSubstringMatches(Part part, String s)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Compares the part's substring with the input string s.\n     * @param part a part of this MessagePattern.\n     * @param s a string.\n     * @return true if getSubstring(part).equals(s).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double getNumericValue(Part part)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the numeric value associated with an ARG_INT or ARG_DOUBLE.\n     * @param part a part of this MessagePattern.\n     * @return the part's numeric value, or NO_NUMERIC_VALUE if this is not a numeric part.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double getPluralOffset(int pluralStart)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the \"offset:\" value of a PluralFormat argument, or 0 if none is specified.\n     * @param pluralStart the index of the first PluralFormat argument style part. (0..countParts()-1)\n     * @return the \"offset:\" value.\n     * @throws IndexOutOfBoundsException if pluralStart is outside the (0..countParts()-1) range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getLimitPartIndex(int start)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the index of the ARG|MSG_LIMIT part corresponding to the ARG|MSG_START at start.\n     * @param start The index of some Part data (0..countParts()-1);\n     *        this Part should be of Type ARG_START or MSG_START.\n     * @return The first i&gt;start where getPart(i).getType()==ARG|MSG_LIMIT at the same nesting level,\n     *         or start itself if getPartType(msgStart)!=ARG|MSG_START.\n     * @throws IndexOutOfBoundsException if start is outside the (0..countParts()-1) range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Creates and returns a copy of this object.\n     * @return a copy of this object (or itself if frozen).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MessagePattern cloneAsThawed()",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Creates and returns an unfrozen copy of this object.\n     * @return a copy of this object.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public MessagePattern freeze()",
+    "returnType" : "MessagePattern",
+    "comment" : "\n     * Freezes this object, making it immutable and thread-safe.\n     * @return this\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isFrozen()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Determines whether this object is frozen (immutable) or not.\n     * @return true if this object is frozen.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void preParse(String pattern)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void postParse()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseMessage(int index, int msgStartLength, int nestingLevel, ArgType parentType)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseArg(int index, int argStartLength, int nestingLevel)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseSimpleStyle(int index)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseChoiceStyle(int index, int nestingLevel)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int parsePluralOrSelectStyle(ArgType argType, int index, int nestingLevel)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int parseArgNumber(CharSequence s, int start, int limit)",
+    "returnType" : "int",
+    "comment" : "\n     * Validates and parses an argument name or argument number string.\n     * This internal method assumes that the input substring is a \"pattern identifier\".\n     * @return &gt;=0 if the name is a valid number,\n     *         ARG_NAME_NOT_NUMBER (-1) if it is a \"pattern identifier\" but not all ASCII digits,\n     *         ARG_NAME_NOT_VALID (-2) if it is neither.\n     * @see #validateArgumentName(String)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int parseArgNumber(int start, int limit)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void parseDouble(int start, int limit, boolean allowInfinity)",
+    "returnType" : "void",
+    "comment" : "\n     * Parses a number from the specified message substring.\n     * @param start start index into the message string\n     * @param limit limit index into the message string, must be start<limit\n     * @param allowInfinity true if U+221E is allowed (for ChoiceFormat)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void appendReducedApostrophes(String s, int start, int limit, StringBuilder sb)",
+    "returnType" : "void",
+    "comment" : " package ",
+    "links" : [ ]
+  }, {
+    "name" : "private int skipWhiteSpace(int index)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int skipIdentifier(int index)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int skipDouble(int index)",
+    "returnType" : "int",
+    "comment" : "\n     * Skips a sequence of characters that could occur in a double value.\n     * Does not fully parse or validate the value.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isArgTypeChar(int c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isChoice(int index)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isPlural(int index)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isSelect(int index)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isOrdinal(int index)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean inMessageFormatPattern(int nestingLevel)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if we are inside a MessageFormat (sub-)pattern,\n     *         as opposed to inside a top-level choice/plural/select pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean inTopLevelChoiceMessage(int nestingLevel, ArgType parentType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if we are in a MessageFormat sub-pattern\n     *         of a top-level ChoiceFormat pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void addPart(Part.Type type, int index, int length, int value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addLimitPart(int start, Part.Type type, int index, int length, int value)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void addArgDoublePart(double numericValue, int start, int length)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String prefix(String s, int start)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a prefix of s.substring(start). Used for Exception messages.\n     * @param s\n     * @param start start index in s\n     * @return s.substring(start) or a prefix of that\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String prefix(String s)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String prefix(int start)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String prefix()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public MessagePattern parse(String pattern)", "public MessagePattern parseChoiceStyle(String pattern)", "public MessagePattern parsePluralStyle(String pattern)", "public MessagePattern parseSelectStyle(String pattern)", "public void clear()", "public void clearPatternAndSetApostropheMode(ApostropheMode mode)", "public boolean equals(Object other)", "public int hashCode()", "public ApostropheMode getApostropheMode()", " boolean jdkAposMode()", "public String getPatternString()", "public boolean hasNamedArguments()", "public boolean hasNumberedArguments()", "public String toString()", "public static int validateArgumentName(String name)", "public String autoQuoteApostropheDeep()", "public int countParts()", "public Part getPart(int i)", "public Part.Type getPartType(int i)", "public int getPatternIndex(int partIndex)", "public String getSubstring(Part part)", "public boolean partSubstringMatches(Part part, String s)", "public double getNumericValue(Part part)", "public double getPluralOffset(int pluralStart)", "public int getLimitPartIndex(int start)", "public Object clone()", "public MessagePattern cloneAsThawed()", "public MessagePattern freeze()", "public boolean isFrozen()", "private void preParse(String pattern)", "private void postParse()", "private int parseMessage(int index, int msgStartLength, int nestingLevel, ArgType parentType)", "private int parseArg(int index, int argStartLength, int nestingLevel)", "private int parseSimpleStyle(int index)", "private int parseChoiceStyle(int index, int nestingLevel)", "private int parsePluralOrSelectStyle(ArgType argType, int index, int nestingLevel)", "private static int parseArgNumber(CharSequence s, int start, int limit)", "private int parseArgNumber(int start, int limit)", "private void parseDouble(int start, int limit, boolean allowInfinity)", " static void appendReducedApostrophes(String s, int start, int limit, StringBuilder sb)", "private int skipWhiteSpace(int index)", "private int skipIdentifier(int index)", "private int skipDouble(int index)", "private static boolean isArgTypeChar(int c)", "private boolean isChoice(int index)", "private boolean isPlural(int index)", "private boolean isSelect(int index)", "private boolean isOrdinal(int index)", "private boolean inMessageFormatPattern(int nestingLevel)", "private boolean inTopLevelChoiceMessage(int nestingLevel, ArgType parentType)", "private void addPart(Part.Type type, int index, int length, int value)", "private void addLimitPart(int start, Part.Type type, int index, int length, int value)", "private void addArgDoublePart(double numericValue, int start, int length)", "private static String prefix(String s, int start)", "private static String prefix(String s)", "private String prefix(int start)", "private String prefix()" ],
+  "variableNames" : [ "ARG_NAME_NOT_NUMBER", "ARG_NAME_NOT_VALID", "NO_NUMERIC_VALUE", "MAX_PREFIX_LENGTH", "aposMode", "msg", "parts", "numericValues", "hasArgNames", "hasArgNumbers", "needsAutoQuoting", "frozen", "defaultAposMode", "argTypes" ]
+}

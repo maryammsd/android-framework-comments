@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/tv/tuner/filter/Filter.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/tv/tuner/filter/Filter.java",
   "packageName" : "android.media.tv.tuner.filter",
   "className" : "Filter",
   "comment" : "\n * Tuner data filter.\n *\n * <p>This class is used to filter wanted data according to the filter's configuration.\n *\n * @hide\n ",
+  "links" : [ ],
   "variables" : [ {
     "name" : "TYPE_UNDEFINED",
     "type" : "int",
@@ -121,7 +122,7 @@
   }, {
     "name" : "STATUS_DATA_READY",
     "type" : "int",
-    "comment" : "\n     * The status of a filter that the data in the filter buffer is ready to be read.\n     ",
+    "comment" : "\n     * The status of a filter that the data in the filter buffer is ready to be read. It can also be\n     * used to know the STC (System Time Clock) ready status if it's PCR filter.\n     ",
     "links" : [ ]
   }, {
     "name" : "STATUS_LOW_WATER",
@@ -137,6 +138,36 @@
     "name" : "STATUS_OVERFLOW",
     "type" : "int",
     "comment" : "\n     * The status of a filter that the filter buffer is full and newly filtered data is being\n     * discarded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_NO_DATA",
+    "type" : "int",
+    "comment" : "\n     * The status of a filter that the filter buffer is empty and no filtered data is coming.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_STATUS_UNKNOWN",
+    "type" : "int",
+    "comment" : "\n     * Content’s scrambling status is unknown\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_STATUS_NOT_SCRAMBLED",
+    "type" : "int",
+    "comment" : "\n     * Content is not scrambled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SCRAMBLING_STATUS_SCRAMBLED",
+    "type" : "int",
+    "comment" : "\n     * Content is scrambled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONITOR_EVENT_SCRAMBLING_STATUS",
+    "type" : "int",
+    "comment" : "\n     * Monitor scrambling status change.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONITOR_EVENT_IP_CID_CHANGE",
+    "type" : "int",
+    "comment" : "\n     * Monitor ip cid change.\n     ",
     "links" : [ ]
   }, {
     "name" : "TAG",
@@ -159,8 +190,13 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mCallbackLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mId",
-    "type" : "int",
+    "type" : "long",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -189,6 +225,16 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mIsStarted",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIsShared",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mLock",
     "type" : "Object",
     "comment" : "",
@@ -201,6 +247,16 @@
     "links" : [ ]
   }, {
     "name" : "private native int nativeGetId()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native long nativeGetId64Bit()",
+    "returnType" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int nativeConfigureMonitorEvent(int monitorEventMask)",
     "returnType" : "int",
     "comment" : "",
     "links" : [ ]
@@ -235,6 +291,26 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "private native String nativeAcquireSharedFilterToken()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native void nativeFreeSharedFilterToken(String token)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int nativeSetTimeDelayHint(int timeDelayInMs)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private native int nativeSetDataSizeDelayHint(int dataSizeDelayInBytes)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private void onFilterStatus(int status)",
     "returnType" : "void",
     "comment" : "",
@@ -262,44 +338,74 @@
   }, {
     "name" : "public int configure(@NonNull FilterConfiguration config)",
     "returnType" : "int",
-    "comment" : "\n     * Configures the filter.\n     *\n     * @param config the configuration of the filter.\n     * @return result status of the operation.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Configures the filter.\n     *\n     * <p>Recofiguring must happen after stopping the filter.\n     *\n     * <p>When stopping, reconfiguring and restarting the filter, the client should discard all\n     * coming events until it receives {@link RestartEvent} through {@link FilterCallback} to avoid\n     * using the events from the previous configuration.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @param config the configuration of the filter.\n     * @return result status of the operation.\n     ",
+    "links" : [ "android.media.tv.tuner.filter.FilterCallback", "android.media.tv.tuner.filter.RestartEvent", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public int getId()",
     "returnType" : "int",
+    "comment" : "\n     * Gets the filter Id in 32-bit. For any Tuner SoC that supports 64-bit filter architecture,\n     * use {@link #getIdLong()}.\n     * @deprecated Use {@link #getIdLong()} for both 32-bit and 64-bit filter architectures.\n     ",
+    "links" : [ "#getIdLong()" ]
+  }, {
+    "name" : "public long getIdLong()",
+    "returnType" : "long",
     "comment" : "\n     * Gets the filter Id.\n     ",
     "links" : [ ]
   }, {
+    "name" : "public int setMonitorEventMask(@MonitorEventMask int monitorEventMask)",
+    "returnType" : "int",
+    "comment" : "\n     * Configure the Filter to monitor scrambling status and ip cid change. Set corresponding bit\n     * to monitor the change. Reset to stop monitoring.\n     *\n     * <p>{@link ScramblingStatusEvent} should be sent at the following two scenarios:\n     * <ul>\n     *   <li>When this method is called with {@link #MONITOR_EVENT_SCRAMBLING_STATUS}, the first\n     *       detected scrambling status should be sent.\n     *   <li>When the Scrambling status transits into different status, event should be sent.\n     *     <ul/>\n     *\n     * <p>{@link IpCidChangeEvent} should be sent at the following two scenarios:\n     * <ul>\n     *   <li>When this method is called with {@link #MONITOR_EVENT_IP_CID_CHANGE}, the first\n     *       detected CID for the IP should be sent.\n     *   <li>When the CID is changed to different value for the IP filter, event should be sent.\n     *     <ul/>\n     *\n     * <p>This configuration is only supported in Tuner 1.1 or higher version. Unsupported version\n     * will cause no-op. Use {@link TunerVersionChecker#getTunerVersion()} to get the version\n     * information.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @param monitorEventMask Types of event to be monitored. Set corresponding bit to\n     *                         monitor it. Reset to stop monitoring.\n     * @return result status of the operation.\n     ",
+    "links" : [ "android.media.tv.tuner.filter.IpCidChangeEvent", "android.media.tv.tuner.TunerVersionChecker#getTunerVersion()", "android.media.tv.tuner.filter.ScramblingStatusEvent", "#MONITOR_EVENT_SCRAMBLING_STATUS", "#MONITOR_EVENT_IP_CID_CHANGE", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
+  }, {
     "name" : "public int setDataSource(@Nullable Filter source)",
     "returnType" : "int",
-    "comment" : "\n     * Sets the filter's data source.\n     *\n     * A filter uses demux as data source by default. If the data was packetized\n     * by multiple protocols, multiple filters may need to work together to\n     * extract all protocols' header. Then a filter's data source can be output\n     * from another filter.\n     *\n     * @param source the filter instance which provides data input. Switch to\n     * use demux as data source if the filter instance is NULL.\n     * @return result status of the operation.\n     * @throws IllegalStateException if the data source has been set.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Sets the filter's data source.\n     *\n     * A filter uses demux as data source by default. If the data was packetized\n     * by multiple protocols, multiple filters may need to work together to\n     * extract all protocols' header. Then a filter's data source can be output\n     * from another filter.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @param source the filter instance which provides data input. Switch to\n     * use demux as data source if the filter instance is NULL.\n     * @return result status of the operation.\n     * @throws IllegalStateException if the data source has been set.\n     ",
+    "links" : [ "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public int start()",
     "returnType" : "int",
-    "comment" : "\n     * Starts filtering data.\n     *\n     * <p>Does nothing if the filter is already started.\n     *\n     * @return result status of the operation.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Starts filtering data.\n     *\n     * <p>Does nothing if the filter is already started.\n     *\n     * <p>When stopping, reconfiguring and restarting the filter, the client should discard all\n     * coming events until it receives {@link RestartEvent} through {@link FilterCallback} to avoid\n     * using the events from the previous configuration.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @return result status of the operation.\n     ",
+    "links" : [ "android.media.tv.tuner.filter.FilterCallback", "android.media.tv.tuner.filter.RestartEvent", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public int stop()",
     "returnType" : "int",
-    "comment" : "\n     * Stops filtering data.\n     *\n     * <p>Does nothing if the filter is stopped or not started.\n     *\n     * @return result status of the operation.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Stops filtering data.\n     *\n     * <p>Does nothing if the filter is stopped or not started.\n     *\n     * <p>Filter must be stopped to reconfigure.\n     *\n     * <p>When stopping, reconfiguring and restarting the filter, the client should discard all\n     * coming events until it receives {@link RestartEvent} through {@link FilterCallback} to avoid\n     * using the events from the previous configuration.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @return result status of the operation.\n     ",
+    "links" : [ "android.media.tv.tuner.filter.FilterCallback", "android.media.tv.tuner.filter.RestartEvent", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public int flush()",
     "returnType" : "int",
-    "comment" : "\n     * Flushes the filter.\n     *\n     * <p>The data which is already produced by filter but not consumed yet will\n     * be cleared.\n     *\n     * @return result status of the operation.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Flushes the filter.\n     *\n     * <p>The data which is already produced by filter but not consumed yet will\n     * be cleared.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @return result status of the operation.\n     ",
+    "links" : [ "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public int read(@NonNull byte[] buffer, @BytesLong long offset, @BytesLong long size)",
     "returnType" : "int",
-    "comment" : "\n     * Copies filtered data from filter output to the given byte array.\n     *\n     * @param buffer the buffer to store the filtered data.\n     * @param offset the index of the first byte in {@code buffer} to write.\n     * @param size the maximum number of bytes to read.\n     * @return the number of bytes read.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Copies filtered data from filter output to the given byte array.\n     *\n     * <p>If this filter is shared, do nothing and just return {@link Tuner#RESULT_INVALID_STATE}.\n     *\n     * @param buffer the buffer to store the filtered data.\n     * @param offset the index of the first byte in {@code buffer} to write.\n     * @param size the maximum number of bytes to read.\n     * @return the number of bytes read.\n     ",
+    "links" : [ "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   }, {
     "name" : "public void close()",
     "returnType" : "void",
-    "comment" : "\n     * Stops filtering data and releases the Filter instance.\n     ",
+    "comment" : "\n     * Stops filtering data and releases the Filter instance.\n     *\n     * <p>If this filter is shared, this filter will be closed and a\n     * {@link SharedFilterCallback#STATUS_INACCESSIBLE} event will be sent to shared filter before\n     * closing.\n     ",
+    "links" : [ "android.media.tv.tuner.filter.SharedFilterCallback#STATUS_INACCESSIBLE" ]
+  }, {
+    "name" : "public String acquireSharedFilterToken()",
+    "returnType" : "String",
+    "comment" : "\n     * Acquires a shared filter token.\n     *\n     * @return a string shared filter token.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public void freeSharedFilterToken(@NonNull String filterToken)",
+    "returnType" : "void",
+    "comment" : "\n     * Frees a shared filter token.\n     *\n     * @param filterToken the token of the shared filter being released.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int delayCallbackForDurationMillis(long durationInMs)",
+    "returnType" : "int",
+    "comment" : "\n     * Set filter time delay.\n     *\n     * <p> Setting a time delay instructs the filter to delay its event callback invocation until\n     * the specified amount of time has passed. The default value (delay disabled) is {@code 0}.\n     *\n     * <p>This functionality is only available in Tuner version 2.0 and higher and will otherwise\n     * be a no-op. Use {@link TunerVersionChecker#getTunerVersion()} to get the version information.\n     *\n     * @param durationInMs specifies the duration of the delay in milliseconds.\n     * @return one of the following results: {@link Tuner#RESULT_SUCCESS},\n     * {@link Tuner#RESULT_UNAVAILABLE}, {@link Tuner#RESULT_NOT_INITIALIZED},\n     * {@link Tuner#RESULT_INVALID_STATE}, {@link Tuner#RESULT_INVALID_ARGUMENT},\n     * {@link Tuner#RESULT_OUT_OF_MEMORY}, or {@link Tuner#RESULT_UNKNOWN_ERROR}.\n     ",
+    "links" : [ "android.media.tv.tuner.Tuner#RESULT_NOT_INITIALIZED", "android.media.tv.tuner.TunerVersionChecker#getTunerVersion()", "android.media.tv.tuner.Tuner#RESULT_UNKNOWN_ERROR", "android.media.tv.tuner.Tuner#RESULT_SUCCESS", "android.media.tv.tuner.Tuner#RESULT_UNAVAILABLE", "android.media.tv.tuner.Tuner#RESULT_INVALID_ARGUMENT", "android.media.tv.tuner.Tuner#RESULT_OUT_OF_MEMORY", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
+  }, {
+    "name" : "public int delayCallbackUntilBytesAccumulated(int bytesAccumulated)",
+    "returnType" : "int",
+    "comment" : "\n     * Set filter data size delay.\n     *\n     * <p> Setting a data size delay instructs the filter to delay its event callback invocation\n     * until a specified amount of data has accumulated. The default value (delay disabled) is\n     * {@code 0}.\n     *\n     * <p>This functionality is only available in Tuner version 2.0 and higher and will otherwise\n     * be a no-op. Use {@link TunerVersionChecker#getTunerVersion()} to get the version information.\n     *\n     * @param bytesAccumulated specifies the delay condition in bytes.\n     * @return one of the following results: {@link Tuner#RESULT_SUCCESS},\n     * {@link Tuner#RESULT_UNAVAILABLE}, {@link Tuner#RESULT_NOT_INITIALIZED},\n     * {@link Tuner#RESULT_INVALID_STATE}, {@link Tuner#RESULT_INVALID_ARGUMENT},\n     * {@link Tuner#RESULT_OUT_OF_MEMORY}, or {@link Tuner#RESULT_UNKNOWN_ERROR}.\n     ",
+    "links" : [ "android.media.tv.tuner.Tuner#RESULT_NOT_INITIALIZED", "android.media.tv.tuner.TunerVersionChecker#getTunerVersion()", "android.media.tv.tuner.Tuner#RESULT_UNKNOWN_ERROR", "android.media.tv.tuner.Tuner#RESULT_SUCCESS", "android.media.tv.tuner.Tuner#RESULT_UNAVAILABLE", "android.media.tv.tuner.Tuner#RESULT_INVALID_ARGUMENT", "android.media.tv.tuner.Tuner#RESULT_OUT_OF_MEMORY", "android.media.tv.tuner.Tuner#RESULT_INVALID_STATE" ]
   } ],
-  "variableNames" : [ "TYPE_UNDEFINED", "TYPE_TS", "TYPE_MMTP", "TYPE_IP", "TYPE_TLV", "TYPE_ALP", "SUBTYPE_UNDEFINED", "SUBTYPE_SECTION", "SUBTYPE_PES", "SUBTYPE_AUDIO", "SUBTYPE_VIDEO", "SUBTYPE_DOWNLOAD", "SUBTYPE_RECORD", "SUBTYPE_TS", "SUBTYPE_PCR", "SUBTYPE_TEMI", "SUBTYPE_MMTP", "SUBTYPE_NTP", "SUBTYPE_IP_PAYLOAD", "SUBTYPE_IP", "SUBTYPE_PAYLOAD_THROUGH", "SUBTYPE_TLV", "SUBTYPE_PTP", "STATUS_DATA_READY", "STATUS_LOW_WATER", "STATUS_HIGH_WATER", "STATUS_OVERFLOW", "TAG", "mNativeContext", "mCallback", "mExecutor", "mId", "mMainType", "mSubtype", "mSource", "mStarted", "mIsClosed", "mLock" ],
-  "methodNames" : [ "private native int nativeConfigureFilter(int type, int subType, FilterConfiguration settings)", "private native int nativeGetId()", "private native int nativeSetDataSource(Filter source)", "private native int nativeStartFilter()", "private native int nativeStopFilter()", "private native int nativeFlushFilter()", "private native int nativeRead(byte[] buffer, long offset, long size)", "private native int nativeClose()", "private void onFilterStatus(int status)", "private void onFilterEvent(FilterEvent[] events)", "public void setType(@Type int mainType, @Subtype int subtype)", "public void setCallback(FilterCallback cb, Executor executor)", "public FilterCallback getCallback()", "public int configure(@NonNull FilterConfiguration config)", "public int getId()", "public int setDataSource(@Nullable Filter source)", "public int start()", "public int stop()", "public int flush()", "public int read(@NonNull byte[] buffer, @BytesLong long offset, @BytesLong long size)", "public void close()" ]
+  "methodNames" : [ "private native int nativeConfigureFilter(int type, int subType, FilterConfiguration settings)", "private native int nativeGetId()", "private native long nativeGetId64Bit()", "private native int nativeConfigureMonitorEvent(int monitorEventMask)", "private native int nativeSetDataSource(Filter source)", "private native int nativeStartFilter()", "private native int nativeStopFilter()", "private native int nativeFlushFilter()", "private native int nativeRead(byte[] buffer, long offset, long size)", "private native int nativeClose()", "private native String nativeAcquireSharedFilterToken()", "private native void nativeFreeSharedFilterToken(String token)", "private native int nativeSetTimeDelayHint(int timeDelayInMs)", "private native int nativeSetDataSizeDelayHint(int dataSizeDelayInBytes)", "private void onFilterStatus(int status)", "private void onFilterEvent(FilterEvent[] events)", "public void setType(@Type int mainType, @Subtype int subtype)", "public void setCallback(FilterCallback cb, Executor executor)", "public FilterCallback getCallback()", "public int configure(@NonNull FilterConfiguration config)", "public int getId()", "public long getIdLong()", "public int setMonitorEventMask(@MonitorEventMask int monitorEventMask)", "public int setDataSource(@Nullable Filter source)", "public int start()", "public int stop()", "public int flush()", "public int read(@NonNull byte[] buffer, @BytesLong long offset, @BytesLong long size)", "public void close()", "public String acquireSharedFilterToken()", "public void freeSharedFilterToken(@NonNull String filterToken)", "public int delayCallbackForDurationMillis(long durationInMs)", "public int delayCallbackUntilBytesAccumulated(int bytesAccumulated)" ],
+  "variableNames" : [ "TYPE_UNDEFINED", "TYPE_TS", "TYPE_MMTP", "TYPE_IP", "TYPE_TLV", "TYPE_ALP", "SUBTYPE_UNDEFINED", "SUBTYPE_SECTION", "SUBTYPE_PES", "SUBTYPE_AUDIO", "SUBTYPE_VIDEO", "SUBTYPE_DOWNLOAD", "SUBTYPE_RECORD", "SUBTYPE_TS", "SUBTYPE_PCR", "SUBTYPE_TEMI", "SUBTYPE_MMTP", "SUBTYPE_NTP", "SUBTYPE_IP_PAYLOAD", "SUBTYPE_IP", "SUBTYPE_PAYLOAD_THROUGH", "SUBTYPE_TLV", "SUBTYPE_PTP", "STATUS_DATA_READY", "STATUS_LOW_WATER", "STATUS_HIGH_WATER", "STATUS_OVERFLOW", "STATUS_NO_DATA", "SCRAMBLING_STATUS_UNKNOWN", "SCRAMBLING_STATUS_NOT_SCRAMBLED", "SCRAMBLING_STATUS_SCRAMBLED", "MONITOR_EVENT_SCRAMBLING_STATUS", "MONITOR_EVENT_IP_CID_CHANGE", "TAG", "mNativeContext", "mCallback", "mExecutor", "mCallbackLock", "mId", "mMainType", "mSubtype", "mSource", "mStarted", "mIsClosed", "mIsStarted", "mIsShared", "mLock" ]
 }

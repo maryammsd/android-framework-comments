@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/telephony/TelephonyRegistryManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/telephony/TelephonyRegistryManager.java",
   "packageName" : "android.telephony",
   "className" : "TelephonyRegistryManager",
-  "comment" : "\n * A centralized place to notify telephony related status changes, e.g, {@link ServiceState} update\n * or {@link PhoneCapability} changed. This might trigger callback from applications side through\n * {@link android.telephony.PhoneStateListener}\n *\n * TODO: limit API access to only carrier apps with certain permissions or apps running on\n * privileged UID.\n *\n * @hide\n ",
+  "comment" : "\n * A centralized place to notify telephony related status changes, e.g, {@link ServiceState} update\n * or {@link PhoneCapability} changed. This might trigger callback from applications side through\n * {@link android.telephony.PhoneStateListener}\n *\n * Limit API access to only carrier apps with certain permissions or apps running on\n * privileged UID.\n *\n * TelephonyRegistryManager is intended for use on devices that implement\n * {@link android.content.pm.PackageManager#FEATURE_TELEPHONY FEATURE_TELEPHONY}. On devices\n * that do not implement this feature, the behavior is not reliable.\n *\n * @hide\n ",
+  "links" : [ "android.telephony.PhoneCapability", "android.telephony.ServiceState", "android.telephony.PhoneStateListener", "android.content.pm.PackageManager#FEATURE_TELEPHONY" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -20,19 +21,24 @@
     "links" : [ ]
   }, {
     "name" : "mSubscriptionChangedListenerMap",
-    "type" : "Map<SubscriptionManager.OnSubscriptionsChangedListener, IOnSubscriptionsChangedListener>",
+    "type" : "ConcurrentHashMap<SubscriptionManager.OnSubscriptionsChangedListener, IOnSubscriptionsChangedListener>",
     "comment" : "\n     * A mapping between {@link SubscriptionManager.OnSubscriptionsChangedListener} and\n     * its callback IOnSubscriptionsChangedListener.\n     ",
     "links" : [ "SubscriptionManager.OnSubscriptionsChangedListener" ]
   }, {
     "name" : "mOpportunisticSubscriptionChangedListenerMap",
-    "type" : "Map<SubscriptionManager.OnOpportunisticSubscriptionsChangedListener, IOnSubscriptionsChangedListener>",
+    "type" : "ConcurrentHashMap<SubscriptionManager.OnOpportunisticSubscriptionsChangedListener, IOnSubscriptionsChangedListener>",
     "comment" : "\n     * A mapping between {@link SubscriptionManager.OnOpportunisticSubscriptionsChangedListener} and\n     * its callback IOnSubscriptionsChangedListener.\n     ",
     "links" : [ "SubscriptionManager.OnOpportunisticSubscriptionsChangedListener" ]
   }, {
+    "name" : "mCarrierConfigChangeListenerMap",
+    "type" : "ConcurrentHashMap<CarrierConfigManager.CarrierConfigChangeListener, ICarrierConfigChangeListener>",
+    "comment" : "\n     * A mapping between {@link CarrierConfigManager.CarrierConfigChangeListener} and its callback\n     * ICarrierConfigChangeListener.\n     ",
+    "links" : [ "CarrierConfigManager.CarrierConfigChangeListener" ]
+  }, {
     "name" : "LISTEN_CODE_CHANGE",
     "type" : "long",
-    "comment" : "\n     * To check the SDK version for {@link #listenForSubscriber}.\n     ",
-    "links" : [ "#listenForSubscriber" ]
+    "comment" : "\n     * To check the SDK version for {@code #listenFromListener}.\n     ",
+    "links" : [ ]
   }, {
     "name" : "SIM_ACTIVATION_TYPE_VOICE",
     "type" : "int",
@@ -43,46 +49,61 @@
     "type" : "int",
     "comment" : "\n     * Sim activation type: data\n     * @see #notifyDataActivationStateChanged\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "sCarrierPrivilegeCallbacks",
+    "type" : "WeakHashMap<CarrierPrivilegesCallback, WeakReference<CarrierPrivilegesCallbackWrapper>>",
+    "comment" : "",
+    "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public void addOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener, @NonNull Executor executor)",
     "returnType" : "void",
-    "comment" : "\n     * Register for changes to the list of active {@link SubscriptionInfo} records or to the\n     * individual records themselves. When a change occurs the onSubscriptionsChanged method of\n     * the listener will be invoked immediately if there has been a notification. The\n     * onSubscriptionChanged method will also be triggered once initially when calling this\n     * function.\n     *\n     * @param listener an instance of {@link SubscriptionManager.OnSubscriptionsChangedListener}\n     *                 with onSubscriptionsChanged overridden.\n     * @param executor the executor that will execute callbacks.\n     ",
-    "links" : [ "SubscriptionManager.OnSubscriptionsChangedListener", "android.telephony.SubscriptionInfo" ]
+    "comment" : "\n     * Register for changes to the list of {@link SubscriptionInfo} records or to the\n     * individual records (active or inactive) themselves. When a change occurs, the\n     * {@link OnSubscriptionsChangedListener#onSubscriptionsChanged()} method of\n     * the listener will be invoked immediately. The\n     * {@link OnSubscriptionsChangedListener#onSubscriptionsChanged()} method will also be invoked\n     * once initially when calling this method.\n     *\n     * @param listener an instance of {@link OnSubscriptionsChangedListener} with\n     * {@link OnSubscriptionsChangedListener#onSubscriptionsChanged()} overridden.\n     * @param executor the executor that will execute callbacks.\n     * @hide\n     ",
+    "links" : [ "android.telephony.SubscriptionManager.OnSubscriptionsChangedListener", "android.telephony.SubscriptionInfo", "android.telephony.SubscriptionManager.OnSubscriptionsChangedListener#onSubscriptionsChanged()" ]
   }, {
     "name" : "public void removeOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Unregister the {@link SubscriptionManager.OnSubscriptionsChangedListener}. This is not\n     * strictly necessary as the listener will automatically be unregistered if an attempt to\n     * invoke the listener fails.\n     *\n     * @param listener that is to be unregistered.\n     ",
+    "comment" : "\n     * Unregister the {@link SubscriptionManager.OnSubscriptionsChangedListener}. This is not\n     * strictly necessary as the listener will automatically be unregistered if an attempt to\n     * invoke the listener fails.\n     *\n     * @param listener that is to be unregistered.\n     * @hide\n     ",
     "links" : [ "SubscriptionManager.OnSubscriptionsChangedListener" ]
   }, {
     "name" : "public void addOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener, @NonNull Executor executor)",
     "returnType" : "void",
-    "comment" : "\n     * Register for changes to the list of opportunistic subscription records or to the\n     * individual records themselves. When a change occurs the onOpportunisticSubscriptionsChanged\n     * method of the listener will be invoked immediately if there has been a notification.\n     *\n     * @param listener an instance of\n     * {@link SubscriptionManager.OnOpportunisticSubscriptionsChangedListener} with\n     *                 onOpportunisticSubscriptionsChanged overridden.\n     * @param executor an Executor that will execute callbacks.\n     ",
+    "comment" : "\n     * Register for changes to the list of opportunistic subscription records or to the\n     * individual records themselves. When a change occurs the onOpportunisticSubscriptionsChanged\n     * method of the listener will be invoked immediately if there has been a notification.\n     *\n     * @param listener an instance of\n     * {@link SubscriptionManager.OnOpportunisticSubscriptionsChangedListener} with\n     *                 onOpportunisticSubscriptionsChanged overridden.\n     * @param executor an Executor that will execute callbacks.\n     * @hide\n     ",
     "links" : [ "SubscriptionManager.OnOpportunisticSubscriptionsChangedListener" ]
   }, {
     "name" : "public void removeOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener)",
     "returnType" : "void",
-    "comment" : "\n     * Unregister the {@link SubscriptionManager.OnOpportunisticSubscriptionsChangedListener}\n     * that is currently listening opportunistic subscriptions change. This is not strictly\n     * necessary as the listener will automatically be unregistered if an attempt to invoke the\n     * listener fails.\n     *\n     * @param listener that is to be unregistered.\n     ",
+    "comment" : "\n     * Unregister the {@link SubscriptionManager.OnOpportunisticSubscriptionsChangedListener}\n     * that is currently listening opportunistic subscriptions change. This is not strictly\n     * necessary as the listener will automatically be unregistered if an attempt to invoke the\n     * listener fails.\n     *\n     * @param listener that is to be unregistered.\n     * @hide\n     ",
     "links" : [ "SubscriptionManager.OnOpportunisticSubscriptionsChangedListener" ]
   }, {
-    "name" : "public void listenForSubscriber(int subId, @NonNull String pkg, @NonNull String featureId, @NonNull PhoneStateListener listener, int events, boolean notifyNow)",
+    "name" : "public void listenFromListener(int subId, @NonNull boolean renounceFineLocationAccess, @NonNull boolean renounceCoarseLocationAccess, @NonNull String pkg, @NonNull String featureId, @NonNull PhoneStateListener listener, @NonNull int events, boolean notifyNow)",
     "returnType" : "void",
-    "comment" : "\n     * Listen for incoming subscriptions\n     * @param subId Subscription ID\n     * @param pkg Package name\n     * @param featureId Feature ID\n     * @param listener Listener providing callback\n     * @param events Events\n     * @param notifyNow Whether to notify instantly\n     ",
+    "comment" : "\n     * Listen for incoming subscriptions\n     * @param subId Subscription ID\n     * @param pkg Package name\n     * @param featureId Feature ID\n     * @param listener Listener providing callback\n     * @param events Events\n     * @param notifyNow Whether to notify instantly\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void listenFromCallback(boolean renounceFineLocationAccess, boolean renounceCoarseLocationAccess, int subId, @NonNull String pkg, @NonNull String featureId, @NonNull TelephonyCallback telephonyCallback, @NonNull int[] events, boolean notifyNow)",
+    "returnType" : "void",
+    "comment" : "\n     * Listen for incoming subscriptions\n     * @param subId Subscription ID\n     * @param pkg Package name\n     * @param featureId Feature ID\n     * @param telephonyCallback Listener providing callback\n     * @param events List events\n     * @param notifyNow Whether to notify instantly\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyCarrierNetworkChange(boolean active)",
     "returnType" : "void",
-    "comment" : "\n     * Informs the system of an intentional upcoming carrier network change by a carrier app.\n     * This call only used to allow the system to provide alternative UI while telephony is\n     * performing an action that may result in intentional, temporary network lack of connectivity.\n     * <p>\n     * Based on the active parameter passed in, this method will either show or hide the alternative\n     * UI. There is no timeout associated with showing this UX, so a carrier app must be sure to\n     * call with active set to false sometime after calling with it set to {@code true}.\n     * <p>\n     * Requires Permission: calling app has carrier privileges.\n     *\n     * @param active Whether the carrier network change is or shortly will be\n     * active. Set this value to true to begin showing alternative UI and false to stop.\n     * @see TelephonyManager#hasCarrierPrivileges\n     ",
+    "comment" : "\n     * Informs the system of an intentional upcoming carrier network change by a carrier app.\n     * This call only used to allow the system to provide alternative UI while telephony is\n     * performing an action that may result in intentional, temporary network lack of connectivity.\n     * <p>\n     * Based on the active parameter passed in, this method will either show or hide the alternative\n     * UI. There is no timeout associated with showing this UX, so a carrier app must be sure to\n     * call with active set to false sometime after calling with it set to {@code true}.\n     * <p>\n     * This will apply to all subscriptions the carrier app has carrier privileges on.\n     * <p>\n     * Requires Permission: calling app has carrier privileges.\n     *\n     * @param active Whether the carrier network change is or shortly will be\n     * active. Set this value to true to begin showing alternative UI and false to stop.\n     * @see TelephonyManager#hasCarrierPrivileges\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyCallStateChanged(int subId, int slotIndex, @CallState int state, @Nullable String incomingNumber)",
+    "name" : "public void notifyCarrierNetworkChange(int subscriptionId, boolean active)",
     "returnType" : "void",
-    "comment" : "\n     * Notify call state changed on certain subscription.\n     *\n     * @param subId for which call state changed.\n     * @param slotIndex for which call state changed. Can be derived from subId except when subId is\n     * invalid.\n     * @param state latest call state. e.g, offhook, ringing\n     * @param incomingNumber incoming phone number.\n     ",
+    "comment" : "\n     * Informs the system of an intentional upcoming carrier network change by a carrier app on the\n     * given {@code subscriptionId}. This call only used to allow the system to provide alternative\n     * UI while telephony is performing an action that may result in intentional, temporary network\n     * lack of connectivity.\n     * <p>\n     * Based on the active parameter passed in, this method will either show or hide the\n     * alternative UI. There is no timeout associated with showing this UX, so a carrier app must be\n     * sure to call with active set to false sometime after calling with it set to {@code true}.\n     * <p>\n     * Requires Permission: calling app has carrier privileges.\n     *\n     * @param subscriptionId the subscription of the carrier network.\n     * @param active whether the carrier network change is or shortly will be active. Set this value\n     *              to true to begin showing alternative UI and false to stop.\n     * @see TelephonyManager#hasCarrierPrivileges\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyCallStateChanged(int slotIndex, int subId, @CallState int state, @Nullable String incomingNumber)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify call state changed on certain subscription.\n     *\n     * @param slotIndex for which call state changed. Can be derived from subId except when subId is\n     * invalid.\n     * @param subId for which call state changed.\n     * @param state latest call state. e.g, offhook, ringing\n     * @param incomingNumber incoming phone number.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyCallStateChangedForAllSubscriptions(@CallState int state, @Nullable String incomingNumber)",
     "returnType" : "void",
-    "comment" : "\n     * Notify call state changed on all subscriptions.\n     *\n     * @param state latest call state. e.g, offhook, ringing\n     * @param incomingNumber incoming phone number.\n     * @hide\n     ",
+    "comment" : "\n     * Notify call state changed on all subscriptions, excluding over-the-top VOIP calls (otherwise\n     * known as self-managed calls in the Android Platform).\n     *\n     * @param state latest call state. e.g, offhook, ringing\n     * @param incomingNumber incoming phone number or null in the case for OTT VOIP calls\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifySubscriptionInfoChanged()",
@@ -95,136 +116,236 @@
     "comment" : "\n     * Notify opportunistic {@link SubscriptionInfo} change.\n     * @hide\n     ",
     "links" : [ "android.telephony.SubscriptionInfo" ]
   }, {
-    "name" : "public void notifyServiceStateChanged(int subId, int slotIndex, @NonNull ServiceState state)",
+    "name" : "public void notifyServiceStateChanged(int slotIndex, int subId, @NonNull ServiceState state)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link ServiceState} update on certain subscription.\n     *\n     * @param subId for which the service state changed.\n     * @param slotIndex for which the service state changed. Can be derived from subId except\n     * subId is invalid.\n     * @param state service state e.g, in service, out of service or roaming status.\n     ",
+    "comment" : "\n     * Notify {@link ServiceState} update on certain subscription.\n     *\n     * @param slotIndex for which the service state changed. Can be derived from subId except\n     * subId is invalid.\n     * @param subId for which the service state changed.\n     * @param state service state e.g, in service, out of service or roaming status.\n     * @hide\n     ",
     "links" : [ "android.telephony.ServiceState" ]
   }, {
-    "name" : "public void notifySignalStrengthChanged(int subId, int slotIndex, @NonNull SignalStrength signalStrength)",
+    "name" : "public void notifySignalStrengthChanged(int slotIndex, int subId, @NonNull SignalStrength signalStrength)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link SignalStrength} update on certain subscription.\n     *\n     * @param subId for which the signalstrength changed.\n     * @param slotIndex for which the signalstrength changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param signalStrength e.g, signalstrength level {@see SignalStrength#getLevel()}\n     ",
+    "comment" : "\n     * Notify {@link SignalStrength} update on certain subscription.\n     *\n     * @param slotIndex for which the signalstrength changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param subId for which the signalstrength changed.\n     * @param signalStrength e.g, signalstrength level {@see SignalStrength#getLevel()}\n     * @hide\n     ",
     "links" : [ "android.telephony.SignalStrength" ]
   }, {
-    "name" : "public void notifyMessageWaitingChanged(int subId, int slotIndex, boolean msgWaitingInd)",
+    "name" : "public void notifyMessageWaitingChanged(int slotIndex, int subId, boolean msgWaitingInd)",
     "returnType" : "void",
-    "comment" : "\n     * Notify changes to the message-waiting indicator on certain subscription. e.g, The status bar\n     * uses message waiting indicator to determine when to display the voicemail icon.\n     *\n     * @param subId for which message waiting indicator changed.\n     * @param slotIndex for which message waiting indicator changed. Can be derived from subId\n     * except when subId is invalid.\n     * @param msgWaitingInd {@code true} indicates there is message-waiting indicator, {@code false}\n     * otherwise.\n     ",
+    "comment" : "\n     * Notify changes to the message-waiting indicator on certain subscription. e.g, The status bar\n     * uses message waiting indicator to determine when to display the voicemail icon.\n     *\n     * @param slotIndex for which message waiting indicator changed. Can be derived from subId\n     * except when subId is invalid.\n     * @param subId for which message waiting indicator changed.\n     * @param msgWaitingInd {@code true} indicates there is message-waiting indicator, {@code false}\n     * otherwise.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyCallForwardingChanged(int subId, boolean callForwardInd)",
     "returnType" : "void",
-    "comment" : "\n     * Notify changes to the call-forwarding status on certain subscription.\n     *\n     * @param subId for which call forwarding status changed.\n     * @param callForwardInd {@code true} indicates there is call forwarding, {@code false}\n     * otherwise.\n     ",
+    "comment" : "\n     * Notify changes to the call-forwarding status on certain subscription.\n     *\n     * @param subId for which call forwarding status changed.\n     * @param callForwardInd {@code true} indicates there is call forwarding, {@code false}\n     * otherwise.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyDataActivityChanged(int subId, @DataActivityType int dataActivityType)",
     "returnType" : "void",
-    "comment" : "\n     * Notify changes to activity state changes on certain subscription.\n     *\n     * @param subId for which data activity state changed.\n     * @param dataActivityType indicates the latest data activity type e.g, {@link\n     * TelephonyManager#DATA_ACTIVITY_IN}\n     ",
+    "comment" : "\n     * Notify changes to activity state changes on certain subscription.\n     *\n     * @param subId for which data activity state changed.\n     * @param dataActivityType indicates the latest data activity type e.g. {@link\n     * TelephonyManager#DATA_ACTIVITY_IN}\n     * @hide\n     ",
     "links" : [ "android.telephony.TelephonyManager#DATA_ACTIVITY_IN" ]
   }, {
-    "name" : "public void notifyDataConnectionForSubscriber(int slotIndex, int subId, @ApnType int apnType, @Nullable PreciseDataConnectionState preciseState)",
+    "name" : "public void notifyDataActivityChanged(int slotIndex, int subId, @DataActivityType int dataActivityType)",
     "returnType" : "void",
-    "comment" : "\n     * Notify changes to default (Internet) data connection state on certain subscription.\n     *\n     * @param subId for which data connection state changed.\n     * @param slotIndex for which data connections state changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param apnType the apn type bitmask, defined with {@code ApnSetting#TYPE_*} flags.\n     * @param preciseState the PreciseDataConnectionState\n     *\n     * @see android.telephony.PreciseDataConnection\n     * @see TelephonyManager#DATA_DISCONNECTED\n     ",
+    "comment" : "\n     * Notify changes to activity state changes on certain subscription.\n     *\n     * @param slotIndex for which data activity changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param subId for which data activity state changed.\n     * @param dataActivityType indicates the latest data activity type e.g. {@link\n     * TelephonyManager#DATA_ACTIVITY_IN}\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyManager#DATA_ACTIVITY_IN" ]
+  }, {
+    "name" : "public void notifyDataConnectionForSubscriber(int slotIndex, int subId, @NonNull PreciseDataConnectionState preciseState)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify changes to default (Internet) data connection state on certain subscription.\n     *\n     * @param slotIndex for which data connections state changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param subId for which data connection state changed.\n     * @param preciseState the PreciseDataConnectionState\n     *\n     * @see PreciseDataConnectionState\n     * @see TelephonyManager#DATA_DISCONNECTED\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyCallQualityChanged(int subId, int slotIndex, @NonNull CallQuality callQuality, @NetworkType int networkType)",
+    "name" : "public void notifyCallQualityChanged(int slotIndex, int subId, @NonNull CallQuality callQuality, @NetworkType int networkType)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link CallQuality} change on certain subscription.\n     *\n     * @param subId for which call quality state changed.\n     * @param slotIndex for which call quality state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param callQuality Information about call quality e.g, call quality level\n     * @param networkType associated with this data connection. e.g, LTE\n     ",
+    "comment" : "\n     * Notify {@link CallQuality} change on certain subscription.\n     *\n     * @param slotIndex for which call quality state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param subId for which call quality state changed.\n     * @param callQuality Information about call quality e.g, call quality level\n     * @param networkType associated with this data connection. e.g, LTE\n     * @hide\n     ",
     "links" : [ "android.telephony.CallQuality" ]
   }, {
-    "name" : "public void notifyEmergencyNumberList(int subId, int slotIndex)",
+    "name" : "public void notifyMediaQualityStatusChanged(int slotIndex, int subId, @NonNull MediaQualityStatus status)",
     "returnType" : "void",
-    "comment" : "\n     * Notify emergency number list changed on certain subscription.\n     *\n     * @param subId for which emergency number list changed.\n     * @param slotIndex for which emergency number list changed. Can be derived from subId except\n     * when subId is invalid.\n     ",
+    "comment" : "\n     * Notify change of media quality status {@link MediaQualityStatus} crosses media quality\n     * threshold\n     * <p/>\n     * Currently thresholds for this indication can be configurable by CARRIER_CONFIG\n     * {@link CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_PACKET_LOSS_RATE_INT}\n     * {@link CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_INACTIVITY_TIME_IN_MILLIS_INT}\n     * {@link CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_JITTER_INT}\n     *\n     * @param status media quality status\n     * @hide\n     ",
+    "links" : [ "android.telephony.ims.MediaQualityStatus", "android.telephony.CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_JITTER_INT", "android.telephony.CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_INACTIVITY_TIME_IN_MILLIS_INT", "android.telephony.CarrierConfigManager#KEY_VOICE_RTP_THRESHOLDS_PACKET_LOSS_RATE_INT" ]
+  }, {
+    "name" : "public void notifyEmergencyNumberList(int slotIndex, int subId)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify emergency number list changed on certain subscription.\n     *\n     * @param slotIndex for which emergency number list changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param subId for which emergency number list changed.\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyOutgoingEmergencyCall(int phoneId, int subId, @NonNull EmergencyNumber emergencyNumber)",
+    "name" : "public void notifyOutgoingEmergencyCall(int simSlotIndex, int subscriptionId, @NonNull EmergencyNumber emergencyNumber)",
     "returnType" : "void",
-    "comment" : "\n     * Notify outgoing emergency call.\n     * @param phoneId Sender phone ID.\n     * @param subId Sender subscription ID.\n     * @param emergencyNumber Emergency number.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Notify outgoing emergency call to all applications that have registered a listener\n     * ({@link PhoneStateListener}) or a callback ({@link TelephonyCallback}) to monitor changes in\n     * telephony states.\n     * @param simSlotIndex Sender phone ID.\n     * @param subscriptionId Sender subscription ID.\n     * @param emergencyNumber Emergency number.\n     * @hide\n     ",
+    "links" : [ "android.telephony.PhoneStateListener", "android.telephony.TelephonyCallback" ]
   }, {
     "name" : "public void notifyOutgoingEmergencySms(int phoneId, int subId, @NonNull EmergencyNumber emergencyNumber)",
     "returnType" : "void",
-    "comment" : "\n     * Notify outgoing emergency SMS.\n     * @param phoneId Sender phone ID.\n     * @param subId Sender subscription ID.\n     * @param emergencyNumber Emergency number.\n     ",
+    "comment" : "\n     * Notify outgoing emergency SMS.\n     * @param phoneId Sender phone ID.\n     * @param subId Sender subscription ID.\n     * @param emergencyNumber Emergency number.\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyRadioPowerStateChanged(int subId, int slotIndex, @RadioPowerState int radioPowerState)",
+    "name" : "public void notifyRadioPowerStateChanged(int slotIndex, int subId, @RadioPowerState int radioPowerState)",
     "returnType" : "void",
-    "comment" : "\n     * Notify radio power state changed on certain subscription.\n     *\n     * @param subId for which radio power state changed.\n     * @param slotIndex for which radio power state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param radioPowerState the current modem radio state.\n     ",
+    "comment" : "\n     * Notify radio power state changed on certain subscription.\n     *\n     * @param slotIndex for which radio power state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param subId for which radio power state changed.\n     * @param radioPowerState the current modem radio state.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyPhoneCapabilityChanged(@NonNull PhoneCapability phoneCapability)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link PhoneCapability} changed.\n     *\n     * @param phoneCapability the capability of the modem group.\n     ",
+    "comment" : "\n     * Notify {@link PhoneCapability} changed.\n     *\n     * @param phoneCapability the capability of the modem group.\n     * @hide\n     ",
     "links" : [ "android.telephony.PhoneCapability" ]
   }, {
-    "name" : "public void notifyDataActivationStateChanged(int subId, int slotIndex, @SimActivationState int activationState)",
+    "name" : "public void notifyDataActivationStateChanged(int slotIndex, int subId, @SimActivationState int activationState)",
     "returnType" : "void",
-    "comment" : "\n     * Notify data activation state changed on certain subscription.\n     * @see TelephonyManager#getDataActivationState()\n     *\n     * @param subId for which data activation state changed.\n     * @param slotIndex for which data activation state changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param activationState sim activation state e.g, activated.\n     ",
+    "comment" : "\n     * Notify data activation state changed on certain subscription.\n     * @see TelephonyManager#getDataActivationState()\n     *\n     * @param slotIndex for which data activation state changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param subId for which data activation state changed.\n     * @param activationState sim activation state e.g, activated.\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyVoiceActivationStateChanged(int subId, int slotIndex, @SimActivationState int activationState)",
+    "name" : "public void notifyVoiceActivationStateChanged(int slotIndex, int subId, @SimActivationState int activationState)",
     "returnType" : "void",
-    "comment" : "\n     * Notify voice activation state changed on certain subscription.\n     * @see TelephonyManager#getVoiceActivationState()\n     *\n     * @param subId for which voice activation state changed.\n     * @param slotIndex for which voice activation state changed. Can be derived from subId except\n     * subId is invalid.\n     * @param activationState sim activation state e.g, activated.\n     ",
+    "comment" : "\n     * Notify voice activation state changed on certain subscription.\n     * @see TelephonyManager#getVoiceActivationState()\n     *\n     * @param slotIndex for which voice activation state changed. Can be derived from subId except\n     * subId is invalid.\n     * @param subId for which voice activation state changed.\n     * @param activationState sim activation state e.g, activated.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyUserMobileDataStateChanged(int slotIndex, int subId, boolean state)",
     "returnType" : "void",
-    "comment" : "\n     * Notify User mobile data state changed on certain subscription. e.g, mobile data is enabled\n     * or disabled.\n     *\n     * @param subId for which mobile data state has changed.\n     * @param slotIndex for which mobile data state has changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param state {@code true} indicates mobile data is enabled/on. {@code false} otherwise.\n     ",
+    "comment" : "\n     * Notify User mobile data state changed on certain subscription. e.g, mobile data is enabled\n     * or disabled.\n     *\n     * @param slotIndex for which mobile data state has changed. Can be derived from subId except\n     * when subId is invalid.\n     * @param subId for which mobile data state has changed.\n     * @param state {@code true} indicates mobile data is enabled/on. {@code false} otherwise.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyDisplayInfoChanged(int slotIndex, int subscriptionId, @NonNull TelephonyDisplayInfo telephonyDisplayInfo)",
     "returnType" : "void",
-    "comment" : "\n     * Notify display info changed.\n     *\n     * @param slotIndex The SIM slot index for which display info has changed. Can be\n     * derived from {@code subscriptionId} except when {@code subscriptionId} is invalid, such as\n     * when the device is in emergency-only mode.\n     * @param subscriptionId Subscription id for which display network info has changed.\n     * @param telephonyDisplayInfo The display info.\n     ",
+    "comment" : "\n     * Notify display info changed.\n     *\n     * @param slotIndex The SIM slot index for which display info has changed. Can be\n     * derived from {@code subscriptionId} except when {@code subscriptionId} is invalid, such as\n     * when the device is in emergency-only mode.\n     * @param subscriptionId Subscription id for which display network info has changed.\n     * @param telephonyDisplayInfo The display info.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyImsDisconnectCause(int subId, @NonNull ImsReasonInfo imsReasonInfo)",
     "returnType" : "void",
-    "comment" : "\n     * Notify IMS call disconnect causes which contains {@link android.telephony.ims.ImsReasonInfo}.\n     *\n     * @param subId for which ims call disconnect.\n     * @param imsReasonInfo the reason for ims call disconnect.\n     ",
+    "comment" : "\n     * Notify IMS call disconnect causes which contains {@link android.telephony.ims.ImsReasonInfo}.\n     *\n     * @param subId for which ims call disconnect.\n     * @param imsReasonInfo the reason for ims call disconnect.\n     * @hide\n     ",
     "links" : [ "android.telephony.ims.ImsReasonInfo" ]
-  }, {
-    "name" : "public void notifyPreciseDataConnectionFailed(int subId, int slotIndex, @ApnType int apnType, @Nullable String apn, @DataFailureCause int failCause)",
-    "returnType" : "void",
-    "comment" : "\n     * Notify precise data connection failed cause on certain subscription.\n     *\n     * @param subId for which data connection failed.\n     * @param slotIndex for which data conenction failed. Can be derived from subId except when\n     * subId is invalid.\n     * @param apnType the apn type bitmask, defined with {@code ApnSetting#TYPE_*} flags.\n     * @param apn the APN {@link ApnSetting#getApnName()} of this data connection.\n     * @param failCause data fail cause.\n     ",
-    "links" : [ "android.telephony.data.ApnSetting#getApnName()" ]
   }, {
     "name" : "public void notifySrvccStateChanged(int subId, @SrvccState int state)",
     "returnType" : "void",
-    "comment" : "\n     * Notify single Radio Voice Call Continuity (SRVCC) state change for the currently active call\n     * on certain subscription.\n     *\n     * @param subId for which srvcc state changed.\n     * @param state srvcc state\n     ",
+    "comment" : "\n     * Notify single Radio Voice Call Continuity (SRVCC) state change for the currently active call\n     * on certain subscription.\n     *\n     * @param subId for which srvcc state changed.\n     * @param state srvcc state\n     * @hide\n     ",
     "links" : [ ]
   }, {
-    "name" : "public void notifyPreciseCallState(int subId, int slotIndex, @PreciseCallStates int ringCallPreciseState, @PreciseCallStates int foregroundCallPreciseState, @PreciseCallStates int backgroundCallPreciseState)",
+    "name" : "public void notifyPreciseCallState(int slotIndex, int subId, @Annotation.PreciseCallStates int[] callStates, String[] imsCallIds, @Annotation.ImsCallServiceType int[] imsServiceTypes, @Annotation.ImsCallType int[] imsCallTypes)",
     "returnType" : "void",
-    "comment" : "\n     * Notify precise call state changed on certain subscription, including foreground, background\n     * and ringcall states.\n     *\n     * @param subId for which precise call state changed.\n     * @param slotIndex for which precise call state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param ringCallPreciseState ringCall state.\n     * @param foregroundCallPreciseState foreground call state.\n     * @param backgroundCallPreciseState background call state.\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Notify precise call state changed on certain subscription, including foreground, background\n     * and ringcall states.\n     *\n     * @param slotIndex for which precise call state changed. Can be derived from subId except when\n     * subId is invalid.\n     * @param subId for which precise call state changed.\n     * @param callStates Array of PreciseCallState of foreground, background & ringing calls.\n     * @param imsCallIds Array of IMS call session ID{@link ImsCallSession#getCallId} for\n     *                   ringing, foreground & background calls.\n     * @param imsServiceTypes Array of IMS call service type for ringing, foreground &\n     *                        background calls.\n     * @param imsCallTypes Array of IMS call type for ringing, foreground & background calls.\n     * @hide\n     ",
+    "links" : [ "android.telephony.ims.ImsCallSession#getCallId" ]
   }, {
     "name" : "public void notifyDisconnectCause(int slotIndex, int subId, @DisconnectCauses int cause, @PreciseDisconnectCauses int preciseCause)",
     "returnType" : "void",
-    "comment" : "\n     * Notify call disconnect causes which contains {@link DisconnectCause} and {@link\n     * android.telephony.PreciseDisconnectCause}.\n     *\n     * @param slotIndex for which call disconnected. Can be derived from subId except when subId is\n     * invalid.\n     * @param subId for which call disconnected.\n     * @param cause {@link DisconnectCause} for the disconnected call.\n     * @param preciseCause {@link android.telephony.PreciseDisconnectCause} for the disconnected\n     * call.\n     ",
+    "comment" : "\n     * Notify call disconnect causes which contains {@link DisconnectCause} and {@link\n     * android.telephony.PreciseDisconnectCause}.\n     *\n     * @param slotIndex for which call disconnected. Can be derived from subId except when subId is\n     * invalid.\n     * @param subId for which call disconnected.\n     * @param cause {@link DisconnectCause} for the disconnected call.\n     * @param preciseCause {@link android.telephony.PreciseDisconnectCause} for the disconnected\n     * call.\n     * @hide\n     ",
     "links" : [ "android.telephony.DisconnectCause", "android.telephony.PreciseDisconnectCause" ]
   }, {
     "name" : "public void notifyCellLocation(int subId, @NonNull CellIdentity cellLocation)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link android.telephony.CellLocation} changed.\n     *\n     * <p>To be compatible with {@link TelephonyRegistry}, use {@link CellIdentity} which is\n     * parcelable, and convert to CellLocation in client code.\n     ",
+    "comment" : "\n     * Notify {@link android.telephony.CellLocation} changed.\n     *\n     * <p>To be compatible with {@link TelephonyRegistry}, use {@link CellIdentity} which is\n     * parcelable, and convert to CellLocation in client code.\n     * @hide\n     ",
     "links" : [ "com.android.internal.telephony.ITelephonyRegistry", "android.telephony.CellLocation", "android.telephony.CellIdentity" ]
   }, {
     "name" : "public void notifyCellInfoChanged(int subId, @NonNull List<CellInfo> cellInfo)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link CellInfo} changed on certain subscription. e.g, when an observed cell info has\n     * changed or new cells have been added or removed on the given subscription.\n     *\n     * @param subId for which cellinfo changed.\n     * @param cellInfo A list of cellInfo associated with the given subscription.\n     ",
+    "comment" : "\n     * Notify {@link CellInfo} changed on certain subscription. e.g, when an observed cell info has\n     * changed or new cells have been added or removed on the given subscription.\n     *\n     * @param subId for which cellinfo changed.\n     * @param cellInfo A list of cellInfo associated with the given subscription.\n     * @hide\n     ",
     "links" : [ "android.telephony.CellInfo" ]
   }, {
     "name" : "public void notifyActiveDataSubIdChanged(int activeDataSubId)",
     "returnType" : "void",
-    "comment" : "\n     * Notify that the active data subscription ID has changed.\n     * @param activeDataSubId The new subscription ID for active data\n     ",
+    "comment" : "\n     * Notify that the active data subscription ID has changed.\n     * @param activeDataSubId The new subscription ID for active data\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyRegistrationFailed(int slotIndex, int subId, @NonNull CellIdentity cellIdentity, @NonNull String chosenPlmn, int domain, int causeCode, int additionalCauseCode)",
     "returnType" : "void",
-    "comment" : "\n     * Report that Registration or a Location/Routing/Tracking Area update has failed.\n     *\n     * @param slotIndex for which call disconnected. Can be derived from subId except when subId is\n     * invalid.\n     * @param subId for which cellinfo changed.\n     * @param cellIdentity the CellIdentity, which must include the globally unique identifier\n     *        for the cell (for example, all components of the CGI or ECGI).\n     * @param chosenPlmn a 5 or 6 digit alphanumeric PLMN (MCC|MNC) among those broadcast by the\n     *         cell that was chosen for the failed registration attempt.\n     * @param domain DOMAIN_CS, DOMAIN_PS or both in case of a combined procedure.\n     * @param causeCode the primary failure cause code of the procedure.\n     *        For GSM/UMTS (MM), values are in TS 24.008 Sec 10.5.95\n     *        For GSM/UMTS (GMM), values are in TS 24.008 Sec 10.5.147\n     *        For LTE (EMM), cause codes are TS 24.301 Sec 9.9.3.9\n     *        For NR (5GMM), cause codes are TS 24.501 Sec 9.11.3.2\n     *        Integer.MAX_VALUE if this value is unused.\n     * @param additionalCauseCode the cause code of any secondary/combined procedure if appropriate.\n     *        For UMTS, if a combined attach succeeds for PS only, then the GMM cause code shall be\n     *        included as an additionalCauseCode. For LTE (ESM), cause codes are in\n     *        TS 24.301 9.9.4.4. Integer.MAX_VALUE if this value is unused.\n     ",
+    "comment" : "\n     * Report that Registration or a Location/Routing/Tracking Area update has failed.\n     *\n     * @param slotIndex for which call disconnected. Can be derived from subId except when subId is\n     * invalid.\n     * @param subId for which cellinfo changed.\n     * @param cellIdentity the CellIdentity, which must include the globally unique identifier\n     *        for the cell (for example, all components of the CGI or ECGI).\n     * @param chosenPlmn a 5 or 6 digit alphanumeric PLMN (MCC|MNC) among those broadcast by the\n     *         cell that was chosen for the failed registration attempt.\n     * @param domain DOMAIN_CS, DOMAIN_PS or both in case of a combined procedure.\n     * @param causeCode the primary failure cause code of the procedure.\n     *        For GSM/UMTS (MM), values are in TS 24.008 Sec 10.5.95\n     *        For GSM/UMTS (GMM), values are in TS 24.008 Sec 10.5.147\n     *        For LTE (EMM), cause codes are TS 24.301 Sec 9.9.3.9\n     *        For NR (5GMM), cause codes are TS 24.501 Sec 9.11.3.2\n     *        Integer.MAX_VALUE if this value is unused.\n     * @param additionalCauseCode the cause code of any secondary/combined procedure if appropriate.\n     *        For UMTS, if a combined attach succeeds for PS only, then the GMM cause code shall be\n     *        included as an additionalCauseCode. For LTE (ESM), cause codes are in\n     *        TS 24.301 9.9.4.4. Integer.MAX_VALUE if this value is unused.\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void notifyBarringInfoChanged(int slotIndex, int subId, @NonNull BarringInfo barringInfo)",
     "returnType" : "void",
-    "comment" : "\n     * Notify {@link BarringInfo} has changed for a specific subscription.\n     *\n     * @param slotIndex for the phone object that got updated barring info.\n     * @param subId for which the BarringInfo changed.\n     * @param barringInfo updated BarringInfo.\n     ",
+    "comment" : "\n     * Notify {@link BarringInfo} has changed for a specific subscription.\n     *\n     * @param slotIndex for the phone object that got updated barring info.\n     * @param subId for which the BarringInfo changed.\n     * @param barringInfo updated BarringInfo.\n     * @hide\n     ",
     "links" : [ "android.telephony.BarringInfo" ]
+  }, {
+    "name" : "public void notifyPhysicalChannelConfigForSubscriber(int slotIndex, int subId, List<PhysicalChannelConfig> configs)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify {@link PhysicalChannelConfig} has changed for a specific subscription.\n     *\n     * @param slotIndex for which physical channel configs changed.\n     * @param subId the subId\n     * @param configs a list of {@link PhysicalChannelConfig}, the configs of physical channel.\n     * @hide\n     ",
+    "links" : [ "android.telephony.PhysicalChannelConfig" ]
+  }, {
+    "name" : "public void notifyDataEnabled(int slotIndex, int subId, boolean enabled, @TelephonyManager.DataEnabledReason int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify that the data enabled has changed.\n     *\n     * @param enabled True if data is enabled, otherwise disabled.\n     * @param reason Reason for data enabled/disabled. See {@code REASON_*} in\n     * {@link TelephonyManager}.\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyManager" ]
+  }, {
+    "name" : "public void notifyAllowedNetworkTypesChanged(int slotIndex, int subId, int reason, long allowedNetworkType)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify the allowed network types has changed for a specific subscription and the specific\n     * reason.\n     * @param slotIndex for which allowed network types changed.\n     * @param subId for which allowed network types changed.\n     * @param reason an allowed network type reasons.\n     * @param allowedNetworkType an allowed network type bitmask value.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyLinkCapacityEstimateChanged(int slotIndex, int subId, List<LinkCapacityEstimate> linkCapacityEstimateList)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify that the link capacity estimate has changed.\n     * @param slotIndex for the phone object that gets the updated link capacity estimate\n     * @param subId for subscription that gets the updated link capacity estimate\n     * @param linkCapacityEstimateList a list of {@link  LinkCapacityEstimate}\n     * @hide\n     ",
+    "links" : [ "android.telephony.LinkCapacityEstimate" ]
+  }, {
+    "name" : "public void notifySimultaneousCellularCallingSubscriptionsChanged(@NonNull Set<Integer> subIds)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify external listeners that the subscriptions supporting simultaneous cellular calling\n     * have changed.\n     * @param subIds The new set of subIds supporting simultaneous cellular calling.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyCarrierRoamingNtnModeChanged(int subId, boolean active)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify external listeners that carrier roaming non-terrestrial network mode changed.\n     * @param subId subscription ID.\n     * @param active {@code true} If the device is connected to carrier roaming\n     *                           non-terrestrial network or was connected within the\n     *                           {CarrierConfigManager#KEY_SATELLITE_CONNECTION_HYSTERESIS_SEC_INT}\n     *                           duration, {code false} otherwise.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Set<Integer> getEventsFromCallback(@NonNull TelephonyCallback telephonyCallback)",
+    "returnType" : "Set<Integer>",
+    "comment" : "\n     * Processes potential event changes from the provided {@link TelephonyCallback}.\n     *\n     * @param telephonyCallback callback for monitoring callback changes to the telephony state.\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyCallback" ]
+  }, {
+    "name" : "private Set<Integer> getEventsFromBitmask(int eventMask)",
+    "returnType" : "Set<Integer>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerTelephonyCallback(boolean renounceFineLocationAccess, boolean renounceCoarseLocationAccess, @NonNull @CallbackExecutor Executor executor, int subId, String pkgName, String attributionTag, @NonNull TelephonyCallback callback, boolean notifyNow)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a callback object to receive notification of changes in specified telephony states.\n     * <p>\n     * To register a callback, pass a {@link TelephonyCallback} which implements\n     * interfaces of events. For example,\n     * FakeServiceStateCallback extends {@link TelephonyCallback} implements\n     * {@link TelephonyCallback.ServiceStateListener}.\n     *\n     * At registration, and when a specified telephony state changes, the telephony manager invokes\n     * the appropriate callback method on the callback object and passes the current (updated)\n     * values.\n     * <p>\n     *\n     * If this TelephonyManager object has been created with\n     * {@link TelephonyManager#createForSubscriptionId}, applies to the given subId.\n     * Otherwise, applies to {@link SubscriptionManager#getDefaultSubscriptionId()}.\n     * To register events for multiple subIds, pass a separate callback object to\n     * each TelephonyManager object created with {@link TelephonyManager#createForSubscriptionId}.\n     *\n     * Note: if you call this method while in the middle of a binder transaction, you <b>must</b>\n     * call {@link android.os.Binder#clearCallingIdentity()} before calling this method. A\n     * {@link SecurityException} will be thrown otherwise.\n     *\n     * This API should be used sparingly -- large numbers of callbacks will cause system\n     * instability. If a process has registered too many callbacks without unregistering them, it\n     * may encounter an {@link IllegalStateException} when trying to register more callbacks.\n     *\n     * @param callback The {@link TelephonyCallback} object to register.\n     * @hide\n     ",
+    "links" : [ "IllegalStateException", "android.telephony.TelephonyManager#createForSubscriptionId", "android.telephony.SubscriptionManager#getDefaultSubscriptionId()", "android.os.Binder#clearCallingIdentity()", "SecurityException", "TelephonyCallback.ServiceStateListener", "android.telephony.TelephonyCallback" ]
+  }, {
+    "name" : "public void unregisterTelephonyCallback(int subId, String pkgName, String attributionTag, @NonNull TelephonyCallback callback, boolean notifyNow)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregister an existing {@link TelephonyCallback}.\n     *\n     * @param callback The {@link TelephonyCallback} object to unregister.\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyCallback" ]
+  }, {
+    "name" : "public void addCarrierPrivilegesCallback(int logicalSlotIndex, @NonNull @CallbackExecutor Executor executor, @NonNull CarrierPrivilegesCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers a {@link CarrierPrivilegesCallback} on the given {@code logicalSlotIndex} to\n     * receive callbacks when the set of packages with carrier privileges changes. The callback will\n     * immediately be called with the latest state.\n     *\n     * @param logicalSlotIndex The SIM slot to listen on\n     * @param executor The executor where {@code listener} will be invoked\n     * @param callback The callback to register\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyManager.CarrierPrivilegesCallback" ]
+  }, {
+    "name" : "public void removeCarrierPrivilegesCallback(@NonNull CarrierPrivilegesCallback callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregisters a {@link CarrierPrivilegesCallback}.\n     *\n     * @param callback The callback to unregister\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyManager.CarrierPrivilegesCallback" ]
+  }, {
+    "name" : "public void notifyCarrierPrivilegesChanged(int logicalSlotIndex, @NonNull Set<String> privilegedPackageNames, @NonNull Set<Integer> privilegedUids)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify listeners that the set of packages with carrier privileges has changed.\n     *\n     * @param logicalSlotIndex The SIM slot the change occurred on\n     * @param privilegedPackageNames The updated set of packages names with carrier privileges\n     * @param privilegedUids The updated set of UIDs with carrier privileges\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyCarrierServiceChanged(int logicalSlotIndex, @Nullable String packageName, int uid)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify listeners that the {@link CarrierService} for current user has changed.\n     *\n     * @param logicalSlotIndex the SIM slot the change occurred on\n     * @param packageName the package name of the changed {@link CarrierService}\n     * @param uid the UID of the changed {@link CarrierService}\n     * @hide\n     ",
+    "links" : [ "android.service.carrier.CarrierService" ]
+  }, {
+    "name" : "public void addCarrierConfigChangedListener(@NonNull @CallbackExecutor Executor executor, @NonNull CarrierConfigManager.CarrierConfigChangeListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a {@link android.telephony.CarrierConfigManager.CarrierConfigChangeListener} to get\n     * notification when carrier configurations have changed.\n     *\n     * @param executor The executor on which the callback will be executed.\n     * @param listener The CarrierConfigChangeListener to be registered with.\n     * @hide\n     ",
+    "links" : [ "android.telephony.CarrierConfigManager.CarrierConfigChangeListener" ]
+  }, {
+    "name" : "public void removeCarrierConfigChangedListener(@NonNull CarrierConfigManager.CarrierConfigChangeListener listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Unregister to stop the notification when carrier configurations changed.\n     *\n     * @param listener The CarrierConfigChangeListener to be unregistered with.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void notifyCarrierConfigChanged(int slotIndex, int subId, int carrierId, int specificCarrierId)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify the registrants the carrier configurations have changed.\n     *\n     * @param slotIndex         The SIM slot index on which to monitor and get notification.\n     * @param subId             The subscription on the SIM slot. May be\n     *                          {@link SubscriptionManager#INVALID_SUBSCRIPTION_ID}.\n     * @param carrierId         The optional carrier Id, may be\n     *                          {@link TelephonyManager#UNKNOWN_CARRIER_ID}.\n     * @param specificCarrierId The optional specific carrier Id, may be {@link\n     *                          TelephonyManager#UNKNOWN_CARRIER_ID}.\n     * @hide\n     ",
+    "links" : [ "android.telephony.TelephonyManager#UNKNOWN_CARRIER_ID", "android.telephony.SubscriptionManager#INVALID_SUBSCRIPTION_ID" ]
+  }, {
+    "name" : "public void notifyCallBackModeStarted(int phoneId, int subId, @TelephonyManager.EmergencyCallbackModeType int type)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify Callback Mode has been started.\n     * @param phoneId Sender phone ID.\n     * @param subId Sender subscription ID.\n     * @param type for callback mode entry.\n     *             See {@link TelephonyManager.EmergencyCallbackModeType}.\n     * @hide\n     ",
+    "links" : [ "TelephonyManager.EmergencyCallbackModeType" ]
+  }, {
+    "name" : "public void notifyCallbackModeStopped(int phoneId, int subId, @TelephonyManager.EmergencyCallbackModeType int type, @TelephonyManager.EmergencyCallbackModeStopReason int reason)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify Callback Mode has been stopped.\n     * @param phoneId Sender phone ID.\n     * @param subId Sender subscription ID.\n     * @param type for callback mode entry.\n     *             See {@link TelephonyManager.EmergencyCallbackModeType}.\n     * @param reason for changing callback mode.\n     *             See {@link TelephonyManager.EmergencyCallbackModeStopReason}.\n     * @hide\n     ",
+    "links" : [ "TelephonyManager.EmergencyCallbackModeStopReason", "TelephonyManager.EmergencyCallbackModeType" ]
   } ],
-  "variableNames" : [ "TAG", "sRegistry", "mContext", "mSubscriptionChangedListenerMap", "mOpportunisticSubscriptionChangedListenerMap", "LISTEN_CODE_CHANGE", "SIM_ACTIVATION_TYPE_VOICE", "SIM_ACTIVATION_TYPE_DATA" ],
-  "methodNames" : [ "public void addOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener, @NonNull Executor executor)", "public void removeOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener)", "public void addOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener, @NonNull Executor executor)", "public void removeOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener)", "public void listenForSubscriber(int subId, @NonNull String pkg, @NonNull String featureId, @NonNull PhoneStateListener listener, int events, boolean notifyNow)", "public void notifyCarrierNetworkChange(boolean active)", "public void notifyCallStateChanged(int subId, int slotIndex, @CallState int state, @Nullable String incomingNumber)", "public void notifyCallStateChangedForAllSubscriptions(@CallState int state, @Nullable String incomingNumber)", "public void notifySubscriptionInfoChanged()", "public void notifyOpportunisticSubscriptionInfoChanged()", "public void notifyServiceStateChanged(int subId, int slotIndex, @NonNull ServiceState state)", "public void notifySignalStrengthChanged(int subId, int slotIndex, @NonNull SignalStrength signalStrength)", "public void notifyMessageWaitingChanged(int subId, int slotIndex, boolean msgWaitingInd)", "public void notifyCallForwardingChanged(int subId, boolean callForwardInd)", "public void notifyDataActivityChanged(int subId, @DataActivityType int dataActivityType)", "public void notifyDataConnectionForSubscriber(int slotIndex, int subId, @ApnType int apnType, @Nullable PreciseDataConnectionState preciseState)", "public void notifyCallQualityChanged(int subId, int slotIndex, @NonNull CallQuality callQuality, @NetworkType int networkType)", "public void notifyEmergencyNumberList(int subId, int slotIndex)", "public void notifyOutgoingEmergencyCall(int phoneId, int subId, @NonNull EmergencyNumber emergencyNumber)", "public void notifyOutgoingEmergencySms(int phoneId, int subId, @NonNull EmergencyNumber emergencyNumber)", "public void notifyRadioPowerStateChanged(int subId, int slotIndex, @RadioPowerState int radioPowerState)", "public void notifyPhoneCapabilityChanged(@NonNull PhoneCapability phoneCapability)", "public void notifyDataActivationStateChanged(int subId, int slotIndex, @SimActivationState int activationState)", "public void notifyVoiceActivationStateChanged(int subId, int slotIndex, @SimActivationState int activationState)", "public void notifyUserMobileDataStateChanged(int slotIndex, int subId, boolean state)", "public void notifyDisplayInfoChanged(int slotIndex, int subscriptionId, @NonNull TelephonyDisplayInfo telephonyDisplayInfo)", "public void notifyImsDisconnectCause(int subId, @NonNull ImsReasonInfo imsReasonInfo)", "public void notifyPreciseDataConnectionFailed(int subId, int slotIndex, @ApnType int apnType, @Nullable String apn, @DataFailureCause int failCause)", "public void notifySrvccStateChanged(int subId, @SrvccState int state)", "public void notifyPreciseCallState(int subId, int slotIndex, @PreciseCallStates int ringCallPreciseState, @PreciseCallStates int foregroundCallPreciseState, @PreciseCallStates int backgroundCallPreciseState)", "public void notifyDisconnectCause(int slotIndex, int subId, @DisconnectCauses int cause, @PreciseDisconnectCauses int preciseCause)", "public void notifyCellLocation(int subId, @NonNull CellIdentity cellLocation)", "public void notifyCellInfoChanged(int subId, @NonNull List<CellInfo> cellInfo)", "public void notifyActiveDataSubIdChanged(int activeDataSubId)", "public void notifyRegistrationFailed(int slotIndex, int subId, @NonNull CellIdentity cellIdentity, @NonNull String chosenPlmn, int domain, int causeCode, int additionalCauseCode)", "public void notifyBarringInfoChanged(int slotIndex, int subId, @NonNull BarringInfo barringInfo)" ]
+  "methodNames" : [ "public void addOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener, @NonNull Executor executor)", "public void removeOnSubscriptionsChangedListener(@NonNull SubscriptionManager.OnSubscriptionsChangedListener listener)", "public void addOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener, @NonNull Executor executor)", "public void removeOnOpportunisticSubscriptionsChangedListener(@NonNull SubscriptionManager.OnOpportunisticSubscriptionsChangedListener listener)", "public void listenFromListener(int subId, @NonNull boolean renounceFineLocationAccess, @NonNull boolean renounceCoarseLocationAccess, @NonNull String pkg, @NonNull String featureId, @NonNull PhoneStateListener listener, @NonNull int events, boolean notifyNow)", "private void listenFromCallback(boolean renounceFineLocationAccess, boolean renounceCoarseLocationAccess, int subId, @NonNull String pkg, @NonNull String featureId, @NonNull TelephonyCallback telephonyCallback, @NonNull int[] events, boolean notifyNow)", "public void notifyCarrierNetworkChange(boolean active)", "public void notifyCarrierNetworkChange(int subscriptionId, boolean active)", "public void notifyCallStateChanged(int slotIndex, int subId, @CallState int state, @Nullable String incomingNumber)", "public void notifyCallStateChangedForAllSubscriptions(@CallState int state, @Nullable String incomingNumber)", "public void notifySubscriptionInfoChanged()", "public void notifyOpportunisticSubscriptionInfoChanged()", "public void notifyServiceStateChanged(int slotIndex, int subId, @NonNull ServiceState state)", "public void notifySignalStrengthChanged(int slotIndex, int subId, @NonNull SignalStrength signalStrength)", "public void notifyMessageWaitingChanged(int slotIndex, int subId, boolean msgWaitingInd)", "public void notifyCallForwardingChanged(int subId, boolean callForwardInd)", "public void notifyDataActivityChanged(int subId, @DataActivityType int dataActivityType)", "public void notifyDataActivityChanged(int slotIndex, int subId, @DataActivityType int dataActivityType)", "public void notifyDataConnectionForSubscriber(int slotIndex, int subId, @NonNull PreciseDataConnectionState preciseState)", "public void notifyCallQualityChanged(int slotIndex, int subId, @NonNull CallQuality callQuality, @NetworkType int networkType)", "public void notifyMediaQualityStatusChanged(int slotIndex, int subId, @NonNull MediaQualityStatus status)", "public void notifyEmergencyNumberList(int slotIndex, int subId)", "public void notifyOutgoingEmergencyCall(int simSlotIndex, int subscriptionId, @NonNull EmergencyNumber emergencyNumber)", "public void notifyOutgoingEmergencySms(int phoneId, int subId, @NonNull EmergencyNumber emergencyNumber)", "public void notifyRadioPowerStateChanged(int slotIndex, int subId, @RadioPowerState int radioPowerState)", "public void notifyPhoneCapabilityChanged(@NonNull PhoneCapability phoneCapability)", "public void notifyDataActivationStateChanged(int slotIndex, int subId, @SimActivationState int activationState)", "public void notifyVoiceActivationStateChanged(int slotIndex, int subId, @SimActivationState int activationState)", "public void notifyUserMobileDataStateChanged(int slotIndex, int subId, boolean state)", "public void notifyDisplayInfoChanged(int slotIndex, int subscriptionId, @NonNull TelephonyDisplayInfo telephonyDisplayInfo)", "public void notifyImsDisconnectCause(int subId, @NonNull ImsReasonInfo imsReasonInfo)", "public void notifySrvccStateChanged(int subId, @SrvccState int state)", "public void notifyPreciseCallState(int slotIndex, int subId, @Annotation.PreciseCallStates int[] callStates, String[] imsCallIds, @Annotation.ImsCallServiceType int[] imsServiceTypes, @Annotation.ImsCallType int[] imsCallTypes)", "public void notifyDisconnectCause(int slotIndex, int subId, @DisconnectCauses int cause, @PreciseDisconnectCauses int preciseCause)", "public void notifyCellLocation(int subId, @NonNull CellIdentity cellLocation)", "public void notifyCellInfoChanged(int subId, @NonNull List<CellInfo> cellInfo)", "public void notifyActiveDataSubIdChanged(int activeDataSubId)", "public void notifyRegistrationFailed(int slotIndex, int subId, @NonNull CellIdentity cellIdentity, @NonNull String chosenPlmn, int domain, int causeCode, int additionalCauseCode)", "public void notifyBarringInfoChanged(int slotIndex, int subId, @NonNull BarringInfo barringInfo)", "public void notifyPhysicalChannelConfigForSubscriber(int slotIndex, int subId, List<PhysicalChannelConfig> configs)", "public void notifyDataEnabled(int slotIndex, int subId, boolean enabled, @TelephonyManager.DataEnabledReason int reason)", "public void notifyAllowedNetworkTypesChanged(int slotIndex, int subId, int reason, long allowedNetworkType)", "public void notifyLinkCapacityEstimateChanged(int slotIndex, int subId, List<LinkCapacityEstimate> linkCapacityEstimateList)", "public void notifySimultaneousCellularCallingSubscriptionsChanged(@NonNull Set<Integer> subIds)", "public void notifyCarrierRoamingNtnModeChanged(int subId, boolean active)", "public Set<Integer> getEventsFromCallback(@NonNull TelephonyCallback telephonyCallback)", "private Set<Integer> getEventsFromBitmask(int eventMask)", "public void registerTelephonyCallback(boolean renounceFineLocationAccess, boolean renounceCoarseLocationAccess, @NonNull @CallbackExecutor Executor executor, int subId, String pkgName, String attributionTag, @NonNull TelephonyCallback callback, boolean notifyNow)", "public void unregisterTelephonyCallback(int subId, String pkgName, String attributionTag, @NonNull TelephonyCallback callback, boolean notifyNow)", "public void addCarrierPrivilegesCallback(int logicalSlotIndex, @NonNull @CallbackExecutor Executor executor, @NonNull CarrierPrivilegesCallback callback)", "public void removeCarrierPrivilegesCallback(@NonNull CarrierPrivilegesCallback callback)", "public void notifyCarrierPrivilegesChanged(int logicalSlotIndex, @NonNull Set<String> privilegedPackageNames, @NonNull Set<Integer> privilegedUids)", "public void notifyCarrierServiceChanged(int logicalSlotIndex, @Nullable String packageName, int uid)", "public void addCarrierConfigChangedListener(@NonNull @CallbackExecutor Executor executor, @NonNull CarrierConfigManager.CarrierConfigChangeListener listener)", "public void removeCarrierConfigChangedListener(@NonNull CarrierConfigManager.CarrierConfigChangeListener listener)", "public void notifyCarrierConfigChanged(int slotIndex, int subId, int carrierId, int specificCarrierId)", "public void notifyCallBackModeStarted(int phoneId, int subId, @TelephonyManager.EmergencyCallbackModeType int type)", "public void notifyCallbackModeStopped(int phoneId, int subId, @TelephonyManager.EmergencyCallbackModeType int type, @TelephonyManager.EmergencyCallbackModeStopReason int reason)" ],
+  "variableNames" : [ "TAG", "sRegistry", "mContext", "mSubscriptionChangedListenerMap", "mOpportunisticSubscriptionChangedListenerMap", "mCarrierConfigChangeListenerMap", "LISTEN_CODE_CHANGE", "SIM_ACTIVATION_TYPE_VOICE", "SIM_ACTIVATION_TYPE_DATA", "sCarrierPrivilegeCallbacks" ]
 }

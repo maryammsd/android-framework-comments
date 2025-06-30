@@ -1,0 +1,381 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/java/io/ObjectInputStream.java",
+  "packageName" : "java.io",
+  "className" : "ObjectInputStream",
+  "comment" : "\n * An ObjectInputStream deserializes primitive data and objects previously\n * written using an ObjectOutputStream.\n *\n * <p>ObjectOutputStream and ObjectInputStream can provide an application with\n * persistent storage for graphs of objects when used with a FileOutputStream\n * and FileInputStream respectively.  ObjectInputStream is used to recover\n * those objects previously serialized. Other uses include passing objects\n * between hosts using a socket stream or for marshaling and unmarshaling\n * arguments and parameters in a remote communication system.\n *\n * <p>ObjectInputStream ensures that the types of all objects in the graph\n * created from the stream match the classes present in the Java Virtual\n * Machine.  Classes are loaded as required using the standard mechanisms.\n *\n * <p>Only objects that support the java.io.Serializable or\n * java.io.Externalizable interface can be read from streams.\n *\n * <p>The method <code>readObject</code> is used to read an object from the\n * stream.  Java's safe casting should be used to get the desired type.  In\n * Java, strings and arrays are objects and are treated as objects during\n * serialization. When read they need to be cast to the expected type.\n *\n * <p>Primitive data types can be read from the stream using the appropriate\n * method on DataInput.\n *\n * <p>The default deserialization mechanism for objects restores the contents\n * of each field to the value and type it had when it was written.  Fields\n * declared as transient or static are ignored by the deserialization process.\n * References to other objects cause those objects to be read from the stream\n * as necessary.  Graphs of objects are restored correctly using a reference\n * sharing mechanism.  New objects are always allocated when deserializing,\n * which prevents existing objects from being overwritten.\n *\n * <p>Reading an object is analogous to running the constructors of a new\n * object.  Memory is allocated for the object and initialized to zero (NULL).\n * No-arg constructors are invoked for the non-serializable classes and then\n * the fields of the serializable classes are restored from the stream starting\n * with the serializable class closest to java.lang.object and finishing with\n * the object's most specific class.\n *\n * <p>For example to read from a stream as written by the example in\n * ObjectOutputStream:\n * <br>\n * <pre>\n *      FileInputStream fis = new FileInputStream(\"t.tmp\");\n *      ObjectInputStream ois = new ObjectInputStream(fis);\n *\n *      int i = ois.readInt();\n *      String today = (String) ois.readObject();\n *      Date date = (Date) ois.readObject();\n *\n *      ois.close();\n * </pre>\n *\n * <p>Classes control how they are serialized by implementing either the\n * java.io.Serializable or java.io.Externalizable interfaces.\n *\n * <p>Implementing the Serializable interface allows object serialization to\n * save and restore the entire state of the object and it allows classes to\n * evolve between the time the stream is written and the time it is read.  It\n * automatically traverses references between objects, saving and restoring\n * entire graphs.\n *\n * <p>Serializable classes that require special handling during the\n * serialization and deserialization process should implement the following\n * methods:\n *\n * <pre>\n * private void writeObject(java.io.ObjectOutputStream stream)\n *     throws IOException;\n * private void readObject(java.io.ObjectInputStream stream)\n *     throws IOException, ClassNotFoundException;\n * private void readObjectNoData()\n *     throws ObjectStreamException;\n * </pre>\n *\n * <p>The readObject method is responsible for reading and restoring the state\n * of the object for its particular class using data written to the stream by\n * the corresponding writeObject method.  The method does not need to concern\n * itself with the state belonging to its superclasses or subclasses.  State is\n * restored by reading data from the ObjectInputStream for the individual\n * fields and making assignments to the appropriate fields of the object.\n * Reading primitive data types is supported by DataInput.\n *\n * <p>Any attempt to read object data which exceeds the boundaries of the\n * custom data written by the corresponding writeObject method will cause an\n * OptionalDataException to be thrown with an eof field value of true.\n * Non-object reads which exceed the end of the allotted data will reflect the\n * end of data in the same way that they would indicate the end of the stream:\n * bytewise reads will return -1 as the byte read or number of bytes read, and\n * primitive reads will throw EOFExceptions.  If there is no corresponding\n * writeObject method, then the end of default serialized data marks the end of\n * the allotted data.\n *\n * <p>Primitive and object read calls issued from within a readExternal method\n * behave in the same manner--if the stream is already positioned at the end of\n * data written by the corresponding writeExternal method, object reads will\n * throw OptionalDataExceptions with eof set to true, bytewise reads will\n * return -1, and primitive reads will throw EOFExceptions.  Note that this\n * behavior does not hold for streams written with the old\n * <code>ObjectStreamConstants.PROTOCOL_VERSION_1</code> protocol, in which the\n * end of data written by writeExternal methods is not demarcated, and hence\n * cannot be detected.\n *\n * <p>The readObjectNoData method is responsible for initializing the state of\n * the object for its particular class in the event that the serialization\n * stream does not list the given class as a superclass of the object being\n * deserialized.  This may occur in cases where the receiving party uses a\n * different version of the deserialized instance's class than the sending\n * party, and the receiver's version extends classes that are not extended by\n * the sender's version.  This may also occur if the serialization stream has\n * been tampered; hence, readObjectNoData is useful for initializing\n * deserialized objects properly despite a \"hostile\" or incomplete source\n * stream.\n *\n * <p>Serialization does not read or assign values to the fields of any object\n * that does not implement the java.io.Serializable interface.  Subclasses of\n * Objects that are not serializable can be serializable. In this case the\n * non-serializable class must have a no-arg constructor to allow its fields to\n * be initialized.  In this case it is the responsibility of the subclass to\n * save and restore the state of the non-serializable class. It is frequently\n * the case that the fields of that class are accessible (public, package, or\n * protected) or that there are get and set methods that can be used to restore\n * the state.\n *\n * <p>Any exception that occurs while deserializing an object will be caught by\n * the ObjectInputStream and abort the reading process.\n *\n * <p>Implementing the Externalizable interface allows the object to assume\n * complete control over the contents and format of the object's serialized\n * form.  The methods of the Externalizable interface, writeExternal and\n * readExternal, are called to save and restore the objects state.  When\n * implemented by a class they can write and read their own state using all of\n * the methods of ObjectOutput and ObjectInput.  It is the responsibility of\n * the objects to handle any versioning that occurs.\n *\n * <p>Enum constants are deserialized differently than ordinary serializable or\n * externalizable objects.  The serialized form of an enum constant consists\n * solely of its name; field values of the constant are not transmitted.  To\n * deserialize an enum constant, ObjectInputStream reads the constant name from\n * the stream; the deserialized constant is then obtained by calling the static\n * method <code>Enum.valueOf(Class, String)</code> with the enum constant's\n * base type and the received constant name as arguments.  Like other\n * serializable or externalizable objects, enum constants can function as the\n * targets of back references appearing subsequently in the serialization\n * stream.  The process by which enum constants are deserialized cannot be\n * customized: any class-specific readObject, readObjectNoData, and readResolve\n * methods defined by enum types are ignored during deserialization.\n * Similarly, any serialPersistentFields or serialVersionUID field declarations\n * are also ignored--all enum types have a fixed serialVersionUID of 0L.\n *\n * @author      Mike Warres\n * @author      Roger Riggs\n * @see java.io.DataInput\n * @see java.io.ObjectOutputStream\n * @see java.io.Serializable\n * @see <a href=\"../../../platform/serialization/spec/input.html\"> Object Serialization Specification, Section 3, Object Input Classes</a>\n * @since   JDK1.1\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "NULL_HANDLE",
+    "type" : "int",
+    "comment" : " handle value representing null ",
+    "links" : [ ]
+  }, {
+    "name" : "unsharedMarker",
+    "type" : "Object",
+    "comment" : " marker for unshared objects in internal handle table ",
+    "links" : [ ]
+  }, {
+    "name" : "primClasses",
+    "type" : "HashMap<String, Class<?>>",
+    "comment" : " table mapping primitive type names to corresponding class objects ",
+    "links" : [ ]
+  }, {
+    "name" : "bin",
+    "type" : "BlockDataInputStream",
+    "comment" : " filter stream for handling block data conversion ",
+    "links" : [ ]
+  }, {
+    "name" : "vlist",
+    "type" : "ValidationList",
+    "comment" : " validation callback list ",
+    "links" : [ ]
+  }, {
+    "name" : "depth",
+    "type" : "int",
+    "comment" : " private long depth;",
+    "links" : [ ]
+  }, {
+    "name" : "closed",
+    "type" : "boolean",
+    "comment" : " whether stream is closed ",
+    "links" : [ ]
+  }, {
+    "name" : "handles",
+    "type" : "HandleTable",
+    "comment" : " wire handle -> obj/exception map ",
+    "links" : [ ]
+  }, {
+    "name" : "passHandle",
+    "type" : "int",
+    "comment" : " scratch field for passing handle values up/down call stack ",
+    "links" : [ ]
+  }, {
+    "name" : "defaultDataEnd",
+    "type" : "boolean",
+    "comment" : " flag set when at end of field value block with no TC_ENDBLOCKDATA ",
+    "links" : [ ]
+  }, {
+    "name" : "primVals",
+    "type" : "byte[]",
+    "comment" : " buffer for reading primitive field values ",
+    "links" : [ ]
+  }, {
+    "name" : "enableOverride",
+    "type" : "boolean",
+    "comment" : " if true, invoke readObjectOverride() instead of readObject() ",
+    "links" : [ ]
+  }, {
+    "name" : "enableResolve",
+    "type" : "boolean",
+    "comment" : " if true, invoke resolveObject() ",
+    "links" : [ ]
+  }, {
+    "name" : "curContext",
+    "type" : "SerialCallbackContext",
+    "comment" : "\n     * Context during upcalls to class-defined readObject methods; holds\n     * object currently being deserialized and descriptor for current class.\n     * Null when not during readObject upcall.\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public final Object readObject() throws IOException, ClassNotFoundException",
+    "returnType" : "Object",
+    "comment" : "\n     * Read an object from the ObjectInputStream.  The class of the object, the\n     * signature of the class, and the values of the non-transient and\n     * non-static fields of the class and all of its supertypes are read.\n     * Default deserializing for a class can be overridden using the writeObject\n     * and readObject methods.  Objects referenced by this object are read\n     * transitively so that a complete equivalent graph of objects is\n     * reconstructed by readObject.\n     *\n     * <p>The root object is completely restored when all of its fields and the\n     * objects it references are completely restored.  At this point the object\n     * validation callbacks are executed in order based on their registered\n     * priorities. The callbacks are registered by objects (in the readObject\n     * special methods) as they are individually restored.\n     *\n     * <p>Exceptions are thrown for problems with the InputStream and for\n     * classes that should not be deserialized.  All exceptions are fatal to\n     * the InputStream and leave it in an indeterminate state; it is up to the\n     * caller to ignore or recover the stream state.\n     *\n     * @throws  ClassNotFoundException Class of a serialized object cannot be\n     *          found.\n     * @throws  InvalidClassException Something is wrong with a class used by\n     *          serialization.\n     * @throws  StreamCorruptedException Control information in the\n     *          stream is inconsistent.\n     * @throws  OptionalDataException Primitive data was found in the\n     *          stream instead of objects.\n     * @throws  IOException Any of the usual Input/Output related exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Object readObjectOverride() throws IOException, ClassNotFoundException",
+    "returnType" : "Object",
+    "comment" : "\n     * This method is called by trusted subclasses of ObjectOutputStream that\n     * constructed ObjectOutputStream using the protected no-arg constructor.\n     * The subclass is expected to provide an override method with the modifier\n     * \"final\".\n     *\n     * @return  the Object read from the stream.\n     * @throws  ClassNotFoundException Class definition of a serialized object\n     *          cannot be found.\n     * @throws  OptionalDataException Primitive data was found in the stream\n     *          instead of objects.\n     * @throws  IOException if I/O errors occurred while reading from the\n     *          underlying stream\n     * @see #ObjectInputStream()\n     * @see #readObject()\n     * @since 1.2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object readUnshared() throws IOException, ClassNotFoundException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reads an \"unshared\" object from the ObjectInputStream.  This method is\n     * identical to readObject, except that it prevents subsequent calls to\n     * readObject and readUnshared from returning additional references to the\n     * deserialized instance obtained via this call.  Specifically:\n     * <ul>\n     *   <li>If readUnshared is called to deserialize a back-reference (the\n     *       stream representation of an object which has been written\n     *       previously to the stream), an ObjectStreamException will be\n     *       thrown.\n     *\n     *   <li>If readUnshared returns successfully, then any subsequent attempts\n     *       to deserialize back-references to the stream handle deserialized\n     *       by readUnshared will cause an ObjectStreamException to be thrown.\n     * </ul>\n     * Deserializing an object via readUnshared invalidates the stream handle\n     * associated with the returned object.  Note that this in itself does not\n     * always guarantee that the reference returned by readUnshared is unique;\n     * the deserialized object may define a readResolve method which returns an\n     * object visible to other parties, or readUnshared may return a Class\n     * object or enum constant obtainable elsewhere in the stream or through\n     * external means. If the deserialized object defines a readResolve method\n     * and the invocation of that method returns an array, then readUnshared\n     * returns a shallow clone of that array; this guarantees that the returned\n     * array object is unique and cannot be obtained a second time from an\n     * invocation of readObject or readUnshared on the ObjectInputStream,\n     * even if the underlying data stream has been manipulated.\n     *\n     * <p>ObjectInputStream subclasses which override this method can only be\n     * constructed in security contexts possessing the\n     * \"enableSubclassImplementation\" SerializablePermission; any attempt to\n     * instantiate such a subclass without this permission will cause a\n     * SecurityException to be thrown.\n     *\n     * @return  reference to deserialized object\n     * @throws  ClassNotFoundException if class of an object to deserialize\n     *          cannot be found\n     * @throws  StreamCorruptedException if control information in the stream\n     *          is inconsistent\n     * @throws  ObjectStreamException if object to deserialize has already\n     *          appeared in stream\n     * @throws  OptionalDataException if primitive data is next in stream\n     * @throws  IOException if an I/O error occurs during deserialization\n     * @since   1.4\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void defaultReadObject() throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Read the non-static and non-transient fields of the current class from\n     * this stream.  This may only be called from the readObject method of the\n     * class being deserialized. It will throw the NotActiveException if it is\n     * called otherwise.\n     *\n     * @throws  ClassNotFoundException if the class of a serialized object\n     *          could not be found.\n     * @throws  IOException if an I/O error occurs.\n     * @throws  NotActiveException if the stream is not currently reading\n     *          objects.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ObjectInputStream.GetField readFields() throws IOException, ClassNotFoundException",
+    "returnType" : "ObjectInputStream.GetField",
+    "comment" : "\n     * Reads the persistent fields from the stream and makes them available by\n     * name.\n     *\n     * @return  the <code>GetField</code> object representing the persistent\n     *          fields of the object being deserialized\n     * @throws  ClassNotFoundException if the class of a serialized object\n     *          could not be found.\n     * @throws  IOException if an I/O error occurs.\n     * @throws  NotActiveException if the stream is not currently reading\n     *          objects.\n     * @since 1.2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException",
+    "returnType" : "void",
+    "comment" : "\n     * Register an object to be validated before the graph is returned.  While\n     * similar to resolveObject these validations are called after the entire\n     * graph has been reconstituted.  Typically, a readObject method will\n     * register the object with the stream so that when all of the objects are\n     * restored a final set of validations can be performed.\n     *\n     * @param   obj the object to receive the validation callback.\n     * @param   prio controls the order of callbacks;zero is a good default.\n     *          Use higher numbers to be called back earlier, lower numbers for\n     *          later callbacks. Within a priority, callbacks are processed in\n     *          no particular order.\n     * @throws  NotActiveException The stream is not currently reading objects\n     *          so it is invalid to register a callback.\n     * @throws  InvalidObjectException The validation object is null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException",
+    "returnType" : "Class<?>",
+    "comment" : "\n     * Load the local class equivalent of the specified stream class\n     * description.  Subclasses may implement this method to allow classes to\n     * be fetched from an alternate source.\n     *\n     * <p>The corresponding method in <code>ObjectOutputStream</code> is\n     * <code>annotateClass</code>.  This method will be invoked only once for\n     * each unique class in the stream.  This method can be implemented by\n     * subclasses to use an alternate loading mechanism but must return a\n     * <code>Class</code> object. Once returned, if the class is not an array\n     * class, its serialVersionUID is compared to the serialVersionUID of the\n     * serialized class, and if there is a mismatch, the deserialization fails\n     * and an {@link InvalidClassException} is thrown.\n     *\n     * <p>The default implementation of this method in\n     * <code>ObjectInputStream</code> returns the result of calling\n     * <pre>\n     *     Class.forName(desc.getName(), false, loader)\n     * </pre>\n     * where <code>loader</code> is determined as follows: if there is a\n     * method on the current thread's stack whose declaring class was\n     * defined by a user-defined class loader (and was not a generated to\n     * implement reflective invocations), then <code>loader</code> is class\n     * loader corresponding to the closest such method to the currently\n     * executing frame; otherwise, <code>loader</code> is\n     * <code>null</code>. If this call results in a\n     * <code>ClassNotFoundException</code> and the name of the passed\n     * <code>ObjectStreamClass</code> instance is the Java language keyword\n     * for a primitive type or void, then the <code>Class</code> object\n     * representing that primitive type or void will be returned\n     * (e.g., an <code>ObjectStreamClass</code> with the name\n     * <code>\"int\"</code> will be resolved to <code>Integer.TYPE</code>).\n     * Otherwise, the <code>ClassNotFoundException</code> will be thrown to\n     * the caller of this method.\n     *\n     * @param   desc an instance of class <code>ObjectStreamClass</code>\n     * @return  a <code>Class</code> object corresponding to <code>desc</code>\n     * @throws  IOException any of the usual Input/Output exceptions.\n     * @throws  ClassNotFoundException if class of a serialized object cannot\n     *          be found.\n     ",
+    "links" : [ "java.io.InvalidClassException" ]
+  }, {
+    "name" : "protected Class<?> resolveProxyClass(String[] interfaces) throws IOException, ClassNotFoundException",
+    "returnType" : "Class<?>",
+    "comment" : "\n     * Returns a proxy class that implements the interfaces named in a proxy\n     * class descriptor; subclasses may implement this method to read custom\n     * data from the stream along with the descriptors for dynamic proxy\n     * classes, allowing them to use an alternate loading mechanism for the\n     * interfaces and the proxy class.\n     *\n     * <p>This method is called exactly once for each unique proxy class\n     * descriptor in the stream.\n     *\n     * <p>The corresponding method in <code>ObjectOutputStream</code> is\n     * <code>annotateProxyClass</code>.  For a given subclass of\n     * <code>ObjectInputStream</code> that overrides this method, the\n     * <code>annotateProxyClass</code> method in the corresponding subclass of\n     * <code>ObjectOutputStream</code> must write any data or objects read by\n     * this method.\n     *\n     * <p>The default implementation of this method in\n     * <code>ObjectInputStream</code> returns the result of calling\n     * <code>Proxy.getProxyClass</code> with the list of <code>Class</code>\n     * objects for the interfaces that are named in the <code>interfaces</code>\n     * parameter.  The <code>Class</code> object for each interface name\n     * <code>i</code> is the value returned by calling\n     * <pre>\n     *     Class.forName(i, false, loader)\n     * </pre>\n     * where <code>loader</code> is that of the first non-<code>null</code>\n     * class loader up the execution stack, or <code>null</code> if no\n     * non-<code>null</code> class loaders are on the stack (the same class\n     * loader choice used by the <code>resolveClass</code> method).  Unless any\n     * of the resolved interfaces are non-public, this same value of\n     * <code>loader</code> is also the class loader passed to\n     * <code>Proxy.getProxyClass</code>; if non-public interfaces are present,\n     * their class loader is passed instead (if more than one non-public\n     * interface class loader is encountered, an\n     * <code>IllegalAccessError</code> is thrown).\n     * If <code>Proxy.getProxyClass</code> throws an\n     * <code>IllegalArgumentException</code>, <code>resolveProxyClass</code>\n     * will throw a <code>ClassNotFoundException</code> containing the\n     * <code>IllegalArgumentException</code>.\n     *\n     * @param interfaces the list of interface names that were\n     *                deserialized in the proxy class descriptor\n     * @return  a proxy class for the specified interfaces\n     * @throws        IOException any exception thrown by the underlying\n     *                <code>InputStream</code>\n     * @throws        ClassNotFoundException if the proxy class or any of the\n     *                named interfaces could not be found\n     * @see ObjectOutputStream#annotateProxyClass(Class)\n     * @since 1.3\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected Object resolveObject(Object obj) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * This method will allow trusted subclasses of ObjectInputStream to\n     * substitute one object for another during deserialization. Replacing\n     * objects is disabled until enableResolveObject is called. The\n     * enableResolveObject method checks that the stream requesting to resolve\n     * object can be trusted. Every reference to serializable objects is passed\n     * to resolveObject.  To insure that the private state of objects is not\n     * unintentionally exposed only trusted streams may use resolveObject.\n     *\n     * <p>This method is called after an object has been read but before it is\n     * returned from readObject.  The default resolveObject method just returns\n     * the same object.\n     *\n     * <p>When a subclass is replacing objects it must insure that the\n     * substituted object is compatible with every field where the reference\n     * will be stored.  Objects whose type is not a subclass of the type of the\n     * field or array element abort the serialization by raising an exception\n     * and the object is not be stored.\n     *\n     * <p>This method is called only once when each object is first\n     * encountered.  All subsequent references to the object will be redirected\n     * to the new object.\n     *\n     * @param   obj object to be substituted\n     * @return  the substituted object\n     * @throws  IOException Any of the usual Input/Output exceptions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean enableResolveObject(boolean enable) throws SecurityException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Enable the stream to allow objects read from the stream to be replaced.\n     * When enabled, the resolveObject method is called for every object being\n     * deserialized.\n     *\n     * <p>If <i>enable</i> is true, and there is a security manager installed,\n     * this method first calls the security manager's\n     * <code>checkPermission</code> method with the\n     * <code>SerializablePermission(\"enableSubstitution\")</code> permission to\n     * ensure it's ok to enable the stream to allow objects read from the\n     * stream to be replaced.\n     *\n     * @param   enable true for enabling use of <code>resolveObject</code> for\n     *          every object being deserialized\n     * @return  the previous setting before this method was invoked\n     * @throws  SecurityException if a security manager exists and its\n     *          <code>checkPermission</code> method denies enabling the stream\n     *          to allow objects read from the stream to be replaced.\n     * @see SecurityManager#checkPermission\n     * @see java.io.SerializablePermission\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void readStreamHeader() throws IOException, StreamCorruptedException",
+    "returnType" : "void",
+    "comment" : "\n     * The readStreamHeader method is provided to allow subclasses to read and\n     * verify their own stream headers. It reads and verifies the magic number\n     * and version number.\n     *\n     * @throws  IOException if there are I/O errors while reading from the\n     *          underlying <code>InputStream</code>\n     * @throws  StreamCorruptedException if control information in the stream\n     *          is inconsistent\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected ObjectStreamClass readClassDescriptor() throws IOException, ClassNotFoundException",
+    "returnType" : "ObjectStreamClass",
+    "comment" : "\n     * Read a class descriptor from the serialization stream.  This method is\n     * called when the ObjectInputStream expects a class descriptor as the next\n     * item in the serialization stream.  Subclasses of ObjectInputStream may\n     * override this method to read in class descriptors that have been written\n     * in non-standard formats (by subclasses of ObjectOutputStream which have\n     * overridden the <code>writeClassDescriptor</code> method).  By default,\n     * this method reads class descriptors according to the format defined in\n     * the Object Serialization specification.\n     *\n     * @return  the class descriptor read\n     * @throws  IOException If an I/O error has occurred.\n     * @throws  ClassNotFoundException If the Class of a serialized object used\n     *          in the class descriptor representation cannot be found\n     * @see java.io.ObjectOutputStream#writeClassDescriptor(java.io.ObjectStreamClass)\n     * @since 1.3\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int read() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Reads a byte of data. This method will block if no input is available.\n     *\n     * @return  the byte read, or -1 if the end of the stream is reached.\n     * @throws  IOException If an I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int read(byte[] buf, int off, int len) throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Reads into an array of bytes.  This method will block until some input\n     * is available. Consider using java.io.DataInputStream.readFully to read\n     * exactly 'length' bytes.\n     *\n     * @param   buf the buffer into which the data is read\n     * @param   off the start offset of the data\n     * @param   len the maximum number of bytes read\n     * @return  the actual number of bytes read, -1 is returned when the end of\n     *          the stream is reached.\n     * @throws  IOException If an I/O error has occurred.\n     * @see java.io.DataInputStream#readFully(byte[],int,int)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int available() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the number of bytes that can be read without blocking.\n     *\n     * @return  the number of available bytes.\n     * @throws  IOException if there are I/O errors while reading from the\n     *          underlying <code>InputStream</code>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void close() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Closes the input stream. Must be called to release any resources\n     * associated with the stream.\n     *\n     * @throws  IOException If an I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean readBoolean() throws IOException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Reads in a boolean.\n     *\n     * @return  the boolean read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public byte readByte() throws IOException",
+    "returnType" : "byte",
+    "comment" : "\n     * Reads an 8 bit byte.\n     *\n     * @return  the 8 bit byte read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int readUnsignedByte() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Reads an unsigned 8 bit byte.\n     *\n     * @return  the 8 bit byte read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public char readChar() throws IOException",
+    "returnType" : "char",
+    "comment" : "\n     * Reads a 16 bit char.\n     *\n     * @return  the 16 bit char read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public short readShort() throws IOException",
+    "returnType" : "short",
+    "comment" : "\n     * Reads a 16 bit short.\n     *\n     * @return  the 16 bit short read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int readUnsignedShort() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Reads an unsigned 16 bit short.\n     *\n     * @return  the 16 bit short read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int readInt() throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Reads a 32 bit int.\n     *\n     * @return  the 32 bit integer read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long readLong() throws IOException",
+    "returnType" : "long",
+    "comment" : "\n     * Reads a 64 bit long.\n     *\n     * @return  the read 64 bit long.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public float readFloat() throws IOException",
+    "returnType" : "float",
+    "comment" : "\n     * Reads a 32 bit float.\n     *\n     * @return  the 32 bit float read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double readDouble() throws IOException",
+    "returnType" : "double",
+    "comment" : "\n     * Reads a 64 bit double.\n     *\n     * @return  the 64 bit double read.\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void readFully(byte[] buf) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads bytes, blocking until all bytes are read.\n     *\n     * @param   buf the buffer into which the data is read\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void readFully(byte[] buf, int off, int len) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads bytes, blocking until all bytes are read.\n     *\n     * @param   buf the buffer into which the data is read\n     * @param   off the start offset of the data\n     * @param   len the maximum number of bytes to read\n     * @throws  EOFException If end of file is reached.\n     * @throws  IOException If other I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int skipBytes(int len) throws IOException",
+    "returnType" : "int",
+    "comment" : "\n     * Skips bytes.\n     *\n     * @param   len the number of bytes to be skipped\n     * @return  the actual number of bytes skipped.\n     * @throws  IOException If an I/O error has occurred.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String readLine() throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Reads in a line that has been terminated by a \\n, \\r, \\r\\n or EOF.\n     *\n     * @return  a String copy of the line.\n     * @throws  IOException if there are I/O errors while reading from the\n     *          underlying <code>InputStream</code>\n     * @deprecated This method does not properly convert bytes to characters.\n     *          see DataInputStream for the details and alternatives.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String readUTF() throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Reads a String in\n     * <a href=\"DataInput.html#modified-utf-8\">modified UTF-8</a>\n     * format.\n     *\n     * @return  the String.\n     * @throws  IOException if there are I/O errors while reading from the\n     *          underlying <code>InputStream</code>\n     * @throws  UTFDataFormatException if read bytes do not represent a valid\n     *          modified UTF-8 encoding of a string\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkArray(Class<?> arrayType, int arrayLength) throws InvalidClassException",
+    "returnType" : "void",
+    "comment" : "\n     * Checks the given array type and length to ensure that creation of such\n     * an array is permitted by this ObjectInputStream. The arrayType argument\n     * must represent an actual array type.\n     *\n     * This private method is called via SharedSecrets.\n     *\n     * @param arrayType the array type\n     * @param arrayLength the array length\n     * @throws NullPointerException if arrayType is null\n     * @throws IllegalArgumentException if arrayType isn't actually an array type\n     * @throws NegativeArraySizeException if arrayLength is negative\n     * @throws InvalidClassException if the filter rejects creation\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void verifySubclass()",
+    "returnType" : "void",
+    "comment" : "\n     * Verifies that this (possibly subclass) instance can be constructed\n     * without violating security constraints: the subclass must not override\n     * security-sensitive non-final methods, or else the\n     * \"enableSubclassImplementation\" SerializablePermission is checked.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean auditSubclass(final Class<?> subcl)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Performs reflective checks on given subclass to verify that it doesn't\n     * override security-sensitive non-final methods.  Returns true if subclass\n     * is \"safe\", false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Clears internal data structures.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readObject0(boolean unshared) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * Underlying readObject implementation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object checkResolve(Object obj) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * If resolveObject has been enabled and given object does not have an\n     * exception associated with it, calls resolveObject to determine\n     * replacement for object, and updates handle table accordingly.  Returns\n     * replacement object, or echoes provided object if no replacement\n     * occurred.  Expects that passHandle is set to given object's handle prior\n     * to calling this method.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " String readTypeString() throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Reads string without allowing it to be replaced in stream.  Called from\n     * within ObjectStreamClass.read().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readNull() throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reads in null code, sets passHandle to NULL_HANDLE and returns null.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readHandle(boolean unshared) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reads in object handle, sets passHandle to the read handle, and returns\n     * object associated with the handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Class<?> readClass(boolean unshared) throws IOException",
+    "returnType" : "Class<?>",
+    "comment" : "\n     * Reads in and returns class object.  Sets passHandle to class object's\n     * assigned handle.  Returns null if class is unresolvable (in which case a\n     * ClassNotFoundException will be associated with the class' handle in the\n     * handle table).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private ObjectStreamClass readClassDesc(boolean unshared) throws IOException",
+    "returnType" : "ObjectStreamClass",
+    "comment" : "\n     * Reads in and returns (possibly null) class descriptor.  Sets passHandle\n     * to class descriptor's assigned handle.  If class descriptor cannot be\n     * resolved to a class in the local VM, a ClassNotFoundException is\n     * associated with the class descriptor's handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isCustomSubclass()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private ObjectStreamClass readProxyDesc(boolean unshared) throws IOException",
+    "returnType" : "ObjectStreamClass",
+    "comment" : "\n     * Reads in and returns class descriptor for a dynamic proxy class.  Sets\n     * passHandle to proxy class descriptor's assigned handle.  If proxy class\n     * descriptor cannot be resolved to a class in the local VM, a\n     * ClassNotFoundException is associated with the descriptor's handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private ObjectStreamClass readNonProxyDesc(boolean unshared) throws IOException",
+    "returnType" : "ObjectStreamClass",
+    "comment" : "\n     * Reads in and returns class descriptor for a class that is not a dynamic\n     * proxy class.  Sets passHandle to class descriptor's assigned handle.  If\n     * class descriptor cannot be resolved to a class in the local VM, a\n     * ClassNotFoundException is associated with the descriptor's handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private String readString(boolean unshared) throws IOException",
+    "returnType" : "String",
+    "comment" : "\n     * Reads in and returns new string.  Sets passHandle to new string's\n     * assigned handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readArray(boolean unshared) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reads in and returns array object, or null if array class is\n     * unresolvable.  Sets passHandle to array's assigned handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Enum<?> readEnum(boolean unshared) throws IOException",
+    "returnType" : "Enum<?>",
+    "comment" : "\n     * Reads in and returns enum constant, or null if enum type is\n     * unresolvable.  Sets passHandle to enum constant's assigned handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readOrdinaryObject(boolean unshared) throws IOException",
+    "returnType" : "Object",
+    "comment" : "\n     * Reads and returns \"ordinary\" (i.e., not a String, Class,\n     * ObjectStreamClass, array, or enum constant) object, or null if object's\n     * class is unresolvable (in which case a ClassNotFoundException will be\n     * associated with object's handle).  Sets passHandle to object's assigned\n     * handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readExternalData(Externalizable obj, ObjectStreamClass desc) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * If obj is non-null, reads externalizable data by invoking readExternal()\n     * method of obj; otherwise, attempts to skip over externalizable data.\n     * Expects that passHandle is set to obj's handle before this method is\n     * called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Object readRecord(ObjectStreamClass desc) throws IOException",
+    "returnType" : "Object",
+    "comment" : " Reads a record. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readSerialData(Object obj, ObjectStreamClass desc) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads (or attempts to skip, if obj is null or is tagged with a\n     * ClassNotFoundException) instance data for each serializable class of\n     * object in stream, from superclass to subclass.  Expects that passHandle\n     * is set to obj's handle before this method is called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void skipCustomData() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Skips over all block data and objects until TC_ENDBLOCKDATA is\n     * encountered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void defaultReadFields(Object obj, ObjectStreamClass desc) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads in values of serializable fields declared by given class\n     * descriptor.  If obj is non-null, sets field values in obj.  Expects that\n     * passHandle is set to obj's handle before this method is called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private IOException readFatalException() throws IOException",
+    "returnType" : "IOException",
+    "comment" : "\n     * Reads in and returns IOException that caused serialization to abort.\n     * All stream state is discarded prior to reading in fatal exception.  Sets\n     * passHandle to fatal exception's handle.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleReset() throws StreamCorruptedException",
+    "returnType" : "void",
+    "comment" : "\n     * If recursion depth is 0, clears internal data structures; otherwise,\n     * throws a StreamCorruptedException.  This method is called when a\n     * TC_RESET typecode is encountered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void bytesToFloats(byte[] src, int srcpos, float[] dst, int dstpos, int nfloats)",
+    "returnType" : "void",
+    "comment" : " REMIND: remove once hotspot inlines Float.intBitsToFloat",
+    "links" : [ ]
+  }, {
+    "name" : "private static native void bytesToDoubles(byte[] src, int srcpos, double[] dst, int dstpos, int ndoubles)",
+    "returnType" : "void",
+    "comment" : " REMIND: remove once hotspot inlines Double.longBitsToDouble",
+    "links" : [ ]
+  }, {
+    "name" : "private static ClassLoader latestUserDefinedLoader()",
+    "returnType" : "ClassLoader",
+    "comment" : "\n     * Returns the first non-null class loader (not counting class loaders of\n     * generated reflection implementation classes) up the execution stack, or\n     * null if only code from the null class loader is on the stack.  This\n     * method is also called via reflection by the following RMI-IIOP class:\n     *\n     *     com.sun.corba.se.internal.util.JDKClassLoader\n     *\n     * This method should not be removed or its signature changed without\n     * corresponding modifications to the above class.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Object cloneArray(Object array)",
+    "returnType" : "Object",
+    "comment" : "\n     * Method for cloning arrays in case of using unsharing reading\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public final Object readObject() throws IOException, ClassNotFoundException", "protected Object readObjectOverride() throws IOException, ClassNotFoundException", "public Object readUnshared() throws IOException, ClassNotFoundException", "public void defaultReadObject() throws IOException, ClassNotFoundException", "public ObjectInputStream.GetField readFields() throws IOException, ClassNotFoundException", "public void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException", "protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException", "protected Class<?> resolveProxyClass(String[] interfaces) throws IOException, ClassNotFoundException", "protected Object resolveObject(Object obj) throws IOException", "protected boolean enableResolveObject(boolean enable) throws SecurityException", "protected void readStreamHeader() throws IOException, StreamCorruptedException", "protected ObjectStreamClass readClassDescriptor() throws IOException, ClassNotFoundException", "public int read() throws IOException", "public int read(byte[] buf, int off, int len) throws IOException", "public int available() throws IOException", "public void close() throws IOException", "public boolean readBoolean() throws IOException", "public byte readByte() throws IOException", "public int readUnsignedByte() throws IOException", "public char readChar() throws IOException", "public short readShort() throws IOException", "public int readUnsignedShort() throws IOException", "public int readInt() throws IOException", "public long readLong() throws IOException", "public float readFloat() throws IOException", "public double readDouble() throws IOException", "public void readFully(byte[] buf) throws IOException", "public void readFully(byte[] buf, int off, int len) throws IOException", "public int skipBytes(int len) throws IOException", "public String readLine() throws IOException", "public String readUTF() throws IOException", "private void checkArray(Class<?> arrayType, int arrayLength) throws InvalidClassException", "private void verifySubclass()", "private static boolean auditSubclass(final Class<?> subcl)", "private void clear()", "private Object readObject0(boolean unshared) throws IOException", "private Object checkResolve(Object obj) throws IOException", " String readTypeString() throws IOException", "private Object readNull() throws IOException", "private Object readHandle(boolean unshared) throws IOException", "private Class<?> readClass(boolean unshared) throws IOException", "private ObjectStreamClass readClassDesc(boolean unshared) throws IOException", "private boolean isCustomSubclass()", "private ObjectStreamClass readProxyDesc(boolean unshared) throws IOException", "private ObjectStreamClass readNonProxyDesc(boolean unshared) throws IOException", "private String readString(boolean unshared) throws IOException", "private Object readArray(boolean unshared) throws IOException", "private Enum<?> readEnum(boolean unshared) throws IOException", "private Object readOrdinaryObject(boolean unshared) throws IOException", "private void readExternalData(Externalizable obj, ObjectStreamClass desc) throws IOException", "private Object readRecord(ObjectStreamClass desc) throws IOException", "private void readSerialData(Object obj, ObjectStreamClass desc) throws IOException", "private void skipCustomData() throws IOException", "private void defaultReadFields(Object obj, ObjectStreamClass desc) throws IOException", "private IOException readFatalException() throws IOException", "private void handleReset() throws StreamCorruptedException", "private static native void bytesToFloats(byte[] src, int srcpos, float[] dst, int dstpos, int nfloats)", "private static native void bytesToDoubles(byte[] src, int srcpos, double[] dst, int dstpos, int ndoubles)", "private static ClassLoader latestUserDefinedLoader()", "private static Object cloneArray(Object array)" ],
+  "variableNames" : [ "NULL_HANDLE", "unsharedMarker", "primClasses", "bin", "vlist", "depth", "closed", "handles", "passHandle", "defaultDataEnd", "primVals", "enableOverride", "enableResolve", "curContext" ]
+}

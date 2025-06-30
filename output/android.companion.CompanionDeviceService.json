@@ -1,0 +1,81 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/companion/CompanionDeviceService.java",
+  "packageName" : "android.companion",
+  "className" : "CompanionDeviceService",
+  "comment" : "\n * A service that receives calls from the system with device events.\n *\n * <p>\n * Companion applications must create a service that {@code extends}\n * {@link CompanionDeviceService}, and declare it in their AndroidManifest.xml with the\n * \"android.permission.BIND_COMPANION_DEVICE_SERVICE\" permission\n * (see {@link android.Manifest.permission#BIND_COMPANION_DEVICE_SERVICE}),\n * as well as add an intent filter for the \"android.companion.CompanionDeviceService\" action\n * (see {@link #SERVICE_INTERFACE}).\n *\n * <p>\n * Following is an example of such declaration:\n * <pre>{@code\n * <service\n *        android:name=\".CompanionService\"\n *        android:label=\"@string/service_name\"\n *        android:exported=\"true\"\n *        android:permission=\"android.permission.BIND_COMPANION_DEVICE_SERVICE\">\n *    <intent-filter>\n *        <action android:name=\"android.companion.CompanionDeviceService\" />\n *    </intent-filter>\n * </service>\n * }</pre>\n *\n * <p>\n * If the companion application has requested observing device presence (see\n * {@link CompanionDeviceManager#startObservingDevicePresence(String)}) the system will\n * <a href=\"https://developer.android.com/guide/components/bound-services\"> bind the service</a>\n * when it detects the device nearby (for BLE devices) or when the device is connected\n * (for Bluetooth devices).\n *\n * <p>\n * The system binding {@link CompanionDeviceService} elevates the priority of the process that\n * the service is running in, and thus may prevent\n * <a href=\"https://developer.android.com/topic/performance/memory-management#low-memory_killer\">\n * the Low-memory killer</a> from killing the process at expense of other processes with lower\n * priority.\n *\n * <p>\n * It is possible for an application to declare multiple {@link CompanionDeviceService}-s.\n * In such case, the system will bind all declared services, but will deliver\n * {@link #onDeviceAppeared(AssociationInfo)} and {@link #onDeviceDisappeared(AssociationInfo)}\n * only to one \"primary\" services.\n * Applications that declare multiple {@link CompanionDeviceService}-s should indicate the \"primary\"\n * service using \"android.companion.PROPERTY_PRIMARY_COMPANION_DEVICE_SERVICE\" service level\n * property.\n * <pre>{@code\n * <property\n *       android:name=\"android.companion.PROPERTY_PRIMARY_COMPANION_DEVICE_SERVICE\"\n *       android:value=\"true\" />\n * }</pre>\n *\n * <p>\n * If the application declares multiple {@link CompanionDeviceService}-s, but does not indicate\n * the \"primary\" one, the system will pick one of the declared services to use as \"primary\".\n *\n * <p>\n * If the application declares multiple \"primary\" {@link CompanionDeviceService}-s, the system\n * will pick single one of them to use as \"primary\".\n ",
+  "links" : [ "#SERVICE_INTERFACE", "#onDeviceDisappeared(AssociationInfo)", "#onDeviceAppeared(AssociationInfo)", "android.companion.CompanionDeviceManager#startObservingDevicePresence(String)", "android.companion.CompanionDeviceService", "android.Manifest.permission#BIND_COMPANION_DEVICE_SERVICE" ],
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SERVICE_INTERFACE",
+    "type" : "String",
+    "comment" : "\n     * An intent action for a service to be bound whenever this app's companion device(s)\n     * are nearby.\n     *\n     * <p>The app will be kept alive for as long as the device is nearby or companion app reports\n     * appeared.\n     * If the app is not running at the time device gets connected, the app will be woken up.</p>\n     *\n     * <p>Shortly after the device goes out of range or the companion app reports disappeared,\n     * the service will be unbound, and the app will be eligible for cleanup, unless any other\n     * user-visible components are running.</p>\n     *\n     * If running in background is not essential for the devices that this app can manage,\n     * app should avoid declaring this service.</p>\n     *\n     * <p>The service must also require permission\n     * {@link android.Manifest.permission#BIND_COMPANION_DEVICE_SERVICE}</p>\n     ",
+    "links" : [ "android.Manifest.permission#BIND_COMPANION_DEVICE_SERVICE" ]
+  }, {
+    "name" : "mRemote",
+    "type" : "Stub",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void onDeviceAppeared(@NonNull String address)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by system whenever a device associated with this app is available.\n     *\n     * @param address the MAC address of the device\n     * @deprecated please override {@link #onDeviceAppeared(AssociationInfo)} instead.\n     ",
+    "links" : [ "#onDeviceAppeared(AssociationInfo)" ]
+  }, {
+    "name" : "public void onDeviceDisappeared(@NonNull String address)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by system whenever a device associated with this app stops being available.\n     *\n     * Usually this means the device goes out of range or is turned off.\n     *\n     * @param address the MAC address of the device\n     * @deprecated please override {@link #onDeviceDisappeared(AssociationInfo)} instead.\n     ",
+    "links" : [ "#onDeviceDisappeared(AssociationInfo)" ]
+  }, {
+    "name" : "public void onMessageDispatchedFromSystem(int messageId, int associationId, @NonNull byte[] message)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by system whenever the system dispatches a message to the app to send it to\n     * an associated device.\n     *\n     * @param messageId system assigned id of the message to be sent\n     * @param associationId association id of the associated device\n     * @param message message to be sent\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void dispatchMessageToSystem(int messageId, int associationId, @NonNull byte[] message) throws DeviceNotAssociatedException",
+    "returnType" : "void",
+    "comment" : "\n     * App calls this method when there's a message received from an associated device,\n     * which needs to be dispatched to system for processing.\n     *\n     * <p>Calling app must declare uses-permission\n     * {@link android.Manifest.permission#DELIVER_COMPANION_MESSAGES}</p>\n     *\n     * <p>You need to start the service before calling this method, otherwise the system can't\n     * get the context and the dispatch would fail.</p>\n     *\n     * <p>Note 1: messageId was assigned by the system, and sender should send the messageId along\n     * with the message to the receiver. messageId will later be used for verification purpose.\n     * Misusing the messageId will result in no action.</p>\n     *\n     * <p>Note 2: associationId should be local to your device which is calling this API. It's not\n     * the associationId on your remote device. If you don't have one, you can call\n     * {@link CompanionDeviceManager#associate(AssociationRequest, Executor,\n     * CompanionDeviceManager.Callback)} to create one. Misusing the associationId will result in\n     * {@link DeviceNotAssociatedException}.</p>\n     *\n     * @param messageId id of the message\n     * @param associationId id of the associated device\n     * @param message message received from the associated device\n     * @hide\n     ",
+    "links" : [ "android.companion.CompanionDeviceManager#associate(AssociationRequest", "android.Manifest.permission#DELIVER_COMPANION_MESSAGES", "android.companion.DeviceNotAssociatedException" ]
+  }, {
+    "name" : "public final void attachSystemDataTransport(int associationId, @NonNull InputStream in, @NonNull OutputStream out) throws DeviceNotAssociatedException",
+    "returnType" : "void",
+    "comment" : "\n     * Attach the given bidirectional communication streams to be used for\n     * transporting system data between associated devices.\n     * <p>\n     * The companion service providing these streams is responsible for ensuring\n     * that all data is transported accurately and in-order between the two\n     * devices, including any fragmentation and re-assembly when carried over a\n     * size-limited transport.\n     * <p>\n     * As an example, it's valid to provide streams obtained from a\n     * {@link BluetoothSocket} to this method, since {@link BluetoothSocket}\n     * meets the API contract described above.\n     * <p>\n     * This method passes through to\n     * {@link CompanionDeviceManager#attachSystemDataTransport(int, InputStream, OutputStream)}\n     * for your convenience if you get callbacks in this class.\n     *\n     * @param associationId id of the associated device\n     * @param in already connected stream of data incoming from remote\n     *            associated device\n     * @param out already connected stream of data outgoing to remote associated\n     *            device\n     ",
+    "links" : [ "android.bluetooth.BluetoothSocket", "android.companion.CompanionDeviceManager#attachSystemDataTransport(int" ]
+  }, {
+    "name" : "public final void detachSystemDataTransport(int associationId) throws DeviceNotAssociatedException",
+    "returnType" : "void",
+    "comment" : "\n     * Detach any bidirectional communication streams previously configured\n     * through {@link #attachSystemDataTransport}.\n     * <p>\n     * This method passes through to\n     * {@link CompanionDeviceManager#detachSystemDataTransport(int)}\n     * for your convenience if you get callbacks in this class.\n     *\n     * @param associationId id of the associated device\n     ",
+    "links" : [ "#attachSystemDataTransport", "android.companion.CompanionDeviceManager#detachSystemDataTransport(int)" ]
+  }, {
+    "name" : "public void onDeviceAppeared(@NonNull AssociationInfo associationInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by system whenever a device associated with this app is connected.\n     *\n     * @param associationInfo A record for the companion device.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDeviceDisappeared(@NonNull AssociationInfo associationInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by system whenever a device associated with this app is disconnected.\n     *\n     * @param associationInfo A record for the companion device.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void onDevicePresenceEvent(@NonNull DevicePresenceEvent event)",
+    "returnType" : "void",
+    "comment" : "\n     * Called by the system during device events.\n     *\n     * @see CompanionDeviceManager#startObservingDevicePresence(ObservingDevicePresenceRequest)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IBinder onBind(@NonNull Intent intent)",
+    "returnType" : "IBinder",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onBindCompanionDeviceService(@NonNull Intent intent)",
+    "returnType" : "void",
+    "comment" : "\n     * Used to track the state of Binder connection in CTS tests.\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void onDeviceAppeared(@NonNull String address)", "public void onDeviceDisappeared(@NonNull String address)", "public void onMessageDispatchedFromSystem(int messageId, int associationId, @NonNull byte[] message)", "public final void dispatchMessageToSystem(int messageId, int associationId, @NonNull byte[] message) throws DeviceNotAssociatedException", "public final void attachSystemDataTransport(int associationId, @NonNull InputStream in, @NonNull OutputStream out) throws DeviceNotAssociatedException", "public final void detachSystemDataTransport(int associationId) throws DeviceNotAssociatedException", "public void onDeviceAppeared(@NonNull AssociationInfo associationInfo)", "public void onDeviceDisappeared(@NonNull AssociationInfo associationInfo)", "public void onDevicePresenceEvent(@NonNull DevicePresenceEvent event)", "public final IBinder onBind(@NonNull Intent intent)", "public void onBindCompanionDeviceService(@NonNull Intent intent)" ],
+  "variableNames" : [ "LOG_TAG", "SERVICE_INTERFACE", "mRemote" ]
+}

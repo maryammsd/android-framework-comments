@@ -1,10 +1,16 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/content/pm/PackageInstaller.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/content/pm/PackageInstaller.java",
   "packageName" : "android.content.pm",
   "className" : "PackageInstaller",
   "comment" : "\n * Offers the ability to install, upgrade, and remove applications on the\n * device. This includes support for apps packaged either as a single\n * \"monolithic\" APK, or apps packaged as multiple \"split\" APKs.\n * <p>\n * An app is delivered for installation through a\n * {@link PackageInstaller.Session}, which any app can create. Once the session\n * is created, the installer can stream one or more APKs into place until it\n * decides to either commit or destroy the session. Committing may require user\n * intervention to complete the installation, unless the caller falls into one of the\n * following categories, in which case the installation will complete automatically.\n * <ul>\n * <li>the device owner\n * <li>the affiliated profile owner\n * </ul>\n * <p>\n * Sessions can install brand new apps, upgrade existing apps, or add new splits\n * into an existing app.\n * <p>\n * Apps packaged as multiple split APKs always consist of a single \"base\" APK\n * (with a {@code null} split name) and zero or more \"split\" APKs (with unique\n * split names). Any subset of these APKs can be installed together, as long as\n * the following constraints are met:\n * <ul>\n * <li>All APKs must have the exact same package name, version code, and signing\n * certificates.\n * <li>All APKs must have unique split names.\n * <li>All installations must contain a single base APK.\n * </ul>\n * <p>\n * The ApiDemos project contains examples of using this API:\n * <code>ApiDemos/src/com/example/android/apis/content/InstallApk*.java</code>.\n ",
+  "links" : [ "PackageInstaller.Session" ],
   "variables" : [ {
     "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_WAIT_INSTALL_CONSTRAINTS",
     "type" : "String",
     "comment" : "",
     "links" : [ ]
@@ -21,8 +27,8 @@
   }, {
     "name" : "ACTION_SESSION_COMMITTED",
     "type" : "String",
-    "comment" : "\n     * Broadcast Action: Explicit broadcast sent to the last known default launcher when a session\n     * for a new install is committed. For managed profile, this is sent to the default launcher\n     * of the primary profile.\n     * <p>\n     * The associated session is defined in {@link #EXTRA_SESSION} and the user for which this\n     * session was created in {@link Intent#EXTRA_USER}.\n     ",
-    "links" : [ "#EXTRA_SESSION", "android.content.Intent#EXTRA_USER" ]
+    "comment" : "\n     * Broadcast Action: Explicit broadcast sent to the last known default launcher when a session\n     * for a new install is committed. For managed profile, this is sent to the default launcher\n     * of the primary profile.\n     * For user-profiles that have items restricted on home screen, this broadcast is sent to\n     * the default launcher of the primary profile, only if it has either\n     * {@link Manifest.permission.ACCESS_HIDDEN_PROFILES_FULL} or\n     * {@link Manifest.permission.ACCESS_HIDDEN_PROFILES} permission.\n     * <p>\n     * The associated session is defined in {@link #EXTRA_SESSION} and the user for which this\n     * session was created in {@link Intent#EXTRA_USER}.\n     ",
+    "links" : [ "#EXTRA_SESSION", "Manifest.permission.ACCESS_HIDDEN_PROFILES_FULL", "android.app.PendingIntent#EXTRA_USER", "Manifest.permission.ACCESS_HIDDEN_PROFILES" ]
   }, {
     "name" : "ACTION_SESSION_UPDATED",
     "type" : "String",
@@ -31,7 +37,12 @@
   }, {
     "name" : "ACTION_CONFIRM_INSTALL",
     "type" : "String",
-    "comment" : " {@hide} ",
+    "comment" : "\n     * Intent action to indicate that user action is required for current install. This action can\n     * be used only by system apps.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_CONFIRM_PRE_APPROVAL",
+    "type" : "String",
+    "comment" : "\n     * Activity Action: Intent sent to the installer when a session for requesting\n     * user pre-approval, and user needs to confirm the installation.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "EXTRA_SESSION_ID",
@@ -51,8 +62,13 @@
   }, {
     "name" : "EXTRA_STATUS",
     "type" : "String",
-    "comment" : "\n     * Current status of an operation. Will be one of\n     * {@link #STATUS_PENDING_USER_ACTION}, {@link #STATUS_SUCCESS},\n     * {@link #STATUS_FAILURE}, {@link #STATUS_FAILURE_ABORTED},\n     * {@link #STATUS_FAILURE_BLOCKED}, {@link #STATUS_FAILURE_CONFLICT},\n     * {@link #STATUS_FAILURE_INCOMPATIBLE}, {@link #STATUS_FAILURE_INVALID}, or\n     * {@link #STATUS_FAILURE_STORAGE}.\n     * <p>\n     * More information about a status may be available through additional\n     * extras; see the individual status documentation for details.\n     *\n     * @see Intent#getIntExtra(String, int)\n     ",
-    "links" : [ "#STATUS_FAILURE_INCOMPATIBLE", "#STATUS_PENDING_USER_ACTION", "#STATUS_FAILURE_BLOCKED", "#STATUS_FAILURE_CONFLICT", "#STATUS_FAILURE", "#STATUS_SUCCESS", "#STATUS_FAILURE_STORAGE", "#STATUS_FAILURE_INVALID", "#STATUS_FAILURE_ABORTED" ]
+    "comment" : "\n     * Current status of an operation. Will be one of\n     * {@link #STATUS_PENDING_USER_ACTION}, {@link #STATUS_SUCCESS},\n     * {@link #STATUS_FAILURE}, {@link #STATUS_FAILURE_ABORTED},\n     * {@link #STATUS_FAILURE_BLOCKED}, {@link #STATUS_FAILURE_CONFLICT},\n     * {@link #STATUS_FAILURE_INCOMPATIBLE}, {@link #STATUS_FAILURE_INVALID},\n     * {@link #STATUS_FAILURE_STORAGE}, or {@link #STATUS_FAILURE_TIMEOUT}.\n     * <p>\n     * More information about a status may be available through additional\n     * extras; see the individual status documentation for details.\n     *\n     * @see Intent#getIntExtra(String, int)\n     ",
+    "links" : [ "#STATUS_FAILURE_INCOMPATIBLE", "#STATUS_PENDING_USER_ACTION", "#STATUS_FAILURE_BLOCKED", "#STATUS_FAILURE_TIMEOUT", "#STATUS_FAILURE_CONFLICT", "#STATUS_FAILURE", "#STATUS_SUCCESS", "#STATUS_FAILURE_STORAGE", "#STATUS_FAILURE_INVALID", "#STATUS_FAILURE_ABORTED" ]
+  }, {
+    "name" : "EXTRA_PRE_APPROVAL",
+    "type" : "String",
+    "comment" : "\n     * Indicate if the status is for a pre-approval request.\n     *\n     * If callers use the same {@link IntentSender} for both\n     * {@link Session#requestUserPreapproval(PreapprovalDetails, IntentSender)} and\n     * {@link Session#commit(IntentSender)}, they can use this to differentiate between them.\n     *\n     * @see Intent#getBooleanExtra(String, boolean)\n     ",
+    "links" : [ "android.content.IntentSender", "#commit(IntentSender)", "#requestUserPreapproval(PreapprovalDetails" ]
   }, {
     "name" : "EXTRA_STATUS_MESSAGE",
     "type" : "String",
@@ -69,6 +85,16 @@
     "comment" : "\n     * Storage path relevant to a status.\n     *\n     * @see Intent#getStringExtra(String)\n     ",
     "links" : [ ]
   }, {
+    "name" : "EXTRA_INSTALL_CONSTRAINTS",
+    "type" : "String",
+    "comment" : "\n     * The {@link InstallConstraints} object.\n     *\n     * @see Intent#getParcelableExtra(String, Class)\n     * @see #waitForInstallConstraints(List, InstallConstraints, IntentSender, long)\n     ",
+    "links" : [ "InstallConstraints" ]
+  }, {
+    "name" : "EXTRA_INSTALL_CONSTRAINTS_RESULT",
+    "type" : "String",
+    "comment" : "\n     * The {@link InstallConstraintsResult} object.\n     *\n     * @see Intent#getParcelableExtra(String, Class)\n     * @see #waitForInstallConstraints(List, InstallConstraints, IntentSender, long)\n     ",
+    "links" : [ "InstallConstraintsResult" ]
+  }, {
     "name" : "EXTRA_PACKAGE_NAMES",
     "type" : "String",
     "comment" : " {@hide} ",
@@ -76,8 +102,8 @@
   }, {
     "name" : "EXTRA_LEGACY_STATUS",
     "type" : "String",
-    "comment" : " {@hide} ",
-    "links" : [ ]
+    "comment" : "\n     * The status as used internally in the package manager. Refer to {@link PackageManager} for\n     * a list of all valid legacy statuses.\n     *\n     * @hide\n     ",
+    "links" : [ "android.content.pm.PackageManager" ]
   }, {
     "name" : "EXTRA_LEGACY_BUNDLE",
     "type" : "String",
@@ -86,13 +112,48 @@
   }, {
     "name" : "EXTRA_CALLBACK",
     "type" : "String",
-    "comment" : " {@hide} ",
+    "comment" : "\n     * The callback to execute once an uninstall is completed (used for both successful and\n     * unsuccessful uninstalls).\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_DELETE_FLAGS",
+    "type" : "String",
+    "comment" : "\n     * Key for passing extra delete flags during archiving.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "EXTRA_DATA_LOADER_TYPE",
     "type" : "String",
     "comment" : "\n     * Type of DataLoader for this session. Will be one of\n     * {@link #DATA_LOADER_TYPE_NONE}, {@link #DATA_LOADER_TYPE_STREAMING},\n     * {@link #DATA_LOADER_TYPE_INCREMENTAL}.\n     * <p>\n     * See the individual types documentation for details.\n     *\n     * @see Intent#getIntExtra(String, int)\n     * {@hide}\n     ",
     "links" : [ "#DATA_LOADER_TYPE_STREAMING", "#DATA_LOADER_TYPE_INCREMENTAL", "#DATA_LOADER_TYPE_NONE" ]
+  }, {
+    "name" : "EXTRA_RESOLVED_BASE_PATH",
+    "type" : "String",
+    "comment" : "\n     * Path to the validated base APK for this session, which may point at an\n     * APK inside the session (when the session defines the base), or it may\n     * point at the existing base APK (when adding splits to an existing app).\n     *\n     * @hide\n     * @deprecated Resolved base path of an install session should not be available to unauthorized\n     * callers. Use {@link SessionInfo#getResolvedBaseApkPath()} instead.\n     ",
+    "links" : [ "#getResolvedBaseApkPath()" ]
+  }, {
+    "name" : "EXTRA_UNARCHIVE_PACKAGE_NAME",
+    "type" : "String",
+    "comment" : "\n     * Extra field for the package name of a package that is requested to be unarchived. Sent as\n     * part of the {@link android.content.Intent#ACTION_UNARCHIVE_PACKAGE} intent.\n     ",
+    "links" : [ "android.content.Intent#ACTION_UNARCHIVE_PACKAGE" ]
+  }, {
+    "name" : "EXTRA_UNARCHIVE_ID",
+    "type" : "String",
+    "comment" : "\n     * Extra field for the unarchive ID. Sent as\n     * part of the {@link android.content.Intent#ACTION_UNARCHIVE_PACKAGE} intent.\n     *\n     * @see SessionParams#setUnarchiveId\n     ",
+    "links" : [ "android.content.Intent#ACTION_UNARCHIVE_PACKAGE" ]
+  }, {
+    "name" : "EXTRA_UNARCHIVE_ALL_USERS",
+    "type" : "String",
+    "comment" : "\n     * If true, the requestor of the unarchival has specified that the app should be unarchived\n     * for all users. Sent as part of the {@link android.content.Intent#ACTION_UNARCHIVE_PACKAGE}\n     * intent.\n     ",
+    "links" : [ "android.content.Intent#ACTION_UNARCHIVE_PACKAGE" ]
+  }, {
+    "name" : "EXTRA_UNARCHIVE_STATUS",
+    "type" : "String",
+    "comment" : "\n     * Current status of an unarchive operation. Will be one of\n     * {@link #UNARCHIVAL_OK}, {@link #UNARCHIVAL_ERROR_USER_ACTION_NEEDED},\n     * {@link #UNARCHIVAL_ERROR_INSUFFICIENT_STORAGE}, {@link #UNARCHIVAL_ERROR_NO_CONNECTIVITY},\n     * {@link #UNARCHIVAL_GENERIC_ERROR}, {@link #UNARCHIVAL_ERROR_INSTALLER_DISABLED} or\n     * {@link #UNARCHIVAL_ERROR_INSTALLER_UNINSTALLED}.\n     *\n     * <p> If the status is not {@link #UNARCHIVAL_OK}, then {@link Intent#EXTRA_INTENT} will be set\n     * with an intent for a corresponding follow-up action (e.g. storage clearing dialog) or a\n     * failure dialog.\n     *\n     * <p> Used as part of {@link #requestUnarchive} to return the status of the unarchival through\n     * the {@link IntentSender}.\n     *\n     * @see #requestUnarchive\n     ",
+    "links" : [ "android.content.IntentSender", "#UNARCHIVAL_GENERIC_ERROR", "#UNARCHIVAL_ERROR_INSTALLER_UNINSTALLED", "#UNARCHIVAL_OK", "#UNARCHIVAL_ERROR_INSUFFICIENT_STORAGE", "#UNARCHIVAL_ERROR_INSTALLER_DISABLED", "#UNARCHIVAL_ERROR_NO_CONNECTIVITY", "#UNARCHIVAL_ERROR_USER_ACTION_NEEDED", "android.app.PendingIntent#EXTRA_INTENT", "#requestUnarchive" ]
+  }, {
+    "name" : "EXTRA_WARNINGS",
+    "type" : "String",
+    "comment" : "\n     * A list of warnings that occurred during installation.\n     *\n     * @hide\n     ",
+    "links" : [ ]
   }, {
     "name" : "STATUS_PENDING_STREAMING",
     "type" : "int",
@@ -102,7 +163,7 @@
     "name" : "STATUS_PENDING_USER_ACTION",
     "type" : "int",
     "comment" : "\n     * User action is currently required to proceed. You can launch the intent\n     * activity described by {@link Intent#EXTRA_INTENT} to involve the user and\n     * continue.\n     * <p>\n     * You may choose to immediately launch the intent if the user is actively\n     * using your app. Otherwise, you should use a notification to guide the\n     * user back into your app before launching.\n     *\n     * @see Intent#getParcelableExtra(String)\n     ",
-    "links" : [ "android.content.Intent#EXTRA_INTENT" ]
+    "links" : [ "android.app.PendingIntent#EXTRA_INTENT" ]
   }, {
     "name" : "STATUS_SUCCESS",
     "type" : "int",
@@ -141,7 +202,12 @@
   }, {
     "name" : "STATUS_FAILURE_INCOMPATIBLE",
     "type" : "int",
-    "comment" : "\n     * The operation failed because it is fundamentally incompatible with this\n     * device. For example, the app may require a hardware feature that doesn't\n     * exist, it may be missing native code for the ABIs supported by the\n     * device, or it requires a newer SDK version, etc.\n     *\n     * @see #EXTRA_STATUS_MESSAGE\n     ",
+    "comment" : "\n     * The operation failed because it is fundamentally incompatible with this\n     * device. For example, the app may require a hardware feature that doesn't\n     * exist, it may be missing native code for the ABIs supported by the\n     * device, or it requires a newer SDK version, etc.\n     *\n     * Starting in {@link Build.VERSION_CODES#UPSIDE_DOWN_CAKE}, an app with only 32-bit native\n     * code can still be installed on a device that supports both 64-bit and 32-bit ABIs.\n     * However, a warning dialog will be displayed when the app is launched.\n     *\n     * @see #EXTRA_STATUS_MESSAGE\n     ",
+    "links" : [ "Build.VERSION_CODES#UPSIDE_DOWN_CAKE" ]
+  }, {
+    "name" : "STATUS_FAILURE_TIMEOUT",
+    "type" : "int",
+    "comment" : "\n     * The operation failed because it didn't complete within the specified timeout.\n     *\n     * @see #EXTRA_STATUS_MESSAGE\n     ",
     "links" : [ ]
   }, {
     "name" : "DATA_LOADER_TYPE_NONE",
@@ -174,6 +240,91 @@
     "comment" : "\n     * Target location for the file in installation session is\n     * /data/media/<userid>/Android/data/<packageName>.\n     * This is the intended location for application data.\n     * Can only be used by an app itself running under specific user.\n     * {@hide}\n     ",
     "links" : [ ]
   }, {
+    "name" : "PACKAGE_SOURCE_UNSPECIFIED",
+    "type" : "int",
+    "comment" : "\n     * The installer did not call {@link PackageInstaller.SessionParams#setPackageSource(int)} to\n     * specify the package source.\n     ",
+    "links" : [ "PackageInstaller.SessionParams#setPackageSource(int)" ]
+  }, {
+    "name" : "PACKAGE_SOURCE_OTHER",
+    "type" : "int",
+    "comment" : "\n     * Code indicating that the package being installed is from a source not reflected by any\n     * other package source constant.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PACKAGE_SOURCE_STORE",
+    "type" : "int",
+    "comment" : "\n     * Code indicating that the package being installed is from a store. An app store that\n     * installs an app for the user would use this.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PACKAGE_SOURCE_LOCAL_FILE",
+    "type" : "int",
+    "comment" : "\n     * Code indicating that the package being installed comes from a local file on the device. A\n     * file manager that is facilitating the installation of an APK file would use this.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "PACKAGE_SOURCE_DOWNLOADED_FILE",
+    "type" : "int",
+    "comment" : "\n     * Code indicating that the package being installed comes from a file that was downloaded to\n     * the device by the user. For use in place of {@link #PACKAGE_SOURCE_LOCAL_FILE} when the\n     * installer knows the package was downloaded.\n     ",
+    "links" : [ "#PACKAGE_SOURCE_LOCAL_FILE" ]
+  }, {
+    "name" : "REASON_CONFIRM_PACKAGE_CHANGE",
+    "type" : "int",
+    "comment" : "\n     * Indicate the user intervention is required when the installer attempts to commit the session.\n     * This is the default case.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_OWNERSHIP_CHANGED",
+    "type" : "int",
+    "comment" : "\n     * Indicate the user intervention is required because the update ownership enforcement is\n     * enabled, and the update owner will change.\n     *\n     * @see PackageInstaller.SessionParams#setRequestUpdateOwnership\n     * @see InstallSourceInfo#getUpdateOwnerPackageName\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "REASON_REMIND_OWNERSHIP",
+    "type" : "int",
+    "comment" : "\n     * Indicate the user intervention is required because the update ownership enforcement is\n     * enabled, and remind the update owner is a different package.\n     *\n     * @see PackageInstaller.SessionParams#setRequestUpdateOwnership\n     * @see InstallSourceInfo#getUpdateOwnerPackageName\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_STATUS_UNSET",
+    "type" : "int",
+    "comment" : "\n     * The unarchival status is not set.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_OK",
+    "type" : "int",
+    "comment" : "\n     * The unarchival is possible and will commence.\n     *\n     * <p> Note that this does not mean that the unarchival has completed. This status should be\n     * sent before any longer asynchronous action (e.g. app download) is started.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_ERROR_USER_ACTION_NEEDED",
+    "type" : "int",
+    "comment" : "\n     * The user needs to interact with the installer to enable the installation.\n     *\n     * <p> An example use case for this could be that the user needs to login to allow the\n     * download for a paid app.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_ERROR_INSUFFICIENT_STORAGE",
+    "type" : "int",
+    "comment" : "\n     * Not enough storage to unarchive the application.\n     *\n     * <p> The installer can optionally provide a {@code userActionIntent} for a space-clearing\n     * dialog. If no action is provided, then a generic intent\n     * {@link android.os.storage.StorageManager#ACTION_MANAGE_STORAGE} is started instead.\n     ",
+    "links" : [ "android.os.storage.StorageManager#ACTION_MANAGE_STORAGE" ]
+  }, {
+    "name" : "UNARCHIVAL_ERROR_NO_CONNECTIVITY",
+    "type" : "int",
+    "comment" : "\n     * The device is not connected to the internet\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_ERROR_INSTALLER_DISABLED",
+    "type" : "int",
+    "comment" : "\n     * The installer responsible for the unarchival is disabled.\n     *\n     * <p> The system will return this status if appropriate. Installers do not need to verify for\n     * this error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_ERROR_INSTALLER_UNINSTALLED",
+    "type" : "int",
+    "comment" : "\n     * The installer responsible for the unarchival has been uninstalled\n     *\n     * <p> The system will return this status if appropriate. Installers do not need to verify for\n     * this error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "UNARCHIVAL_GENERIC_ERROR",
+    "type" : "int",
+    "comment" : "\n     * Generic error: The app cannot be unarchived.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_CHECKSUMS",
+    "type" : "int",
+    "comment" : " Default set of checksums - includes all available checksums.\n     * @see Session#requestChecksums  ",
+    "links" : [ ]
+  }, {
     "name" : "mInstaller",
     "type" : "IPackageInstaller",
     "comment" : "",
@@ -185,6 +336,11 @@
     "links" : [ ]
   }, {
     "name" : "mInstallerPackageName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAttributionTag",
     "type" : "String",
     "comment" : "",
     "links" : [ ]
@@ -222,12 +378,12 @@
   }, {
     "name" : "public SessionInfo getSessionInfo(int sessionId)",
     "returnType" : "SessionInfo",
-    "comment" : "\n     * Return details for a specific session. No special permissions are\n     * required to retrieve these details.\n     *\n     * @return details for the requested session, or {@code null} if the session\n     *         does not exist.\n     ",
+    "comment" : "\n     * Return details for a specific session. Callers need to either declare &lt;queries&gt;\n     * element with the specific package name in the app's manifest, have the\n     * android.permission.QUERY_ALL_PACKAGES, or be the session owner to retrieve these details.\n     *\n     * @return details for the requested session, or {@code null} if the session\n     *         does not exist.\n     ",
     "links" : [ ]
   }, {
     "name" : "public List<SessionInfo> getAllSessions()",
     "returnType" : "List<SessionInfo>",
-    "comment" : "\n     * Return list of all known install sessions, regardless of the installer.\n     ",
+    "comment" : "\n     * Return list of all known install sessions, regardless of the installer. Callers need to\n     * either declare &lt;queries&gt; element with the specific  package name in the app's manifest,\n     * have the android.permission.QUERY_ALL_PACKAGES, or be the session owner to retrieve these\n     * details.\n     ",
     "links" : [ ]
   }, {
     "name" : "public List<SessionInfo> getMySessions()",
@@ -237,7 +393,7 @@
   }, {
     "name" : "public List<SessionInfo> getStagedSessions()",
     "returnType" : "List<SessionInfo>",
-    "comment" : "\n     * Return list of all staged install sessions.\n     ",
+    "comment" : "\n     * Return list of all staged install sessions. Callers need to either declare &lt;queries&gt;\n     * element with the specific package name in the app's manifest, have the\n     * android.permission.QUERY_ALL_PACKAGES, or be the session owner to retrieve these details.\n     ",
     "links" : [ ]
   }, {
     "name" : "public SessionInfo getActiveStagedSession()",
@@ -252,38 +408,58 @@
   }, {
     "name" : "public void uninstall(@NonNull String packageName, @NonNull IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Uninstall the given package, removing it completely from the device. This\n     * method is available to:\n     * <ul>\n     * <li>the current \"installer of record\" for the package\n     * <li>the device owner\n     * <li>the affiliated profile owner\n     * </ul>\n     *\n     * @param packageName The package to uninstall.\n     * @param statusReceiver Where to deliver the result.\n     *\n     * @see android.app.admin.DevicePolicyManager\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Uninstall the given package, removing it completely from the device. This\n     * method is available to:\n     * <ul>\n     * <li>the current \"installer of record\" for the package\n     * <li>the device owner\n     * <li>the affiliated profile owner\n     * </ul>\n     *\n     * @param packageName The package to uninstall.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     *\n     * @see android.app.admin.DevicePolicyManager\n     ",
+    "links" : [ "#EXTRA_STATUS" ]
   }, {
     "name" : "public void uninstall(@NonNull String packageName, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Uninstall the given package, removing it completely from the device. This\n     * method is only available to the current \"installer of record\" for the\n     * package.\n     *\n     * @param packageName The package to uninstall.\n     * @param flags Flags for uninstall.\n     * @param statusReceiver Where to deliver the result.\n     *\n     * @hide\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Uninstall the given package, removing it completely from the device. This\n     * method is only available to the current \"installer of record\" for the\n     * package.\n     *\n     * @param packageName The package to uninstall.\n     * @param flags Flags for uninstall.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     *\n     * @hide\n     ",
+    "links" : [ "#EXTRA_STATUS" ]
   }, {
     "name" : "public void uninstall(@NonNull VersionedPackage versionedPackage, @NonNull IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Uninstall the given package with a specific version code, removing it\n     * completely from the device. If the version code of the package\n     * does not match the one passed in the versioned package argument this\n     * method is a no-op. Use {@link PackageManager#VERSION_CODE_HIGHEST} to\n     * uninstall the latest version of the package.\n     * <p>\n     * This method is available to:\n     * <ul>\n     * <li>the current \"installer of record\" for the package\n     * <li>the device owner\n     * <li>the affiliated profile owner\n     * </ul>\n     *\n     * @param versionedPackage The versioned package to uninstall.\n     * @param statusReceiver Where to deliver the result.\n     *\n     * @see android.app.admin.DevicePolicyManager\n     ",
-    "links" : [ "android.content.pm.PackageManager#VERSION_CODE_HIGHEST" ]
+    "comment" : "\n     * Uninstall the given package with a specific version code, removing it\n     * completely from the device. If the version code of the package\n     * does not match the one passed in the versioned package argument this\n     * method is a no-op. Use {@link PackageManager#VERSION_CODE_HIGHEST} to\n     * uninstall the latest version of the package.\n     * <p>\n     * This method is available to:\n     * <ul>\n     * <li>the current \"installer of record\" for the package\n     * <li>the device owner\n     * <li>the affiliated profile owner\n     * </ul>\n     *\n     * @param versionedPackage The versioned package to uninstall.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     *\n     * @see android.app.admin.DevicePolicyManager\n     ",
+    "links" : [ "android.content.pm.PackageManager#VERSION_CODE_HIGHEST", "#EXTRA_STATUS" ]
   }, {
     "name" : "public void uninstall(@NonNull VersionedPackage versionedPackage, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Uninstall the given package with a specific version code, removing it\n     * completely from the device. This method is only available to the current\n     * \"installer of record\" for the package. If the version code of the package\n     * does not match the one passed in the versioned package argument this\n     * method is a no-op. Use {@link PackageManager#VERSION_CODE_HIGHEST} to\n     * uninstall the latest version of the package.\n     *\n     * @param versionedPackage The versioned package to uninstall.\n     * @param flags Flags for uninstall.\n     * @param statusReceiver Where to deliver the result.\n     *\n     * @hide\n     ",
-    "links" : [ "android.content.pm.PackageManager#VERSION_CODE_HIGHEST" ]
+    "comment" : "\n     * Uninstall the given package with a specific version code, removing it\n     * completely from the device. This method is only available to the current\n     * \"installer of record\" for the package. If the version code of the package\n     * does not match the one passed in the versioned package argument this\n     * method is a no-op. Use {@link PackageManager#VERSION_CODE_HIGHEST} to\n     * uninstall the latest version of the package.\n     *\n     * @param versionedPackage The versioned package to uninstall.\n     * @param flags Flags for uninstall.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     ",
+    "links" : [ "android.content.pm.PackageManager#VERSION_CODE_HIGHEST", "#EXTRA_STATUS" ]
   }, {
     "name" : "public void installExistingPackage(@NonNull String packageName, @InstallReason int installReason, @Nullable IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Install the given package, which already exists on the device, for the user for which this\n     * installer was created.\n     *\n     * <p>This will\n     * {@link PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set) whitelist\n     * all restricted permissions}.\n     *\n     * @param packageName The package to install.\n     * @param installReason Reason for install.\n     * @param statusReceiver Where to deliver the result.\n     ",
-    "links" : [ "PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set)" ]
+    "comment" : "\n     * Install the given package, which already exists on the device, for the user for which this\n     * installer was created.\n     *\n     * <p>This will\n     * {@link PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set) allowlist\n     * all restricted permissions}.\n     *\n     * @param packageName The package to install.\n     * @param installReason Reason for install.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     ",
+    "links" : [ "PackageInstaller.SessionParams#setWhitelistedRestrictedPermissions(Set)", "#EXTRA_STATUS" ]
   }, {
     "name" : "public void uninstallExistingPackage(@NonNull String packageName, @Nullable IntentSender statusReceiver)",
     "returnType" : "void",
-    "comment" : "\n     * Uninstall the given package for the user for which this installer was created if the package\n     * will still exist for other users on the device.\n     *\n     * @param packageName The package to install.\n     * @param statusReceiver Where to deliver the result.\n     *\n     * {@hide}\n     ",
-    "links" : [ ]
+    "comment" : "\n     * Uninstall the given package for the user for which this installer was created if the package\n     * will still exist for other users on the device.\n     *\n     * @param packageName The package to uninstall.\n     * @param statusReceiver Where to deliver the result of the operation indicated by the extra\n     *                       {@link #EXTRA_STATUS}. Refer to the individual status codes\n     *                       on how to handle them.\n     ",
+    "links" : [ "#EXTRA_STATUS" ]
+  }, {
+    "name" : "public void installPackageArchived(@NonNull ArchivedPackageInfo archivedPackageInfo, @NonNull SessionParams sessionParams, @NonNull IntentSender statusReceiver)",
+    "returnType" : "void",
+    "comment" : "\n     * Install package in an archived state.\n     *\n     * @param archivedPackageInfo archived package data such as package name, signature etc.\n     * @param sessionParams used to create an underlying installation session\n     * @param statusReceiver Called when the state of the session changes. Intents\n     *                       sent to this receiver contain {@link #EXTRA_STATUS}. Refer to the\n     *                       individual status codes on how to handle them.\n     * @see #createSession\n     * @see PackageInstaller.Session#commit\n     ",
+    "links" : [ "#EXTRA_STATUS" ]
   }, {
     "name" : "public void setPermissionsResult(int sessionId, boolean accepted)",
     "returnType" : "void",
     "comment" : " {@hide} ",
     "links" : [ ]
+  }, {
+    "name" : "public void checkInstallConstraints(@NonNull List<String> packageNames, @NonNull InstallConstraints constraints, @NonNull @CallbackExecutor Executor executor, @NonNull Consumer<InstallConstraintsResult> callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Check if install constraints are satisfied for the given packages.\n     *\n     * Note this query result is just a hint and subject to race because system states could\n     * change anytime in-between this query and committing the session.\n     *\n     * The result is returned by a callback because some constraints might take a long time\n     * to evaluate.\n     *\n     * @param packageNames a list of package names to check the constraints for installation\n     * @param constraints the constraints for installation.\n     * @param executor the {@link Executor} on which to invoke the callback\n     * @param callback called when the {@link InstallConstraintsResult} is ready\n     *\n     * @throws SecurityException if the given packages' installer of record doesn't match the\n     *             caller's own package name or the installerPackageName set by the caller doesn't\n     *             match the caller's own package name.\n     ",
+    "links" : [ "InstallConstraintsResult", "android.annotation.CallbackExecutor" ]
+  }, {
+    "name" : "public void waitForInstallConstraints(@NonNull List<String> packageNames, @NonNull InstallConstraints constraints, @NonNull IntentSender callback, @DurationMillisLong long timeoutMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Similar to {@link #checkInstallConstraints(List, InstallConstraints, Executor, Consumer)},\n     * but the callback is invoked only when the constraints are satisfied or after timeout.\n     * <p>\n     * Note: the device idle constraint might take a long time to evaluate. The system will\n     * ensure the constraint is evaluated completely before handling timeout.\n     *\n     * @param packageNames a list of package names to check the constraints for installation\n     * @param constraints the constraints for installation.\n     * @param callback Called when the constraints are satisfied or after timeout.\n     *                 Intents sent to this callback contain:\n     *                 {@link Intent#EXTRA_PACKAGES} for the input package names,\n     *                 {@link #EXTRA_INSTALL_CONSTRAINTS} for the input constraints,\n     *                 {@link #EXTRA_INSTALL_CONSTRAINTS_RESULT} for the result.\n     * @param timeoutMillis The maximum time to wait, in milliseconds until the constraints are\n     *                      satisfied. Valid range is from 0 to one week. {@code 0} means the\n     *                      callback will be invoked immediately no matter constraints are\n     *                      satisfied or not.\n     * @throws SecurityException if the given packages' installer of record doesn't match the\n     *             caller's own package name or the installerPackageName set by the caller doesn't\n     *             match the caller's own package name.\n     ",
+    "links" : [ "#EXTRA_INSTALL_CONSTRAINTS_RESULT", "android.app.PendingIntent#EXTRA_PACKAGES", "#checkInstallConstraints(List", "#EXTRA_INSTALL_CONSTRAINTS" ]
+  }, {
+    "name" : "public void commitSessionAfterInstallConstraintsAreMet(int sessionId, @NonNull IntentSender statusReceiver, @NonNull InstallConstraints constraints, @DurationMillisLong long timeoutMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Commit the session when all constraints are satisfied. This is a convenient method to\n     * combine {@link #waitForInstallConstraints(List, InstallConstraints, IntentSender, long)}\n     * and {@link Session#commit(IntentSender)}.\n     * <p>\n     * Once this method is called, the session is sealed and no additional mutations\n     * may be performed on the session. In the case of timeout, you may commit the\n     * session again using this method or {@link Session#commit(IntentSender)} for retries.\n     *\n     * @param sessionId the session ID to commit when all constraints are satisfied.\n     * @param statusReceiver Called when the state of the session changes. Intents\n     *                       sent to this receiver contain {@link #EXTRA_STATUS}.\n     *                       Refer to the individual status codes on how to handle them.\n     * @param constraints The requirements to satisfy before committing the session.\n     * @param timeoutMillis The maximum time to wait, in milliseconds until the\n     *                      constraints are satisfied. The caller will be notified via\n     *                      {@code statusReceiver} if timeout happens before commit.\n     * @throws IllegalArgumentException if the {@code statusReceiver} from an immutable\n     *             {@link android.app.PendingIntent} when caller has a target SDK of API\n     *             35 or above.\n     ",
+    "links" : [ "#waitForInstallConstraints(List", "#commit(IntentSender)", "android.app.PendingIntent", "#EXTRA_STATUS" ]
   }, {
     "name" : "public void addSessionCallback(@NonNull SessionCallback callback)",
     "returnType" : "void",
@@ -292,7 +468,7 @@
   }, {
     "name" : "public void registerSessionCallback(@NonNull SessionCallback callback)",
     "returnType" : "void",
-    "comment" : "\n     * Register to watch for session lifecycle events. No special permissions\n     * are required to watch for these events.\n     ",
+    "comment" : "\n     * Register to watch for session lifecycle events. The callers need to be the session\n     * owner or have the android.permission.QUERY_ALL_PACKAGES to watch for these events.\n     ",
     "links" : [ ]
   }, {
     "name" : "public void addSessionCallback(@NonNull SessionCallback callback, @NonNull Handler handler)",
@@ -314,7 +490,37 @@
     "returnType" : "void",
     "comment" : "\n     * Unregister a previously registered callback.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public InstallInfo readInstallInfo(@NonNull File file, int flags) throws PackageParsingException",
+    "returnType" : "InstallInfo",
+    "comment" : "\n     * Parse a single APK or a directory of APKs to get install relevant information about\n     * the package wrapped in {@link InstallInfo}.\n     * @throws PackageParsingException if the package source file(s) provided is(are) not valid,\n     * or the parser isn't able to parse the supplied source(s).\n     * @hide\n     ",
+    "links" : [ "InstallInfo" ]
+  }, {
+    "name" : "public InstallInfo readInstallInfo(@NonNull ParcelFileDescriptor pfd, @Nullable String debugPathName, int flags) throws PackageParsingException",
+    "returnType" : "InstallInfo",
+    "comment" : "\n     * Parse a single APK file passed as an FD to get install relevant information about\n     * the package wrapped in {@link InstallInfo}.\n     * @throws PackageParsingException if the package source file(s) provided is(are) not valid,\n     * or the parser isn't able to parse the supplied source(s).\n     * @hide\n     ",
+    "links" : [ "InstallInfo" ]
+  }, {
+    "name" : "public void requestArchive(@NonNull String packageName, @NonNull IntentSender statusReceiver) throws PackageManager.NameNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Requests to archive a package which is currently installed.\n     *\n     * <p> During the archival process, the apps APKs and cache are removed from the device while\n     * the user data is kept. Through the {@link #requestUnarchive} call, apps\n     * can be restored again through their responsible installer.\n     *\n     * <p> Archived apps are returned as displayable apps through the {@link LauncherApps} APIs and\n     * will be displayed to users with UI treatment to highlight that said apps are archived. If\n     * a user taps on an archived app, the app will be unarchived and the restoration process is\n     * communicated.\n     *\n     * @param statusReceiver Callback used to notify when the operation is completed.\n     * @throws PackageManager.NameNotFoundException If {@code packageName} isn't found or not\n     *                                              available to the caller or isn't archived.\n     ",
+    "links" : [ "android.content.pm.LauncherApps", "#requestUnarchive" ]
+  }, {
+    "name" : "public void requestUnarchive(@NonNull String packageName, @NonNull IntentSender statusReceiver) throws IOException, PackageManager.NameNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Requests to unarchive a currently archived package.\n     *\n     * <p> Sends a request to unarchive an app to the responsible installer. The installer is\n     * determined by {@link InstallSourceInfo#getUpdateOwnerPackageName()}, or\n     * {@link InstallSourceInfo#getInstallingPackageName()} if the former value is null.\n     *\n     * <p> The installation will happen asynchronously and can be observed through\n     * {@link android.content.Intent#ACTION_PACKAGE_ADDED}.\n     *\n     * @param statusReceiver Callback used to notify whether the installer has accepted the\n     *                       unarchival request or an error has occurred. The status update will be\n     *                       sent though {@link #EXTRA_UNARCHIVE_STATUS}. Only one status will be\n     *                       sent.\n     * @throws PackageManager.NameNotFoundException If {@code packageName} isn't found or not\n     *                                              visible to the caller or if the package has no\n     *                                              installer on the device anymore to unarchive it.\n     * @throws IOException If parameters were unsatisfiable, such as lack of disk space.\n     ",
+    "links" : [ "#EXTRA_UNARCHIVE_STATUS", "android.content.Intent#ACTION_PACKAGE_ADDED", "android.content.pm.InstallSourceInfo#getInstallingPackageName()", "android.content.pm.InstallSourceInfo#getUpdateOwnerPackageName()" ]
+  }, {
+    "name" : "public void reportUnarchivalStatus(int unarchiveId, @UnarchivalStatus int status, long requiredStorageBytes, @Nullable PendingIntent userActionIntent) throws PackageManager.NameNotFoundException",
+    "returnType" : "void",
+    "comment" : " TODO(b/314960798) Remove old API once it's unused",
+    "links" : [ ]
+  }, {
+    "name" : "public void reportUnarchivalState(@NonNull UnarchivalState unarchivalState) throws PackageManager.NameNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * Reports the state of an unarchival to the system.\n     *\n     * @see UnarchivalState for the different state options.\n     * @throws PackageManager.NameNotFoundException if no unarchival with {@code unarchiveId} exists\n     ",
+    "links" : [ ]
   } ],
-  "variableNames" : [ "TAG", "ENABLE_REVOCABLE_FD", "ACTION_SESSION_DETAILS", "ACTION_SESSION_COMMITTED", "ACTION_SESSION_UPDATED", "ACTION_CONFIRM_INSTALL", "EXTRA_SESSION_ID", "EXTRA_SESSION", "EXTRA_PACKAGE_NAME", "EXTRA_STATUS", "EXTRA_STATUS_MESSAGE", "EXTRA_OTHER_PACKAGE_NAME", "EXTRA_STORAGE_PATH", "EXTRA_PACKAGE_NAMES", "EXTRA_LEGACY_STATUS", "EXTRA_LEGACY_BUNDLE", "EXTRA_CALLBACK", "EXTRA_DATA_LOADER_TYPE", "STATUS_PENDING_STREAMING", "STATUS_PENDING_USER_ACTION", "STATUS_SUCCESS", "STATUS_FAILURE", "STATUS_FAILURE_BLOCKED", "STATUS_FAILURE_ABORTED", "STATUS_FAILURE_INVALID", "STATUS_FAILURE_CONFLICT", "STATUS_FAILURE_STORAGE", "STATUS_FAILURE_INCOMPATIBLE", "DATA_LOADER_TYPE_NONE", "DATA_LOADER_TYPE_STREAMING", "DATA_LOADER_TYPE_INCREMENTAL", "LOCATION_DATA_APP", "LOCATION_MEDIA_OBB", "LOCATION_MEDIA_DATA", "mInstaller", "mUserId", "mInstallerPackageName", "mDelegates" ],
-  "methodNames" : [ "public int createSession(@NonNull SessionParams params) throws IOException", "public Session openSession(int sessionId) throws IOException", "public void updateSessionAppIcon(int sessionId, @Nullable Bitmap appIcon)", "public void updateSessionAppLabel(int sessionId, @Nullable CharSequence appLabel)", "public void abandonSession(int sessionId)", "public SessionInfo getSessionInfo(int sessionId)", "public List<SessionInfo> getAllSessions()", "public List<SessionInfo> getMySessions()", "public List<SessionInfo> getStagedSessions()", "public SessionInfo getActiveStagedSession()", "public List<SessionInfo> getActiveStagedSessions()", "public void uninstall(@NonNull String packageName, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull String packageName, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull VersionedPackage versionedPackage, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull VersionedPackage versionedPackage, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)", "public void installExistingPackage(@NonNull String packageName, @InstallReason int installReason, @Nullable IntentSender statusReceiver)", "public void uninstallExistingPackage(@NonNull String packageName, @Nullable IntentSender statusReceiver)", "public void setPermissionsResult(int sessionId, boolean accepted)", "public void addSessionCallback(@NonNull SessionCallback callback)", "public void registerSessionCallback(@NonNull SessionCallback callback)", "public void addSessionCallback(@NonNull SessionCallback callback, @NonNull Handler handler)", "public void registerSessionCallback(@NonNull SessionCallback callback, @NonNull Handler handler)", "public void removeSessionCallback(@NonNull SessionCallback callback)", "public void unregisterSessionCallback(@NonNull SessionCallback callback)" ]
+  "methodNames" : [ "public int createSession(@NonNull SessionParams params) throws IOException", "public Session openSession(int sessionId) throws IOException", "public void updateSessionAppIcon(int sessionId, @Nullable Bitmap appIcon)", "public void updateSessionAppLabel(int sessionId, @Nullable CharSequence appLabel)", "public void abandonSession(int sessionId)", "public SessionInfo getSessionInfo(int sessionId)", "public List<SessionInfo> getAllSessions()", "public List<SessionInfo> getMySessions()", "public List<SessionInfo> getStagedSessions()", "public SessionInfo getActiveStagedSession()", "public List<SessionInfo> getActiveStagedSessions()", "public void uninstall(@NonNull String packageName, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull String packageName, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull VersionedPackage versionedPackage, @NonNull IntentSender statusReceiver)", "public void uninstall(@NonNull VersionedPackage versionedPackage, @DeleteFlags int flags, @NonNull IntentSender statusReceiver)", "public void installExistingPackage(@NonNull String packageName, @InstallReason int installReason, @Nullable IntentSender statusReceiver)", "public void uninstallExistingPackage(@NonNull String packageName, @Nullable IntentSender statusReceiver)", "public void installPackageArchived(@NonNull ArchivedPackageInfo archivedPackageInfo, @NonNull SessionParams sessionParams, @NonNull IntentSender statusReceiver)", "public void setPermissionsResult(int sessionId, boolean accepted)", "public void checkInstallConstraints(@NonNull List<String> packageNames, @NonNull InstallConstraints constraints, @NonNull @CallbackExecutor Executor executor, @NonNull Consumer<InstallConstraintsResult> callback)", "public void waitForInstallConstraints(@NonNull List<String> packageNames, @NonNull InstallConstraints constraints, @NonNull IntentSender callback, @DurationMillisLong long timeoutMillis)", "public void commitSessionAfterInstallConstraintsAreMet(int sessionId, @NonNull IntentSender statusReceiver, @NonNull InstallConstraints constraints, @DurationMillisLong long timeoutMillis)", "public void addSessionCallback(@NonNull SessionCallback callback)", "public void registerSessionCallback(@NonNull SessionCallback callback)", "public void addSessionCallback(@NonNull SessionCallback callback, @NonNull Handler handler)", "public void registerSessionCallback(@NonNull SessionCallback callback, @NonNull Handler handler)", "public void removeSessionCallback(@NonNull SessionCallback callback)", "public void unregisterSessionCallback(@NonNull SessionCallback callback)", "public InstallInfo readInstallInfo(@NonNull File file, int flags) throws PackageParsingException", "public InstallInfo readInstallInfo(@NonNull ParcelFileDescriptor pfd, @Nullable String debugPathName, int flags) throws PackageParsingException", "public void requestArchive(@NonNull String packageName, @NonNull IntentSender statusReceiver) throws PackageManager.NameNotFoundException", "public void requestUnarchive(@NonNull String packageName, @NonNull IntentSender statusReceiver) throws IOException, PackageManager.NameNotFoundException", "public void reportUnarchivalStatus(int unarchiveId, @UnarchivalStatus int status, long requiredStorageBytes, @Nullable PendingIntent userActionIntent) throws PackageManager.NameNotFoundException", "public void reportUnarchivalState(@NonNull UnarchivalState unarchivalState) throws PackageManager.NameNotFoundException" ],
+  "variableNames" : [ "TAG", "ACTION_WAIT_INSTALL_CONSTRAINTS", "ENABLE_REVOCABLE_FD", "ACTION_SESSION_DETAILS", "ACTION_SESSION_COMMITTED", "ACTION_SESSION_UPDATED", "ACTION_CONFIRM_INSTALL", "ACTION_CONFIRM_PRE_APPROVAL", "EXTRA_SESSION_ID", "EXTRA_SESSION", "EXTRA_PACKAGE_NAME", "EXTRA_STATUS", "EXTRA_PRE_APPROVAL", "EXTRA_STATUS_MESSAGE", "EXTRA_OTHER_PACKAGE_NAME", "EXTRA_STORAGE_PATH", "EXTRA_INSTALL_CONSTRAINTS", "EXTRA_INSTALL_CONSTRAINTS_RESULT", "EXTRA_PACKAGE_NAMES", "EXTRA_LEGACY_STATUS", "EXTRA_LEGACY_BUNDLE", "EXTRA_CALLBACK", "EXTRA_DELETE_FLAGS", "EXTRA_DATA_LOADER_TYPE", "EXTRA_RESOLVED_BASE_PATH", "EXTRA_UNARCHIVE_PACKAGE_NAME", "EXTRA_UNARCHIVE_ID", "EXTRA_UNARCHIVE_ALL_USERS", "EXTRA_UNARCHIVE_STATUS", "EXTRA_WARNINGS", "STATUS_PENDING_STREAMING", "STATUS_PENDING_USER_ACTION", "STATUS_SUCCESS", "STATUS_FAILURE", "STATUS_FAILURE_BLOCKED", "STATUS_FAILURE_ABORTED", "STATUS_FAILURE_INVALID", "STATUS_FAILURE_CONFLICT", "STATUS_FAILURE_STORAGE", "STATUS_FAILURE_INCOMPATIBLE", "STATUS_FAILURE_TIMEOUT", "DATA_LOADER_TYPE_NONE", "DATA_LOADER_TYPE_STREAMING", "DATA_LOADER_TYPE_INCREMENTAL", "LOCATION_DATA_APP", "LOCATION_MEDIA_OBB", "LOCATION_MEDIA_DATA", "PACKAGE_SOURCE_UNSPECIFIED", "PACKAGE_SOURCE_OTHER", "PACKAGE_SOURCE_STORE", "PACKAGE_SOURCE_LOCAL_FILE", "PACKAGE_SOURCE_DOWNLOADED_FILE", "REASON_CONFIRM_PACKAGE_CHANGE", "REASON_OWNERSHIP_CHANGED", "REASON_REMIND_OWNERSHIP", "UNARCHIVAL_STATUS_UNSET", "UNARCHIVAL_OK", "UNARCHIVAL_ERROR_USER_ACTION_NEEDED", "UNARCHIVAL_ERROR_INSUFFICIENT_STORAGE", "UNARCHIVAL_ERROR_NO_CONNECTIVITY", "UNARCHIVAL_ERROR_INSTALLER_DISABLED", "UNARCHIVAL_ERROR_INSTALLER_UNINSTALLED", "UNARCHIVAL_GENERIC_ERROR", "DEFAULT_CHECKSUMS", "mInstaller", "mUserId", "mInstallerPackageName", "mAttributionTag", "mDelegates" ]
 }

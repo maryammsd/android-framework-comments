@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/media/ImageReader.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/media/ImageReader.java",
   "packageName" : "android.media",
   "className" : "ImageReader",
   "comment" : "\n * <p>The ImageReader class allows direct application access to image data\n * rendered into a {@link android.view.Surface}</p>\n *\n * <p>Several Android media API classes accept Surface objects as targets to\n * render to, including {@link MediaPlayer}, {@link MediaCodec},\n * {@link android.hardware.camera2.CameraDevice}, {@link ImageWriter} and\n * {@link android.renderscript.Allocation RenderScript Allocations}. The image\n * sizes and formats that can be used with each source vary, and should be\n * checked in the documentation for the specific API.</p>\n *\n * <p>The image data is encapsulated in {@link Image} objects, and multiple such\n * objects can be accessed at the same time, up to the number specified by the\n * {@code maxImages} constructor parameter. New images sent to an ImageReader\n * through its {@link Surface} are queued until accessed through the {@link #acquireLatestImage}\n * or {@link #acquireNextImage} call. Due to memory limits, an image source will\n * eventually stall or drop Images in trying to render to the Surface if the\n * ImageReader does not obtain and release Images at a rate equal to the\n * production rate.</p>\n ",
+  "links" : [ "android.media.MediaCodec", "#acquireNextImage", "android.media.Image", "android.view.Surface", "android.renderscript.Allocation", "android.media.ImageWriter", "android.hardware.camera2.CameraDevice", "android.media.MediaPlayer", "#acquireLatestImage" ],
   "variables" : [ {
     "name" : "ACQUIRE_SUCCESS",
     "type" : "int",
@@ -19,6 +20,16 @@
     "comment" : "\n     * Returned by nativeImageSetup when we couldn't acquire the buffer\n     * because the consumer has already acquired {@maxImages} and cannot\n     * acquire more than that.\n     ",
     "links" : [ ]
   }, {
+    "name" : "DETACH_THROWS_ISE_ONLY",
+    "type" : "long",
+    "comment" : "\n     * <p>\n     * Flag to gate correct exception thrown by {@code #detachImage}.\n     * </p>\n     * <p>\n     * {@code #detachImage} is documented as throwing {@link java.lang.IllegalStateException} in\n     * the event of an error; a native helper method to this threw\n     * {@link java.lang.RuntimeException} if the surface was abandoned while detaching the\n     * {@code Image}.\n     * <p>\n     * This previously undocumented exception behavior continues through Android T.\n     * </p>\n     * <p>\n     * After Android T, the native helper method only throws {@code IllegalStateExceptions} in\n     * accordance with the documentation.\n     * </p>\n     * <p>\n     * {@code #detachImage} will now throw only ISEs if it runs into errors while detaching\n     * the image. Behavior on apps targeting API levels <= T remains unchanged.\n     * </p>\n     ",
+    "links" : [ "java.lang.IllegalStateException", "java.lang.RuntimeException" ]
+  }, {
+    "name" : "mDetachThrowsIseOnly",
+    "type" : "boolean",
+    "comment" : "\n     * Cached value of {@link #DETACH_THROWS_ISE_ONLY} flag to prevent repeated calls when\n     * detaching image.\n     ",
+    "links" : [ "#DETACH_THROWS_ISE_ONLY" ]
+  }, {
     "name" : "mWidth",
     "type" : "int",
     "comment" : "",
@@ -31,6 +42,11 @@
   }, {
     "name" : "mFormat",
     "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUsage",
+    "type" : "long",
     "comment" : "",
     "links" : [ ]
   }, {
@@ -74,6 +90,11 @@
     "comment" : "",
     "links" : [ ]
   }, {
+    "name" : "mListenerExecutor",
+    "type" : "Executor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "mListenerHandler",
     "type" : "ListenerHandler",
     "comment" : "",
@@ -82,6 +103,21 @@
     "name" : "mAcquiredImages",
     "type" : "List<Image>",
     "comment" : " could be closed by different threads (e.g., application thread and GC thread).",
+    "links" : [ ]
+  }, {
+    "name" : "mParent",
+    "type" : "MultiResolutionImageReader",
+    "comment" : " MultiResolutionImageReader.",
+    "links" : [ ]
+  }, {
+    "name" : "mHardwareBufferFormat",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDataSpace",
+    "type" : "int",
+    "comment" : "",
     "links" : [ ]
   }, {
     "name" : "mNativeContext",
@@ -93,12 +129,22 @@
     "name" : "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages)",
     "returnType" : "ImageReader",
     "comment" : "\n     * <p>\n     * Create a new reader for images of the desired size and format.\n     * </p>\n     * <p>\n     * The {@code maxImages} parameter determines the maximum number of\n     * {@link Image} objects that can be be acquired from the\n     * {@code ImageReader} simultaneously. Requesting more buffers will use up\n     * more memory, so it is important to use only the minimum number necessary\n     * for the use case.\n     * </p>\n     * <p>\n     * The valid sizes and formats depend on the source of the image data.\n     * </p>\n     * <p>\n     * If the {@code format} is {@link ImageFormat#PRIVATE PRIVATE}, the created\n     * {@link ImageReader} will produce images that are not directly accessible\n     * by the application. The application can still acquire images from this\n     * {@link ImageReader}, and send them to the\n     * {@link android.hardware.camera2.CameraDevice camera} for reprocessing via\n     * {@link ImageWriter} interface. However, the {@link Image#getPlanes()\n     * getPlanes()} will return an empty array for {@link ImageFormat#PRIVATE\n     * PRIVATE} format images. The application can check if an existing reader's\n     * format by calling {@link #getImageFormat()}.\n     * </p>\n     * <p>\n     * {@link ImageFormat#PRIVATE PRIVATE} format {@link ImageReader\n     * ImageReaders} are more efficient to use when application access to image\n     * data is not necessary, compared to ImageReaders using other format such\n     * as {@link ImageFormat#YUV_420_888 YUV_420_888}.\n     * </p>\n     *\n     * @param width The default width in pixels of the Images that this reader\n     *            will produce.\n     * @param height The default height in pixels of the Images that this reader\n     *            will produce.\n     * @param format The format of the Image that this reader will produce. This\n     *            must be one of the {@link android.graphics.ImageFormat} or\n     *            {@link android.graphics.PixelFormat} constants. Note that not\n     *            all formats are supported, like ImageFormat.NV21.\n     * @param maxImages The maximum number of images the user will want to\n     *            access simultaneously. This should be as small as possible to\n     *            limit memory use. Once maxImages Images are obtained by the\n     *            user, one of them has to be released before a new Image will\n     *            become available for access through\n     *            {@link #acquireLatestImage()} or {@link #acquireNextImage()}.\n     *            Must be greater than 0.\n     * @see Image\n     ",
-    "links" : [ "android.graphics.ImageFormat", "android.media.ImageWriter", "android.media.ImageReader", "android.graphics.ImageFormat#PRIVATEPRIVATE", "#getImageFormat()", "android.graphics.ImageFormat#YUV_420_888", "android.graphics.PixelFormat", "#acquireNextImage()", "android.graphics.ImageFormat#PRIVATE", "android.media.Image#getPlanes()", "android.media.Image", "#acquireLatestImage()", "android.hardware.camera2.CameraDevice", "ImageReaderImageReaders" ]
+    "links" : [ "android.graphics.ImageFormat", "android.media.ImageWriter", "android.graphics.ImageFormat#PRIVATEPRIVATE", "#getImageFormat()", "android.graphics.ImageFormat#YUV_420_888", "android.graphics.PixelFormat", "#acquireNextImage()", "android.graphics.ImageFormat#PRIVATE", "android.media.Image#getPlanes()", "android.media.Image", "#acquireLatestImage()", "android.hardware.camera2.MultiResolutionImageReader", "android.hardware.camera2.CameraDevice", "ImageReaderImageReaders" ]
   }, {
     "name" : "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages, @Usage long usage)",
     "returnType" : "ImageReader",
-    "comment" : "\n     * <p>\n     * Create a new reader for images of the desired size, format and consumer usage flag.\n     * </p>\n     * <p>\n     * The {@code maxImages} parameter determines the maximum number of {@link Image} objects that\n     * can be be acquired from the {@code ImageReader} simultaneously. Requesting more buffers will\n     * use up more memory, so it is important to use only the minimum number necessary for the use\n     * case.\n     * </p>\n     * <p>\n     * The valid sizes and formats depend on the source of the image data.\n     * </p>\n     * <p>\n     * The format and usage flag combination describes how the buffer will be used by\n     * consumer end-points. For example, if the application intends to send the images to\n     * {@link android.media.MediaCodec} or {@link android.media.MediaRecorder} for hardware video\n     * encoding, the format and usage flag combination needs to be\n     * {@link ImageFormat#PRIVATE PRIVATE} and {@link HardwareBuffer#USAGE_VIDEO_ENCODE}. When an\n     * {@link ImageReader} object is created with a valid size and such format/usage flag\n     * combination, the application can send the {@link Image images} to an {@link ImageWriter} that\n     * is created with the input {@link android.view.Surface} provided by the\n     * {@link android.media.MediaCodec} or {@link android.media.MediaRecorder}.\n     * </p>\n     * <p>\n     * If the {@code format} is {@link ImageFormat#PRIVATE PRIVATE}, the created {@link ImageReader}\n     * will produce images that are not directly accessible by the application. The application can\n     * still acquire images from this {@link ImageReader}, and send them to the\n     * {@link android.hardware.camera2.CameraDevice camera} for reprocessing, or to the\n     * {@link android.media.MediaCodec} / {@link android.media.MediaRecorder} for hardware video\n     * encoding via {@link ImageWriter} interface. However, the {@link Image#getPlanes()\n     * getPlanes()} will return an empty array for {@link ImageFormat#PRIVATE PRIVATE} format\n     * images. The application can check if an existing reader's format by calling\n     * {@link #getImageFormat()}.\n     * </p>\n     * <p>\n     * {@link ImageFormat#PRIVATE PRIVATE} format {@link ImageReader ImageReaders} are more\n     * efficient to use when application access to image data is not necessary, compared to\n     * ImageReaders using other format such as {@link ImageFormat#YUV_420_888 YUV_420_888}.\n     * </p>\n     * <p>\n     * Note that not all format and usage flag combinations are supported by the\n     * {@link ImageReader}. Below are the supported combinations by the {@link ImageReader}\n     * (assuming the consumer end-points support the such image consumption, e.g., hardware video\n     * encoding).\n     * <table>\n     * <tr>\n     *   <th>Format</th>\n     *   <th>Compatible usage flags</th>\n     * </tr>\n     * <tr>\n     *   <td>non-{@link android.graphics.ImageFormat#PRIVATE PRIVATE} formats defined by\n     *   {@link android.graphics.ImageFormat ImageFormat} or\n     *   {@link android.graphics.PixelFormat PixelFormat}</td>\n     *   <td>{@link HardwareBuffer#USAGE_CPU_READ_RARELY} or\n     *   {@link HardwareBuffer#USAGE_CPU_READ_OFTEN}</td>\n     * </tr>\n     * <tr>\n     *   <td>{@link android.graphics.ImageFormat#PRIVATE}</td>\n     *   <td>{@link HardwareBuffer#USAGE_VIDEO_ENCODE} or\n     *   {@link HardwareBuffer#USAGE_GPU_SAMPLED_IMAGE}, or combined</td>\n     * </tr>\n     * </table>\n     * Using other combinations may result in {@link IllegalArgumentException}.\n     * </p>\n     * <p>\n     * If the {@link ImageReader} is used as an output target for a {@link\n     * android.hardware.camera2.CameraDevice}, and if the usage flag contains\n     * {@link HardwareBuffer#USAGE_VIDEO_ENCODE}, the timestamps of the\n     * {@link Image images} produced by the {@link ImageReader} won't be in the same timebase as\n     * {@link android.os.SystemClock#elapsedRealtimeNanos}, even if\n     * {@link android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE} is\n     * {@link android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME}.\n     * Instead, the timestamps will be roughly in the same timebase as in\n     * {@link android.os.SystemClock#uptimeMillis}, so that A/V synchronization could work for\n     * video recording. In this case, the timestamps from the {@link ImageReader} with\n     * {@link HardwareBuffer#USAGE_VIDEO_ENCODE} usage flag may not be directly comparable with\n     * timestamps of other streams or capture result metadata.\n     * </p>\n     * @param width The default width in pixels of the Images that this reader will produce.\n     * @param height The default height in pixels of the Images that this reader will produce.\n     * @param format The format of the Image that this reader will produce. This must be one of the\n     *            {@link android.graphics.ImageFormat} or {@link android.graphics.PixelFormat}\n     *            constants. Note that not all formats are supported, like ImageFormat.NV21.\n     * @param maxImages The maximum number of images the user will want to access simultaneously.\n     *            This should be as small as possible to limit memory use. Once maxImages Images are\n     *            obtained by the user, one of them has to be released before a new Image will\n     *            become available for access through {@link #acquireLatestImage()} or\n     *            {@link #acquireNextImage()}. Must be greater than 0.\n     * @param usage The intended usage of the images produced by this ImageReader. See the usages\n     *              on {@link HardwareBuffer} for a list of valid usage bits. See also\n     *              {@link HardwareBuffer#isSupported(int, int, int, int, long)} for checking\n     *              if a combination is supported. If it's not supported this will throw\n     *              an {@link IllegalArgumentException}.\n     * @see Image\n     * @see HardwareBuffer\n     ",
-    "links" : [ "android.media.ImageWriter", "android.graphics.ImageFormat#YUV_420_888", "android.graphics.PixelFormat", "#acquireNextImage()", "android.hardware.HardwareBuffer#USAGE_VIDEO_ENCODE", "android.media.Image", "android.hardware.HardwareBuffer#USAGE_CPU_READ_RARELY", "android.hardware.HardwareBuffer#USAGE_CPU_READ_OFTEN", "IllegalArgumentException", "android.graphics.ImageFormat", "android.view.Surface", "android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME", "android.media.ImageReader", "#getImageFormat()", "android.os.SystemClock#uptimeMillis", "android.hardware.HardwareBuffer", "android.media.MediaRecorder", "android.os.SystemClock#elapsedRealtimeNanos", "android.hardware.HardwareBuffer#isSupported(int", "android.media.MediaCodec", "android.graphics.ImageFormat#PRIVATE", "android.media.Image#getPlanes()", "#acquireLatestImage()", "android.hardware.camera2.CameraDevice", "android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE", "android.hardware.HardwareBuffer#USAGE_GPU_SAMPLED_IMAGE" ]
+    "comment" : "\n     * <p>\n     * Create a new reader for images of the desired size, format and consumer usage flag.\n     * </p>\n     * <p>\n     * The {@code maxImages} parameter determines the maximum number of {@link Image} objects that\n     * can be be acquired from the {@code ImageReader} simultaneously. Requesting more buffers will\n     * use up more memory, so it is important to use only the minimum number necessary for the use\n     * case.\n     * </p>\n     * <p>\n     * The valid sizes and formats depend on the source of the image data.\n     * </p>\n     * <p>\n     * The format and usage flag combination describes how the buffer will be used by\n     * consumer end-points. For example, if the application intends to send the images to\n     * {@link android.media.MediaCodec} or {@link android.media.MediaRecorder} for hardware video\n     * encoding, the format and usage flag combination needs to be\n     * {@link ImageFormat#PRIVATE PRIVATE} and {@link HardwareBuffer#USAGE_VIDEO_ENCODE}. When an\n     * {@link ImageReader} object is created with a valid size and such format/usage flag\n     * combination, the application can send the {@link Image images} to an {@link ImageWriter} that\n     * is created with the input {@link android.view.Surface} provided by the\n     * {@link android.media.MediaCodec} or {@link android.media.MediaRecorder}.\n     * </p>\n     * <p>\n     * If the {@code format} is {@link ImageFormat#PRIVATE PRIVATE}, the created {@link ImageReader}\n     * will produce images that are not directly accessible by the application. The application can\n     * still acquire images from this {@link ImageReader}, and send them to the\n     * {@link android.hardware.camera2.CameraDevice camera} for reprocessing, or to the\n     * {@link android.media.MediaCodec} / {@link android.media.MediaRecorder} for hardware video\n     * encoding via {@link ImageWriter} interface. However, the {@link Image#getPlanes()\n     * getPlanes()} will return an empty array for {@link ImageFormat#PRIVATE PRIVATE} format\n     * images. The application can check if an existing reader's format by calling\n     * {@link #getImageFormat()}.\n     * </p>\n     * <p>\n     * {@link ImageFormat#PRIVATE PRIVATE} format {@link ImageReader ImageReaders} are more\n     * efficient to use when application access to image data is not necessary, compared to\n     * ImageReaders using other format such as {@link ImageFormat#YUV_420_888 YUV_420_888}.\n     * </p>\n     * <p>\n     * Note that not all format and usage flag combinations are supported by the\n     * {@link ImageReader}. Below are the supported combinations by the {@link ImageReader}\n     * (assuming the consumer end-points support the such image consumption, e.g., hardware video\n     * encoding).\n     * <table>\n     * <tr>\n     *   <th>Format</th>\n     *   <th>Compatible usage flags</th>\n     * </tr>\n     * <tr>\n     *   <td>non-{@link android.graphics.ImageFormat#PRIVATE PRIVATE} formats defined by\n     *   {@link android.graphics.ImageFormat ImageFormat} or\n     *   {@link android.graphics.PixelFormat PixelFormat}</td>\n     *   <td>{@link HardwareBuffer#USAGE_CPU_READ_RARELY} or\n     *   {@link HardwareBuffer#USAGE_CPU_READ_OFTEN}</td>\n     * </tr>\n     * <tr>\n     *   <td>{@link android.graphics.ImageFormat#PRIVATE}</td>\n     *   <td>{@link HardwareBuffer#USAGE_VIDEO_ENCODE} or\n     *   {@link HardwareBuffer#USAGE_GPU_SAMPLED_IMAGE}, or combined</td>\n     * </tr>\n     * </table>\n     * Using other combinations may result in {@link IllegalArgumentException}. Additionally,\n     * specifying {@link HardwareBuffer#USAGE_CPU_WRITE_RARELY} or\n     * {@link HardwareBuffer#USAGE_CPU_WRITE_OFTEN} and writing to the ImageReader's buffers\n     * might break assumptions made by some producers, and should be used with caution.\n     * </p>\n     * <p>\n     * If the {@link ImageReader} is used as an output target for a {@link\n     * android.hardware.camera2.CameraDevice}, and if the usage flag contains\n     * {@link HardwareBuffer#USAGE_VIDEO_ENCODE}, the timestamps of the\n     * {@link Image images} produced by the {@link ImageReader} won't be in the same timebase as\n     * {@link android.os.SystemClock#elapsedRealtimeNanos}, even if\n     * {@link android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE} is\n     * {@link android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME}.\n     * Instead, the timestamps will be roughly in the same timebase as in\n     * {@link android.os.SystemClock#uptimeMillis}, so that A/V synchronization could work for\n     * video recording. In this case, the timestamps from the {@link ImageReader} with\n     * {@link HardwareBuffer#USAGE_VIDEO_ENCODE} usage flag may not be directly comparable with\n     * timestamps of other streams or capture result metadata.\n     * </p>\n     * @param width The default width in pixels of the Images that this reader will produce.\n     * @param height The default height in pixels of the Images that this reader will produce.\n     * @param format The format of the Image that this reader will produce. This must be one of the\n     *            {@link android.graphics.ImageFormat} or {@link android.graphics.PixelFormat}\n     *            constants. Note that not all formats are supported, like ImageFormat.NV21.\n     * @param maxImages The maximum number of images the user will want to access simultaneously.\n     *            This should be as small as possible to limit memory use. Once maxImages Images are\n     *            obtained by the user, one of them has to be released before a new Image will\n     *            become available for access through {@link #acquireLatestImage()} or\n     *            {@link #acquireNextImage()}. Must be greater than 0.\n     * @param usage The intended usage of the images produced by this ImageReader. See the usages\n     *              on {@link HardwareBuffer} for a list of valid usage bits. See also\n     *              {@link HardwareBuffer#isSupported(int, int, int, int, long)} for checking\n     *              if a combination is supported. If it's not supported this will throw\n     *              an {@link IllegalArgumentException}.\n     * @see Image\n     * @see HardwareBuffer\n     ",
+    "links" : [ "android.media.ImageWriter", "android.graphics.ImageFormat#YUV_420_888", "android.graphics.PixelFormat", "android.hardware.HardwareBuffer#USAGE_CPU_WRITE_OFTEN", "#acquireNextImage()", "android.hardware.HardwareBuffer#USAGE_VIDEO_ENCODE", "android.media.Image", "android.hardware.HardwareBuffer#USAGE_CPU_READ_RARELY", "android.hardware.camera2.MultiResolutionImageReader", "android.hardware.HardwareBuffer#USAGE_CPU_READ_OFTEN", "IllegalArgumentException", "android.graphics.ImageFormat", "android.view.Surface", "android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE_REALTIME", "#getImageFormat()", "android.os.SystemClock#uptimeMillis", "android.hardware.HardwareBuffer", "android.media.MediaRecorder", "android.os.SystemClock#elapsedRealtimeNanos", "android.hardware.HardwareBuffer#isSupported(int", "android.media.MediaCodec", "android.graphics.ImageFormat#PRIVATE", "android.media.Image#getPlanes()", "#acquireLatestImage()", "android.hardware.camera2.CameraDevice", "android.hardware.camera2.CameraCharacteristics#SENSOR_INFO_TIMESTAMP_SOURCE", "android.hardware.HardwareBuffer#USAGE_GPU_SAMPLED_IMAGE", "android.hardware.HardwareBuffer#USAGE_CPU_WRITE_RARELY" ]
+  }, {
+    "name" : "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages, @NonNull MultiResolutionImageReader parent)",
+    "returnType" : "ImageReader",
+    "comment" : "\n      * @hide\n      ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initializeImageReader(int width, int height, int imageFormat, int maxImages, long usage, int hardwareBufferFormat, int dataSpace)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
   }, {
     "name" : "public int getWidth()",
     "returnType" : "int",
@@ -112,13 +158,28 @@
   }, {
     "name" : "public int getImageFormat()",
     "returnType" : "int",
-    "comment" : "\n     * The default {@link ImageFormat image format} of {@link Image Images}.\n     *\n     * <p>Some color formats may be overridden by the producer sending buffers to\n     * this ImageReader's Surface if the default color format allows. ImageReader\n     * guarantees that all {@link Image Images} acquired from ImageReader\n     * (for example, with {@link #acquireNextImage}) will have a \"compatible\"\n     * format to what was specified in {@link #newInstance}.\n     * As of now, each format is only compatible to itself.\n     * The actual format of the images can be found using {@link Image#getFormat}.</p>\n     *\n     * @return the expected format of an Image\n     *\n     * @see ImageFormat\n     ",
-    "links" : [ "#acquireNextImage", "android.graphics.ImageFormat", "android.media.Image", "#newInstance", "android.media.Image#getFormat" ]
+    "comment" : "\n     * The default {@link ImageFormat image format} of {@link Image Images}.\n     *\n     * <p>Some color formats may be overridden by the producer sending buffers to\n     * this ImageReader's Surface if the default color format allows. ImageReader\n     * guarantees that all {@link Image Images} acquired from ImageReader\n     * (for example, with {@link #acquireNextImage}) will have a \"compatible\"\n     * format to what was specified in {@link #newInstance}.\n     * As of now, each format is only compatible to itself.\n     * The actual format of the images can be found using {@link Image#getFormat}.</p>\n     *\n     * <p>Use this function if the ImageReader instance is created by factory method\n     * {@code newInstance} function or by builder pattern {@code ImageReader.Builder} and using\n     * {@link Builder#setImageFormat}.</p>\n     *\n     * @return the expected format of an Image\n     *\n     * @see ImageFormat\n     ",
+    "links" : [ "#acquireNextImage", "android.graphics.ImageFormat", "android.media.Image", "#newInstance", "android.media.Image#getFormat", "#setImageFormat" ]
+  }, {
+    "name" : "public int getHardwareBufferFormat()",
+    "returnType" : "int",
+    "comment" : "\n     * The default {@link HardwareBuffer} format of {@link Image Images}.\n     *\n     * <p>Use this function if the ImageReader instance is created by builder pattern\n     * {@code ImageReader.Builder} and using {@link Builder#setDefaultHardwareBufferFormat} and\n     * {@link Builder#setDefaultDataSpace}.</p>\n     *\n     * @return the expected {@link HardwareBuffer} format of an Image.\n     ",
+    "links" : [ "android.media.Image", "#setDefaultHardwareBufferFormat", "android.hardware.HardwareBuffer", "#setDefaultDataSpace" ]
+  }, {
+    "name" : "public int getDataSpace()",
+    "returnType" : "int",
+    "comment" : "\n     * The default dataspace of {@link Image Images}.\n     *\n     * <p>Use this function if the ImageReader instance is created by builder pattern\n     * {@code ImageReader.Builder} and {@link Builder#setDefaultDataSpace}.</p>\n     *\n     * @return the expected dataspace of an Image.\n     ",
+    "links" : [ "android.media.Image", "#setDefaultDataSpace" ]
   }, {
     "name" : "public int getMaxImages()",
     "returnType" : "int",
     "comment" : "\n     * Maximum number of images that can be acquired from the ImageReader by any time (for example,\n     * with {@link #acquireNextImage}).\n     *\n     * <p>An image is considered acquired after it's returned by a function from ImageReader, and\n     * until the Image is {@link Image#close closed} to release the image back to the ImageReader.\n     * </p>\n     *\n     * <p>Attempting to acquire more than {@code maxImages} concurrently will result in the\n     * acquire function throwing a {@link IllegalStateException}. Furthermore,\n     * while the max number of images have been acquired by the ImageReader user, the producer\n     * enqueueing additional images may stall until at least one image has been released. </p>\n     *\n     * @return Maximum number of images for this ImageReader.\n     *\n     * @see Image#close\n     ",
     "links" : [ "#acquireNextImage", "IllegalStateException", "android.media.Image#close" ]
+  }, {
+    "name" : "public long getUsage()",
+    "returnType" : "long",
+    "comment" : "\n     * The usage flag of images that can be produced by the ImageReader.\n     *\n     * @return The usage flag of the images for this ImageReader.\n     ",
+    "links" : [ ]
   }, {
     "name" : "public Surface getSurface()",
     "returnType" : "Surface",
@@ -147,12 +208,17 @@
   }, {
     "name" : "private void releaseImage(Image i)",
     "returnType" : "void",
-    "comment" : "\n     * <p>Return the frame to the ImageReader for reuse.</p>\n     ",
-    "links" : [ ]
+    "comment" : "\n     * <p>Return the frame to the ImageReader for reuse.</p>\n     *\n     * This method should only be called via {@link SurfaceImage#close} which ensures that image\n     * closing is atomic.\n     ",
+    "links" : [ "#close" ]
   }, {
     "name" : "public void setOnImageAvailableListener(OnImageAvailableListener listener, Handler handler)",
     "returnType" : "void",
     "comment" : "\n     * Register a listener to be invoked when a new image becomes available\n     * from the ImageReader.\n     *\n     * @param listener\n     *            The listener that will be run.\n     * @param handler\n     *            The handler on which the listener should be invoked, or null\n     *            if the listener should be invoked on the calling thread's looper.\n     * @throws IllegalArgumentException\n     *            If no handler specified and the calling thread has no looper.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOnImageAvailableListenerWithExecutor(@NonNull OnImageAvailableListener listener, @NonNull Executor executor)",
+    "returnType" : "void",
+    "comment" : "\n     * Register a listener to be invoked when a new image becomes available\n     * from the ImageReader.\n     *\n     * @param listener\n     *            The listener that will be run.\n     * @param executor\n     *            The executor which will be used to invoke the listener.\n     * @throws IllegalArgumentException\n     *            If no handler specified and the calling thread has no looper.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public void close()",
@@ -170,10 +236,10 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : " void detachImage(Image image)",
+    "name" : "public void detachImage(@Nullable Image image)",
     "returnType" : "void",
-    "comment" : "\n     * <p>\n     * Remove the ownership of this image from the ImageReader.\n     * </p>\n     * <p>\n     * After this call, the ImageReader no longer owns this image, and the image\n     * ownership can be transfered to another entity like {@link ImageWriter}\n     * via {@link ImageWriter#queueInputImage}. It's up to the new owner to\n     * release the resources held by this image. For example, if the ownership\n     * of this image is transfered to an {@link ImageWriter}, the image will be\n     * freed by the ImageWriter after the image data consumption is done.\n     * </p>\n     * <p>\n     * This method can be used to achieve zero buffer copy for use cases like\n     * {@link android.hardware.camera2.CameraDevice Camera2 API} PRIVATE and YUV\n     * reprocessing, where the application can select an output image from\n     * {@link ImageReader} and transfer this image directly to\n     * {@link ImageWriter}, where this image can be consumed by camera directly.\n     * For PRIVATE reprocessing, this is the only way to send input buffers to\n     * the {@link android.hardware.camera2.CameraDevice camera} for\n     * reprocessing.\n     * </p>\n     * <p>\n     * This is a package private method that is only used internally.\n     * </p>\n     *\n     * @param image The image to be detached from this ImageReader.\n     * @throws IllegalStateException If the ImageReader or image have been\n     *             closed, or the has been detached, or has not yet been\n     *             acquired.\n     ",
-    "links" : [ "android.media.ImageWriter#queueInputImage", "android.media.ImageWriter", "android.hardware.camera2.CameraDevice", "android.media.ImageReader" ]
+    "comment" : "\n     * <p>\n     * Remove the ownership of this image from the ImageReader.\n     * </p>\n     * <p>\n     * After this call, the ImageReader no longer owns this image, and the image\n     * ownership can be transferred to another entity like {@link ImageWriter}\n     * via {@link ImageWriter#queueInputImage}. It's up to the new owner to\n     * release the resources held by this image. For example, if the ownership\n     * of this image is transferred to an {@link ImageWriter}, the image will be\n     * freed by the ImageWriter after the image data consumption is done.\n     * </p>\n     * <p>\n     * This method can be used to achieve zero buffer copy for use cases like\n     * {@link android.hardware.camera2.CameraDevice Camera2 API} PRIVATE and YUV\n     * reprocessing, where the application can select an output image from\n     * {@link ImageReader} and transfer this image directly to\n     * {@link ImageWriter}, where this image can be consumed by camera directly.\n     * For PRIVATE reprocessing, this is the only way to send input buffers to\n     * the {@link android.hardware.camera2.CameraDevice camera} for\n     * reprocessing.\n     * </p>\n     * <p>\n     * This is a package private method that is only used internally.\n     * </p>\n     *\n     * @param image The image to be detached from this ImageReader.\n     * @throws IllegalStateException If the ImageReader or image have been\n     *             closed, or the has been detached, or has not yet been\n     *             acquired.\n     * @throws RuntimeException If there is an error detaching {@code Image} from {@code Surface}.\n     *              {@code RuntimeException} is only thrown for applications targeting SDK <=\n     *              {@link android.os.Build.VERSION_CODES#TIRAMISU}.\n     *              For applications targeting SDK >\n     *              {@link android.os.Build.VERSION_CODES#TIRAMISU},\n     *              this method only throws {@code IllegalStateException}.\n     * @hide\n     ",
+    "links" : [ "android.os.Build.VERSION_CODES#TIRAMISU", "android.media.ImageWriter#queueInputImage", "android.media.ImageWriter", "android.hardware.camera2.MultiResolutionImageReader", "android.hardware.camera2.CameraDevice" ]
   }, {
     "name" : "private boolean isImageOwnedbyMe(Image image)",
     "returnType" : "boolean",
@@ -185,7 +251,7 @@
     "comment" : "\n     * Called from Native code when an Event happens.\n     *\n     * This may be called from an arbitrary Binder thread, so access to the ImageReader must be\n     * synchronized appropriately.\n     ",
     "links" : [ ]
   }, {
-    "name" : "private native synchronized void nativeInit(Object weakSelf, int w, int h, int fmt, int maxImgs, long consumerUsage)",
+    "name" : "private native synchronized void nativeInit(Object weakSelf, int w, int h, int maxImgs, long consumerUsage, int hardwareBufferFormat, int dataSpace)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
@@ -205,7 +271,7 @@
     "comment" : "",
     "links" : [ ]
   }, {
-    "name" : "private native synchronized int nativeDetachImage(Image i)",
+    "name" : "private native synchronized int nativeDetachImage(Image i, boolean throwISEOnly)",
     "returnType" : "int",
     "comment" : "",
     "links" : [ ]
@@ -220,11 +286,31 @@
     "comment" : "\n     * @return A return code {@code ACQUIRE_*}\n     *\n     * @see #ACQUIRE_SUCCESS\n     * @see #ACQUIRE_NO_BUFS\n     * @see #ACQUIRE_MAX_IMAGES\n     ",
     "links" : [ ]
   }, {
+    "name" : "public static ImagePlane[] initializeImagePlanes(int numPlanes, GraphicBuffer buffer, int fenceFd, int format, long timestamp, int transform, int scalingMode, Rect crop)",
+    "returnType" : "ImagePlane[]",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native synchronized ImagePlane[] nativeCreateImagePlanes(int numPlanes, GraphicBuffer buffer, int fenceFd, int format, int cropLeft, int cropTop, int cropRight, int cropBottom)",
+    "returnType" : "ImagePlane[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static void unlockGraphicBuffer(GraphicBuffer buffer)",
+    "returnType" : "void",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static native synchronized void nativeUnlockGraphicBuffer(GraphicBuffer buffer)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
     "name" : "private static native void nativeClassInit()",
     "returnType" : "void",
     "comment" : "\n     * We use a class initializer to allow the native code to cache some\n     * field offsets.\n     ",
     "links" : [ ]
   } ],
-  "variableNames" : [ "ACQUIRE_SUCCESS", "ACQUIRE_NO_BUFS", "ACQUIRE_MAX_IMAGES", "mWidth", "mHeight", "mFormat", "mMaxImages", "mNumPlanes", "mSurface", "mEstimatedNativeAllocBytes", "mListenerLock", "mCloseLock", "mIsReaderValid", "mListener", "mListenerHandler", "mAcquiredImages", "mNativeContext" ],
-  "methodNames" : [ "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages)", "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages, @Usage long usage)", "public int getWidth()", "public int getHeight()", "public int getImageFormat()", "public int getMaxImages()", "public Surface getSurface()", "public Image acquireLatestImage()", "public Image acquireNextImageNoThrowISE()", "private int acquireNextSurfaceImage(SurfaceImage si)", "public Image acquireNextImage()", "private void releaseImage(Image i)", "public void setOnImageAvailableListener(OnImageAvailableListener listener, Handler handler)", "public void close()", "public void discardFreeBuffers()", "protected void finalize() throws Throwable", " void detachImage(Image image)", "private boolean isImageOwnedbyMe(Image image)", "private static void postEventFromNative(Object selfRef)", "private native synchronized void nativeInit(Object weakSelf, int w, int h, int fmt, int maxImgs, long consumerUsage)", "private native synchronized void nativeClose()", "private native synchronized void nativeReleaseImage(Image i)", "private native synchronized Surface nativeGetSurface()", "private native synchronized int nativeDetachImage(Image i)", "private native synchronized void nativeDiscardFreeBuffers()", "private native synchronized int nativeImageSetup(Image i)", "private static native void nativeClassInit()" ]
+  "methodNames" : [ "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages)", "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages, @Usage long usage)", "public static ImageReader newInstance(@IntRange(from = 1) int width, @IntRange(from = 1) int height, @Format int format, @IntRange(from = 1) int maxImages, @NonNull MultiResolutionImageReader parent)", "private void initializeImageReader(int width, int height, int imageFormat, int maxImages, long usage, int hardwareBufferFormat, int dataSpace)", "public int getWidth()", "public int getHeight()", "public int getImageFormat()", "public int getHardwareBufferFormat()", "public int getDataSpace()", "public int getMaxImages()", "public long getUsage()", "public Surface getSurface()", "public Image acquireLatestImage()", "public Image acquireNextImageNoThrowISE()", "private int acquireNextSurfaceImage(SurfaceImage si)", "public Image acquireNextImage()", "private void releaseImage(Image i)", "public void setOnImageAvailableListener(OnImageAvailableListener listener, Handler handler)", "public void setOnImageAvailableListenerWithExecutor(@NonNull OnImageAvailableListener listener, @NonNull Executor executor)", "public void close()", "public void discardFreeBuffers()", "protected void finalize() throws Throwable", "public void detachImage(@Nullable Image image)", "private boolean isImageOwnedbyMe(Image image)", "private static void postEventFromNative(Object selfRef)", "private native synchronized void nativeInit(Object weakSelf, int w, int h, int maxImgs, long consumerUsage, int hardwareBufferFormat, int dataSpace)", "private native synchronized void nativeClose()", "private native synchronized void nativeReleaseImage(Image i)", "private native synchronized Surface nativeGetSurface()", "private native synchronized int nativeDetachImage(Image i, boolean throwISEOnly)", "private native synchronized void nativeDiscardFreeBuffers()", "private native synchronized int nativeImageSetup(Image i)", "public static ImagePlane[] initializeImagePlanes(int numPlanes, GraphicBuffer buffer, int fenceFd, int format, long timestamp, int transform, int scalingMode, Rect crop)", "private static native synchronized ImagePlane[] nativeCreateImagePlanes(int numPlanes, GraphicBuffer buffer, int fenceFd, int format, int cropLeft, int cropTop, int cropRight, int cropBottom)", "public static void unlockGraphicBuffer(GraphicBuffer buffer)", "private static native synchronized void nativeUnlockGraphicBuffer(GraphicBuffer buffer)", "private static native void nativeClassInit()" ],
+  "variableNames" : [ "ACQUIRE_SUCCESS", "ACQUIRE_NO_BUFS", "ACQUIRE_MAX_IMAGES", "DETACH_THROWS_ISE_ONLY", "mDetachThrowsIseOnly", "mWidth", "mHeight", "mFormat", "mUsage", "mMaxImages", "mNumPlanes", "mSurface", "mEstimatedNativeAllocBytes", "mListenerLock", "mCloseLock", "mIsReaderValid", "mListener", "mListenerExecutor", "mListenerHandler", "mAcquiredImages", "mParent", "mHardwareBufferFormat", "mDataSpace", "mNativeContext" ]
 }

@@ -1,0 +1,896 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/DateFormat.java",
+  "packageName" : "android.icu.text",
+  "className" : "DateFormat",
+  "comment" : "\n * <strong>[icu enhancement]</strong> ICU's replacement for {@link java.text.DateFormat}.&nbsp;Methods, fields, and other functionality specific to ICU are labeled '<strong>[icu]</strong>'.\n *\n * <p>\n * DateFormat is an abstract class for date/time formatting subclasses which formats and parses dates or time in a\n * language-independent manner. The date/time formatting subclass, such as SimpleDateFormat, allows for formatting\n * (i.e., date -&gt; text), parsing (text -&gt; date), and normalization. The date is represented as a <code>Date</code>\n * object or as the milliseconds since January 1, 1970, 00:00:00 GMT.\n *\n * <p>\n * DateFormat helps you to format and parse dates for any locale. Your code can be completely independent of the locale\n * conventions for months, days of the week, or even the calendar format: lunar vs. solar. It provides many class\n * methods for obtaining default date/time formatters based on the default for a given locale and a number of formatting\n * styles or arbitrary \"skeletons\".\n * <ol>\n * <li>The formatting styles include FULL, LONG, MEDIUM, and SHORT. More detail and examples of using these styles are\n * provided in the method descriptions.\n * <li>The formatting styles only cover a fraction of the necessary usage. You often need to have just certain\n * combinations of fields, like Month and Year, but have it to be formatted appropriate to a given locale. This is done\n * using the (misnamed) getPatternInstance() method, supplying a skeleton. There are a number of constants that have\n * common pre-defined skeletons, such as {@link #MINUTE_SECOND} for something like \"13:45\" or {@link #YEAR_ABBR_MONTH}\n * for something like \"Sept 2012\".\n * </ol>\n *\n * <p>\n * To format a date for the current Locale, use one of the static factory methods:\n *\n * <pre>\n * myString = DateFormat.getDateInstance().format(myDate);\n * myString = DateFormat.getPatternInstance(DateFormat.YEAR_ABBR_MONTH).format(myDate);\n * </pre>\n * <p>\n * If you are formatting multiple numbers, it is more efficient to get the format and use it multiple times so that the\n * system doesn't have to fetch the information about the local language and country conventions multiple times.\n *\n * <pre>\n * DateFormat df = DateFormat.getDateInstance();\n * for (int i = 0; i &lt; a.length; ++i) {\n *     output.println(df.format(myDate[i]) + &quot;; &quot;);\n * }\n * </pre>\n * <p>\n * To format a date for a different Locale, specify it in the call to getDateInstance().\n *\n * <pre>\n * DateFormat df = DateFormat.getDateInstance(DateFormat.LONG, Locale.FRANCE);\n * </pre>\n * <p>\n * You can use a DateFormat to parse also.\n *\n * <pre>\n * myDate = df.parse(myString);\n * </pre>\n * <p>\n * There are many static factory methods available. Use getDateInstance to get the normal date format for that country.\n * Use getTimeInstance to get the time format for that country. Use getDateTimeInstance to get a date and time format.\n * You can pass in different options to these factory methods to control the length of the result; from SHORT to MEDIUM\n * to LONG to FULL. The exact result depends on the locale, but generally:\n * <ul>\n * <li>SHORT is completely numeric, such as 12.13.52 or 3:30pm\n * <li>MEDIUM is longer, such as Jan 12, 1952\n * <li>LONG is longer, such as January 12, 1952 or 3:30:32pm\n * <li>FULL is pretty completely specified, such as Tuesday, April 12, 1952 AD or 3:30:42pm PST.\n * </ul>\n *\n * <p>\n * Use getPatternInstance to format with a skeleton. Typically this is with a predefined skeleton, like\n * {@link #YEAR_ABBR_MONTH} for something like \"Sept 2012\". If you don't want to use one of the predefined skeletons,\n * you can supply your own. The skeletons are like the patterns in SimpleDateFormat, except they:\n * <ol>\n * <li>only keep the field pattern letter and ignore all other parts in a pattern, such as space, punctuation, and\n * string literals.\n * <li>are independent of the order of fields.\n * <li>ignore certain differences in the field's pattern letter length:\n * <ol>\n * <li>For those non-digit calendar fields, the pattern letter length is important, such as MMM, MMMM, and MMMMM; E and\n * EEEE, and the field's pattern letter length is honored.\n * <li>For the digit calendar fields, such as M or MM, d or dd, yy or yyyy, the field pattern length is ignored and the\n * best match, which is defined in date time patterns, will be returned without honor the field pattern letter length in\n * skeleton.\n * </ol>\n * </ol>\n *\n * <p>\n * You can also set the time zone on the format if you wish. If you want even more control over the format or parsing,\n * (or want to give your users more control), you can try casting the DateFormat you get from the factory methods to a\n * SimpleDateFormat. This will work for the majority of countries; just remember to put it in a try block in case you\n * encounter an unusual one.\n *\n * <p>\n * You can also use forms of the parse and format methods with ParsePosition and FieldPosition to allow you to\n * <ul>\n * <li>progressively parse through pieces of a string.\n * <li>align any particular field, or find out where it is for selection on the screen.\n * </ul>\n *\n * <h3>Synchronization</h3>\n *\n * Date formats are not synchronized. It is recommended to create separate format instances for each thread. If multiple\n * threads access a format concurrently, it must be synchronized externally.\n *\n * @see UFormat\n * @see NumberFormat\n * @see SimpleDateFormat\n * @see android.icu.util.Calendar\n * @see android.icu.util.GregorianCalendar\n * @see android.icu.util.TimeZone\n * @author Mark Davis, Chen-Lieh Huang, Alan Liu\n ",
+  "links" : [ "#YEAR_ABBR_MONTH", "#MINUTE_SECOND", "java.text.DateFormat" ],
+  "variables" : [ {
+    "name" : "calendar",
+    "type" : "Calendar",
+    "comment" : "\n     * The calendar that <code>DateFormat</code> uses to produce the time field\n     * values needed to implement date and time formatting.  Subclasses should\n     * initialize this to a calendar appropriate for the locale associated with\n     * this <code>DateFormat</code>.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "numberFormat",
+    "type" : "NumberFormat",
+    "comment" : "\n     * The number formatter that <code>DateFormat</code> uses to format numbers\n     * in dates and times.  Subclasses should initialize this to a number format\n     * appropriate for the locale associated with this <code>DateFormat</code>.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ERA_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'G' field alignment,\n     * corresponding to the {@link Calendar#ERA} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#ERA" ]
+  }, {
+    "name" : "YEAR_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'y' field alignment,\n     * corresponding to the {@link Calendar#YEAR} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#YEAR" ]
+  }, {
+    "name" : "MONTH_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'M' field alignment,\n     * corresponding to the {@link Calendar#MONTH} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#MONTH" ]
+  }, {
+    "name" : "DATE_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'd' field alignment,\n     * corresponding to the {@link Calendar#DATE} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#DATE" ]
+  }, {
+    "name" : "HOUR_OF_DAY1_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'k' field alignment,\n     * corresponding to the {@link Calendar#HOUR_OF_DAY} field.\n     * HOUR_OF_DAY1_FIELD is used for the one-based 24-hour clock.\n     * For example, 23:59 + 01:00 results in 24:59.\n     ",
+    "links" : [ "android.icu.util.Calendar#HOUR_OF_DAY" ]
+  }, {
+    "name" : "HOUR_OF_DAY0_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'H' field alignment,\n     * corresponding to the {@link Calendar#HOUR_OF_DAY} field.\n     * HOUR_OF_DAY0_FIELD is used for the zero-based 24-hour clock.\n     * For example, 23:59 + 01:00 results in 00:59.\n     ",
+    "links" : [ "android.icu.util.Calendar#HOUR_OF_DAY" ]
+  }, {
+    "name" : "MINUTE_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'm' field alignment,\n     * corresponding to the {@link Calendar#MINUTE} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#MINUTE" ]
+  }, {
+    "name" : "SECOND_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 's' field alignment,\n     * corresponding to the {@link Calendar#SECOND} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#SECOND" ]
+  }, {
+    "name" : "FRACTIONAL_SECOND_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'S' field alignment,\n     * corresponding to the {@link Calendar#MILLISECOND} field.\n     *\n     * Note: Time formats that use 'S' can display a maximum of three\n     * significant digits for fractional seconds, corresponding to millisecond\n     * resolution and a fractional seconds sub-pattern of SSS. If the\n     * sub-pattern is S or SS, the fractional seconds value will be truncated\n     * (not rounded) to the number of display places specified. If the\n     * fractional seconds sub-pattern is longer than SSS, the additional\n     * display places will be filled with zeros.\n     ",
+    "links" : [ "android.icu.util.Calendar#MILLISECOND" ]
+  }, {
+    "name" : "MILLISECOND_FIELD",
+    "type" : "int",
+    "comment" : "\n     * Alias for FRACTIONAL_SECOND_FIELD.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DAY_OF_WEEK_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'E' field alignment,\n     * corresponding to the {@link Calendar#DAY_OF_WEEK} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#DAY_OF_WEEK" ]
+  }, {
+    "name" : "DAY_OF_YEAR_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'D' field alignment,\n     * corresponding to the {@link Calendar#DAY_OF_YEAR} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#DAY_OF_YEAR" ]
+  }, {
+    "name" : "DAY_OF_WEEK_IN_MONTH_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'F' field alignment,\n     * corresponding to the {@link Calendar#DAY_OF_WEEK_IN_MONTH} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#DAY_OF_WEEK_IN_MONTH" ]
+  }, {
+    "name" : "WEEK_OF_YEAR_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'w' field alignment,\n     * corresponding to the {@link Calendar#WEEK_OF_YEAR} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#WEEK_OF_YEAR" ]
+  }, {
+    "name" : "WEEK_OF_MONTH_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'W' field alignment,\n     * corresponding to the {@link Calendar#WEEK_OF_MONTH} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#WEEK_OF_MONTH" ]
+  }, {
+    "name" : "AM_PM_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'a' field alignment,\n     * corresponding to the {@link Calendar#AM_PM} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#AM_PM" ]
+  }, {
+    "name" : "HOUR1_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'h' field alignment,\n     * corresponding to the {@link Calendar#HOUR} field.\n     * HOUR1_FIELD is used for the one-based 12-hour clock.\n     * For example, 11:30 PM + 1 hour results in 12:30 AM.\n     ",
+    "links" : [ "android.icu.util.Calendar#HOUR" ]
+  }, {
+    "name" : "HOUR0_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'K' field alignment,\n     * corresponding to the {@link Calendar#HOUR} field.\n     * HOUR0_FIELD is used for the zero-based 12-hour clock.\n     * For example, 11:30 PM + 1 hour results in 00:30 AM.\n     ",
+    "links" : [ "android.icu.util.Calendar#HOUR" ]
+  }, {
+    "name" : "TIMEZONE_FIELD",
+    "type" : "int",
+    "comment" : "\n     * FieldPosition selector for 'z' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "YEAR_WOY_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'Y' field alignment,\n     * corresponding to the {@link Calendar#YEAR_WOY} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#YEAR_WOY" ]
+  }, {
+    "name" : "DOW_LOCAL_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'e' field alignment,\n     * corresponding to the {@link Calendar#DOW_LOCAL} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#DOW_LOCAL" ]
+  }, {
+    "name" : "EXTENDED_YEAR_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'u' field alignment,\n     * corresponding to the {@link Calendar#EXTENDED_YEAR} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#EXTENDED_YEAR" ]
+  }, {
+    "name" : "JULIAN_DAY_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'g' field alignment,\n     * corresponding to the {@link Calendar#JULIAN_DAY} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#JULIAN_DAY" ]
+  }, {
+    "name" : "MILLISECONDS_IN_DAY_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'A' field alignment,\n     * corresponding to the {@link Calendar#MILLISECONDS_IN_DAY} field.\n     ",
+    "links" : [ "android.icu.util.Calendar#MILLISECONDS_IN_DAY" ]
+  }, {
+    "name" : "TIMEZONE_RFC_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'Z' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "TIMEZONE_GENERIC_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'v' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.  This displays the generic zone\n     * name, if available.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "STANDALONE_DAY_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'c' field alignment,\n     * corresponding to the {@link Calendar#DAY_OF_WEEK} field.\n     * This displays the stand alone day name, if available.\n     ",
+    "links" : [ "android.icu.util.Calendar#DAY_OF_WEEK" ]
+  }, {
+    "name" : "STANDALONE_MONTH_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'L' field alignment,\n     * corresponding to the {@link Calendar#MONTH} field.\n     * This displays the stand alone month name, if available.\n     ",
+    "links" : [ "android.icu.util.Calendar#MONTH" ]
+  }, {
+    "name" : "QUARTER_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'Q' field alignment,\n     * corresponding to the {@link Calendar#MONTH} field.\n     * This displays the quarter.\n     ",
+    "links" : [ "android.icu.util.Calendar#MONTH" ]
+  }, {
+    "name" : "STANDALONE_QUARTER_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'q' field alignment,\n     * corresponding to the {@link Calendar#MONTH} field.\n     * This displays the stand alone quarter, if available.\n     ",
+    "links" : [ "android.icu.util.Calendar#MONTH" ]
+  }, {
+    "name" : "TIMEZONE_SPECIAL_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'V' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.  This displays the fallback timezone\n     * name when VVVV is specified, and the short standard or daylight\n     * timezone name ignoring commonlyUsed when a single V is specified.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "YEAR_NAME_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'U' field alignment,\n     * corresponding to the {@link Calendar#YEAR} field.\n     * This displays the cyclic year name, if available.\n     ",
+    "links" : [ "android.icu.util.Calendar#YEAR" ]
+  }, {
+    "name" : "TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'O' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.  This displays the\n     * localized GMT format.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "TIMEZONE_ISO_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'X' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.  This displays the\n     * ISO 8601 local time offset format or UTC indicator (\"Z\").\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "TIMEZONE_ISO_LOCAL_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'x' field alignment,\n     * corresponding to the {@link Calendar#ZONE_OFFSET} and\n     * {@link Calendar#DST_OFFSET} fields.  This displays the\n     * ISO 8601 local time offset format.\n     ",
+    "links" : [ "android.icu.util.Calendar#DST_OFFSET", "android.icu.util.Calendar#ZONE_OFFSET" ]
+  }, {
+    "name" : "RELATED_YEAR",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'r' field alignment,\n     * corresponding to the {@link Calendar#EXTENDED_YEAR} field\n     * of the *related* calendar which may be different than the\n     * one used by the DateFormat.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "android.icu.util.Calendar#EXTENDED_YEAR" ]
+  }, {
+    "name" : "AM_PM_MIDNIGHT_NOON_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'b' field alignment.\n     * No related Calendar field.\n     * This displays the fixed day period (am/pm/midnight/noon).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FLEXIBLE_DAY_PERIOD_FIELD",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector for 'B' field alignment.\n     * No related Calendar field.\n     * This displays the flexible day period.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TIME_SEPARATOR",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> FieldPosition selector time separator,\n     * no related Calendar field. No pattern character is currently\n     * defined for this.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FIELD_COUNT",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Number of FieldPosition selectors for DateFormat.\n     * Valid selectors range from 0 to FIELD_COUNT-1.\n     * @deprecated ICU 58 The numeric value may change over time, see ICU ticket #12420.\n     * @hide unsupported on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "booleanAttributes",
+    "type" : "EnumSet<BooleanAttribute>",
+    "comment" : "\n     * boolean attributes for this instance. Inclusion in this is indicates a true condition.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "capitalizationSetting",
+    "type" : "DisplayContext",
+    "comment" : "\n     * Capitalization setting, hoisted to DateFormat ICU 53\n     * Note that SimpleDateFormat serialization may call getContext/setContext to read/write\n     * this for compatibility with serialization for its old copy of capitalizationSetting.\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "currentSerialVersion",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionOnStream",
+    "type" : "int",
+    "comment" : "\n     * Describes the version of <code>DateFormat</code> present on the stream.\n     * Possible values are:\n     * <ul>\n     * <li><b>0</b> (or uninitialized): the pre-ICU-53 version\n     *\n     * <li><b>1</b>: ICU 53, adds serialVersionOnStream and capitalizationSetting\n     * </ul>\n     * When streaming out a <code>DateFormat</code>, the most recent format\n     * (corresponding to the highest allowable <code>serialVersionOnStream</code>)\n     * is always written.\n     *\n     * @serial\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : " Proclaim serial compatibility with 1.1 FCS",
+    "links" : [ ]
+  }, {
+    "name" : "NONE",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for empty style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "FULL",
+    "type" : "int",
+    "comment" : "\n     * Constant for full style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LONG",
+    "type" : "int",
+    "comment" : "\n     * Constant for long style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MEDIUM",
+    "type" : "int",
+    "comment" : "\n     * Constant for medium style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SHORT",
+    "type" : "int",
+    "comment" : "\n     * Constant for short style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT",
+    "type" : "int",
+    "comment" : "\n     * Constant for default style pattern.  Its value is MEDIUM.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative style mask.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE_FULL",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative full style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE_LONG",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE_MEDIUM",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE_SHORT",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "RELATIVE_DEFAULT",
+    "type" : "int",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for relative default style pattern.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "QUARTER",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with quarter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_QUARTER",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with abbreviated quarter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_QUARTER",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year and quarter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_ABBR_QUARTER",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year and abbreviated quarter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with abbreviated month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NUM_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with numeric month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year and month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_ABBR_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year and abbreviated month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_NUM_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year and numeric month.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with day.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, month, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_ABBR_MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, abbreviated month, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_NUM_MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, numeric month, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "WEEKDAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with weekday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_WEEKDAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with abbreviated weekday.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_ABBR_MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, abbreviated month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "YEAR_NUM_MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with year, numeric month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with long month and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with abbreviated month and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NUM_MONTH_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with numeric month and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with abbreviated month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NUM_MONTH_WEEKDAY_DAY",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with numeric month, weekday, and day.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DATE_SKELETONS",
+    "type" : "List<String>",
+    "comment" : "\n     * List of all of the date skeleton constants for iteration.\n     * Note that this is fragile; be sure to add any values that are added above.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour, with the locale's preferred hour format (12 or 24).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR24",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour in 24-hour presentation.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MINUTE",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with minute.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR_MINUTE",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour and minute, with the locale's preferred hour format (12 or 24).\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR24_MINUTE",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour and minute in 24-hour presentation.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SECOND",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with second.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR_MINUTE_SECOND",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour, minute, and second,\n     * with the locale's preferred hour format (12 or 24).\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "HOUR24_MINUTE_SECOND",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour, minute, and second in\n     * 24-hour presentation.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "MINUTE_SECOND",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with minute and second.\n     * Used in combinations date + time, date + time + zone, or time + zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "TIME_SKELETONS",
+    "type" : "List<String>",
+    "comment" : "\n     * List of all of the time skeleton constants for iteration.\n     * Note that this is fragile; be sure to add any values that are added above.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LOCATION_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>generic location format</i>, such as Los Angeles Time;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "GENERIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>generic non-location format</i>, such as Pacific Time;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_GENERIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>generic non-location format</i>, abbreviated if possible, such as PT;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SPECIFIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>specific non-location format</i>, such as Pacific Daylight Time;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_SPECIFIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>specific non-location format</i>, abbreviated if possible, such as PDT;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ABBR_UTC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for <i>localized GMT/UTC format</i>, such as GMT+8:00 or HPG-8:00;\n     * used in combinations date + time + zone, or time + zone.\n     * @see <a href=\"http://unicode.org/reports/tr35/#Date_Format_Patterns\">LDML Date Format Patterns</a>\n     * @see <a href=\"http://unicode.org/reports/tr35/#Time_Zone_Fallback\">LDML Time Zone Fallback</a>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "ZONE_SKELETONS",
+    "type" : "List<String>",
+    "comment" : "\n     * List of all of the zone skeleton constants for iteration.\n     * Note that this is fragile; be sure to add any values that are added above.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "STANDALONE_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with standalone month.\n     * @deprecated ICU 50 Use {@link #MONTH} instead.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#MONTH" ]
+  }, {
+    "name" : "ABBR_STANDALONE_MONTH",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with standalone abbreviated month.\n     * @deprecated ICU 50 Use {@link #ABBR_MONTH} instead.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#ABBR_MONTH" ]
+  }, {
+    "name" : "HOUR_MINUTE_GENERIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour, minute, and generic timezone.\n     * @deprecated ICU 50 Use instead {@link #HOUR_MINUTE}+{@link #ABBR_GENERIC_TZ} or some other timezone presentation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#HOUR_MINUTE", "#ABBR_GENERIC_TZ" ]
+  }, {
+    "name" : "HOUR_MINUTE_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour, minute, and timezone.\n     * @deprecated ICU 50 Use instead {@link #HOUR_MINUTE}+{@link #ABBR_SPECIFIC_TZ} or some other timezone presentation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#HOUR_MINUTE", "#ABBR_SPECIFIC_TZ" ]
+  }, {
+    "name" : "HOUR_GENERIC_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour and generic timezone.\n     * @deprecated ICU 50 Use instead {@link #HOUR}+{@link #ABBR_GENERIC_TZ} or some other timezone presentation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#ABBR_GENERIC_TZ", "#HOUR" ]
+  }, {
+    "name" : "HOUR_TZ",
+    "type" : "String",
+    "comment" : "\n     * <strong>[icu]</strong> Constant for date skeleton with hour and timezone.\n     * @deprecated ICU 50 Use instead {@link #HOUR}+{@link #ABBR_SPECIFIC_TZ} or some other timezone presentation.\n     * @hide original deprecated declaration\n     ",
+    "links" : [ "#ABBR_SPECIFIC_TZ", "#HOUR" ]
+  }, {
+    "name" : "JP_ERA_2019_ROOT",
+    "type" : "String",
+    "comment" : "\n     * Constant for Unicode string name of new (in 2019) Japanese calendar era,\n     * root/English abbreviated version (ASCII-range characters).\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JP_ERA_2019_JA",
+    "type" : "String",
+    "comment" : "\n     * Constant for Unicode string name of new (in 2019) Japanese calendar era,\n     * Japanese abbreviated version (Han, or fullwidth Latin for testing).\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "JP_ERA_2019_NARROW",
+    "type" : "String",
+    "comment" : "\n     * Constant for Unicode string name of new (in 2019) Japanese calendar era,\n     * root and Japanese narrow version (ASCII-range characters).\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public final StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats a time object into a time string. Examples of time objects\n     * are a time value expressed in milliseconds and a Date object.\n     * @param obj must be a Number or a Date or a Calendar.\n     * @param toAppendTo the string buffer for the returning time string.\n     * @return the formatted time string.\n     * @param fieldPosition keeps track of the position of the field\n     * within the returned string.\n     * On input: an alignment field,\n     * if desired. On output: the offsets of the alignment field. For\n     * example, given a time text \"1996.07.10 AD at 15:08:56 PDT\",\n     * if the given fieldPosition is DateFormat.YEAR_FIELD, the\n     * begin index and end index of fieldPosition will be set to\n     * 0 and 4, respectively.\n     * Notice that if the same time field appears\n     * more than once in a pattern, the fieldPosition will be set for the first\n     * occurrence of that time field. For instance, formatting a Date to\n     * the time string \"1 PM PDT (Pacific Daylight Time)\" using the pattern\n     * \"h a z (zzzz)\" and the alignment field DateFormat.TIMEZONE_FIELD,\n     * the begin index and end index of fieldPosition will be set to\n     * 5 and 8, respectively, for the first occurrence of the timezone\n     * pattern character 'z'.\n     * @see java.text.Format\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats a date into a date/time string.\n     * @param cal a Calendar set to the date and time to be formatted\n     * into a date/time string.  When the calendar type is different from\n     * the internal calendar held by this DateFormat instance, the date\n     * and the time zone will be inherited from the input calendar, but\n     * other calendar field values will be calculated by the internal calendar.\n     * @param toAppendTo the string buffer for the returning date/time string.\n     * @param fieldPosition keeps track of the position of the field\n     * within the returned string.\n     * On input: an alignment field,\n     * if desired. On output: the offsets of the alignment field. For\n     * example, given a time text \"1996.07.10 AD at 15:08:56 PDT\",\n     * if the given fieldPosition is DateFormat.YEAR_FIELD, the\n     * begin index and end index of fieldPosition will be set to\n     * 0 and 4, respectively.\n     * Notice that if the same time field appears\n     * more than once in a pattern, the fieldPosition will be set for the first\n     * occurrence of that time field. For instance, formatting a Date to\n     * the time string \"1 PM PDT (Pacific Daylight Time)\" using the pattern\n     * \"h a z (zzzz)\" and the alignment field DateFormat.TIMEZONE_FIELD,\n     * the begin index and end index of fieldPosition will be set to\n     * 5 and 8, respectively, for the first occurrence of the timezone\n     * pattern character 'z'.\n     * @return the formatted date/time string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition fieldPosition)",
+    "returnType" : "StringBuffer",
+    "comment" : "\n     * Formats a Date into a date/time string.\n     * @param date a Date to be formatted into a date/time string.\n     * @param toAppendTo the string buffer for the returning date/time string.\n     * @param fieldPosition keeps track of the position of the field\n     * within the returned string.\n     * On input: an alignment field,\n     * if desired. On output: the offsets of the alignment field. For\n     * example, given a time text \"1996.07.10 AD at 15:08:56 PDT\",\n     * if the given fieldPosition is DateFormat.YEAR_FIELD, the\n     * begin index and end index of fieldPosition will be set to\n     * 0 and 4, respectively.\n     * Notice that if the same time field appears\n     * more than once in a pattern, the fieldPosition will be set for the first\n     * occurrence of that time field. For instance, formatting a Date to\n     * the time string \"1 PM PDT (Pacific Daylight Time)\" using the pattern\n     * \"h a z (zzzz)\" and the alignment field DateFormat.TIMEZONE_FIELD,\n     * the begin index and end index of fieldPosition will be set to\n     * 5 and 8, respectively, for the first occurrence of the timezone\n     * pattern character 'z'.\n     * @return the formatted date/time string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String format(Date date)",
+    "returnType" : "String",
+    "comment" : "\n     * Formats a Date into a date/time string.\n     * @param date the time value to be formatted into a time string.\n     * @return the formatted time string.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Date parse(String text) throws ParseException",
+    "returnType" : "Date",
+    "comment" : "\n     * Parses a date/time string. For example, a time text \"07/10/96 4:5 PM, PDT\"\n     * will be parsed into a Date that is equivalent to Date(837039928046).\n     * Parsing begins at the beginning of the string and proceeds as far as\n     * possible.  Assuming no parse errors were encountered, this function\n     * doesn't return any information about how much of the string was consumed\n     * by the parsing.  If you need that information, use a version of\n     * parse() that takes a ParsePosition.\n     *\n     * <p> By default, parsing is lenient: If the input is not in the form used\n     * by this object's format method but can still be parsed as a date, then\n     * the parse succeeds.  Clients may insist on strict adherence to the\n     * format by calling setLenient(false).\n     *\n     * <p> Note that the normal date formats associated with some calendars - such\n     * as the Chinese lunar calendar - do not specify enough fields to enable\n     * dates to be parsed unambiguously. In the case of the Chinese lunar\n     * calendar, while the year within the current 60-year cycle is specified,\n     * the number of such cycles since the start date of the calendar (in the\n     * ERA field of the Calendar object) is not normally part of the format,\n     * and parsing may assume the wrong era. For cases such as this it is\n     * recommended that clients parse using the parse method that takes a Calendar\n     * with the Calendar passed in set to the current date, or to a date\n     * within the era/cycle that should be assumed if absent in the format.\n     *\n     * @param text  The date/time string to be parsed\n     *\n     * @return      A Date, or null if the input could not be parsed\n     *\n     * @exception  ParseException  If the given string cannot be parsed as a date.\n     *\n     * @see #parse(String, ParsePosition)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void parse(String text, Calendar cal, ParsePosition pos)",
+    "returnType" : "void",
+    "comment" : "\n     * Parses a date/time string according to the given parse position.\n     * For example, a time text \"07/10/96 4:5 PM, PDT\" will be parsed\n     * into a Calendar that is equivalent to Date(837039928046). Before\n     * calling this method the caller should initialize the calendar\n     * in one of two ways (unless existing field information is to be kept):\n     * (1) clear the calendar, or (2) set the calendar to the current date\n     * (or to any date whose fields should be used to supply values that\n     * are missing in the parsed date). For example, Chinese calendar dates\n     * do not normally provide an era/cycle; in this case the calendar that\n     * is passed in should be set to a date within the era that should be\n     * assumed, normally the current era.\n     *\n     * <p> By default, parsing is lenient: If the input is not in the form used\n     * by this object's format method but can still be parsed as a date, then\n     * the parse succeeds.  Clients may insist on strict adherence to the\n     * format by calling setLenient(false).\n     *\n     * @see #setLenient(boolean)\n     *\n     * @param text  The date/time string to be parsed\n     *\n     * @param cal   The calendar set on input to the date and time to be used\n     *              for missing values in the date/time string being parsed,\n     *              and set on output to the parsed date/time. In general, this\n     *              should be initialized before calling this method - either\n     *              cleared or set to the current date, depending on desired\n     *              behavior. If this parse fails, the calendar may still\n     *              have been modified. When the calendar type is different\n     *              from the internal calendar held by this DateFormat\n     *              instance, calendar field values will be parsed based\n     *              on the internal calendar initialized with the time and\n     *              the time zone taken from this calendar, then the\n     *              parse result (time in milliseconds and time zone) will\n     *              be set back to this calendar.\n     *\n     * @param pos   On input, the position at which to start parsing; on\n     *              output, the position at which parsing terminated, or the\n     *              start position if the parse failed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Date parse(String text, ParsePosition pos)",
+    "returnType" : "Date",
+    "comment" : "\n     * Parses a date/time string according to the given parse position.  For\n     * example, a time text \"07/10/96 4:5 PM, PDT\" will be parsed into a Date\n     * that is equivalent to Date(837039928046).\n     *\n     * <p> By default, parsing is lenient: If the input is not in the form used\n     * by this object's format method but can still be parsed as a date, then\n     * the parse succeeds.  Clients may insist on strict adherence to the\n     * format by calling setLenient(false).\n     *\n     * <p> Note that the normal date formats associated with some calendars - such\n     * as the Chinese lunar calendar - do not specify enough fields to enable\n     * dates to be parsed unambiguously. In the case of the Chinese lunar\n     * calendar, while the year within the current 60-year cycle is specified,\n     * the number of such cycles since the start date of the calendar (in the\n     * ERA field of the Calendar object) is not normally part of the format,\n     * and parsing may assume the wrong era. For cases such as this it is\n     * recommended that clients parse using the parse method that takes a Calendar\n     * with the Calendar passed in set to the current date, or to a date\n     * within the era/cycle that should be assumed if absent in the format.\n     *\n     * @see #setLenient(boolean)\n     *\n     * @param text  The date/time string to be parsed\n     *\n     * @param pos   On input, the position at which to start parsing; on\n     *              output, the position at which parsing terminated, or the\n     *              start position if the parse failed.\n     *\n     * @return      A Date, or null if the input could not be parsed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object parseObject(String source, ParsePosition pos)",
+    "returnType" : "Object",
+    "comment" : "\n     * Parses a date/time string into an Object.  This convenience method simply\n     * calls parse(String, ParsePosition).\n     *\n     * @see #parse(String, ParsePosition)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance()",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Gets the time formatter with the default formatting style\n     * for the default <code>FORMAT</code> locale.\n     * @return a time formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(int style)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the time formatter with the given formatting style\n     * for the default <code>FORMAT</code> locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"h:mm a\" in the US locale. Relative time styles are not currently\n     * supported, and behave just like the corresponding non-relative style.\n     * @return a time formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(int style, Locale aLocale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the time formatter with the given formatting style\n     * for the given locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"h:mm a\" in the US locale. Relative time styles are not currently\n     * supported, and behave just like the corresponding non-relative style.\n     * @param aLocale the given locale.\n     * @return a time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(int style, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the time formatter with the given formatting style\n     * for the given locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"h:mm a\" in the US locale. Relative time styles are not currently\n     * supported, and behave just like the corresponding non-relative style.\n     * @param locale the given ulocale.\n     * @return a time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance()",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date formatter with the default formatting style\n     * for the default <code>FORMAT</code> locale.\n     * @return a date formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(int style)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date formatter with the given formatting style\n     * for the default <code>FORMAT</code> locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"M/d/yy\" in the US locale. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @return a date formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(int style, Locale aLocale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date formatter with the given formatting style\n     * for the given locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"M/d/yy\" in the US locale. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @param aLocale the given locale.\n     * @return a date formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(int style, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date formatter with the given formatting style\n     * for the given locale.\n     * @param style the given formatting style. For example,\n     * SHORT for \"M/d/yy\" in the US locale. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @param locale the given ulocale.\n     * @return a date formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance()",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date/time formatter with the default formatting style\n     * for the default <code>FORMAT</code> locale.\n     * @return a date/time formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date/time formatter with the given date and time\n     * formatting styles for the default <code>FORMAT</code> locale.\n     * @param dateStyle the given date formatting style. For example,\n     * SHORT for \"M/d/yy\" in the US locale. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @param timeStyle the given time formatting style. For example,\n     * SHORT for \"h:mm a\" in the US locale. Relative time styles are not currently\n     * supported, and behave just like the corresponding non-relative style.\n     * @return a date/time formatter.\n     * @see Category#FORMAT\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle, Locale aLocale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date/time formatter with the given formatting styles\n     * for the given locale.\n     * @param dateStyle the given date formatting style. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @param timeStyle the given time formatting style. Relative time styles are not\n     * currently supported, and behave just like the corresponding non-relative style.\n     * @param aLocale the given locale.\n     * @return a date/time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns the date/time formatter with the given formatting styles\n     * for the given locale.\n     * @param dateStyle the given date formatting style. As currently implemented, relative date\n     * formatting only affects a limited range of calendar days before or after the\n     * current date, based on the CLDR &lt;field type=\"day\"&gt;/&lt;relative&gt; data: For example,\n     * in English, \"Yesterday\", \"Today\", and \"Tomorrow\". Outside of this range, relative\n     * dates are formatted using the corresponding non-relative style.\n     * @param timeStyle the given time formatting style. Relative time styles are not\n     * currently supported, and behave just like the corresponding non-relative style.\n     * @param locale the given ulocale.\n     * @return a date/time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getInstance()",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns a default date/time formatter that uses the SHORT style for both the\n     * date and the time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Locale[] getAvailableLocales()",
+    "returnType" : "Locale[]",
+    "comment" : "\n     * Returns the set of locales for which DateFormats are installed.\n     * @return the set of locales for which DateFormats are installed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ULocale[] getAvailableULocales()",
+    "returnType" : "ULocale[]",
+    "comment" : "\n     * <strong>[icu]</strong> Returns the set of locales for which DateFormats are installed.\n     * @return the set of locales for which DateFormats are installed.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCalendar(Calendar newCalendar)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the calendar to be used by this date format.  Initially, the default\n     * calendar for the specified or default locale is used.\n     * @param newCalendar the new Calendar to be used by the date format\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Calendar getCalendar()",
+    "returnType" : "Calendar",
+    "comment" : "\n     * Returns the calendar associated with this date/time formatter.\n     * @return the calendar associated with this date/time formatter.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumberFormat(NumberFormat newNumberFormat)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the number formatter.\n     * @param newNumberFormat the given new NumberFormat.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static void fixNumberFormatForDates(NumberFormat nf)",
+    "returnType" : "void",
+    "comment" : " show the decimal point, and recognizes integers only when parsing",
+    "links" : [ ]
+  }, {
+    "name" : "public NumberFormat getNumberFormat()",
+    "returnType" : "NumberFormat",
+    "comment" : "\n     * Returns the number formatter which this date/time formatter uses to\n     * format and parse a time.\n     * @return the number formatter which this date/time formatter uses.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTimeZone(TimeZone zone)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the time zone for the calendar of this DateFormat object.\n     * @param zone the given new time zone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public TimeZone getTimeZone()",
+    "returnType" : "TimeZone",
+    "comment" : "\n     * Returns the time zone.\n     * @return the time zone associated with the calendar of DateFormat.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLenient(boolean lenient)",
+    "returnType" : "void",
+    "comment" : "\n     * Specifies whether date/time parsing is to be lenient.  With\n     * lenient parsing, the parser may use heuristics to interpret inputs that\n     * do not precisely match this object's format.  Without lenient parsing,\n     * inputs must match this object's format more closely.\n     * <br><br>\n     * <b>Note:</b> ICU 53 introduced finer grained control of leniency (and added\n     * new control points) making the preferred method a combination of\n     * setCalendarLenient() &amp; setBooleanAttribute() calls.\n     * This method supports prior functionality but may not support all\n     * future leniency control &amp; behavior of DateFormat. For control of pre 53 leniency,\n     * Calendar and DateFormat whitespace &amp; numeric tolerance, this method is safe to\n     * use. However, mixing leniency control via this method and modification of the\n     * newer attributes via setBooleanAttribute() may produce undesirable\n     * results.\n     *\n     * @param lenient True specifies date/time interpretation to be lenient.\n     * @see android.icu.util.Calendar#setLenient\n     * @see #setBooleanAttribute(BooleanAttribute, boolean)\n     * @see #setCalendarLenient(boolean)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLenient()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether both date/time parsing in the encapsulated Calendar object and DateFormat whitespace &amp;\n     * numeric processing is lenient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCalendarLenient(boolean lenient)",
+    "returnType" : "void",
+    "comment" : "\n     * Specifies whether date/time parsing in the encapsulated Calendar object should be lenient.\n     * With lenient parsing, the parser may use heuristics to interpret inputs that\n     * do not precisely match this object's format.  Without lenient parsing,\n     * inputs must match this object's format more closely.\n     * @param lenient when true, Calendar parsing is lenient\n     * @see android.icu.util.Calendar#setLenient\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isCalendarLenient()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether date/time parsing in the encapsulated Calendar object is lenient.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public DateFormat setBooleanAttribute(BooleanAttribute key, boolean value)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Sets a boolean attribute for this instance. Aspects of DateFormat leniency are controlled by\n     * boolean attributes.\n     *\n     * @see BooleanAttribute\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean getBooleanAttribute(BooleanAttribute key)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns the current value for the specified BooleanAttribute for this instance\n     *\n     * if attribute is missing false is returned.\n     *\n     * @see BooleanAttribute\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setContext(DisplayContext context)",
+    "returnType" : "void",
+    "comment" : "\n     * <strong>[icu]</strong> Set a particular DisplayContext value in the formatter,\n     * such as CAPITALIZATION_FOR_STANDALONE.\n     *\n     * @param context The DisplayContext value to set.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public DisplayContext getContext(DisplayContext.Type type)",
+    "returnType" : "DisplayContext",
+    "comment" : "\n     * <strong>[icu]</strong> Get the formatter's DisplayContext value for the specified DisplayContext.Type,\n     * such as CAPITALIZATION.\n     *\n     * @param type the DisplayContext.Type whose value to return\n     * @return the current DisplayContext setting for the specified type\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : " turn off code coverage since all subclasses override this",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Overrides equals.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Object clone()",
+    "returnType" : "Object",
+    "comment" : "\n     * Overrides clone.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static DateFormat get(int dateStyle, int timeStyle, ULocale loc, Calendar cal)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a DateFormat with the given time and/or date style in the given\n     * locale.\n     * @param dateStyle a value from 0 to 3 indicating the time format,\n     * or -1 to indicate no date\n     * @param timeStyle a value from 0 to 3 indicating the time format,\n     * or -1 to indicate no time\n     * @param loc the locale for the format\n     * @param cal the calendar to be used, or null\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "\n     * First, read in the default serializable data.\n     *\n     * Then, if <code>serialVersionOnStream</code> is less than 1, indicating that\n     * the stream was written by a pre-ICU-53 version,\n     * set capitalizationSetting to a default value.\n     * Finally, set serialVersionOnStream back to the maximum allowed value so that\n     * default serialization will work properly if this object is streamed out again.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(Calendar cal, int dateStyle, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format dates in\n     * the calendar system specified by <code>cal</code>.\n     * <p>\n     * @param cal   The calendar system for which a date format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the date format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(Calendar cal, int dateStyle, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format dates in\n     * the calendar system specified by <code>cal</code>.\n     * <p>\n     * @param cal   The calendar system for which a date format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the date format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format times in\n     * the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a time format is desired.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the time format is desired.\n     *\n     * @see DateFormat#getTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format times in\n     * the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a time format is desired.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the time format is desired.\n     *\n     * @see DateFormat#getTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format dates and times in\n     * the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     *\n     * @see DateFormat#getDateTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format dates and times in\n     * the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     *\n     * @see DateFormat#getDateTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getInstance(Calendar cal, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns a date/time formatter that uses the SHORT style\n     * for both the date and the time.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getInstance(Calendar cal, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns a date/time formatter that uses the SHORT style\n     * for both the date and the time.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getInstance(Calendar cal)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Returns a default date/time formatter that uses the SHORT style for both the\n     * date and the time.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final DateFormat getDateInstance(Calendar cal, int dateStyle)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object for the default locale that can be used\n     * to format dates in the calendar system specified by <code>cal</code>.\n     * <p>\n     * @param cal   The calendar system for which a date format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object that can be used to format times in\n     * the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a time format is desired.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @see DateFormat#getTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * Creates a {@link DateFormat} object for the default locale that can be used to format\n     * dates and times in the calendar system specified by <code>cal</code>.\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param dateStyle The type of date format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @param timeStyle The type of time format desired.  This can be\n     *              {@link DateFormat#SHORT}, {@link DateFormat#MEDIUM},\n     *              etc.\n     *\n     * @see DateFormat#getDateTimeInstance\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat#SHORT", "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MEDIUM" ]
+  }, {
+    "name" : "public static final DateFormat getInstanceForSkeleton(String skeleton)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the default locale.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getInstanceForSkeleton(String skeleton, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the given locale.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getInstanceForSkeleton(String skeleton, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the given locale.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getInstanceForSkeleton(Calendar cal, String skeleton, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Creates a {@link DateFormat} object that can be used to format dates and\n     * times in the calendar system specified by <code>cal</code>.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.)  This can be\n     *              {@link DateFormat#ABBR_MONTH}, {@link DateFormat#MONTH_WEEKDAY_DAY},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getInstanceForSkeleton(Calendar cal, String skeleton, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Creates a {@link DateFormat} object that can be used to format dates and\n     * times in the calendar system specified by <code>cal</code>.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.)  This can be\n     *              {@link DateFormat#ABBR_MONTH}, {@link DateFormat#MONTH_WEEKDAY_DAY},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getPatternInstance(String skeleton)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the default locale.\n     * The getInstanceForSkeleton methods are preferred over the getPatternInstance methods.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getPatternInstance(String skeleton, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the given locale.\n     * The getInstanceForSkeleton methods are preferred over the getPatternInstance methods.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getPatternInstance(String skeleton, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Returns a {@link DateFormat} object that can be used to format dates and times in\n     * the given locale.\n     * The getInstanceForSkeleton methods are preferred over the getPatternInstance methods.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.) This can be {@link DateFormat#ABBR_MONTH},\n     *              {@link DateFormat#MONTH_WEEKDAY_DAY}, etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getPatternInstance(Calendar cal, String skeleton, Locale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Creates a {@link DateFormat} object that can be used to format dates and\n     * times in the calendar system specified by <code>cal</code>.\n     * The getInstanceForSkeleton methods are preferred over the getPatternInstance methods.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.)  This can be\n     *              {@link DateFormat#ABBR_MONTH}, {@link DateFormat#MONTH_WEEKDAY_DAY},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  }, {
+    "name" : "public static final DateFormat getPatternInstance(Calendar cal, String skeleton, ULocale locale)",
+    "returnType" : "DateFormat",
+    "comment" : "\n     * <strong>[icu]</strong> Creates a {@link DateFormat} object that can be used to format dates and\n     * times in the calendar system specified by <code>cal</code>.\n     * The getInstanceForSkeleton methods are preferred over the getPatternInstance methods.\n     *\n     * @param cal   The calendar system for which a date/time format is desired.\n     *\n     * @param skeleton The skeleton that selects the fields to be formatted. (Uses the\n     *              {@link DateTimePatternGenerator}.)  This can be\n     *              {@link DateFormat#ABBR_MONTH}, {@link DateFormat#MONTH_WEEKDAY_DAY},\n     *              etc.\n     *\n     * @param locale The locale for which the date/time format is desired.\n     ",
+    "links" : [ "android.icu.impl.RelativeDateFormat", "android.icu.impl.RelativeDateFormat#MONTH_WEEKDAY_DAY", "android.icu.impl.RelativeDateFormat#ABBR_MONTH", "android.icu.text.DateTimePatternGenerator" ]
+  } ],
+  "methodNames" : [ "public final StringBuffer format(Object obj, StringBuffer toAppendTo, FieldPosition fieldPosition)", "public abstract StringBuffer format(Calendar cal, StringBuffer toAppendTo, FieldPosition fieldPosition)", "public StringBuffer format(Date date, StringBuffer toAppendTo, FieldPosition fieldPosition)", "public final String format(Date date)", "public Date parse(String text) throws ParseException", "public abstract void parse(String text, Calendar cal, ParsePosition pos)", "public Date parse(String text, ParsePosition pos)", "public Object parseObject(String source, ParsePosition pos)", "public static final DateFormat getTimeInstance()", "public static final DateFormat getTimeInstance(int style)", "public static final DateFormat getTimeInstance(int style, Locale aLocale)", "public static final DateFormat getTimeInstance(int style, ULocale locale)", "public static final DateFormat getDateInstance()", "public static final DateFormat getDateInstance(int style)", "public static final DateFormat getDateInstance(int style, Locale aLocale)", "public static final DateFormat getDateInstance(int style, ULocale locale)", "public static final DateFormat getDateTimeInstance()", "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle)", "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle, Locale aLocale)", "public static final DateFormat getDateTimeInstance(int dateStyle, int timeStyle, ULocale locale)", "public static final DateFormat getInstance()", "public static Locale[] getAvailableLocales()", "public static ULocale[] getAvailableULocales()", "public void setCalendar(Calendar newCalendar)", "public Calendar getCalendar()", "public void setNumberFormat(NumberFormat newNumberFormat)", " static void fixNumberFormatForDates(NumberFormat nf)", "public NumberFormat getNumberFormat()", "public void setTimeZone(TimeZone zone)", "public TimeZone getTimeZone()", "public void setLenient(boolean lenient)", "public boolean isLenient()", "public void setCalendarLenient(boolean lenient)", "public boolean isCalendarLenient()", "public DateFormat setBooleanAttribute(BooleanAttribute key, boolean value)", "public boolean getBooleanAttribute(BooleanAttribute key)", "public void setContext(DisplayContext context)", "public DisplayContext getContext(DisplayContext.Type type)", "public int hashCode()", "public boolean equals(Object obj)", "public Object clone()", "private static DateFormat get(int dateStyle, int timeStyle, ULocale loc, Calendar cal)", "private void readObject(ObjectInputStream stream) throws IOException, ClassNotFoundException", "public static final DateFormat getDateInstance(Calendar cal, int dateStyle, Locale locale)", "public static final DateFormat getDateInstance(Calendar cal, int dateStyle, ULocale locale)", "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle, Locale locale)", "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle, ULocale locale)", "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle, Locale locale)", "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle, ULocale locale)", "public static final DateFormat getInstance(Calendar cal, Locale locale)", "public static final DateFormat getInstance(Calendar cal, ULocale locale)", "public static final DateFormat getInstance(Calendar cal)", "public static final DateFormat getDateInstance(Calendar cal, int dateStyle)", "public static final DateFormat getTimeInstance(Calendar cal, int timeStyle)", "public static final DateFormat getDateTimeInstance(Calendar cal, int dateStyle, int timeStyle)", "public static final DateFormat getInstanceForSkeleton(String skeleton)", "public static final DateFormat getInstanceForSkeleton(String skeleton, Locale locale)", "public static final DateFormat getInstanceForSkeleton(String skeleton, ULocale locale)", "public static final DateFormat getInstanceForSkeleton(Calendar cal, String skeleton, Locale locale)", "public static final DateFormat getInstanceForSkeleton(Calendar cal, String skeleton, ULocale locale)", "public static final DateFormat getPatternInstance(String skeleton)", "public static final DateFormat getPatternInstance(String skeleton, Locale locale)", "public static final DateFormat getPatternInstance(String skeleton, ULocale locale)", "public static final DateFormat getPatternInstance(Calendar cal, String skeleton, Locale locale)", "public static final DateFormat getPatternInstance(Calendar cal, String skeleton, ULocale locale)" ],
+  "variableNames" : [ "calendar", "numberFormat", "ERA_FIELD", "YEAR_FIELD", "MONTH_FIELD", "DATE_FIELD", "HOUR_OF_DAY1_FIELD", "HOUR_OF_DAY0_FIELD", "MINUTE_FIELD", "SECOND_FIELD", "FRACTIONAL_SECOND_FIELD", "MILLISECOND_FIELD", "DAY_OF_WEEK_FIELD", "DAY_OF_YEAR_FIELD", "DAY_OF_WEEK_IN_MONTH_FIELD", "WEEK_OF_YEAR_FIELD", "WEEK_OF_MONTH_FIELD", "AM_PM_FIELD", "HOUR1_FIELD", "HOUR0_FIELD", "TIMEZONE_FIELD", "YEAR_WOY_FIELD", "DOW_LOCAL_FIELD", "EXTENDED_YEAR_FIELD", "JULIAN_DAY_FIELD", "MILLISECONDS_IN_DAY_FIELD", "TIMEZONE_RFC_FIELD", "TIMEZONE_GENERIC_FIELD", "STANDALONE_DAY_FIELD", "STANDALONE_MONTH_FIELD", "QUARTER_FIELD", "STANDALONE_QUARTER_FIELD", "TIMEZONE_SPECIAL_FIELD", "YEAR_NAME_FIELD", "TIMEZONE_LOCALIZED_GMT_OFFSET_FIELD", "TIMEZONE_ISO_FIELD", "TIMEZONE_ISO_LOCAL_FIELD", "RELATED_YEAR", "AM_PM_MIDNIGHT_NOON_FIELD", "FLEXIBLE_DAY_PERIOD_FIELD", "TIME_SEPARATOR", "FIELD_COUNT", "booleanAttributes", "capitalizationSetting", "currentSerialVersion", "serialVersionOnStream", "serialVersionUID", "NONE", "FULL", "LONG", "MEDIUM", "SHORT", "DEFAULT", "RELATIVE", "RELATIVE_FULL", "RELATIVE_LONG", "RELATIVE_MEDIUM", "RELATIVE_SHORT", "RELATIVE_DEFAULT", "YEAR", "QUARTER", "ABBR_QUARTER", "YEAR_QUARTER", "YEAR_ABBR_QUARTER", "MONTH", "ABBR_MONTH", "NUM_MONTH", "YEAR_MONTH", "YEAR_ABBR_MONTH", "YEAR_NUM_MONTH", "DAY", "YEAR_MONTH_DAY", "YEAR_ABBR_MONTH_DAY", "YEAR_NUM_MONTH_DAY", "WEEKDAY", "ABBR_WEEKDAY", "YEAR_MONTH_WEEKDAY_DAY", "YEAR_ABBR_MONTH_WEEKDAY_DAY", "YEAR_NUM_MONTH_WEEKDAY_DAY", "MONTH_DAY", "ABBR_MONTH_DAY", "NUM_MONTH_DAY", "MONTH_WEEKDAY_DAY", "ABBR_MONTH_WEEKDAY_DAY", "NUM_MONTH_WEEKDAY_DAY", "DATE_SKELETONS", "HOUR", "HOUR24", "MINUTE", "HOUR_MINUTE", "HOUR24_MINUTE", "SECOND", "HOUR_MINUTE_SECOND", "HOUR24_MINUTE_SECOND", "MINUTE_SECOND", "TIME_SKELETONS", "LOCATION_TZ", "GENERIC_TZ", "ABBR_GENERIC_TZ", "SPECIFIC_TZ", "ABBR_SPECIFIC_TZ", "ABBR_UTC_TZ", "ZONE_SKELETONS", "STANDALONE_MONTH", "ABBR_STANDALONE_MONTH", "HOUR_MINUTE_GENERIC_TZ", "HOUR_MINUTE_TZ", "HOUR_GENERIC_TZ", "HOUR_TZ", "JP_ERA_2019_ROOT", "JP_ERA_2019_JA", "JP_ERA_2019_NARROW" ]
+}

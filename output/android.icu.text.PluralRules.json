@@ -1,0 +1,381 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/icu/text/PluralRules.java",
+  "packageName" : "android.icu.text",
+  "className" : "PluralRules",
+  "comment" : "\n * <p>\n * Defines rules for mapping non-negative numeric values onto a small set of keywords.\n * </p>\n * <p>\n * Rules are constructed from a text description, consisting of a series of keywords and conditions. The {@link #select}\n * method examines each condition in order and returns the keyword for the first condition that matches the number. If\n * none match, {@link #KEYWORD_OTHER} is returned.\n * </p>\n * <p>\n * A PluralRules object is immutable. It contains caches for sample values, but those are synchronized.\n * <p>\n * PluralRules is Serializable so that it can be used in formatters, which are serializable.\n * </p>\n * <p>\n * For more information, details, and tips for writing rules, see the <a\n * href=\"https://www.unicode.org/reports/tr35/tr35-numbers.html#Language_Plural_Rules\">LDML spec,\n * Part 3.5 Language Plural Rules</a>\n * </p>\n * <p>\n * Examples:\n * </p>\n *\n * <pre>\n * &quot;one: n is 1; few: n in 2..4&quot;\n * </pre>\n * <p>\n * This defines two rules, for 'one' and 'few'. The condition for 'one' is \"n is 1\" which means that the number must be\n * equal to 1 for this condition to pass. The condition for 'few' is \"n in 2..4\" which means that the number must be\n * between 2 and 4 inclusive - and be an integer - for this condition to pass. All other numbers are assigned the\n * keyword \"other\" by the default rule.\n * </p>\n *\n * <pre>\n * &quot;zero: n is 0; one: n is 1; zero: n mod 100 in 1..19&quot;\n * </pre>\n * <p>\n * This illustrates that the same keyword can be defined multiple times. Each rule is examined in order, and the first\n * keyword whose condition passes is the one returned. Also notes that a modulus is applied to n in the last rule. Thus\n * its condition holds for 119, 219, 319...\n * </p>\n *\n * <pre>\n * &quot;one: n is 1; few: n mod 10 in 2..4 and n mod 100 not in 12..14&quot;\n * </pre>\n * <p>\n * This illustrates conjunction and negation. The condition for 'few' has two parts, both of which must be met:\n * \"n mod 10 in 2..4\" and \"n mod 100 not in 12..14\". The first part applies a modulus to n before the test as in the\n * previous example. The second part applies a different modulus and also uses negation, thus it matches all numbers\n * <i>not</i> in 12, 13, 14, 112, 113, 114, 212, 213, 214...\n * </p>\n * <p>\n * Syntax:\n * </p>\n * <pre>\n * rules         = rule (';' rule)*\n * rule          = keyword ':' condition\n * keyword       = &lt;identifier&gt;\n * condition     = and_condition ('or' and_condition)*\n * and_condition = relation ('and' relation)*\n * relation      = not? expr not? rel not? range_list\n * expr          = ('n' | 'i' | 'f' | 'v' | 't') (mod value)?\n * not           = 'not' | '!'\n * rel           = 'in' | 'is' | '=' | '≠' | 'within'\n * mod           = 'mod' | '%'\n * range_list    = (range | value) (',' range_list)*\n * value         = digit+\n * digit         = 0|1|2|3|4|5|6|7|8|9\n * range         = value'..'value\n * </pre>\n * <p>Each <b>not</b> term inverts the meaning; however, there should not be more than one of them.</p>\n * <p>\n * The i, f, t, and v values are defined as follows:\n * </p>\n * <ul>\n * <li>i to be the integer digits.</li>\n * <li>f to be the visible decimal digits, as an integer.</li>\n * <li>t to be the visible decimal digits—without trailing zeros—as an integer.</li>\n * <li>v to be the number of visible fraction digits.</li>\n * <li>j is defined to only match integers. That is j is 3 fails if v != 0 (eg for 3.1 or 3.0).</li>\n * </ul>\n * <p>\n * Examples are in the following table:\n * </p>\n * <table border='1' style=\"border-collapse:collapse\">\n * <tbody>\n * <tr>\n * <th>n</th>\n * <th>i</th>\n * <th>f</th>\n * <th>v</th>\n * </tr>\n * <tr>\n * <td>1.0</td>\n * <td>1</td>\n * <td align=\"right\">0</td>\n * <td>1</td>\n * </tr>\n * <tr>\n * <td>1.00</td>\n * <td>1</td>\n * <td align=\"right\">0</td>\n * <td>2</td>\n * </tr>\n * <tr>\n * <td>1.3</td>\n * <td>1</td>\n * <td align=\"right\">3</td>\n * <td>1</td>\n * </tr>\n * <tr>\n * <td>1.03</td>\n * <td>1</td>\n * <td align=\"right\">3</td>\n * <td>2</td>\n * </tr>\n * <tr>\n * <td>1.23</td>\n * <td>1</td>\n * <td align=\"right\">23</td>\n * <td>2</td>\n * </tr>\n * </tbody>\n * </table>\n * <p>\n * An \"identifier\" is a sequence of characters that do not have the Unicode Pattern_Syntax or Pattern_White_Space\n * properties.\n * <p>\n * The difference between 'in' and 'within' is that 'in' only includes integers in the specified range, while 'within'\n * includes all values. Using 'within' with a range_list consisting entirely of values is the same as using 'in' (it's\n * not an error).\n * </p>\n ",
+  "links" : [ "#select", "#KEYWORD_OTHER" ],
+  "variables" : [ {
+    "name" : "ALLOWED_ID",
+    "type" : "UnicodeSet",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CATEGORY_SEPARATOR",
+    "type" : "String",
+    "comment" : "\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "serialVersionUID",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "rules",
+    "type" : "RuleList",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "keywords",
+    "type" : "Set<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "standardPluralRanges",
+    "type" : "StandardPluralRanges",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_ZERO",
+    "type" : "String",
+    "comment" : "\n     * Common name for the 'zero' plural form.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_ONE",
+    "type" : "String",
+    "comment" : "\n     * Common name for the 'singular' plural form.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_TWO",
+    "type" : "String",
+    "comment" : "\n     * Common name for the 'dual' plural form.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_FEW",
+    "type" : "String",
+    "comment" : "\n     * Common name for the 'paucal' or other special plural form.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_MANY",
+    "type" : "String",
+    "comment" : "\n     * Common name for the arabic (11 to 99) plural form.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "KEYWORD_OTHER",
+    "type" : "String",
+    "comment" : "\n     * Common name for the default plural form.  This name is returned\n     * for values to which no other form in the rule applies.  It\n     * can additionally be assigned rules of its own.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NO_UNIQUE_VALUE",
+    "type" : "double",
+    "comment" : "\n     * Value returned by {@link #getUniqueKeywordValue} when there is no\n     * unique value to return.\n     ",
+    "links" : [ "#getUniqueKeywordValue" ]
+  }, {
+    "name" : "NO_UNIQUE_VALUE_DECIMAL_QUANTITY",
+    "type" : "DecimalQuantity",
+    "comment" : "\n     * Value returned by {@link #getUniqueKeywordDecimalQuantityValue} when there is no\n     * unique value to return.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "#getUniqueKeywordDecimalQuantityValue" ]
+  }, {
+    "name" : "NO_CONSTRAINT",
+    "type" : "Constraint",
+    "comment" : "\n     * The default constraint that is always satisfied.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_RULE",
+    "type" : "Rule",
+    "comment" : "\n     *\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT",
+    "type" : "PluralRules",
+    "comment" : "\n     * The default rules that accept any number and return\n     * {@link #KEYWORD_OTHER}.\n     ",
+    "links" : [ "#KEYWORD_OTHER" ]
+  }, {
+    "name" : "AT_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "OR_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "AND_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "COMMA_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DOTDOT_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TILDE_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SEMI_SEPARATED",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static PluralRules parseDescription(String description) throws ParseException",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Parses a plural rules description and returns a PluralRules.\n     * @param description the rule description.\n     * @throws ParseException if the description cannot be parsed.\n     *    The exception index is typically not set, it will be -1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluralRules createRules(String description)",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Creates a PluralRules from a description if it is parsable,\n     * otherwise returns null.\n     * @param description the rule description.\n     * @return the PluralRules\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluralRules newInternal(String description, StandardPluralRanges ranges) throws ParseException",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Constraint parseConstraint(String description) throws ParseException",
+    "returnType" : "Constraint",
+    "comment" : "\n     * syntax:\n     * condition :       or_condition\n     *                   and_condition\n     * or_condition :    and_condition 'or' condition\n     * and_condition :   relation\n     *                   relation 'and' relation\n     * relation :        in_relation\n     *                   within_relation\n     * in_relation :     not? expr not? in not? range\n     * within_relation : not? expr not? 'within' not? range\n     * not :             'not'\n     *                   '!'\n     * expr :            'n'\n     *                   'n' mod value\n     * mod :             'mod'\n     *                   '%'\n     * in :              'in'\n     *                   'is'\n     *                   '='\n     *                   '≠'\n     * value :           digit+\n     * digit :           0|1|2|3|4|5|6|7|8|9\n     * range :           value'..'value\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ParseException unexpected(String token, String context)",
+    "returnType" : "ParseException",
+    "comment" : " Returns a parse exception wrapping the token and context strings. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String nextToken(String[] tokens, int x, String context) throws ParseException",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the token at x if available, else throws a parse exception.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Rule parseRule(String description) throws ParseException",
+    "returnType" : "Rule",
+    "comment" : "\n     * Syntax:\n     * rule : keyword ':' condition\n     * keyword: <identifier>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static RuleList parseRuleChain(String description) throws ParseException",
+    "returnType" : "RuleList",
+    "comment" : "\n     * Syntax:\n     * rules : rule\n     *         rule ';' rules\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void addRange(StringBuilder result, double lb, double ub, boolean addSeparator)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String format(double lb)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean addConditional(Set<IFixedDecimal> toAddTo, Set<IFixedDecimal> others, double trial)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluralRules forLocale(ULocale locale)",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Provides access to the predefined cardinal-number <code>PluralRules</code> for a given\n     * locale.\n     * Same as forLocale(locale, PluralType.CARDINAL).\n     *\n     * <p>ICU defines plural rules for many locales based on CLDR <i>Language Plural Rules</i>.\n     * For these predefined rules, see CLDR page at\n     * https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html\n     *\n     * @param locale The locale for which a <code>PluralRules</code> object is\n     *   returned.\n     * @return The predefined <code>PluralRules</code> object for this locale.\n     *   If there's no predefined rules for this locale, the rules\n     *   for the closest parent in the locale hierarchy that has one will\n     *   be returned.  The final fallback always returns the default\n     *   rules.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluralRules forLocale(Locale locale)",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Provides access to the predefined cardinal-number <code>PluralRules</code> for a given\n     * {@link java.util.Locale}.\n     * Same as forLocale(locale, PluralType.CARDINAL).\n     *\n     * <p>ICU defines plural rules for many locales based on CLDR <i>Language Plural Rules</i>.\n     * For these predefined rules, see CLDR page at\n     * https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html\n     *\n     * @param locale The locale for which a <code>PluralRules</code> object is\n     *   returned.\n     * @return The predefined <code>PluralRules</code> object for this locale.\n     *   If there's no predefined rules for this locale, the rules\n     *   for the closest parent in the locale hierarchy that has one will\n     *   be returned.  The final fallback always returns the default\n     *   rules.\n     ",
+    "links" : [ "java.util.Locale" ]
+  }, {
+    "name" : "public static PluralRules forLocale(ULocale locale, PluralType type)",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Provides access to the predefined <code>PluralRules</code> for a given\n     * locale and the plural type.\n     *\n     * <p>ICU defines plural rules for many locales based on CLDR <i>Language Plural Rules</i>.\n     * For these predefined rules, see CLDR page at\n     * https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html\n     *\n     * @param locale The locale for which a <code>PluralRules</code> object is\n     *   returned.\n     * @param type The plural type (e.g., cardinal or ordinal).\n     * @return The predefined <code>PluralRules</code> object for this locale.\n     *   If there's no predefined rules for this locale, the rules\n     *   for the closest parent in the locale hierarchy that has one will\n     *   be returned.  The final fallback always returns the default\n     *   rules.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static PluralRules forLocale(Locale locale, PluralType type)",
+    "returnType" : "PluralRules",
+    "comment" : "\n     * Provides access to the predefined <code>PluralRules</code> for a given\n     * {@link java.util.Locale} and the plural type.\n     *\n     * <p>ICU defines plural rules for many locales based on CLDR <i>Language Plural Rules</i>.\n     * For these predefined rules, see CLDR page at\n     * https://unicode-org.github.io/cldr-staging/charts/latest/supplemental/language_plural_rules.html\n     *\n     * @param locale The locale for which a <code>PluralRules</code> object is\n     *   returned.\n     * @param type The plural type (e.g., cardinal or ordinal).\n     * @return The predefined <code>PluralRules</code> object for this locale.\n     *   If there's no predefined rules for this locale, the rules\n     *   for the closest parent in the locale hierarchy that has one will\n     *   be returned.  The final fallback always returns the default\n     *   rules.\n     ",
+    "links" : [ "java.util.Locale" ]
+  }, {
+    "name" : "private static boolean isValidKeyword(String token)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Checks whether a token is a valid keyword.\n     *\n     * @param token the token to be checked\n     * @return true if the token is a valid keyword.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n     * {@inheritDoc}\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String select(double number)",
+    "returnType" : "String",
+    "comment" : "\n     * Given a floating-point number, returns the keyword of the first rule\n     * that applies to the number.\n     *\n     * @param number The number for which the rule has to be determined.\n     * @return The keyword of the selected rule.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String select(FormattedNumber number)",
+    "returnType" : "String",
+    "comment" : "\n     * Given a formatted number, returns the keyword of the first rule that\n     * applies to the number.\n     *\n     * A FormattedNumber allows you to specify an exponent or trailing zeros,\n     * which can affect the plural category. To get a FormattedNumber, see\n     * {@link NumberFormatter}.\n     *\n     * @param number The number for which the rule has to be determined.\n     * @return The keyword of the selected rule.\n     ",
+    "links" : [ "android.icu.number.NumberFormatter" ]
+  }, {
+    "name" : "public String select(FormattedNumberRange range)",
+    "returnType" : "String",
+    "comment" : "\n     * Given a formatted number range, returns the overall plural form of the\n     * range. For example, \"3-5\" returns \"other\" in English.\n     *\n     * To get a FormattedNumberRange, see {@link android.icu.number.NumberRangeFormatter}.\n     *\n     * This method only works if PluralRules was created with a locale. If it was created\n     * from PluralRules.createRules(), or if it was deserialized, this method throws\n     * UnsupportedOperationException.\n     *\n     * @param range  The number range onto which the rules will be applied.\n     * @return       The keyword of the selected rule.\n     * @throws UnsupportedOperationException If called on an instance without plural ranges data.\n     ",
+    "links" : [ "android.icu.number.NumberRangeFormatter" ]
+  }, {
+    "name" : "public String select(double number, int countVisibleFractionDigits, long fractionaldigits)",
+    "returnType" : "String",
+    "comment" : "\n     * Given a number, returns the keyword of the first rule that applies to\n     * the number.\n     *\n     * @param number The number for which the rule has to be determined.\n     * @return The keyword of the selected rule.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String select(IFixedDecimal number)",
+    "returnType" : "String",
+    "comment" : "\n     * Given a number information, returns the keyword of the first rule that applies to\n     * the number.\n     *\n     * @param number The number information for which the rule has to be determined.\n     * @return The keyword of the selected rule.\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean matches(FixedDecimal sample, String keyword)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Given a number information, and keyword, return whether the keyword would match the number.\n     *\n     * @param sample The number information for which the rule has to be determined.\n     * @param keyword The keyword to filter on\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Set<String> getKeywords()",
+    "returnType" : "Set<String>",
+    "comment" : "\n     * Returns a set of all rule keywords used in this <code>PluralRules</code>\n     * object.  The rule \"other\" is always present by default.\n     *\n     * @return The set of keywords.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public double getUniqueKeywordValue(String keyword)",
+    "returnType" : "double",
+    "comment" : "\n     * Returns the unique value that this keyword matches, or {@link #NO_UNIQUE_VALUE}\n     * if the keyword matches multiple values or is not defined for this PluralRules.\n     *\n     * @param keyword the keyword to check for a unique value\n     * @return The unique value for the keyword, or NO_UNIQUE_VALUE.\n     ",
+    "links" : [ "#NO_UNIQUE_VALUE" ]
+  }, {
+    "name" : "public DecimalQuantity getUniqueKeywordDecimalQuantityValue(String keyword)",
+    "returnType" : "DecimalQuantity",
+    "comment" : "\n     * Returns the unique value that this keyword matches, or {@link #NO_UNIQUE_VALUE}\n     * if the keyword matches multiple values or is not defined for this PluralRules.\n     *\n     * @param keyword the keyword to check for a unique value\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ "#NO_UNIQUE_VALUE" ]
+  }, {
+    "name" : "public Collection<Double> getAllKeywordValues(String keyword)",
+    "returnType" : "Collection<Double>",
+    "comment" : "\n     * Returns all the values that trigger this keyword, or null if the number of such\n     * values is unlimited.\n     *\n     * @param keyword the keyword\n     * @return the values that trigger this keyword, or null.  The returned collection\n     * is immutable. It will be empty if the keyword is not defined.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<DecimalQuantity> getAllKeywordDecimalQuantityValues(String keyword)",
+    "returnType" : "Collection<DecimalQuantity>",
+    "comment" : "\n     * Returns all the values that trigger this keyword, or null if the number of such\n     * values is unlimited.\n     *\n     * @param keyword the keyword\n     * @return the values that trigger this keyword, or null.  The returned collection\n     * is immutable. It will be empty if the keyword is not defined.\n     *\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<DecimalQuantity> getAllKeywordValues(String keyword, SampleType type)",
+    "returnType" : "Collection<DecimalQuantity>",
+    "comment" : "\n     * Returns all the values that trigger this keyword, or null if the number of such\n     * values is unlimited.\n     *\n     * @param keyword the keyword\n     * @param type the type of samples requested, INTEGER or DECIMAL\n     * @return the values that trigger this keyword, or null.  The returned collection\n     * is immutable. It will be empty if the keyword is not defined.\n     *\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<Double> getSamples(String keyword)",
+    "returnType" : "Collection<Double>",
+    "comment" : "\n     * Returns a list of integer values for which select() would return that keyword,\n     * or null if the keyword is not defined. The returned collection is unmodifiable.\n     * The returned list is not complete, and there might be additional values that\n     * would return the keyword.\n     *\n     * @param keyword the keyword to test\n     * @return a list of values matching the keyword.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<DecimalQuantity> getDecimalQuantitySamples(String keyword)",
+    "returnType" : "Collection<DecimalQuantity>",
+    "comment" : "\n     * Returns a list of integer values for which select() would return that keyword,\n     * or null if the keyword is not defined. The returned collection is unmodifiable.\n     * The returned list is not complete, and there might be additional values that\n     * would return the keyword.\n     *\n     * @param keyword the keyword to test\n     * @return a list of values matching the keyword.\n     * @deprecated ICU internal only\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<Double> getSamples(String keyword, SampleType sampleType)",
+    "returnType" : "Collection<Double>",
+    "comment" : "\n     * Returns a list of values for which select() would return that keyword,\n     * or null if the keyword is not defined.\n     * The returned collection is unmodifiable.\n     * The returned list is not complete, and there might be additional values that\n     * would return the keyword. The keyword might be defined, and yet have an empty set of samples,\n     * IF there are samples for the other sampleType.\n     *\n     * @param keyword the keyword to test\n     * @param sampleType the type of samples requested, INTEGER or DECIMAL\n     * @return a list of values matching the keyword.\n     * @deprecated ICU internal only\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Collection<DecimalQuantity> getDecimalQuantitySamples(String keyword, SampleType sampleType)",
+    "returnType" : "Collection<DecimalQuantity>",
+    "comment" : "\n     * Returns a list of values for which select() would return that keyword,\n     * or null if the keyword is not defined.\n     * The returned collection is unmodifiable.\n     * The returned list is not complete, and there might be additional values that\n     * would return the keyword. The keyword might be defined, and yet have an empty set of samples,\n     * IF there are samples for the other sampleType.\n     *\n     * @param keyword the keyword to test\n     * @param sampleType the type of samples requested, INTEGER or DECIMAL\n     * @return a list of values matching the keyword.\n     * @deprecated ICU internal only\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean addSample(String keyword, DecimalQuantity sample, int maxCount, Set<DecimalQuantity> result)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public DecimalQuantitySamples getDecimalSamples(String keyword, SampleType sampleType)",
+    "returnType" : "DecimalQuantitySamples",
+    "comment" : "\n     * Returns a list of values for which select() would return that keyword,\n     * or null if the keyword is not defined or no samples are available.\n     * The returned collection is unmodifiable.\n     * The returned list is not complete, and there might be additional values that\n     * would return the keyword.\n     *\n     * @param keyword the keyword to test\n     * @param sampleType the type of samples requested, INTEGER or DECIMAL\n     * @return a list of values matching the keyword.\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ULocale[] getAvailableULocales()",
+    "returnType" : "ULocale[]",
+    "comment" : "\n     * Returns the set of locales for which PluralRules are known.\n     * @return the set of locales for which PluralRules are known, as a list\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ULocale getFunctionalEquivalent(ULocale locale, boolean[] isAvailable)",
+    "returnType" : "ULocale",
+    "comment" : "\n     * Returns the 'functionally equivalent' locale with respect to\n     * plural rules.  Calling PluralRules.forLocale with the functionally equivalent\n     * locale, and with the provided locale, returns rules that behave the same.\n     * <br>\n     * All locales with the same functionally equivalent locale have\n     * plural rules that behave the same.  This is not exhaustive;\n     * there may be other locales whose plural rules behave the same\n     * that do not have the same equivalent locale.\n     *\n     * @param locale the locale to check\n     * @param isAvailable if not null and of length &gt; 0, this will hold 'true' at\n     * index 0 if locale is directly defined (without fallback) as having plural rules\n     * @return the functionally-equivalent locale\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object rhs)",
+    "returnType" : "boolean",
+    "comment" : "\n     * {@inheritDoc}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(PluralRules rhs)",
+    "returnType" : "boolean",
+    "comment" : " TODO Optimize this",
+    "links" : [ ]
+  }, {
+    "name" : "public KeywordStatus getKeywordStatus(String keyword, int offset, Set<DecimalQuantity> explicits, Output<DecimalQuantity> uniqueValue)",
+    "returnType" : "KeywordStatus",
+    "comment" : "\n     * Find the status for the keyword, given a certain set of explicit values.\n     *\n     * @param keyword\n     *            the particular keyword (call rules.getKeywords() to get the valid ones)\n     * @param offset\n     *            the offset used, or 0.0d if not. Internally, the offset is subtracted from each explicit value before\n     *            checking against the keyword values.\n     * @param explicits\n     *            a set of {@code DecimalQuantity}s that are used explicitly (eg [=0], \"[=1]\"). May be empty or null.\n     * @param uniqueValue\n     *            If non null, set to the unique value.\n     * @return the KeywordStatus\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public KeywordStatus getKeywordStatus(String keyword, int offset, Set<DecimalQuantity> explicits, Output<DecimalQuantity> uniqueValue, SampleType sampleType)",
+    "returnType" : "KeywordStatus",
+    "comment" : "\n     * Find the status for the keyword, given a certain set of explicit values.\n     *\n     * @param keyword\n     *            the particular keyword (call rules.getKeywords() to get the valid ones)\n     * @param offset\n     *            the offset used, or 0.0d if not. Internally, the offset is subtracted from each explicit value before\n     *            checking against the keyword values.\n     * @param explicits\n     *            a set of {@code DecimalQuantity}s that are used explicitly (eg [=0], \"[=1]\"). May be empty or null.\n     * @param sampleType\n     *            request KeywordStatus relative to INTEGER or DECIMAL values\n     * @param uniqueValue\n     *            If non null, set to the unique value.\n     * @return the KeywordStatus\n     * @deprecated This API is ICU internal only.\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getRules(String keyword)",
+    "returnType" : "String",
+    "comment" : "\n     * @deprecated This API is ICU internal only.\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeObject(ObjectOutputStream out) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Object writeReplace() throws ObjectStreamException",
+    "returnType" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int compareTo(PluralRules other)",
+    "returnType" : "int",
+    "comment" : "\n     * @deprecated internal\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " Boolean isLimited(String keyword)",
+    "returnType" : "Boolean",
+    "comment" : "\n     * @hide original deprecated declaration\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isLimited(String keyword, SampleType sampleType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @deprecated internal\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean computeLimited(String keyword, SampleType sampleType)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @deprecated internal\n     * @hide original deprecated declaration\n     * @hide draft / provisional / internal are hidden on Android\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static PluralRules parseDescription(String description) throws ParseException", "public static PluralRules createRules(String description)", "public static PluralRules newInternal(String description, StandardPluralRanges ranges) throws ParseException", "private static Constraint parseConstraint(String description) throws ParseException", "private static ParseException unexpected(String token, String context)", "private static String nextToken(String[] tokens, int x, String context) throws ParseException", "private static Rule parseRule(String description) throws ParseException", "private static RuleList parseRuleChain(String description) throws ParseException", "private static void addRange(StringBuilder result, double lb, double ub, boolean addSeparator)", "private static String format(double lb)", "private boolean addConditional(Set<IFixedDecimal> toAddTo, Set<IFixedDecimal> others, double trial)", "public static PluralRules forLocale(ULocale locale)", "public static PluralRules forLocale(Locale locale)", "public static PluralRules forLocale(ULocale locale, PluralType type)", "public static PluralRules forLocale(Locale locale, PluralType type)", "private static boolean isValidKeyword(String token)", "public int hashCode()", "public String select(double number)", "public String select(FormattedNumber number)", "public String select(FormattedNumberRange range)", "public String select(double number, int countVisibleFractionDigits, long fractionaldigits)", "public String select(IFixedDecimal number)", "public boolean matches(FixedDecimal sample, String keyword)", "public Set<String> getKeywords()", "public double getUniqueKeywordValue(String keyword)", "public DecimalQuantity getUniqueKeywordDecimalQuantityValue(String keyword)", "public Collection<Double> getAllKeywordValues(String keyword)", "public Collection<DecimalQuantity> getAllKeywordDecimalQuantityValues(String keyword)", "public Collection<DecimalQuantity> getAllKeywordValues(String keyword, SampleType type)", "public Collection<Double> getSamples(String keyword)", "public Collection<DecimalQuantity> getDecimalQuantitySamples(String keyword)", "public Collection<Double> getSamples(String keyword, SampleType sampleType)", "public Collection<DecimalQuantity> getDecimalQuantitySamples(String keyword, SampleType sampleType)", "private boolean addSample(String keyword, DecimalQuantity sample, int maxCount, Set<DecimalQuantity> result)", "public DecimalQuantitySamples getDecimalSamples(String keyword, SampleType sampleType)", "public static ULocale[] getAvailableULocales()", "public static ULocale getFunctionalEquivalent(ULocale locale, boolean[] isAvailable)", "public String toString()", "public boolean equals(Object rhs)", "public boolean equals(PluralRules rhs)", "public KeywordStatus getKeywordStatus(String keyword, int offset, Set<DecimalQuantity> explicits, Output<DecimalQuantity> uniqueValue)", "public KeywordStatus getKeywordStatus(String keyword, int offset, Set<DecimalQuantity> explicits, Output<DecimalQuantity> uniqueValue, SampleType sampleType)", "public String getRules(String keyword)", "private void writeObject(ObjectOutputStream out) throws IOException", "private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException", "private Object writeReplace() throws ObjectStreamException", "public int compareTo(PluralRules other)", " Boolean isLimited(String keyword)", "public boolean isLimited(String keyword, SampleType sampleType)", "public boolean computeLimited(String keyword, SampleType sampleType)" ],
+  "variableNames" : [ "ALLOWED_ID", "CATEGORY_SEPARATOR", "serialVersionUID", "rules", "keywords", "standardPluralRanges", "KEYWORD_ZERO", "KEYWORD_ONE", "KEYWORD_TWO", "KEYWORD_FEW", "KEYWORD_MANY", "KEYWORD_OTHER", "NO_UNIQUE_VALUE", "NO_UNIQUE_VALUE_DECIMAL_QUANTITY", "NO_CONSTRAINT", "DEFAULT_RULE", "DEFAULT", "AT_SEPARATED", "OR_SEPARATED", "AND_SEPARATED", "COMMA_SEPARATED", "DOTDOT_SEPARATED", "TILDE_SEPARATED", "SEMI_SEPARATED" ]
+}

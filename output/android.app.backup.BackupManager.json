@@ -1,8 +1,9 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/app/backup/BackupManager.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/app/backup/BackupManager.java",
   "packageName" : "android.app.backup",
   "className" : "BackupManager",
   "comment" : "\n * The interface through which an application interacts with the Android backup service to\n * request backup and restore operations.\n * Applications instantiate it using the constructor and issue calls through that instance.\n * <p>\n * When an application has made changes to data which should be backed up, a\n * call to {@link #dataChanged()} will notify the backup service. The system\n * will then schedule a backup operation to occur in the near future. Repeated\n * calls to {@link #dataChanged()} have no further effect until the backup\n * operation actually occurs.\n * <p>\n * A backup or restore operation for your application begins when the system launches the\n * {@link android.app.backup.BackupAgent} subclass you've declared in your manifest. See the\n * documentation for {@link android.app.backup.BackupAgent} for a detailed description\n * of how the operation then proceeds.\n * <p>\n * Several attributes affecting the operation of the backup and restore mechanism\n * can be set on the <code>\n * <a href=\"{@docRoot}guide/topics/manifest/application-element.html\">&lt;application&gt;</a></code>\n * tag in your application's AndroidManifest.xml file.\n *\n * <div class=\"special reference\">\n * <h3>Developer Guides</h3>\n * <p>For more information about using BackupManager, read the\n * <a href=\"{@docRoot}guide/topics/data/backup.html\">Data Backup</a> developer guide.</p></div>\n *\n * @attr ref android.R.styleable#AndroidManifestApplication_allowBackup\n * @attr ref android.R.styleable#AndroidManifestApplication_backupAgent\n * @attr ref android.R.styleable#AndroidManifestApplication_killAfterRestore\n * @attr ref android.R.styleable#AndroidManifestApplication_restoreAnyVersion\n ",
+  "links" : [ "#dataChanged()", "android.app.backup.BackupAgent" ],
   "variables" : [ {
     "name" : "TAG",
     "type" : "String",
@@ -81,8 +82,13 @@
   }, {
     "name" : "sService",
     "type" : "IBackupManager",
-    "comment" : "",
+    "comment" : "\n     * @hide Making this package private is not sufficient for the test to access it, that's because\n     * the test is in the same package but is loaded with a different class loader. Package\n     * private members are not accessible across class loaders. So we make it public and @hide it.\n     ",
     "links" : [ ]
+  }, {
+    "name" : "IS_BACKUP_SERVICE_ACTIVE_ENFORCE_PERMISSION_IN_SERVICE",
+    "type" : "long",
+    "comment" : "\n     * If this change is enabled, the {@code BACKUP} permission needed for\n     * {@code isBackupServiceActive()} will be enforced on the service end\n     * rather than client-side in {@link BackupManager}.\n     * @hide\n     ",
+    "links" : [ "android.app.backup.BackupManager" ]
   } ],
   "methods" : [ {
     "name" : "private static void checkServiceBinder()",
@@ -92,12 +98,17 @@
   }, {
     "name" : "public void dataChanged()",
     "returnType" : "void",
-    "comment" : "\n     * Notifies the Android backup system that your application wishes to back up\n     * new changes to its data.  A backup operation using your application's\n     * {@link android.app.backup.BackupAgent} subclass will be scheduled when you\n     * call this method.\n     ",
+    "comment" : "\n     * Notifies the Android backup system that your application wishes to back up\n     * new changes to its data.  A backup operation using your application's\n     * {@link android.app.backup.BackupAgent} subclass will be scheduled when you\n     * call this method.\n     *\n     * <p>\n     * Note: This only works if your application is performing Key/Value backups.\n     ",
     "links" : [ "android.app.backup.BackupAgent" ]
   }, {
     "name" : "public static void dataChanged(String packageName)",
     "returnType" : "void",
-    "comment" : "\n     * Convenience method for callers who need to indicate that some other package\n     * needs a backup pass.  This can be useful in the case of groups of packages\n     * that share a uid.\n     * <p>\n     * This method requires that the application hold the \"android.permission.BACKUP\"\n     * permission if the package named in the argument does not run under the same uid\n     * as the caller.\n     *\n     * @param packageName The package name identifying the application to back up.\n     ",
+    "comment" : "\n     * Convenience method for callers who need to indicate that some other package\n     * needs a backup pass.  This can be useful in the case of groups of packages\n     * that share a uid.\n     * <p>\n     * This method requires that the application hold the \"android.permission.BACKUP\"\n     * permission if the package named in the argument does not run under the same uid\n     * as the caller.\n     *\n     * @param packageName The package name identifying the application to back up.\n     * <p>\n     * Note: Only works for packages performing Key/Value backups.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void dataChangedForUser(int userId, String packageName)",
+    "returnType" : "void",
+    "comment" : "\n     * Convenience method for callers who need to indicate that some other package or\n     * some other user needs a backup pass. This can be useful in the case of groups of\n     * packages that share a uid and/or have user-specific data.\n     * <p>\n     * This method requires that the application hold the \"android.permission.BACKUP\"\n     * permission if the package named in the package argument does not run under the\n     * same uid as the caller. This method also requires that the application hold the\n     * \"android.permission.INTERACT_ACROSS_USERS_FULL\" if the user argument is not the\n     * same as the user the caller is running under.\n     * @param userId The user to back up\n     * @param packageName The package name identifying the application to back up.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public int requestRestore(RestoreObserver observer)",
@@ -118,6 +129,11 @@
     "name" : "public void setBackupEnabled(boolean isEnabled)",
     "returnType" : "void",
     "comment" : "\n     * Enable/disable the backup service entirely.  When disabled, no backup\n     * or restore operations will take place.  Data-changed notifications will\n     * still be observed and collected, however, so that changes made while the\n     * mechanism was disabled will still be backed up properly if it is enabled\n     * at some point in the future.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setFrameworkSchedulingEnabled(boolean isEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Enable/disable the framework backup scheduling entirely for the context user. When disabled,\n     * no Key/Value or Full backup jobs will be scheduled by the Android framework.\n     *\n     * <p>Note: This does not disable backups: only their scheduling is affected and backups can\n     * still be triggered manually.\n     *\n     * <p>Callers must hold the android.permission.BACKUP permission to use this method. If the\n     * context user is different from the calling user, then the caller must additionally hold the\n     * android.permission.INTERACT_ACROSS_USERS_FULL permission.\n     *\n     * @hide\n     ",
     "links" : [ ]
   }, {
     "name" : "public boolean isBackupEnabled()",
@@ -193,7 +209,7 @@
     "name" : "public int requestBackup(String[] packages, BackupObserver observer, BackupManagerMonitor monitor, int flags)",
     "returnType" : "int",
     "comment" : "\n     * Request an immediate backup, providing an observer to which results of the backup operation\n     * will be published. The Android backup system will decide for each package whether it will\n     * be full app data backup or key/value-pair-based backup.\n     *\n     * <p>If this method returns {@link BackupManager#SUCCESS}, the OS will attempt to backup all\n     * provided packages using the remote transport.\n     *\n     * @param packages List of package names to backup.\n     * @param observer The {@link BackupObserver} to receive callbacks during the backup\n     *                 operation. Could be {@code null}.\n     * @param monitor  The {@link BackupManagerMonitorWrapper} to receive callbacks of important\n     *                 events during the backup operation. Could be {@code null}.\n     * @param flags    {@link #FLAG_NON_INCREMENTAL_BACKUP}.\n     * @return {@link BackupManager#SUCCESS} on success; nonzero on error.\n     * @throws IllegalArgumentException on null or empty {@code packages} param.\n     * @hide\n     ",
-    "links" : [ "android.app.backup.BackupObserver", "#FLAG_NON_INCREMENTAL_BACKUP", "BackupManagerMonitorWrapper", "android.app.backup.BackupManager#SUCCESS" ]
+    "links" : [ "android.app.backup.BackupObserver", "#FLAG_NON_INCREMENTAL_BACKUP", "android.app.backup.BackupManager#SUCCESS", "android.app.backup.BackupManagerMonitorWrapper" ]
   }, {
     "name" : "public void cancelBackups()",
     "returnType" : "void",
@@ -239,7 +255,22 @@
     "returnType" : "void",
     "comment" : "\n     * Excludes keys from KV restore for a given package. The corresponding data will be excluded\n     * from the data set available the backup agent during restore. However,  final list  of keys\n     * that have been excluded will be passed to the agent to make it aware of the exclusions.\n     *\n     * @param packageName The name of the package for which to exclude keys.\n     * @param keys The list of keys to exclude.\n     *\n     * @hide\n     ",
     "links" : [ ]
+  }, {
+    "name" : "public BackupRestoreEventLogger getBackupRestoreEventLogger(@NonNull BackupAgent backupAgent)",
+    "returnType" : "BackupRestoreEventLogger",
+    "comment" : "\n     * Get an instance of {@link BackupRestoreEventLogger} to report B&R related events during an\n     * ongoing backup or restore operation.\n     *\n     * @param backupAgent the agent currently running a B&R operation.\n     *\n     * @return an instance of {@code BackupRestoreEventLogger} or {@code null} if the agent has not\n     *         finished initialisation, i.e. {@link BackupAgent#onCreate()} has not been called yet.\n     * @throws IllegalStateException if called before the agent has finished initialisation.\n     *\n     * @hide\n     ",
+    "links" : [ "android.app.backup.BackupAgent#onCreate()", "android.app.backup.BackupRestoreEventLogger" ]
+  }, {
+    "name" : "public BackupRestoreEventLogger getDelayedRestoreLogger()",
+    "returnType" : "BackupRestoreEventLogger",
+    "comment" : "\n     * Get an instance of {@link BackupRestoreEventLogger} to report B&R related events during a\n     * delayed restore operation.\n     *\n     * @return an instance of {@link BackupRestoreEventLogger}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.app.backup.BackupRestoreEventLogger" ]
+  }, {
+    "name" : "public void reportDelayedRestoreResult(@NonNull BackupRestoreEventLogger logger)",
+    "returnType" : "void",
+    "comment" : "\n     * Report B&R related events following a delayed restore operation.\n     *\n     * @param logger an instance of {@link BackupRestoreEventLogger} to which the corresponding\n     *               events have been logged.\n     *\n     * @hide\n     ",
+    "links" : [ "android.app.backup.BackupRestoreEventLogger" ]
   } ],
-  "variableNames" : [ "TAG", "SUCCESS", "ERROR_BACKUP_NOT_ALLOWED", "ERROR_PACKAGE_NOT_FOUND", "ERROR_BACKUP_CANCELLED", "ERROR_TRANSPORT_ABORTED", "ERROR_TRANSPORT_PACKAGE_REJECTED", "ERROR_TRANSPORT_QUOTA_EXCEEDED", "ERROR_AGENT_FAILURE", "EXTRA_BACKUP_SERVICES_AVAILABLE", "FLAG_NON_INCREMENTAL_BACKUP", "PACKAGE_MANAGER_SENTINEL", "ERROR_TRANSPORT_UNAVAILABLE", "ERROR_TRANSPORT_INVALID", "mContext", "sService" ],
-  "methodNames" : [ "private static void checkServiceBinder()", "public void dataChanged()", "public static void dataChanged(String packageName)", "public int requestRestore(RestoreObserver observer)", "public int requestRestore(RestoreObserver observer, BackupManagerMonitor monitor)", "public RestoreSession beginRestoreSession()", "public void setBackupEnabled(boolean isEnabled)", "public boolean isBackupEnabled()", "public boolean isBackupServiceActive(UserHandle user)", "public void setAutoRestore(boolean isEnabled)", "public String getCurrentTransport()", "public ComponentName getCurrentTransportComponent()", "public String[] listAllTransports()", "public void updateTransportAttributes(@NonNull ComponentName transportComponent, @NonNull String name, @Nullable Intent configurationIntent, @NonNull String currentDestinationString, @Nullable Intent dataManagementIntent, @Nullable String dataManagementLabel)", "public void updateTransportAttributes(@NonNull ComponentName transportComponent, @NonNull String name, @Nullable Intent configurationIntent, @NonNull String currentDestinationString, @Nullable Intent dataManagementIntent, @Nullable CharSequence dataManagementLabel)", "public String selectBackupTransport(String transport)", "public void selectBackupTransport(ComponentName transport, SelectBackupTransportCallback listener)", "public void backupNow()", "public long getAvailableRestoreToken(String packageName)", "public boolean isAppEligibleForBackup(String packageName)", "public int requestBackup(String[] packages, BackupObserver observer)", "public int requestBackup(String[] packages, BackupObserver observer, BackupManagerMonitor monitor, int flags)", "public void cancelBackups()", "public UserHandle getUserForAncestralSerialNumber(long ancestralSerialNumber)", "public void setAncestralSerialNumber(long ancestralSerialNumber)", "public Intent getConfigurationIntent(String transportName)", "public String getDestinationString(String transportName)", "public Intent getDataManagementIntent(String transportName)", "public String getDataManagementLabel(@NonNull String transportName)", "public CharSequence getDataManagementIntentLabel(@NonNull String transportName)", "public void excludeKeysFromRestore(@NonNull String packageName, @NonNull List<String> keys)" ]
+  "methodNames" : [ "private static void checkServiceBinder()", "public void dataChanged()", "public static void dataChanged(String packageName)", "public static void dataChangedForUser(int userId, String packageName)", "public int requestRestore(RestoreObserver observer)", "public int requestRestore(RestoreObserver observer, BackupManagerMonitor monitor)", "public RestoreSession beginRestoreSession()", "public void setBackupEnabled(boolean isEnabled)", "public void setFrameworkSchedulingEnabled(boolean isEnabled)", "public boolean isBackupEnabled()", "public boolean isBackupServiceActive(UserHandle user)", "public void setAutoRestore(boolean isEnabled)", "public String getCurrentTransport()", "public ComponentName getCurrentTransportComponent()", "public String[] listAllTransports()", "public void updateTransportAttributes(@NonNull ComponentName transportComponent, @NonNull String name, @Nullable Intent configurationIntent, @NonNull String currentDestinationString, @Nullable Intent dataManagementIntent, @Nullable String dataManagementLabel)", "public void updateTransportAttributes(@NonNull ComponentName transportComponent, @NonNull String name, @Nullable Intent configurationIntent, @NonNull String currentDestinationString, @Nullable Intent dataManagementIntent, @Nullable CharSequence dataManagementLabel)", "public String selectBackupTransport(String transport)", "public void selectBackupTransport(ComponentName transport, SelectBackupTransportCallback listener)", "public void backupNow()", "public long getAvailableRestoreToken(String packageName)", "public boolean isAppEligibleForBackup(String packageName)", "public int requestBackup(String[] packages, BackupObserver observer)", "public int requestBackup(String[] packages, BackupObserver observer, BackupManagerMonitor monitor, int flags)", "public void cancelBackups()", "public UserHandle getUserForAncestralSerialNumber(long ancestralSerialNumber)", "public void setAncestralSerialNumber(long ancestralSerialNumber)", "public Intent getConfigurationIntent(String transportName)", "public String getDestinationString(String transportName)", "public Intent getDataManagementIntent(String transportName)", "public String getDataManagementLabel(@NonNull String transportName)", "public CharSequence getDataManagementIntentLabel(@NonNull String transportName)", "public void excludeKeysFromRestore(@NonNull String packageName, @NonNull List<String> keys)", "public BackupRestoreEventLogger getBackupRestoreEventLogger(@NonNull BackupAgent backupAgent)", "public BackupRestoreEventLogger getDelayedRestoreLogger()", "public void reportDelayedRestoreResult(@NonNull BackupRestoreEventLogger logger)" ],
+  "variableNames" : [ "TAG", "SUCCESS", "ERROR_BACKUP_NOT_ALLOWED", "ERROR_PACKAGE_NOT_FOUND", "ERROR_BACKUP_CANCELLED", "ERROR_TRANSPORT_ABORTED", "ERROR_TRANSPORT_PACKAGE_REJECTED", "ERROR_TRANSPORT_QUOTA_EXCEEDED", "ERROR_AGENT_FAILURE", "EXTRA_BACKUP_SERVICES_AVAILABLE", "FLAG_NON_INCREMENTAL_BACKUP", "PACKAGE_MANAGER_SENTINEL", "ERROR_TRANSPORT_UNAVAILABLE", "ERROR_TRANSPORT_INVALID", "mContext", "sService", "IS_BACKUP_SERVICE_ACTIVE_ENFORCE_PERMISSION_IN_SERVICE" ]
 }

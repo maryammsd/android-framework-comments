@@ -1,9 +1,15 @@
 {
-  "filePath" : "/home/maryam/clearblue/files/android-source-30/android/security/KeyChain.java",
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/android/security/KeyChain.java",
   "packageName" : "android.security",
   "className" : "KeyChain",
   "comment" : " TODO reference intent for credential installation when public",
+  "links" : [ ],
   "variables" : [ {
+    "name" : "LOG",
+    "type" : "String",
+    "comment" : "\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "ACCOUNT_TYPE",
     "type" : "String",
     "comment" : "\n     * @hide Also used by KeyChainService implementation\n     ",
@@ -22,6 +28,11 @@
     "name" : "CERT_INSTALLER_PACKAGE",
     "type" : "String",
     "comment" : "\n     * Package name for the Certificate Installer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "SETTINGS_PACKAGE",
+    "type" : "String",
+    "comment" : "\n     * Package name for Settings.\n     ",
     "links" : [ ]
   }, {
     "name" : "EXTRA_RESPONSE",
@@ -73,6 +84,11 @@
     "type" : "String",
     "comment" : " Compatible with old android.security.Credentials.PKCS12",
     "links" : [ ]
+  }, {
+    "name" : "EXTRA_AUTHENTICATION_POLICY",
+    "type" : "String",
+    "comment" : "\n     * Extra used by {@link #createManageCredentialsIntent(AppUriAuthenticationPolicy)} to specify\n     * the authentication policy of the credential management app.\n     *\n     * <p>The authentication policy declares which alias for a private key and certificate pair\n     * should be used for authentication, given a list of apps and URIs.\n     *\n     * <p>The extra value should be a {@link AppUriAuthenticationPolicy}.\n     *\n     * @hide\n     ",
+    "links" : [ "android.security.AppUriAuthenticationPolicy", "#createManageCredentialsIntent(AppUriAuthenticationPolicy)" ]
   }, {
     "name" : "ACTION_STORAGE_CHANGED",
     "type" : "String",
@@ -173,12 +189,22 @@
     "type" : "String",
     "comment" : "\n     * Used by DPC or delegated app in\n     * {@link android.app.admin.DeviceAdminReceiver#onChoosePrivateKeyAlias} or\n     * {@link android.app.admin.DelegatedAdminReceiver#onChoosePrivateKeyAlias} to identify that\n     * the requesting app is not granted access to any key, and nor will the user be able to grant\n     * access manually.\n     ",
     "links" : [ "android.app.admin.DeviceAdminReceiver#onChoosePrivateKeyAlias", "android.app.admin.DelegatedAdminReceiver#onChoosePrivateKeyAlias" ]
+  }, {
+    "name" : "GRANT_ALIAS_PREFIX",
+    "type" : "String",
+    "comment" : "\n     * This prefix is used to disambiguate grant aliase strings from normal key alias strings.\n     * Technically, a key alias string can use the same prefix. However, a collision does not\n     * lead to privilege escalation, because grants are access controlled in the Keystore daemon.\n     * @hide\n     ",
+    "links" : [ ]
   } ],
   "methods" : [ {
     "name" : "public static Intent createInstallIntent()",
     "returnType" : "Intent",
     "comment" : "\n     * Returns an {@code Intent} that can be used for credential\n     * installation. The intent may be used without any extras, in\n     * which case the user will be able to install credentials from\n     * their own source.\n     *\n     * <p>Alternatively, {@link #EXTRA_CERTIFICATE} or {@link\n     * #EXTRA_PKCS12} maybe used to specify the bytes of an X.509\n     * certificate or a PKCS#12 key store for installation. These\n     * extras may be combined with {@link #EXTRA_NAME} to provide a\n     * default alias name for credentials being installed.\n     *\n     * <p>When used with {@link Activity#startActivityForResult},\n     * {@link Activity#RESULT_OK} will be returned if a credential was\n     * successfully installed, otherwise {@link\n     * Activity#RESULT_CANCELED} will be returned.\n     *\n     * <p>Starting from {@link android.os.Build.VERSION_CODES#R}, the intent returned by this\n     * method cannot be used for installing CA certificates. Since CA certificates can only be\n     * installed via Settings, the app should provide the user with a file containing the\n     * CA certificate. One way to do this would be to use the {@link android.provider.MediaStore}\n     * API to write the certificate to the {@link android.provider.MediaStore.Downloads}\n     * collection.\n     ",
     "links" : [ "#EXTRA_PKCS12", "android.app.Activity#RESULT_CANCELED", "android.os.Build.VERSION_CODES#R", "android.app.Activity#RESULT_OK", "android.provider.MediaStore.Downloads", "android.app.Activity#startActivityForResult", "android.provider.MediaStore", "#EXTRA_CERTIFICATE", "#EXTRA_NAME" ]
+  }, {
+    "name" : "public static Intent createManageCredentialsIntent(@NonNull AppUriAuthenticationPolicy policy)",
+    "returnType" : "Intent",
+    "comment" : "\n     * Returns an {@code Intent} that should be used by an app to request to manage the user's\n     * credentials. This is limited to unmanaged devices. The authentication policy must be\n     * provided to be able to make this request successfully.\n     *\n     * <p> This intent should be started using {@link Activity#startActivityForResult(Intent, int)}\n     * to verify whether the request was successful and whether the user accepted or denied the\n     * request. If the user successfully receives and accepts the request, the result code will be\n     * {@link Activity#RESULT_OK}, otherwise the result code will be\n     * {@link Activity#RESULT_CANCELED}.\n     *\n     * <p> {@link KeyChain#isCredentialManagementApp(Context)} should be used to determine whether\n     * an app is already the credential management app.\n     *\n     * @param policy The authentication policy determines which alias for a private key and\n     *               certificate pair should be used for authentication.\n     ",
+    "links" : [ "android.app.Activity#RESULT_CANCELED", "android.app.Activity#RESULT_OK", "android.app.Activity#startActivityForResult(Intent", "android.security.KeyChain#isCredentialManagementApp(Context)" ]
   }, {
     "name" : "public static void choosePrivateKeyAlias(@NonNull Activity activity, @NonNull KeyChainAliasCallback response, @Nullable @KeyProperties.KeyAlgorithmEnum String[] keyTypes, @Nullable Principal[] issuers, @Nullable String host, int port, @Nullable String alias)",
     "returnType" : "void",
@@ -190,10 +216,40 @@
     "comment" : "\n     * Launches an {@code Activity} for the user to select the alias\n     * for a private key and certificate pair for authentication. The\n     * selected alias or null will be returned via the\n     * KeyChainAliasCallback callback.\n     *\n     * <p>A device policy controller (as a device or profile owner) can\n     * intercept the request before the activity is shown, to pick a\n     * specific private key alias by implementing\n     * {@link android.app.admin.DeviceAdminReceiver#onChoosePrivateKeyAlias\n     * onChoosePrivateKeyAlias}.\n     *\n     * <p>{@code keyTypes} and {@code issuers} may be used to\n     * narrow down suggested choices to the user. If either {@code keyTypes}\n     * or {@code issuers} is specified and non-empty, and there are no\n     * matching certificates in the KeyChain, then the certificate\n     * selection prompt would be suppressed entirely.\n     *\n     * <p>{@code uri} may be used to give the user more context about\n     * the server requesting the credentials.\n     *\n     * <p>{@code alias} allows the caller to preselect an existing\n     * alias which will still be subject to user confirmation.\n     *\n     * @param activity The {@link Activity} context to use for\n     *     launching the new sub-Activity to prompt the user to select\n     *     a private key; used only to call startActivity(); must not\n     *     be null.\n     * @param response Callback to invoke when the request completes;\n     *     must not be null.\n     * @param keyTypes The acceptable types of asymmetric keys such as\n     *     \"RSA\", \"EC\" or null.\n     * @param issuers The acceptable certificate issuers for the\n     *     certificate matching the private key, or null.\n     * @param uri The full URI the server is requesting the certificate\n     *     for, or null if unavailable.\n     * @param alias The alias to preselect if available, or null if\n     *     unavailable.\n     * @throws IllegalArgumentException if the specified issuers are not\n     *     of type {@code X500Principal}.\n     ",
     "links" : [ "android.app.admin.DeviceAdminReceiver#onChoosePrivateKeyAliasonChoosePrivateKeyAlias", "android.app.Activity" ]
   }, {
+    "name" : "public static boolean isCredentialManagementApp(@NonNull Context context)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check whether the caller is the credential management app {@code CredentialManagementApp}.\n     * The credential management app has the ability to manage the user's KeyChain credentials\n     * on unmanaged devices.\n     *\n     * <p> {@link KeyChain#createManageCredentialsIntent} should be used by an app to request to\n     * become the credential management app. The user must approve this request before the app can\n     * manage the user's credentials. There can only be one credential management on the device.\n     *\n     * @return {@code true} if the caller is the credential management app.\n     ",
+    "links" : [ "android.security.KeyChain#createManageCredentialsIntent" ]
+  }, {
+    "name" : "public static AppUriAuthenticationPolicy getCredentialManagementAppPolicy(@NonNull Context context) throws SecurityException",
+    "returnType" : "AppUriAuthenticationPolicy",
+    "comment" : "\n     * Called by the credential management app to get the authentication policy\n     * {@link AppUriAuthenticationPolicy}.\n     *\n     * @return the credential management app's authentication policy.\n     * @throws SecurityException if the caller is not the credential management app.\n     ",
+    "links" : [ "android.security.AppUriAuthenticationPolicy" ]
+  }, {
+    "name" : "public static boolean setCredentialManagementApp(@NonNull Context context, @NonNull String packageName, @NonNull AppUriAuthenticationPolicy authenticationPolicy)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Set a credential management app. The credential management app has the ability to manage\n     * the user's KeyChain credentials on unmanaged devices.\n     *\n     * <p>There can only be one credential management on the device. If another app requests to\n     * become the credential management app, then the existing credential management app will\n     * no longer be able to manage credentials.\n     *\n     * @param packageName The package name of the credential management app\n     * @param authenticationPolicy The authentication policy of the credential management app. This\n     *                             policy determines which alias for a private key and certificate\n     *                             pair should be used for authentication.\n     * @return {@code true} if the credential management app was successfully added.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean removeCredentialManagementApp(@NonNull Context context)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Called by the credential management app {@code CredentialManagementApp} to unregister as\n     * the credential management app and stop managing the user's credentials.\n     *\n     * <p> All credentials previously installed by the credential management app will be removed\n     * from the user's device.\n     *\n     * <p> An app holding {@code MANAGE_CREDENTIAL_MANAGEMENT_APP} permission can also call this\n     * method to remove the current credential management app, even if it's not the current\n     * credential management app itself.\n     *\n     * @return {@code true} if the credential management app was successfully removed.\n     ",
+    "links" : [ ]
+  }, {
     "name" : "public static PrivateKey getPrivateKey(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException",
     "returnType" : "PrivateKey",
     "comment" : "\n     * Returns the {@code PrivateKey} for the requested alias, or null if the alias does not exist\n     * or the caller has no permission to access it (see note on exceptions below).\n     *\n     * <p> This method may block while waiting for a connection to another process, and must never\n     * be called from the main thread.\n     * <p> As {@link Activity} and {@link Service} contexts are short-lived and can be destroyed\n     * at any time from the main thread, it is safer to rely on a long-lived context such as one\n     * returned from {@link Context#getApplicationContext()}.\n     *\n     * <p> If the caller provides a valid alias to which it was not granted access, then the\n     * caller must invoke {@link #choosePrivateKeyAlias} again to get another valid alias\n     * or a grant to access the same alias.\n     * <p>On Android versions prior to Q, when a key associated with the specified alias is\n     * unavailable, the method will throw a {@code KeyChainException} rather than return null.\n     * If the exception's cause (as obtained by calling {@code KeyChainException.getCause()})\n     * is a throwable of type {@code IllegalStateException} then the caller lacks a grant\n     * to access the key and certificates associated with this alias.\n     *\n     * @param alias The alias of the desired private key, typically returned via\n     *              {@link KeyChainAliasCallback#alias}.\n     * @throws KeyChainException if the alias was valid but there was some problem accessing it.\n     * @throws IllegalStateException if called from the main thread.\n     ",
     "links" : [ "android.app.Service", "#choosePrivateKeyAlias", "android.content.Context#getApplicationContext()", "android.security.KeyChainAliasCallback#alias", "android.app.Activity" ]
+  }, {
+    "name" : "private static KeyDescriptor getGrantDescriptor(String keyid)",
+    "returnType" : "KeyDescriptor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getGrantString(KeyDescriptor key)",
+    "returnType" : "String",
+    "comment" : " @hide ",
+    "links" : [ ]
   }, {
     "name" : "public static KeyPair getKeyPair(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException",
     "returnType" : "KeyPair",
@@ -235,11 +291,26 @@
     "comment" : "\n     * Bind to KeyChainService in the target user.\n     * Caller should call unbindService on the result when finished.\n     *\n     * @throws InterruptedException if interrupted during binding.\n     * @throws AssertionError if unable to bind to KeyChainService.\n     * @hide\n     ",
     "links" : [ ]
   }, {
+    "name" : "public static String getWifiKeyGrantAsUser(@NonNull Context context, @NonNull UserHandle user, @NonNull String alias)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a persistable grant string that allows WiFi stack to access the key using Keystore\n     * SSL engine.\n     *\n     * @return grant string or null if key is not granted or doesn't exist.\n     *\n     * The key should be granted to Process.WIFI_UID.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static boolean hasWifiKeyGrantAsUser(@NonNull Context context, @NonNull UserHandle user, @NonNull String alias)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether the key is granted to WiFi stack.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static KeyChainConnection bindAsUser(@NonNull Context context, @Nullable Handler handler, UserHandle user) throws InterruptedException",
+    "returnType" : "KeyChainConnection",
+    "comment" : "\n     * Bind to KeyChainService in the target user.\n     * Caller should call unbindService on the result when finished.\n     *\n     * @throws InterruptedException if interrupted during binding.\n     * @throws AssertionError if unable to bind to KeyChainService.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
     "name" : "private static void ensureNotOnMainThread(@NonNull Context context)",
     "returnType" : "void",
     "comment" : "",
     "links" : [ ]
   } ],
-  "variableNames" : [ "ACCOUNT_TYPE", "KEYCHAIN_PACKAGE", "ACTION_CHOOSER", "CERT_INSTALLER_PACKAGE", "EXTRA_RESPONSE", "EXTRA_URI", "EXTRA_ALIAS", "EXTRA_SENDER", "EXTRA_KEY_TYPES", "EXTRA_ISSUERS", "ACTION_INSTALL", "EXTRA_NAME", "EXTRA_CERTIFICATE", "EXTRA_PKCS12", "ACTION_STORAGE_CHANGED", "ACTION_KEYCHAIN_CHANGED", "ACTION_TRUST_STORE_CHANGED", "ACTION_KEY_ACCESS_CHANGED", "EXTRA_KEY_ALIAS", "EXTRA_KEY_ACCESSIBLE", "KEY_GEN_SUCCESS", "KEY_GEN_MISSING_ALIAS", "KEY_GEN_SUPERFLUOUS_ATTESTATION_CHALLENGE", "KEY_GEN_NO_SUCH_ALGORITHM", "KEY_GEN_INVALID_ALGORITHM_PARAMETERS", "KEY_GEN_NO_KEYSTORE_PROVIDER", "KEY_GEN_STRONGBOX_UNAVAILABLE", "KEY_GEN_FAILURE", "KEY_ATTESTATION_SUCCESS", "KEY_ATTESTATION_MISSING_CHALLENGE", "KEY_ATTESTATION_CANNOT_COLLECT_DATA", "KEY_ATTESTATION_CANNOT_ATTEST_IDS", "KEY_ATTESTATION_FAILURE", "KEY_ALIAS_SELECTION_DENIED" ],
-  "methodNames" : [ "public static Intent createInstallIntent()", "public static void choosePrivateKeyAlias(@NonNull Activity activity, @NonNull KeyChainAliasCallback response, @Nullable @KeyProperties.KeyAlgorithmEnum String[] keyTypes, @Nullable Principal[] issuers, @Nullable String host, int port, @Nullable String alias)", "public static void choosePrivateKeyAlias(@NonNull Activity activity, @NonNull KeyChainAliasCallback response, @Nullable @KeyProperties.KeyAlgorithmEnum String[] keyTypes, @Nullable Principal[] issuers, @Nullable Uri uri, @Nullable String alias)", "public static PrivateKey getPrivateKey(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "public static KeyPair getKeyPair(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "public static X509Certificate[] getCertificateChain(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "public static boolean isKeyAlgorithmSupported(@NonNull @KeyProperties.KeyAlgorithmEnum String algorithm)", "public static boolean isBoundKeyAlgorithm(@NonNull @KeyProperties.KeyAlgorithmEnum String algorithm)", "public static X509Certificate toCertificate(@NonNull byte[] bytes)", "public static Collection<X509Certificate> toCertificates(@NonNull byte[] bytes)", "public static KeyChainConnection bind(@NonNull Context context) throws InterruptedException", "public static KeyChainConnection bindAsUser(@NonNull Context context, UserHandle user) throws InterruptedException", "private static void ensureNotOnMainThread(@NonNull Context context)" ]
+  "methodNames" : [ "public static Intent createInstallIntent()", "public static Intent createManageCredentialsIntent(@NonNull AppUriAuthenticationPolicy policy)", "public static void choosePrivateKeyAlias(@NonNull Activity activity, @NonNull KeyChainAliasCallback response, @Nullable @KeyProperties.KeyAlgorithmEnum String[] keyTypes, @Nullable Principal[] issuers, @Nullable String host, int port, @Nullable String alias)", "public static void choosePrivateKeyAlias(@NonNull Activity activity, @NonNull KeyChainAliasCallback response, @Nullable @KeyProperties.KeyAlgorithmEnum String[] keyTypes, @Nullable Principal[] issuers, @Nullable Uri uri, @Nullable String alias)", "public static boolean isCredentialManagementApp(@NonNull Context context)", "public static AppUriAuthenticationPolicy getCredentialManagementAppPolicy(@NonNull Context context) throws SecurityException", "public static boolean setCredentialManagementApp(@NonNull Context context, @NonNull String packageName, @NonNull AppUriAuthenticationPolicy authenticationPolicy)", "public static boolean removeCredentialManagementApp(@NonNull Context context)", "public static PrivateKey getPrivateKey(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "private static KeyDescriptor getGrantDescriptor(String keyid)", "public static String getGrantString(KeyDescriptor key)", "public static KeyPair getKeyPair(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "public static X509Certificate[] getCertificateChain(@NonNull Context context, @NonNull String alias) throws KeyChainException, InterruptedException", "public static boolean isKeyAlgorithmSupported(@NonNull @KeyProperties.KeyAlgorithmEnum String algorithm)", "public static boolean isBoundKeyAlgorithm(@NonNull @KeyProperties.KeyAlgorithmEnum String algorithm)", "public static X509Certificate toCertificate(@NonNull byte[] bytes)", "public static Collection<X509Certificate> toCertificates(@NonNull byte[] bytes)", "public static KeyChainConnection bind(@NonNull Context context) throws InterruptedException", "public static KeyChainConnection bindAsUser(@NonNull Context context, UserHandle user) throws InterruptedException", "public static String getWifiKeyGrantAsUser(@NonNull Context context, @NonNull UserHandle user, @NonNull String alias)", "public static boolean hasWifiKeyGrantAsUser(@NonNull Context context, @NonNull UserHandle user, @NonNull String alias)", "public static KeyChainConnection bindAsUser(@NonNull Context context, @Nullable Handler handler, UserHandle user) throws InterruptedException", "private static void ensureNotOnMainThread(@NonNull Context context)" ],
+  "variableNames" : [ "LOG", "ACCOUNT_TYPE", "KEYCHAIN_PACKAGE", "ACTION_CHOOSER", "CERT_INSTALLER_PACKAGE", "SETTINGS_PACKAGE", "EXTRA_RESPONSE", "EXTRA_URI", "EXTRA_ALIAS", "EXTRA_SENDER", "EXTRA_KEY_TYPES", "EXTRA_ISSUERS", "ACTION_INSTALL", "EXTRA_NAME", "EXTRA_CERTIFICATE", "EXTRA_PKCS12", "EXTRA_AUTHENTICATION_POLICY", "ACTION_STORAGE_CHANGED", "ACTION_KEYCHAIN_CHANGED", "ACTION_TRUST_STORE_CHANGED", "ACTION_KEY_ACCESS_CHANGED", "EXTRA_KEY_ALIAS", "EXTRA_KEY_ACCESSIBLE", "KEY_GEN_SUCCESS", "KEY_GEN_MISSING_ALIAS", "KEY_GEN_SUPERFLUOUS_ATTESTATION_CHALLENGE", "KEY_GEN_NO_SUCH_ALGORITHM", "KEY_GEN_INVALID_ALGORITHM_PARAMETERS", "KEY_GEN_NO_KEYSTORE_PROVIDER", "KEY_GEN_STRONGBOX_UNAVAILABLE", "KEY_GEN_FAILURE", "KEY_ATTESTATION_SUCCESS", "KEY_ATTESTATION_MISSING_CHALLENGE", "KEY_ATTESTATION_CANNOT_COLLECT_DATA", "KEY_ATTESTATION_CANNOT_ATTEST_IDS", "KEY_ATTESTATION_FAILURE", "KEY_ALIAS_SELECTION_DENIED", "GRANT_ALIAS_PREFIX" ]
 }
