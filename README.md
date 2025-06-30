@@ -1,58 +1,10 @@
 # Find Method Dependencies in Android Framework Source Code 
 
-This is a simple Java application built using Gradle. In this project, we aimed at collecting the comments written in Javadoc format for each class, method, and variable in Java source code, and storing them in `JSON` format for further analysis. The collected data contains the dependency of each class, method, and variable on other classes, methods, and variables. This information can be used to learn about the source code and dependencies between different parts of it with each other.   Below are the instructions on how to build and run the application.
-
-## Project Structure
-
-```
-java-code
-├── src
-│   ├── main
-│   │   ├── java
-│   │   │   └── JavaSourceAnalyzer.java
-│   │   │   └── ClassInfo.java
-│   │   │   └── MethodInfo.java
-│   │   │   └── VariableInfo.java
-│   ├── resources
-│   │   └── resources
-|   |       └── application.properties
-├── build.gradle
-├── settings.gradle
-├── application.properties
-├──  README.md
-```
-
-## Requirements
-
-- Java JDK 8 
-- Gradle 6.0 or higher
-- JavaParser 
-## Building the Project
-
-To build the project, navigate to the project directory and run:
-
-```
-gradle build
-```
-
-## Running the Application
+This is a simple Java application built using Gradle. In this project, we aimed at collecting the comments written in Javadoc format for each class, method, and variable in Java source code, and storing them in the `JSON` format for further analysis. The collected data contains the dependency of each class, method, and variable on other classes, methods, and variables. This information can be used to learn about the source code and dependencies between different parts of it with each other.   Below are the instructions on how to build and run the application.
 
 
-To run the application, use the following command:
-
-```
-gradle run
-```
-
-## Configuration
-
-You can configure the application settings in the `src/main/resources/application.properties` file. 
-
-Before running the application, update `source.dir` with the path to the Android platform source code. 
-
-
-##  Output
-In this project, we aim to analyze the Android framework source code. In the Android source code, developers use the `javadoc` documentation format to create comments for classes, variables, and methods. In such a format, they leverage `@link` to explicitly define the relation between methods and variables. As shown in the example below, the method `getDisplayId` returns the value corresponding to the `getDisplay` method declared in the class `DisplayManager`.
+## Overview
+In the Android source code, developers use the `javadoc` documentation format to create comments for classes, variables, and methods. In such a format, they leverage `@link` to explicitly define the relation between methods and variables. As shown in the example below, the method `getDisplayId` returns the value corresponding to the `getDisplay` method declared in the class `DisplayManager`.
 
 ````
  /**
@@ -68,9 +20,10 @@ In this project, we aim to analyze the Android framework source code. In the And
 
 ````
 By studying the documentation, we found out that existing comments contain valuable information about 
-- dependency of methods and variables to each other in their operation.
-- type of inputs for each method
-- required configuration of an Android device
+- Description of the classes, methods, or variables' operations. 
+- Dependencies between classes, methods, and variables in their operation.
+- Type of inputs for each method.
+- Required configuration of an Android device.
 
 ### Example of Permission Description in the Comments
 ````
@@ -108,7 +61,7 @@ By studying the documentation, we found out that existing comments contain valua
     }
 
 ````
-Hence, we try to analyze the source code and the comments and collect this information for each API class and store it in `the output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
+Hence, we try to analyze the source code and the comments and collect this information for each API class and store it in `the output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comments mentioned by the developers. An example of a created `.json` file is shown below:
 
 ````
 {
@@ -134,6 +87,56 @@ Hence, we try to analyze the source code and the comments and collect this infor
 
 
 ````
+
+## Project Structure
+
+```
+java-code
+├── src
+│   ├── main
+│   │   ├── java
+│   │   │   └── JavaSourceAnalyzer.java
+│   │   │   └── ClassInfo.java
+│   │   │   └── MethodInfo.java
+│   │   │   └── VariableInfo.java
+│   ├── resources
+│   │   └── resources
+|   |       └── application.properties
+├── build.gradle
+├── settings.gradle
+├── application.properties
+├──  README.md
+```
+
+## Requirements
+
+- Java JDK 8 
+- Gradle 6.0 or higher
+- JavaParser 
+
+## Configuration
+
+Before running the application, update `source.dir` with the path to the Android platform source code. You can configure it in the `src/main/resources/application.properties` file. 
+
+## Building the Project
+
+To build the project, navigate to the project directory and run:
+
+```
+gradle build
+```
+
+## Running the Application
+
+
+To run the application, use the following command:
+
+```
+gradle run
+```
+
+##  Output
+The output is located in `JSON` files storing information about dependencies between classes, methods, and variables of the given source code. These files are located under the directory `output`. 
 
 
 ## License
