@@ -1,6 +1,6 @@
 # Find Method Dependencies in Android Framework Source Code 
 
-This is a simple Java application built using Gradle. Below are the instructions on how to build and run the application.
+This is a simple Java application built using Gradle. In this project, we aimed at collecting the comments written in Javadoc format for each class, method, and variable in Java source code, and storing them in `JSON` format for further analysis. The collected data contains the dependency of each class, method, and variable on other classes, methods, and variables. This information can be used to learn about the source code and dependencies between different parts of it with each other.   Below are the instructions on how to build and run the application.
 
 ## Project Structure
 
@@ -10,9 +10,10 @@ java-code
 │   ├── main
 │   │   ├── java
 │   │   │   └── JavaSourceAnalyzer.java
-│   ├── test
-│   │   ├── java
-│   │   │   └── AppTest.java
+│   │   │   └── ClassInfo.java
+│   │   │   └── MethodInfo.java
+│   │   │   └── VariableInfo.java
+│   ├── resources
 │   │   └── resources
 |   |       └── application.properties
 ├── build.gradle
@@ -25,6 +26,7 @@ java-code
 
 - Java JDK 8 
 - Gradle 6.0 or higher
+- JavaParser 
 ## Building the Project
 
 To build the project, navigate to the project directory and run:
@@ -46,11 +48,11 @@ gradle run
 
 You can configure the application settings in the `src/main/resources/application.properties` file. 
 
-Before running the application, you should update `source.dir` with the path to the android platform source code. 
+Before running the application, update `source.dir` with the path to the Android platform source code. 
 
 
 ##  Output
-In this project, we aim at analyzing the Android framework source code. In the Android source code, the developers use `javadoc` documentation format creating comments for the classes, variables and methods. In such a format, they leverage `@link` to explicitely define the relation between methods and variables. As shown in the below example, the method `getDisplayId` returns the value corresponding to `getDisplay` method declared in the class `DisplayManager`.
+In this project, we aim to analyze the Android framework source code. In the Android source code, developers use the `javadoc` documentation format to create comments for classes, variables, and methods. In such a format, they leverage `@link` to explicitly define the relation between methods and variables. As shown in the example below, the method `getDisplayId` returns the value corresponding to the `getDisplay` method declared in the class `DisplayManager`.
 
 ````
  /**
@@ -106,7 +108,7 @@ By studying the documentation, we found out that existing comments contain valua
     }
 
 ````
-Hence, we try to analyze the source code and the comments and collect these information for each API class and store it in `output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
+Hence, we try to analyze the source code and the comments and collect this information for each API class and store it in `the output/API_CLASS_NAME.json` file. In this file, we separately store variables and methods and their dependency with the comment mentioned by the developers. An example of a created `.json` file is shown below:
 
 ````
 {
