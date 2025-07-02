@@ -112,7 +112,7 @@ java-code
 
 - Java JDK 8 
 - Gradle 6.0 or higher
-- JavaParser 
+- (JavaParser)[https://github.com/javaparser/javaparser]
 
 ## Configuration
 
@@ -135,7 +135,7 @@ To run the application, use the following command:
 gradle run
 ```
 
-##  Output
+##  Desired Outputs
 The output is located in `JSON` files storing information about dependencies between classes, methods, and variables of the given source code. These files are located under the directory `output`. 
 
 
