@@ -1,0 +1,791 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/os/BatteryStatsHistory.java",
+  "packageName" : "com.android.internal.os",
+  "className" : "BatteryStatsHistory",
+  "comment" : "\n * BatteryStatsHistory encapsulates battery history files.\n * Battery history record is appended into buffer {@link #mHistoryBuffer} and backed up into\n * {@link #mActiveFile}.\n * When {@link #mHistoryBuffer} size reaches {@link BatteryStatsImpl.Constants#MAX_HISTORY_BUFFER},\n * current mActiveFile is closed and a new mActiveFile is open.\n * History files are under directory /data/system/battery-history/.\n * History files have name battery-history-<num>.bin. The file number <num> starts from zero and\n * grows sequentially.\n * The mActiveFile is always the highest numbered history file.\n * The lowest number file is always the oldest file.\n * The highest number file is always the newest file.\n * The file number grows sequentially and we never skip number.\n * When count of history files exceeds {@link BatteryStatsImpl.Constants#MAX_HISTORY_FILES},\n * the lowest numbered file is deleted and a new file is open.\n *\n * All interfaces in BatteryStatsHistory should only be called by BatteryStatsImpl and protected by\n * locks on BatteryStatsImpl object.\n ",
+  "links" : [ "BatteryStatsImpl.Constants#MAX_HISTORY_BUFFER", "#mActiveFile", "#mHistoryBuffer", "BatteryStatsImpl.Constants#MAX_HISTORY_FILES" ],
+  "variables" : [ {
+    "name" : "DEBUG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VERSION",
+    "type" : "int",
+    "comment" : " Current on-disk Parcel version. Must be updated when the format of the parcelable changes",
+    "links" : [ ]
+  }, {
+    "name" : "HISTORY_DIR",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FILE_SUFFIX",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MIN_FREE_SPACE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_TIME_MASK",
+    "type" : "int",
+    "comment" : " Part of initial delta int that specifies the time delta.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_TIME_LONG",
+    "type" : "int",
+    "comment" : " The delta is a following long",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_TIME_INT",
+    "type" : "int",
+    "comment" : " The delta is a following int",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_TIME_ABS",
+    "type" : "int",
+    "comment" : " Following is an entire abs update.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_BATTERY_LEVEL_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: a new battery level int follows.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_STATE_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: a new full state and battery status int follows.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_STATE2_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: a new full state2 int follows.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_WAKELOCK_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: contains a wakelock or wakeReason tag.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_EVENT_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: contains an event description.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_BATTERY_CHARGE_FLAG",
+    "type" : "int",
+    "comment" : " Flag in delta int: contains the battery charge count in uAh.",
+    "links" : [ ]
+  }, {
+    "name" : "DELTA_STATE_MASK",
+    "type" : "int",
+    "comment" : " These upper bits are the frequently changing state bits.",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_MASK",
+    "type" : "int",
+    "comment" : " in STATE_BATTERY_MASK.",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_STATUS_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_STATUS_SHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_HEALTH_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_HEALTH_SHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_PLUG_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE_BATTERY_PLUG_SHIFT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BATTERY_LEVEL_DETAILS_FLAG",
+    "type" : "int",
+    "comment" : " from a battery level change.",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_FIRST_OCCURRENCE_FLAG",
+    "type" : "int",
+    "comment" : " therefore the tag value is written in the parcel",
+    "links" : [ ]
+  }, {
+    "name" : "EXTENSION_POWER_STATS_DESCRIPTOR_FLAG",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EXTENSION_POWER_STATS_FLAG",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EXTENSION_PROCESS_STATE_CHANGE_FLAG",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATE1_TRACE_MASK",
+    "type" : "int",
+    "comment" : " suspend) and the running bit (which isn't meaningful in traces).",
+    "links" : [ ]
+  }, {
+    "name" : "STATE2_TRACE_MASK",
+    "type" : "int",
+    "comment" : " For state2, trace all bit changes.",
+    "links" : [ ]
+  }, {
+    "name" : "EXTRA_BUFFER_SIZE_WHEN_DIR_LOCKED",
+    "type" : "int",
+    "comment" : "\n     * Number of overflow bytes that can be written into the history buffer if the history\n     * directory is locked. This is done to prevent a long lock contention and a potential\n     * kill by a watchdog.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryBuffer",
+    "type" : "Parcel",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSystemDir",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mStepDetailsCalculator",
+    "type" : "HistoryStepDetailsCalculator",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClock",
+    "type" : "Clock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMaxHistoryBufferSize",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mActiveFile",
+    "type" : "AtomicFile",
+    "comment" : "\n     * The active history file that the history buffer is backed up into.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryDir",
+    "type" : "BatteryHistoryDirectory",
+    "comment" : "\n     * A list of history files with increasing timestamps.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryParcels",
+    "type" : "List<Parcel>",
+    "comment" : "\n     * A list of small history parcels, used when BatteryStatsImpl object is created from\n     * deserialization of a parcel, such as Settings app or checkin file.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentFile",
+    "type" : "BatteryHistoryFile",
+    "comment" : "\n     * When iterating history files, the current file index.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentParcel",
+    "type" : "Parcel",
+    "comment" : "\n     * When iterating history files, the current file parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentParcelEnd",
+    "type" : "int",
+    "comment" : "\n     * When iterating history file, the current parcel's Parcel.dataSize().\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mParcelIndex",
+    "type" : "int",
+    "comment" : "\n     * Used when BatteryStatsImpl object is created from deserialization of a parcel,\n     * such as Settings app or checkin file, to iterate over history parcels.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mWriteLock",
+    "type" : "ReentrantLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryCur",
+    "type" : "HistoryItem",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHaveBatteryLevel",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRecordingHistory",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "HISTORY_TAG_INDEX_LIMIT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_HISTORY_TAG_STRING_LENGTH",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryTagPool",
+    "type" : "HashMap<HistoryTag, Integer>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryTags",
+    "type" : "SparseArray<HistoryTag>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryLastWritten",
+    "type" : "HistoryItem",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryLastLastWritten",
+    "type" : "HistoryItem",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryAddTmp",
+    "type" : "HistoryItem",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNextHistoryTagIdx",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mNumHistoryTagChars",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryBufferLastPos",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTrackRunningHistoryElapsedRealtimeMs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTrackRunningHistoryUptimeMs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMonotonicClock",
+    "type" : "MonotonicClock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mHistoryBufferStartTime",
+    "type" : "long",
+    "comment" : " Monotonic time when we started writing to the history buffer",
+    "links" : [ ]
+  }, {
+    "name" : "mWrittenPowerStatsDescriptors",
+    "type" : "ArraySet<PowerStats.Descriptor>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastHistoryStepLevel",
+    "type" : "byte",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMutable",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWritableHistory",
+    "type" : "BatteryStatsHistory",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTracer",
+    "type" : "TraceDelegate",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTraceLastState",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTraceLastState2",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEventLogger",
+    "type" : "EventLogger",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void initHistoryBuffer()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMaxHistoryFiles(int maxHistoryFiles)",
+    "returnType" : "void",
+    "comment" : "\n     * Changes the maximum number of history files to be kept.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMaxHistoryBufferSize(int maxHistoryBufferSize)",
+    "returnType" : "void",
+    "comment" : "\n     * Changes the maximum size of the history buffer, in bytes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public BatteryStatsHistory copy()",
+    "returnType" : "BatteryStatsHistory",
+    "comment" : "\n     * Creates a read-only copy of the battery history.  Does not copy the files stored\n     * in the system directory, so it is not safe while actively writing history.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isReadOnly()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if this instance only supports reading history.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setActiveFile(BatteryHistoryFile file)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the active file that mHistoryBuffer is backed up into.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startNextFile(long elapsedRealtimeMs)",
+    "returnType" : "void",
+    "comment" : "\n     * When {@link #mHistoryBuffer} reaches {@link BatteryStatsImpl.Constants#MAX_HISTORY_BUFFER},\n     * create next history file.\n     ",
+    "links" : [ "BatteryStatsImpl.Constants#MAX_HISTORY_BUFFER", "#mHistoryBuffer" ]
+  }, {
+    "name" : "private void startNextFileLocked(long elapsedRealtimeMs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isResetEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if it is safe to reset history. It will return false if the history is\n     * currently being read.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reset()",
+    "returnType" : "void",
+    "comment" : "\n     * Clear history buffer and delete all existing history files. Active history file start from\n     * number 0 again.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getStartTime()",
+    "returnType" : "long",
+    "comment" : "\n     * Returns the monotonic clock time when the available battery history collection started.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public BatteryStatsHistoryIterator iterate(long startTimeMs, long endTimeMs)",
+    "returnType" : "BatteryStatsHistoryIterator",
+    "comment" : "\n     * Start iterating history files and history buffer.\n     *\n     * @param startTimeMs monotonic time (the HistoryItem.time field) to start iterating from,\n     *                    inclusive\n     * @param endTimeMs monotonic time to stop iterating, exclusive.\n     *                  Pass {@link MonotonicClock#UNDEFINED} to indicate current time.\n     ",
+    "links" : [ "#UNDEFINED" ]
+  }, {
+    "name" : " void iteratorFinished()",
+    "returnType" : "void",
+    "comment" : "\n     * Finish iterating history files and history buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Parcel getNextParcel(long startTimeMs, long endTimeMs)",
+    "returnType" : "Parcel",
+    "comment" : "\n     * When iterating history files and history buffer, always start from the lowest numbered\n     * history file, when reached the mActiveFile (highest numbered history file), do not read from\n     * mActiveFile, read from history buffer instead because the buffer has more updated data.\n     *\n     * @return The parcel that has next record. null if finished all history files and history\n     * buffer\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void checkImmutable()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean readFileToParcel(Parcel out, AtomicFile file)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Read history file into a parcel.\n     *\n     * @param out  the Parcel read into.\n     * @param file the File to read from.\n     * @return true if success, false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean verifyVersion(Parcel p)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Verify header part of history parcel.\n     *\n     * @return true if version match, false if not.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long getHistoryBufferStartTime(Parcel p)",
+    "returnType" : "long",
+    "comment" : "\n     * Extracts the monotonic time, as per {@link MonotonicClock}, from the supplied battery history\n     * buffer.\n     ",
+    "links" : [ "MonotonicClock" ]
+  }, {
+    "name" : "public void writeSummaryToParcel(Parcel out, boolean inclHistory)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes the battery history contents for persistence.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void readSummaryFromParcel(Parcel in)",
+    "returnType" : "void",
+    "comment" : "\n     * Reads battery history contents from a persisted parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeToParcel(Parcel out)",
+    "returnType" : "void",
+    "comment" : "\n     * Read all history files and serialize into a big Parcel.\n     * Checkin file calls this method.\n     *\n     * @param out the output parcel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeToBatteryUsageStatsParcel(Parcel out)",
+    "returnType" : "void",
+    "comment" : "\n     * This is for Settings app, when Settings app receives big history parcel, it call\n     * this method to parse it into list of parcels.\n     *\n     * @param out the output parcel\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeToParcel(Parcel out, boolean useBlobs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static BatteryStatsHistory createFromBatteryUsageStatsParcel(Parcel in)",
+    "returnType" : "BatteryStatsHistory",
+    "comment" : "\n     * Reads a BatteryStatsHistory from a parcel written with\n     * the {@link #writeToBatteryUsageStatsParcel} method.\n     ",
+    "links" : [ "#writeToBatteryUsageStatsParcel" ]
+  }, {
+    "name" : "public boolean readSummary()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Read history from a check-in file.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void readFromParcel(Parcel in)",
+    "returnType" : "void",
+    "comment" : "\n     * This is for the check-in file, which has all history files embedded.\n     *\n     * @param in the input parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readFromParcel(Parcel in, boolean useBlobs)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean hasFreeDiskSpace(File systemDir)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if there is more than 100MB free disk space left.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean hasFreeDiskSpace$ravenwood(File systemDir)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public List<String> getFilesNames()",
+    "returnType" : "List<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public AtomicFile getActiveFile()",
+    "returnType" : "AtomicFile",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistoryUsedSize()",
+    "returnType" : "int",
+    "comment" : "\n     * @return the total size of all history files and history buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHistoryRecordingEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Enables/disables recording of history.  When disabled, all \"record*\" calls are a no-op.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isRecordingHistory()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if history recording is enabled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void forceRecordAllHistory()",
+    "returnType" : "void",
+    "comment" : "\n     * Forces history recording regardless of charging state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startRecordingHistory(final long elapsedRealtimeMs, final long uptimeMs, boolean reset)",
+    "returnType" : "void",
+    "comment" : "\n     * Starts a history buffer by recording the current wall-clock time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void continueRecordingHistory()",
+    "returnType" : "void",
+    "comment" : "\n     * Prepares to continue recording after restoring previous history from persistent storage.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setBatteryState(boolean charging, int status, int level, int chargeUah)",
+    "returnType" : "void",
+    "comment" : "\n     * Notes the current battery state to be reflected in the next written history item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setBatteryState(int status, int level, int health, int plugType, int temperature, int voltageMv, int chargeUah)",
+    "returnType" : "void",
+    "comment" : "\n     * Notes the current battery state to be reflected in the next written history item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPluggedInState(boolean pluggedIn)",
+    "returnType" : "void",
+    "comment" : "\n     * Notes the current power plugged-in state to be reflected in the next written history item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setChargingState(boolean charging)",
+    "returnType" : "void",
+    "comment" : "\n     * Notes the current battery charging state to be reflected in the next written history item.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordEvent(long elapsedRealtimeMs, long uptimeMs, int code, String name, int uid)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a history event with the given code, name and UID.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordCurrentTimeChange(long elapsedRealtimeMs, long uptimeMs, long currentTimeMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a time change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordShutdownEvent(long elapsedRealtimeMs, long uptimeMs, long currentTimeMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a system shutdown event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordBatteryState(long elapsedRealtimeMs, long uptimeMs, int batteryLevel, boolean isPlugged)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a battery state change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordPowerStats(long elapsedRealtimeMs, long uptimeMs, PowerStats powerStats)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a PowerStats snapshot.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordProcessStateChange(long elapsedRealtimeMs, long uptimeMs, int uid, @BatteryConsumer.ProcessState int processState)",
+    "returnType" : "void",
+    "comment" : "\n     * Records the change of a UID's proc state.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWifiConsumedCharge(long elapsedRealtimeMs, long uptimeMs, double monitoredRailChargeMah)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a history item with the amount of charge consumed by WiFi.  Used on certain devices\n     * equipped with on-device power metering.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWakelockStartEvent(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a wakelock start event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean maybeUpdateWakelockTag(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Updates the previous history event with a wakelock name and UID.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWakelockStopEvent(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a wakelock release event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordStateStartEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an event when some state flag changes to true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordStateStopEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an event when some state flag changes to false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int stateStartFlags, int stateStopFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an event when some state flags change to true and some to false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordState2StartEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an event when some state2 flag changes to true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordState2StopEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an event when some state2 flag changes to false.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWakeupEvent(long elapsedRealtimeMs, long uptimeMs, String reason)",
+    "returnType" : "void",
+    "comment" : "\n     * Records an wakeup event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordScreenBrightnessEvent(long elapsedRealtimeMs, long uptimeMs, int brightnessBin)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a screen brightness change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordGpsSignalQualityEvent(long elapsedRealtimeMs, long uptimeMs, int signalLevel)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a GNSS signal level change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordDeviceIdleEvent(long elapsedRealtimeMs, long uptimeMs, int mode)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a device idle mode change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordPhoneStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int addStateFlag, int removeStateFlag, int state, int signalStrength)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a telephony state change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordDataConnectionTypeChangeEvent(long elapsedRealtimeMs, long uptimeMs, int dataConnectionType)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a data connection type change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordNrStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int nrState)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a data connection type change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWifiSupplicantStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int supplState)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a WiFi supplicant state change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void recordWifiSignalStrengthChangeEvent(long elapsedRealtimeMs, long uptimeMs, int strengthBin)",
+    "returnType" : "void",
+    "comment" : "\n     * Records a WiFi signal strength change event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void recordTraceEvents(int code, HistoryTag tag)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes event details into Atrace.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void recordTraceCounters(int oldval, int newval, int mask, BitDescription[] descriptions)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes changes to a HistoryItem state bitmap to Atrace.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int setBitField(int bits, int value, int shift, int mask)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeHistoryItem(long elapsedRealtimeMs, long uptimeMs)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes the current history item to history.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeHistoryItem(long elapsedRealtimeMs, long uptimeMs, HistoryItem cur)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean maybeFlushBufferAndWriteHistoryItem(HistoryItem cur, long elapsedRealtimeMs, long uptimeMs)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeHistoryItem(long elapsedRealtimeMs, @SuppressWarnings(\"UnusedVariable\") long uptimeMs, HistoryItem cur, byte cmd)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeHistoryDelta(Parcel dest, HistoryItem cur, HistoryItem last)",
+    "returnType" : "void",
+    "comment" : "\n     * Writes the delta between the previous and current history items into history buffer.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int buildBatteryLevelInt(HistoryItem h)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int buildStateInt(HistoryItem h)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int writeHistoryTag(HistoryTag tag)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the index for the specified tag. If this is the first time the tag is encountered\n     * while writing the current history buffer, the method returns\n     * <code>(index | TAG_FIRST_OCCURRENCE_FLAG)</code>\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void commitCurrentHistoryBatchLocked()",
+    "returnType" : "void",
+    "comment" : "\n     * Don't allow any more batching in to the current history event.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void writeHistory()",
+    "returnType" : "void",
+    "comment" : "\n     * Saves the accumulated history buffer in the active file, see {@link #getActiveFile()} .\n     ",
+    "links" : [ "#getActiveFile()" ]
+  }, {
+    "name" : "public void readHistoryBuffer(Parcel in) throws ParcelFormatException",
+    "returnType" : "void",
+    "comment" : "\n     * Reads history buffer from a persisted Parcel.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeHistoryBuffer(Parcel out)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeParcelToFileLocked(Parcel p, AtomicFile file)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistoryStringPoolSize()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the total number of history tags in the tag pool.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistoryStringPoolBytes()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the total number of bytes occupied by the history tag pool.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getHistoryTagPoolString(int index)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the string held by the requested history tag.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHistoryTagPoolUid(int index)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the UID held by the requested history tag.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void ensureHistoryTagArray()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void initHistoryBuffer()", "public void setMaxHistoryFiles(int maxHistoryFiles)", "public void setMaxHistoryBufferSize(int maxHistoryBufferSize)", "public BatteryStatsHistory copy()", "public boolean isReadOnly()", "private void setActiveFile(BatteryHistoryFile file)", "public void startNextFile(long elapsedRealtimeMs)", "private void startNextFileLocked(long elapsedRealtimeMs)", "public boolean isResetEnabled()", "public void reset()", "public long getStartTime()", "public BatteryStatsHistoryIterator iterate(long startTimeMs, long endTimeMs)", " void iteratorFinished()", "public Parcel getNextParcel(long startTimeMs, long endTimeMs)", "private void checkImmutable()", "public boolean readFileToParcel(Parcel out, AtomicFile file)", "private boolean verifyVersion(Parcel p)", "public long getHistoryBufferStartTime(Parcel p)", "public void writeSummaryToParcel(Parcel out, boolean inclHistory)", "public void readSummaryFromParcel(Parcel in)", "public void writeToParcel(Parcel out)", "public void writeToBatteryUsageStatsParcel(Parcel out)", "private void writeToParcel(Parcel out, boolean useBlobs)", "public static BatteryStatsHistory createFromBatteryUsageStatsParcel(Parcel in)", "public boolean readSummary()", "public void readFromParcel(Parcel in)", "private void readFromParcel(Parcel in, boolean useBlobs)", "private static boolean hasFreeDiskSpace(File systemDir)", "private static boolean hasFreeDiskSpace$ravenwood(File systemDir)", "public List<String> getFilesNames()", "public AtomicFile getActiveFile()", "public int getHistoryUsedSize()", "public void setHistoryRecordingEnabled(boolean enabled)", "public boolean isRecordingHistory()", "public void forceRecordAllHistory()", "public void startRecordingHistory(final long elapsedRealtimeMs, final long uptimeMs, boolean reset)", "public void continueRecordingHistory()", "public void setBatteryState(boolean charging, int status, int level, int chargeUah)", "public void setBatteryState(int status, int level, int health, int plugType, int temperature, int voltageMv, int chargeUah)", "public void setPluggedInState(boolean pluggedIn)", "public void setChargingState(boolean charging)", "public void recordEvent(long elapsedRealtimeMs, long uptimeMs, int code, String name, int uid)", "public void recordCurrentTimeChange(long elapsedRealtimeMs, long uptimeMs, long currentTimeMs)", "public void recordShutdownEvent(long elapsedRealtimeMs, long uptimeMs, long currentTimeMs)", "public void recordBatteryState(long elapsedRealtimeMs, long uptimeMs, int batteryLevel, boolean isPlugged)", "public void recordPowerStats(long elapsedRealtimeMs, long uptimeMs, PowerStats powerStats)", "public void recordProcessStateChange(long elapsedRealtimeMs, long uptimeMs, int uid, @BatteryConsumer.ProcessState int processState)", "public void recordWifiConsumedCharge(long elapsedRealtimeMs, long uptimeMs, double monitoredRailChargeMah)", "public void recordWakelockStartEvent(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)", "public boolean maybeUpdateWakelockTag(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)", "public void recordWakelockStopEvent(long elapsedRealtimeMs, long uptimeMs, String historyName, int uid)", "public void recordStateStartEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)", "public void recordStateStopEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)", "public void recordStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int stateStartFlags, int stateStopFlags)", "public void recordState2StartEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)", "public void recordState2StopEvent(long elapsedRealtimeMs, long uptimeMs, int stateFlags)", "public void recordWakeupEvent(long elapsedRealtimeMs, long uptimeMs, String reason)", "public void recordScreenBrightnessEvent(long elapsedRealtimeMs, long uptimeMs, int brightnessBin)", "public void recordGpsSignalQualityEvent(long elapsedRealtimeMs, long uptimeMs, int signalLevel)", "public void recordDeviceIdleEvent(long elapsedRealtimeMs, long uptimeMs, int mode)", "public void recordPhoneStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int addStateFlag, int removeStateFlag, int state, int signalStrength)", "public void recordDataConnectionTypeChangeEvent(long elapsedRealtimeMs, long uptimeMs, int dataConnectionType)", "public void recordNrStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int nrState)", "public void recordWifiSupplicantStateChangeEvent(long elapsedRealtimeMs, long uptimeMs, int supplState)", "public void recordWifiSignalStrengthChangeEvent(long elapsedRealtimeMs, long uptimeMs, int strengthBin)", "private void recordTraceEvents(int code, HistoryTag tag)", "private void recordTraceCounters(int oldval, int newval, int mask, BitDescription[] descriptions)", "private int setBitField(int bits, int value, int shift, int mask)", "public void writeHistoryItem(long elapsedRealtimeMs, long uptimeMs)", "private void writeHistoryItem(long elapsedRealtimeMs, long uptimeMs, HistoryItem cur)", "private boolean maybeFlushBufferAndWriteHistoryItem(HistoryItem cur, long elapsedRealtimeMs, long uptimeMs)", "private void writeHistoryItem(long elapsedRealtimeMs, @SuppressWarnings(\"UnusedVariable\") long uptimeMs, HistoryItem cur, byte cmd)", "private void writeHistoryDelta(Parcel dest, HistoryItem cur, HistoryItem last)", "private int buildBatteryLevelInt(HistoryItem h)", "private int buildStateInt(HistoryItem h)", "private int writeHistoryTag(HistoryTag tag)", "public void commitCurrentHistoryBatchLocked()", "public void writeHistory()", "public void readHistoryBuffer(Parcel in) throws ParcelFormatException", "private void writeHistoryBuffer(Parcel out)", "private void writeParcelToFileLocked(Parcel p, AtomicFile file)", "public int getHistoryStringPoolSize()", "public int getHistoryStringPoolBytes()", "public String getHistoryTagPoolString(int index)", "public int getHistoryTagPoolUid(int index)", "private void ensureHistoryTagArray()" ],
+  "variableNames" : [ "DEBUG", "TAG", "VERSION", "HISTORY_DIR", "FILE_SUFFIX", "MIN_FREE_SPACE", "DELTA_TIME_MASK", "DELTA_TIME_LONG", "DELTA_TIME_INT", "DELTA_TIME_ABS", "DELTA_BATTERY_LEVEL_FLAG", "DELTA_STATE_FLAG", "DELTA_STATE2_FLAG", "DELTA_WAKELOCK_FLAG", "DELTA_EVENT_FLAG", "DELTA_BATTERY_CHARGE_FLAG", "DELTA_STATE_MASK", "STATE_BATTERY_MASK", "STATE_BATTERY_STATUS_MASK", "STATE_BATTERY_STATUS_SHIFT", "STATE_BATTERY_HEALTH_MASK", "STATE_BATTERY_HEALTH_SHIFT", "STATE_BATTERY_PLUG_MASK", "STATE_BATTERY_PLUG_SHIFT", "BATTERY_LEVEL_DETAILS_FLAG", "TAG_FIRST_OCCURRENCE_FLAG", "EXTENSION_POWER_STATS_DESCRIPTOR_FLAG", "EXTENSION_POWER_STATS_FLAG", "EXTENSION_PROCESS_STATE_CHANGE_FLAG", "STATE1_TRACE_MASK", "STATE2_TRACE_MASK", "EXTRA_BUFFER_SIZE_WHEN_DIR_LOCKED", "mHistoryBuffer", "mSystemDir", "mStepDetailsCalculator", "mClock", "mMaxHistoryBufferSize", "mActiveFile", "mHistoryDir", "mHistoryParcels", "mCurrentFile", "mCurrentParcel", "mCurrentParcelEnd", "mParcelIndex", "mWriteLock", "mHistoryCur", "mHaveBatteryLevel", "mRecordingHistory", "HISTORY_TAG_INDEX_LIMIT", "MAX_HISTORY_TAG_STRING_LENGTH", "mHistoryTagPool", "mHistoryTags", "mHistoryLastWritten", "mHistoryLastLastWritten", "mHistoryAddTmp", "mNextHistoryTagIdx", "mNumHistoryTagChars", "mHistoryBufferLastPos", "mTrackRunningHistoryElapsedRealtimeMs", "mTrackRunningHistoryUptimeMs", "mMonotonicClock", "mHistoryBufferStartTime", "mWrittenPowerStatsDescriptors", "mLastHistoryStepLevel", "mMutable", "mWritableHistory", "mTracer", "mTraceLastState", "mTraceLastState2", "mEventLogger" ]
+}

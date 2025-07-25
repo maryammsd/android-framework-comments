@@ -1,0 +1,136 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/androidx/core/text/PrecomputedTextCompat.java",
+  "packageName" : "androidx.core.text",
+  "className" : "PrecomputedTextCompat",
+  "comment" : "\n * A text which has the character metrics data.\n *\n * A text object that contains the character metrics data and can be used to improve the performance\n * of text layout operations. When a PrecomputedTextCompat is created with a given\n * {@link CharSequence}, it will measure the text metrics during the creation. This PrecomputedText\n * instance can be set on {@link android.widget.TextView} or {@link StaticLayout}. Since the text\n * layout information will be included in this instance, {@link android.widget.TextView} or\n * {@link StaticLayout} will not have to recalculate this information.\n *\n * On API 29 or later, there is full PrecomputedText support by framework. From API 21 to API 27,\n * PrecomputedTextCompat relies on internal text layout cache. PrecomputedTextCompat immediately\n * computes the text layout in the constuctor to warm up the internal text layout cache. On API 20\n * or before, PrecomputedTextCompat does nothing.\n *\n * Note that any {@link android.text.NoCopySpan} attached to the original text won't be passed to\n * PrecomputedText.\n ",
+  "links" : [ "android.text.StaticLayout", "android.widget.TextView", "android.text.NoCopySpan", "CharSequence" ],
+  "variables" : [ {
+    "name" : "LINE_FEED",
+    "type" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sLock",
+    "type" : "Object",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sExecutor",
+    "type" : "Executor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mText",
+    "type" : "Spannable",
+    "comment" : " The original text.",
+    "links" : [ ]
+  }, {
+    "name" : "mParams",
+    "type" : "Params",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mParagraphEnds",
+    "type" : "int @NonNull []",
+    "comment" : " The list of measured paragraph info.",
+    "links" : [ ]
+  }, {
+    "name" : "mWrapped",
+    "type" : "PrecomputedText",
+    "comment" : " null on API 27 or before. Non-null on API 29 or later",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static PrecomputedTextCompat create(@NonNull CharSequence text, @NonNull Params params)",
+    "returnType" : "PrecomputedTextCompat",
+    "comment" : "\n     * Create a new {@link PrecomputedText} which will pre-compute text measurement and glyph\n     * positioning information.\n     * <p>\n     * This can be expensive, so computing this on a background thread before your text will be\n     * presented can save work on the UI thread.\n     * </p>\n     *\n     * Note that any {@link android.text.NoCopySpan} attached to the text won't be passed to the\n     * created PrecomputedText.\n     *\n     * @param text the text to be measured\n     * @param params parameters that define how text will be precomputed\n     * @return A {@link PrecomputedText}\n     ",
+    "links" : [ "android.text.NoCopySpan", "android.text.PrecomputedText" ]
+  }, {
+    "name" : "public PrecomputedText getPrecomputedText()",
+    "returnType" : "PrecomputedText",
+    "comment" : "\n     * Returns the underlying original text if the text is PrecomputedText.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Params getParams()",
+    "returnType" : "Params",
+    "comment" : "\n     * Returns the parameters used to measure this text.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getParagraphCount()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the count of paragraphs.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getParagraphStart(@IntRange(from = 0) int paraIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the paragraph start offset of the text.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getParagraphEnd(@IntRange(from = 0) int paraIndex)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the paragraph end offset of the text.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Future<PrecomputedTextCompat> getTextFuture(@NonNull final CharSequence charSequence, PrecomputedTextCompat.@NonNull Params params, @Nullable Executor executor)",
+    "returnType" : "Future<PrecomputedTextCompat>",
+    "comment" : "\n     * Helper for PrecomputedText that returns a future to be used with\n     * {@link androidx.appcompat.widget.AppCompatTextView#setTextFuture}.\n     *\n     * PrecomputedText is suited to compute on a background thread, but when TextView properties are\n     * dynamic, it's common to configure text properties and text at the same time, when binding a\n     * View. For example, in a RecyclerView Adapter:\n     * <pre>\n     *     void onBindViewHolder(ViewHolder vh, int position) {\n     *         ItemData data = getData(position);\n     *\n     *         vh.textView.setTextSize(...);\n     *         vh.textView.setFontVariationSettings(...);\n     *         vh.textView.setText(data.text);\n     *     }\n     * </pre>\n     * In such cases, using PrecomputedText is difficult, since it isn't safe to defer the setText()\n     * code arbitrarily - a layout pass may happen before computation finishes, and will be\n     * incorrect if the text isn't ready yet.\n     * <p>\n     * With {@code getTextFuture()}, you can block on the result of the precomputation safely\n     * before the result is needed. AppCompatTextView provides\n     * {@link androidx.appcompat.widget.AppCompatTextView#setTextFuture} for exactly this\n     * use case. With the following code, the app's layout work is largely done on a background\n     * thread:\n     * <pre>\n     *     void onBindViewHolder(ViewHolder vh, int position) {\n     *         ItemData data = getData(position);\n     *\n     *         vh.textView.setTextSize(...);\n     *         vh.textView.setFontVariationSettings(...);\n     *\n     *         // start precompute\n     *         Future<PrecomputedTextCompat> future = PrecomputedTextCompat.getTextFuture(\n     *                 data.text, vh.textView.getTextMetricsParamsCompat(), myExecutor);\n     *\n     *         // and pass future to TextView, which awaits result before measuring\n     *         vh.textView.setTextFuture(future);\n     *     }\n     * </pre>\n     * Because RecyclerView\n     * {@link androidx.recyclerview.widget.RecyclerView.LayoutManager#isItemPrefetchEnabled\n     * prefetches} bind multiple frames in advance while scrolling, the text work generally has\n     * plenty of time to complete before measurement occurs.\n     * </p>\n     * <p class=\"note\">\n     *     <strong>Note:</strong> all TextView layout properties must be set before creating the\n     *     Params object. If they are changed during the precomputation, this can cause a\n     *     {@link IllegalArgumentException} when the precomputed value is consumed during measure,\n     *     and doesn't reflect the TextView's current state.\n     * </p>\n     * @param charSequence the text to be displayed\n     * @param params the parameters to be used for displaying text\n     * @param executor the executor to be process the text layout. If null is passed, the default\n     *                single threaded pool will be used.\n     * @return a future of the precomputed text\n     *\n     * @see androidx.appcompat.widget.AppCompatTextView#setTextFuture\n     ",
+    "links" : [ "androidx.appcompat.widget.AppCompatTextView#setTextFuture", "androidx.recyclerview.widget.RecyclerView.LayoutManager#isItemPrefetchEnabledprefetches", "IllegalArgumentException" ]
+  }, {
+    "name" : "public void setSpan(Object what, int start, int end, int flags)",
+    "returnType" : "void",
+    "comment" : "\n     * @throws IllegalArgumentException if {@link MetricAffectingSpan} is specified.\n     ",
+    "links" : [ "android.text.style.MetricAffectingSpan" ]
+  }, {
+    "name" : "public void removeSpan(Object what)",
+    "returnType" : "void",
+    "comment" : "\n     * @throws IllegalArgumentException if {@link MetricAffectingSpan} is specified.\n     ",
+    "links" : [ "android.text.style.MetricAffectingSpan" ]
+  }, {
+    "name" : "public T[] getSpans(int start, int end, Class<T> type)",
+    "returnType" : "T[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSpanStart(Object tag)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSpanEnd(Object tag)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSpanFlags(Object tag)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int nextSpanTransition(int start, int limit, Class type)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int length()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public char charAt(int index)",
+    "returnType" : "char",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public CharSequence subSequence(int start, int end)",
+    "returnType" : "CharSequence",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static PrecomputedTextCompat create(@NonNull CharSequence text, @NonNull Params params)", "public PrecomputedText getPrecomputedText()", "public Params getParams()", "public int getParagraphCount()", "public int getParagraphStart(@IntRange(from = 0) int paraIndex)", "public int getParagraphEnd(@IntRange(from = 0) int paraIndex)", "public static Future<PrecomputedTextCompat> getTextFuture(@NonNull final CharSequence charSequence, PrecomputedTextCompat.@NonNull Params params, @Nullable Executor executor)", "public void setSpan(Object what, int start, int end, int flags)", "public void removeSpan(Object what)", "public T[] getSpans(int start, int end, Class<T> type)", "public int getSpanStart(Object tag)", "public int getSpanEnd(Object tag)", "public int getSpanFlags(Object tag)", "public int nextSpanTransition(int start, int limit, Class type)", "public int length()", "public char charAt(int index)", "public CharSequence subSequence(int start, int end)", "public String toString()" ],
+  "variableNames" : [ "LINE_FEED", "sLock", "sExecutor", "mText", "mParams", "mParagraphEnds", "mWrapped" ]
+}

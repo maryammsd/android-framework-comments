@@ -1,0 +1,71 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/libcore/util/NativeAllocationRegistry.java",
+  "packageName" : "libcore.util",
+  "className" : "NativeAllocationRegistry",
+  "comment" : "\n * A NativeAllocationRegistry is used to associate native allocations with\n * Java objects and register them with the runtime.\n * There are two primary benefits of registering native allocations associated\n * with Java objects:\n * <ol>\n *  <li>The runtime will account for the native allocations when scheduling\n *  garbage collection to run.</li>\n *  <li>The runtime will arrange for the native allocation to be automatically\n *  freed by a user-supplied function when the associated Java object becomes\n *  unreachable.</li>\n * </ol>\n * A separate NativeAllocationRegistry should be instantiated for each kind\n * of native allocation, where the kind of a native allocation consists of the\n * native function used to free the allocation and the estimated size of the\n * allocation. Once a NativeAllocationRegistry is instantiated, it can be\n * used to register any number of native allocations of that kind.\n * @hide\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "classLoader",
+    "type" : "ClassLoader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "freeFunction",
+    "type" : "long",
+    "comment" : " Pointer to native deallocation function of type void f(void* freeFunction).",
+    "links" : [ ]
+  }, {
+    "name" : "size",
+    "type" : "long",
+    "comment" : " and (b) to avoid adding a field to NativeAllocationRegistry objects.",
+    "links" : [ ]
+  }, {
+    "name" : "IS_MALLOCED",
+    "type" : "long",
+    "comment" : " Bit mask for \"is_malloced\" information.",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_SIZE",
+    "type" : "long",
+    "comment" : " We use an even value close to 100 that is unlikely to be explicitly provided.",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static NativeAllocationRegistry createNonmalloced(@NonNull ClassLoader classLoader, long freeFunction, long size)",
+    "returnType" : "NativeAllocationRegistry",
+    "comment" : "\n     * Return a {@link NativeAllocationRegistry} for native memory that is mostly\n     * allocated by means other than the system memory allocator. For example,\n     * the memory may be allocated directly with mmap.\n     * @param classLoader  ClassLoader that was used to load the native\n     *                     library defining freeFunction.\n     *                     This ensures that the the native library isn't unloaded\n     *                     before {@code freeFunction} is called.\n     * @param freeFunction address of a native function of type\n     *                     {@code void f(void* nativePtr)} used to free this\n     *                     kind of native allocation\n     * @param size         estimated size in bytes of the part of the described\n     *                     native memory that is not allocated with system malloc.\n     *                     Used as input to the garbage collector triggering algorithm,\n     *                     and by heap analysis tools.\n     *                     Approximate values are acceptable.\n     * @return allocated {@link NativeAllocationRegistry}\n     * @throws IllegalArgumentException If {@code size} is negative\n     *\n     * @hide\n     ",
+    "links" : [ "NativeAllocationRegistry" ]
+  }, {
+    "name" : "public static NativeAllocationRegistry createMalloced(@NonNull ClassLoader classLoader, long freeFunction, long size)",
+    "returnType" : "NativeAllocationRegistry",
+    "comment" : "\n     * Return a {@link NativeAllocationRegistry} for native memory that is mostly\n     * allocated by the system memory allocator.\n     * For example, the memory may be allocated directly with new or malloc.\n     * <p>\n     * The native function should have the type:\n     * <pre>\n     *    void f(void* nativePtr);\n     * </pre>\n     * <p>\n     * @param classLoader  ClassLoader that was used to load the native\n     *                     library {@code freeFunction} belongs to.\n     * @param freeFunction address of a native function of type\n     *                     {@code void f(void* nativePtr)} used to free this\n     *                     kind of native allocation\n     * @param size         estimated size in bytes of the part of the described\n     *                     native memory allocated with system malloc.\n     *                     Approximate values, including wild guesses, are acceptable.\n     *                     Unlike {@code createNonmalloced()}, this size is used\n     *                     only by heap analysis tools; garbage collector triggering\n     *                     instead looks directly at {@code mallinfo()} information.\n     * @return allocated {@link NativeAllocationRegistry}\n     * @throws IllegalArgumentException If {@code size} is negative\n     *\n     * @hide\n     ",
+    "links" : [ "NativeAllocationRegistry" ]
+  }, {
+    "name" : "public static NativeAllocationRegistry createMalloced(@NonNull ClassLoader classLoader, long freeFunction)",
+    "returnType" : "NativeAllocationRegistry",
+    "comment" : "\n     * Return a {@link NativeAllocationRegistry} for native memory that is mostly\n     * allocated by the system memory allocator. This version uses a default size,\n     * thus providing less information than desired for heap analysis tools.\n     * It should only be used when the native allocation is expected to be small,\n     * but there is no reasonable way to provide a meaningful size estimate.\n     * @param classLoader  ClassLoader that was used to load the native\n     *                     library {@code freeFunction} belongs to.\n     * @param freeFunction address of a native function of type\n     *                     {@code void f(void* nativePtr)} used to free this\n     *                     kind of native allocation\n     * @return allocated {@link NativeAllocationRegistry}\n     *\n     * @hide\n     ",
+    "links" : [ "NativeAllocationRegistry" ]
+  }, {
+    "name" : "public Runnable registerNativeAllocation(@NonNull Object referent, long nativePtr)",
+    "returnType" : "Runnable",
+    "comment" : "\n     * Registers a new native allocation and associated Java object with the\n     * runtime.\n     * This {@link NativeAllocationRegistry}'s {@code freeFunction} will\n     * automatically be called with {@code nativePtr} as its sole\n     * argument when {@code referent} becomes unreachable. If you\n     * maintain copies of {@code nativePtr} outside\n     * {@code referent}, you must not access these after\n     * {@code referent} becomes unreachable, because they may be dangling\n     * pointers.\n     * <p>\n     * The returned Runnable can be used to free the native allocation before\n     * {@code referent} becomes unreachable. The runnable will have no\n     * effect if the native allocation has already been freed by the runtime\n     * or by using the runnable.\n     * <p>\n     * WARNING: This unconditionally takes ownership, i.e. deallocation\n     * responsibility of nativePtr. nativePtr will be DEALLOCATED IMMEDIATELY\n     * if the registration attempt throws an exception (other than one reporting\n     * a programming error).\n     *\n     * @param referent      Non-{@code null} java object to associate the native allocation with\n     * @param nativePtr     Non-zero address of the native allocation\n     * @return runnable to explicitly free native allocation\n     * @throws IllegalArgumentException if either referent or nativePtr is {@code null}.\n     * @throws OutOfMemoryError  if there is not enough space on the Java heap\n     *                           in which to register the allocation. In this\n     *                           case, {@code freeFunction} will be\n     *                           called with {@code nativePtr} as its\n     *                           argument before the {@link OutOfMemoryError} is\n     *                           thrown.\n     *\n     * @hide\n     ",
+    "links" : [ "NativeAllocationRegistry", "OutOfMemoryError" ]
+  }, {
+    "name" : "private static void registerNativeAllocation(long size)",
+    "returnType" : "void",
+    "comment" : " malloc-based allocations.",
+    "links" : [ ]
+  }, {
+    "name" : "private static void registerNativeFree(long size)",
+    "returnType" : "void",
+    "comment" : " Inform the garbage collector of deallocation, if appropriate.",
+    "links" : [ ]
+  }, {
+    "name" : "public static native void applyFreeFunction(long freeFunction, long nativePtr)",
+    "returnType" : "void",
+    "comment" : "\n     * Calls {@code freeFunction}({@code nativePtr}).\n     * Provided as a convenience in the case where you wish to manually free a\n     * native allocation using a {@code freeFunction} without using a\n     * {@link NativeAllocationRegistry}.\n     *\n     * @param freeFunction address of a native function used to free this\n     *                     kind of native allocation\n     * @param nativePtr    pointer to pass to freeing function\n     *\n     * @hide\n     ",
+    "links" : [ "NativeAllocationRegistry" ]
+  } ],
+  "methodNames" : [ "public static NativeAllocationRegistry createNonmalloced(@NonNull ClassLoader classLoader, long freeFunction, long size)", "public static NativeAllocationRegistry createMalloced(@NonNull ClassLoader classLoader, long freeFunction, long size)", "public static NativeAllocationRegistry createMalloced(@NonNull ClassLoader classLoader, long freeFunction)", "public Runnable registerNativeAllocation(@NonNull Object referent, long nativePtr)", "private static void registerNativeAllocation(long size)", "private static void registerNativeFree(long size)", "public static native void applyFreeFunction(long freeFunction, long nativePtr)" ],
+  "variableNames" : [ "classLoader", "freeFunction", "size", "IS_MALLOCED", "DEFAULT_SIZE" ]
+}

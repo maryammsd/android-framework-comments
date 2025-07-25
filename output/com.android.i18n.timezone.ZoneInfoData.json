@@ -1,0 +1,181 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/i18n/timezone/ZoneInfoData.java",
+  "packageName" : "com.android.i18n.timezone",
+  "className" : "ZoneInfoData",
+  "comment" : "\n * This class holds the data of a time zone backed by the tzfiles. An instance is immutable.\n *\n * <p>This reads time zone information from a binary file stored on the platform. The binary file\n * is essentially a single file containing compacted versions of all the tzfiles produced by the\n * zone info compiler (zic) tool (see {@code man 5 tzfile} for details of the format and\n * {@code man 8 zic}) and an index by long name, e.g. Europe/London.\n *\n * <p>The compacted form is created by\n * {@code system/timezone/input_tools/android/zone_compactor/main/java/ZoneCompactor.java} and is\n * used by both this and Bionic. {@link ZoneInfoDb} is responsible for mapping the binary file, and\n * reading the index and creating a {@link BufferIterator} that provides access to an entry for a\n * specific file. This class is responsible for reading the data from that {@link BufferIterator}\n * and storing it a representation to support the {@link java.util.TimeZone} and\n * {@link java.util.GregorianCalendar} implementations. See\n * {@link ZoneInfoData#readTimeZone(String, BufferIterator)}.\n *\n * <p>This class does not use all the information from the {@code tzfile}; it uses:\n * {@code tzh_timecnt} and the associated transition times and type information. For each type\n * (described by {@code struct ttinfo}) it uses {@code tt_gmtoff} and {@code tt_isdst}.\n *\n * @hide\n ",
+  "links" : [ "com.android.i18n.timezone.internal.BufferIterator", "java.util.GregorianCalendar", "java.util.TimeZone", "#readTimeZone(String", "ZoneInfoDb" ],
+  "variables" : [ {
+    "name" : "ZONEINFO_SERIALIZED_FIELDS",
+    "type" : "ObjectStreamField @NonNull []",
+    "comment" : "\n     * The serialized fields in {@link libcore.util.ZoneInfo} kept for backward app compatibility.\n     *\n     * @hide\n     ",
+    "links" : [ "libcore.util.ZoneInfo" ]
+  }, {
+    "name" : "mId",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRawOffset",
+    "type" : "int",
+    "comment" : "\n     * The (best guess) non-DST offset used \"today\". It is stored in milliseconds.\n     * See also {@link #mOffsets} which holds values relative to this value, albeit in seconds.\n     ",
+    "links" : [ "#mOffsets" ]
+  }, {
+    "name" : "mEarliestRawOffset",
+    "type" : "int",
+    "comment" : "\n     * The earliest non-DST offset for the zone. It is stored in milliseconds and is absolute, i.e.\n     * it is not relative to mRawOffset.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mTransitions",
+    "type" : "long[]",
+    "comment" : "\n     * The times (in Unix epoch time, seconds since 1st Jan 1970 00:00:00 UTC) at which the offsets\n     * changes for any reason, whether that is a change in the offset from UTC or a change in the\n     * DST.\n     *\n     * <p>These times are pre-calculated externally from a set of rules (both historical and\n     * future) and stored in a file from which {@link ZoneInfoData#readTimeZone(String,\n     * BufferIterator)} reads the data. That is quite different to {@link java.util.SimpleTimeZone},\n     * which has essentially human readable rules (e.g. DST starts at 01:00 on the first Sunday in\n     * March and ends at 01:00 on the last Sunday in October) that can be used to determine the\n     * DST transition times across a number of years\n     *\n     * <p>In terms of {@link ZoneInfoData tzfile} structure this array is of length\n     * {@code tzh_timecnt} and contains the times in seconds converted to long to make them safer\n     * to use.\n     *\n     * <p>They are stored in order from earliest (lowest) time to latest (highest). A transition is\n     * identified by its index within this array. A transition {@code T} is active at a specific\n     * time {@code X} if {@code T} is the highest transition whose time is less than or equal to\n     * {@code X}.\n     *\n     * @see #mTypes\n     ",
+    "links" : [ "#readTimeZone(String", "java.util.SimpleTimeZone", "ZoneInfoData" ]
+  }, {
+    "name" : "mTypes",
+    "type" : "byte[]",
+    "comment" : "\n     * The type of the transition, where type is a pair consisting of the offset and whether the\n     * offset includes DST or not.\n     *\n     * <p>Each transition in {@link #mTransitions} has an associated type in this array at the same\n     * index. The type is an index into the arrays {@link #mOffsets} and {@link #mIsDsts} that each\n     * contain one part of the pair.\n     *\n     * <p>In the {@link ZoneInfoData tzfile} structure the type array only contains unique instances\n     * of the {@code struct ttinfo} to save space and each type may be referenced by multiple\n     * transitions. However, the type pairs stored in this class are not guaranteed unique because\n     * they do not include the {@code tt_abbrind}, which is the abbreviated identifier to use for\n     * the time zone after the transition.\n     *\n     * @see #mTransitions\n     * @see #mOffsets\n     * @see #mIsDsts\n     ",
+    "links" : [ "#mIsDsts", "#mTransitions", "ZoneInfoData", "#mOffsets" ]
+  }, {
+    "name" : "mOffsets",
+    "type" : "int[]",
+    "comment" : "\n     * The offset parts of the transition types, in seconds.\n     *\n     * <p>These are actually a delta to the {@link #mRawOffset}. So, if the offset is say +7200\n     * seconds and {@link #mRawOffset} is say +3600 then this will have a value of +3600.\n     *\n     * <p>The offset in milliseconds can be computed using:\n     * {@code mRawOffset + mOffsets[type] * 1000}\n     *\n     * @see #mTypes\n     * @see #mIsDsts\n     ",
+    "links" : [ "#mRawOffset" ]
+  }, {
+    "name" : "mIsDsts",
+    "type" : "byte[]",
+    "comment" : "\n     * Specifies whether an associated offset includes DST or not.\n     *\n     * <p>Each entry in here is 1 if the offset at the same index in {@link #mOffsets} includes DST\n     * and 0 otherwise.\n     *\n     * @see #mTypes\n     * @see #mOffsets\n     ",
+    "links" : [ "#mOffsets" ]
+  } ],
+  "methods" : [ {
+    "name" : "public static ZoneInfoData readTimeZone(String id, BufferIterator it) throws IOException",
+    "returnType" : "ZoneInfoData",
+    "comment" : " VisibleForTesting",
+    "links" : [ ]
+  }, {
+    "name" : "private static void skipOver32BitData(String id, BufferIterator it) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n     * Skip over the 32-bit data with some minimal validation to make sure sure we reading a valid\n     * and supported file.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ZoneInfoData read64BitData(String id, BufferIterator it) throws IOException",
+    "returnType" : "ZoneInfoData",
+    "comment" : "\n     * Read the 64-bit header and data for {@code id} from the current position of {@code it} and\n     * return a ZoneInfo.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void checkTzifVersionAcceptable(String id, byte tzh_version) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static ZoneInfoData createFromSerializationFields(@NonNull String id, @NonNull GetField getField) throws IOException",
+    "returnType" : "ZoneInfoData",
+    "comment" : "\n     * Create an instance from the serialized fields from {@link libcore.util.ZoneInfo}\n     * for backward app compatibility.\n     *\n     * @hide\n     ",
+    "links" : [ "libcore.util.ZoneInfo" ]
+  }, {
+    "name" : "public void writeToSerializationFields(@NonNull PutField putField)",
+    "returnType" : "void",
+    "comment" : "\n     * Serialize {@link libcore.util.ZoneInfo} into backward app compatible form.\n     *\n     * @hide\n     ",
+    "links" : [ "libcore.util.ZoneInfo" ]
+  }, {
+    "name" : "public int findTransitionIndex(long seconds)",
+    "returnType" : "int",
+    "comment" : "\n     * Find the transition in the {@code timezone} in effect at {@code seconds}.\n     *\n     * <p>Returns an index in the range -1..timeZone.mTransitions.length - 1. -1 is used to\n     * indicate the time is before the first transition. Other values are an index into\n     * timeZone.mTransitions.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " int findOffsetIndexForTimeInSeconds(long seconds)",
+    "returnType" : "int",
+    "comment" : "\n     * Finds the index within the {@link #mOffsets}/{@link #mIsDsts} arrays for the specified time\n     * in seconds, since 1st Jan 1970 00:00:00.\n     * @param seconds the time in seconds.\n     * @return -1 if the time is before the first transition, or [0..{@code mOffsets}-1] for the\n     * active offset.\n     ",
+    "links" : [ "#mIsDsts", "#mOffsets" ]
+  }, {
+    "name" : " int findOffsetIndexForTimeInMilliseconds(long millis)",
+    "returnType" : "int",
+    "comment" : "\n     * Finds the index within the {@link #mOffsets}/{@link #mIsDsts} arrays for the specified time\n     * in milliseconds, since 1st Jan 1970 00:00:00.000.\n     * @param millis the time in milliseconds.\n     * @return -1 if the time is before the first transition, or [0..{@code mOffsets}-1] for the\n     * active offset.\n     ",
+    "links" : [ "#mIsDsts", "#mOffsets" ]
+  }, {
+    "name" : " static long roundDownMillisToSeconds(long millis)",
+    "returnType" : "long",
+    "comment" : "\n     * Converts time in milliseconds into a time in seconds, rounding down to the closest time\n     * in seconds before the time in milliseconds.\n     *\n     * <p>It's not sufficient to simply divide by 1000 because that rounds towards 0 and so while\n     * for positive numbers it produces a time in seconds that precedes the time in milliseconds\n     * for negative numbers it can produce a time in seconds that follows the time in milliseconds.\n     *\n     * <p>This basically does the same as {@code (long) Math.floor(millis / 1000.0)} but should be\n     * faster.\n     *\n     * @param millis the time in milliseconds, may be negative.\n     * @return the time in seconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static long roundUpMillisToSeconds(long millis)",
+    "returnType" : "long",
+    "comment" : "\n     * Converts time in milliseconds into a time in seconds, rounding up to the closest time\n     * in seconds before the time in milliseconds.\n     *\n     * <p>It's not sufficient to simply divide by 1000 because that rounds towards 0 and so while\n     * for negative numbers it produces a time in seconds that follows the time in milliseconds\n     * for positive numbers it can produce a time in seconds that precedes the time in milliseconds.\n     *\n     * <p>This basically does the same as {@code (long) Math.ceil(millis / 1000.0)} but should be\n     * faster.\n     *\n     * @param millis the time in milliseconds, may be negative.\n     * @return the time in seconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getOffsetsByUtcTime(long unixEpochTimeInMillis, @NonNull int[] offsets)",
+    "returnType" : "int",
+    "comment" : "\n     * Get the raw and DST offsets for the specified time in milliseconds since\n     * 1st Jan 1970 00:00:00 UTC.\n     *\n     * <p>The raw offset, i.e. that part of the total offset which is not due to DST, is stored at\n     * index 0 of the {@code offsets} array and the DST offset, i.e. that part of the offset which\n     * is due to DST is stored at index 1.\n     *\n     * @param unixEpochTimeInMillis the Unix epoch time in milliseconds.\n     * @param offsets the array whose length must be greater than or equal to 2.\n     * @return the total offset which is the sum of the raw and DST offsets.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getOffset(long whenMillis)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the offset from UTC in milliseconds at the specified time {@code whenMillis}.\n     *\n     * @param whenMillis the Unix epoch time in milliseconds since 1st Jan 1970, 00:00:00 UTC\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isInDaylightTime(long whenMillis)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether the given {@code whenMillis} is in daylight saving time in this time zone.\n     *\n     * @param whenMillis the Unix epoch time in milliseconds since 1st Jan 1970, 00:00:00 UTC\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getRawOffset()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the raw offset in milliseconds. The value is not affected by daylight saving.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Integer getLatestDstSavingsMillis(long whenMillis)",
+    "returnType" : "Integer",
+    "comment" : "\n     * Returns the offset of daylight saving in milliseconds in the latest Daylight Savings Time\n     * after the time {@code whenMillis}. If no known DST occurs after {@code whenMillis}, it\n     * returns {@code null}.\n     *\n     * @param whenMillis the Unix epoch time in milliseconds since 1st Jan 1970, 00:00:00 UTC\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " int getEarliestRawOffset()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean hasSameRules(@NonNull ZoneInfoData other)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns {@code true} if 2 time zones have the same time zone rule.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean equals(Object obj)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int hashCode()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns a string containing the internal states for debug purpose.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String getID()",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the time zone id.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ZoneInfoData createCopyWithRawOffset(int newRawOffset)",
+    "returnType" : "ZoneInfoData",
+    "comment" : "\n     * Create a deep copy of this object with a new raw offset.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public long[] getTransitions()",
+    "returnType" : "long[]",
+    "comment" : "\n     * Returns the Unix epoch times (in seconds since 1st Jan 1970 00:00:00 UTC) at which the\n     * offsets changes for any reason, whether that is a change in the offset from UTC or a change\n     * in the DST.\n     *\n     * WARNING: This API is exposed only for app compat usage in @link libcore.util.ZoneInfo}.\n     *\n     * @hide\n     ",
+    "links" : [ "libcore.util.ZoneInfo" ]
+  }, {
+    "name" : "public static ZoneInfoData createInstance(@NonNull String id, @NonNull long[] transitions, @NonNull byte[] types, @NonNull int[] offsets, @NonNull boolean[] isDsts)",
+    "returnType" : "ZoneInfoData",
+    "comment" : "\n     * Creates an instance. This method is only for testing purposes.\n     *\n     * @param transitions The times (in seconds) since beginning of the Unix epoch at which\n     *                    the offsets changes\n     * @param types the type of the transition. The offsets and standard/daylight states are\n     *              represented in the corresponding entry in <code>offsets</code> and\n     *              <code>isDsts</code> respectively\n     * @param offsets the total offsets of each type. The max allowed size of this array is 256.\n     * @param isDsts an entry is {@code true} if the type is daylight saving time. The max allowed\n     *               size of this array is 256.\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static byte[] toByteArray(boolean[] isDsts)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static ZoneInfoData readTimeZone(String id, BufferIterator it) throws IOException", "private static void skipOver32BitData(String id, BufferIterator it) throws IOException", "private static ZoneInfoData read64BitData(String id, BufferIterator it) throws IOException", "private static void checkTzifVersionAcceptable(String id, byte tzh_version) throws IOException", "public static ZoneInfoData createFromSerializationFields(@NonNull String id, @NonNull GetField getField) throws IOException", "public void writeToSerializationFields(@NonNull PutField putField)", "public int findTransitionIndex(long seconds)", " int findOffsetIndexForTimeInSeconds(long seconds)", " int findOffsetIndexForTimeInMilliseconds(long millis)", " static long roundDownMillisToSeconds(long millis)", " static long roundUpMillisToSeconds(long millis)", "public int getOffsetsByUtcTime(long unixEpochTimeInMillis, @NonNull int[] offsets)", "public int getOffset(long whenMillis)", "public boolean isInDaylightTime(long whenMillis)", "public int getRawOffset()", "public Integer getLatestDstSavingsMillis(long whenMillis)", " int getEarliestRawOffset()", "public boolean hasSameRules(@NonNull ZoneInfoData other)", "public boolean equals(Object obj)", "public int hashCode()", "public String toString()", "public String getID()", "public ZoneInfoData createCopyWithRawOffset(int newRawOffset)", "public long[] getTransitions()", "public static ZoneInfoData createInstance(@NonNull String id, @NonNull long[] transitions, @NonNull byte[] types, @NonNull int[] offsets, @NonNull boolean[] isDsts)", "private static byte[] toByteArray(boolean[] isDsts)" ],
+  "variableNames" : [ "ZONEINFO_SERIALIZED_FIELDS", "mId", "mRawOffset", "mEarliestRawOffset", "mTransitions", "mTypes", "mOffsets", "mIsDsts" ]
+}

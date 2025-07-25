@@ -1,0 +1,391 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/telephony/euicc/EuiccConnector.java",
+  "packageName" : "com.android.internal.telephony.euicc",
+  "className" : "EuiccConnector",
+  "comment" : "\n * State machine which maintains the binding to the EuiccService implementation and issues commands.\n *\n * <p>Keeps track of the highest-priority EuiccService implementation to use. When a command comes\n * in, brings up a binding to that service, issues the command, and lingers the binding as long as\n * more commands are coming in. The binding is dropped after an idle timeout.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BIND_TIMEOUT_MILLIS",
+    "type" : "int",
+    "comment" : "\n     * Maximum amount of time to wait for a connection to be established after bindService returns\n     * true or onServiceDisconnected is called (and no package change has occurred which should\n     * force us to reestablish the binding).\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "LINGER_TIMEOUT_MILLIS",
+    "type" : "int",
+    "comment" : "\n     * Maximum amount of idle time to hold the binding while in {@link ConnectedState}. After this,\n     * the binding is dropped to free up memory as the EuiccService is not expected to be used\n     * frequently as part of ongoing device operation.\n     ",
+    "links" : [ "ConnectedState" ]
+  }, {
+    "name" : "CMD_PACKAGE_CHANGE",
+    "type" : "int",
+    "comment" : "\n     * Command indicating that a package change has occurred.\n     *\n     * <p>{@link Message#obj} is an optional package name. If set, this package has changed in a\n     * way that will permanently sever any open bindings, and if we're bound to it, the binding must\n     * be forcefully reestablished.\n     ",
+    "links" : [ "android.os.Message#obj" ]
+  }, {
+    "name" : "CMD_CONNECT_TIMEOUT",
+    "type" : "int",
+    "comment" : " Command indicating that {@link #BIND_TIMEOUT_MILLIS} has been reached. ",
+    "links" : [ "#BIND_TIMEOUT_MILLIS" ]
+  }, {
+    "name" : "CMD_LINGER_TIMEOUT",
+    "type" : "int",
+    "comment" : " Command indicating that {@link #LINGER_TIMEOUT_MILLIS} has been reached. ",
+    "links" : [ "#LINGER_TIMEOUT_MILLIS" ]
+  }, {
+    "name" : "CMD_SERVICE_CONNECTED",
+    "type" : "int",
+    "comment" : "\n     * Command indicating that the service has connected.\n     *\n     * <p>{@link Message#obj} is the connected {@link IEuiccService} implementation.\n     ",
+    "links" : [ "android.os.Message#obj", "android.service.euicc.IEuiccService" ]
+  }, {
+    "name" : "CMD_SERVICE_DISCONNECTED",
+    "type" : "int",
+    "comment" : " Command indicating that the service has disconnected. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_COMMAND_COMPLETE",
+    "type" : "int",
+    "comment" : "\n     * Command indicating that a command has completed and the callback should be executed.\n     *\n     * <p>{@link Message#obj} is a {@link Runnable} which will trigger the callback.\n     ",
+    "links" : [ "Runnable", "android.os.Message#obj" ]
+  }, {
+    "name" : "CMD_GET_EID",
+    "type" : "int",
+    "comment" : " Commands corresponding with EuiccService APIs. Keep isEuiccCommand in sync with any changes.",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_DOWNLOADABLE_SUBSCRIPTION_METADATA",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_DOWNLOAD_SUBSCRIPTION",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_EUICC_PROFILE_INFO_LIST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_DEFAULT_DOWNLOADABLE_SUBSCRIPTION_LIST",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_EUICC_INFO",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_DELETE_SUBSCRIPTION",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_SWITCH_TO_SUBSCRIPTION",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_UPDATE_SUBSCRIPTION_NICKNAME",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_ERASE_SUBSCRIPTIONS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_RETAIN_SUBSCRIPTIONS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_OTA_STATUS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_START_OTA_IF_NECESSARY",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_ERASE_SUBSCRIPTIONS_WITH_OPTIONS",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_DUMP_EUICC_SERVICE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GET_AVAILABLE_MEMORY_IN_BYTES",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EUICC_QUERY_FLAGS",
+    "type" : "int",
+    "comment" : " Flags to use when querying PackageManager for Euicc component implementations. ",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPm",
+    "type" : "PackageManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTm",
+    "type" : "TelephonyManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSm",
+    "type" : "SubscriptionManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPackageMonitor",
+    "type" : "PackageChangeReceiver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUserUnlockedReceiver",
+    "type" : "BroadcastReceiver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSelectedComponent",
+    "type" : "ServiceInfo",
+    "comment" : " Set to the current component we should bind to except in {@link UnavailableState}. ",
+    "links" : [ "UnavailableState" ]
+  }, {
+    "name" : "mEuiccService",
+    "type" : "IEuiccService",
+    "comment" : " Set to the currently connected EuiccService implementation in {@link ConnectedState}. ",
+    "links" : [ "ConnectedState" ]
+  }, {
+    "name" : "mActiveCommandCallbacks",
+    "type" : "Set<BaseEuiccCommandCallback>",
+    "comment" : " The callbacks for all (asynchronous) commands which are currently in flight. ",
+    "links" : [ ]
+  }, {
+    "name" : "mUnavailableState",
+    "type" : "UnavailableState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAvailableState",
+    "type" : "AvailableState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBindingState",
+    "type" : "BindingState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDisconnectedState",
+    "type" : "DisconnectedState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConnectedState",
+    "type" : "ConnectedState",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static boolean isEuiccCommand(int what)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static ActivityInfo findBestActivity(PackageManager packageManager, Intent intent)",
+    "returnType" : "ActivityInfo",
+    "comment" : "\n     * Return the activity info of the activity to start for the given intent, or null if none\n     * was found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ComponentInfo findBestComponent(PackageManager packageManager)",
+    "returnType" : "ComponentInfo",
+    "comment" : "\n     * Return the component info of the EuiccService to bind to, or null if none were found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void init(Context context)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onHalting()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void getEid(int cardId, GetEidCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously fetch the EID. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getAvailableMemoryInBytes(int cardId, GetAvailableMemoryInBytesCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously fetch the available memory in bytes. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getOtaStatus(int cardId, GetOtaStatusCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously get OTA status. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void startOtaIfNecessary(int cardId, OtaStatusChangedCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously perform OTA update. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getDownloadableSubscriptionMetadata(int cardId, int portIndex, DownloadableSubscription subscription, boolean switchAfterDownload, boolean forceDeactivateSim, GetMetadataCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously fetch metadata for the given downloadable subscription. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void downloadSubscription(int cardId, int portIndex, DownloadableSubscription subscription, boolean switchAfterDownload, boolean forceDeactivateSim, Bundle resolvedBundle, DownloadCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously download the given subscription. ",
+    "links" : [ ]
+  }, {
+    "name" : " void getEuiccProfileInfoList(int cardId, GetEuiccProfileInfoListCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void getDefaultDownloadableSubscriptionList(int cardId, boolean forceDeactivateSim, GetDefaultListCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously fetch the default downloadable subscription list. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void getEuiccInfo(int cardId, GetEuiccInfoCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously fetch the {@link EuiccInfo}. ",
+    "links" : [ "android.telephony.euicc.EuiccInfo" ]
+  }, {
+    "name" : "public void deleteSubscription(int cardId, String iccid, DeleteCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously delete the given subscription. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void switchToSubscription(int cardId, int portIndex, @Nullable String iccid, boolean forceDeactivateSim, SwitchCommandCallback callback, boolean usePortIndex)",
+    "returnType" : "void",
+    "comment" : " Asynchronously switch to the given subscription. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void updateSubscriptionNickname(int cardId, String iccid, String nickname, UpdateNicknameCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously update the nickname of the given subscription. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void eraseSubscriptions(int cardId, EraseCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously erase operational profiles on the eUICC. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void eraseSubscriptionsWithOptions(int cardId, @ResetOption int options, EraseCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously erase specific profiles on the eUICC. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void retainSubscriptions(int cardId, RetainSubscriptionsCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously ensure that all profiles will be retained on the next factory reset. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dumpEuiccService(DumpEuiccServiceCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Asynchronously calls the currently bound EuiccService implementation to dump its states ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IEuiccService getBinder()",
+    "returnType" : "IEuiccService",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static BaseEuiccCommandCallback getCallback(Message message)",
+    "returnType" : "BaseEuiccCommandCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int getSlotIdFromCardId(int cardId)",
+    "returnType" : "int",
+    "comment" : "\n     * Gets the slot ID from the card ID.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void onCommandStart(BaseEuiccCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Call this at the beginning of the execution of any command. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void onCommandEnd(BaseEuiccCommandCallback callback)",
+    "returnType" : "void",
+    "comment" : " Call this at the end of execution of any command (whether or not it succeeded). ",
+    "links" : [ ]
+  }, {
+    "name" : "private ServiceInfo findBestComponent()",
+    "returnType" : "ServiceInfo",
+    "comment" : " Return the service info of the EuiccService to bind to, or null if none were found. ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean createBinding()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Bring up a binding to the currently-selected component.\n     *\n     * <p>Returns true if we've successfully bound to the service.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void unbind()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static ComponentInfo findBestComponent(PackageManager packageManager, List<ResolveInfo> resolveInfoList)",
+    "returnType" : "ComponentInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isValidEuiccComponent(PackageManager packageManager, ResolveInfo resolveInfo)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onServiceConnected(ComponentName name, IBinder service)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onServiceDisconnected(ComponentName name)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void unhandledMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateSubscriptionInfoListForAllAccessibleEuiccs()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private static boolean isEuiccCommand(int what)", "public static ActivityInfo findBestActivity(PackageManager packageManager, Intent intent)", "public static ComponentInfo findBestComponent(PackageManager packageManager)", "private void init(Context context)", "public void onHalting()", "public void getEid(int cardId, GetEidCommandCallback callback)", "public void getAvailableMemoryInBytes(int cardId, GetAvailableMemoryInBytesCommandCallback callback)", "public void getOtaStatus(int cardId, GetOtaStatusCommandCallback callback)", "public void startOtaIfNecessary(int cardId, OtaStatusChangedCallback callback)", "public void getDownloadableSubscriptionMetadata(int cardId, int portIndex, DownloadableSubscription subscription, boolean switchAfterDownload, boolean forceDeactivateSim, GetMetadataCommandCallback callback)", "public void downloadSubscription(int cardId, int portIndex, DownloadableSubscription subscription, boolean switchAfterDownload, boolean forceDeactivateSim, Bundle resolvedBundle, DownloadCommandCallback callback)", " void getEuiccProfileInfoList(int cardId, GetEuiccProfileInfoListCommandCallback callback)", "public void getDefaultDownloadableSubscriptionList(int cardId, boolean forceDeactivateSim, GetDefaultListCommandCallback callback)", "public void getEuiccInfo(int cardId, GetEuiccInfoCommandCallback callback)", "public void deleteSubscription(int cardId, String iccid, DeleteCommandCallback callback)", "public void switchToSubscription(int cardId, int portIndex, @Nullable String iccid, boolean forceDeactivateSim, SwitchCommandCallback callback, boolean usePortIndex)", "public void updateSubscriptionNickname(int cardId, String iccid, String nickname, UpdateNicknameCommandCallback callback)", "public void eraseSubscriptions(int cardId, EraseCommandCallback callback)", "public void eraseSubscriptionsWithOptions(int cardId, @ResetOption int options, EraseCommandCallback callback)", "public void retainSubscriptions(int cardId, RetainSubscriptionsCommandCallback callback)", "public void dumpEuiccService(DumpEuiccServiceCommandCallback callback)", "public final IEuiccService getBinder()", "private static BaseEuiccCommandCallback getCallback(Message message)", "private int getSlotIdFromCardId(int cardId)", "private void onCommandStart(BaseEuiccCommandCallback callback)", "private void onCommandEnd(BaseEuiccCommandCallback callback)", "private ServiceInfo findBestComponent()", "private boolean createBinding()", "private void unbind()", "private static ComponentInfo findBestComponent(PackageManager packageManager, List<ResolveInfo> resolveInfoList)", "private static boolean isValidEuiccComponent(PackageManager packageManager, ResolveInfo resolveInfo)", "public void onServiceConnected(ComponentName name, IBinder service)", "public void onServiceDisconnected(ComponentName name)", "protected void unhandledMessage(Message msg)", "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)", "private void updateSubscriptionInfoListForAllAccessibleEuiccs()" ],
+  "variableNames" : [ "TAG", "BIND_TIMEOUT_MILLIS", "LINGER_TIMEOUT_MILLIS", "CMD_PACKAGE_CHANGE", "CMD_CONNECT_TIMEOUT", "CMD_LINGER_TIMEOUT", "CMD_SERVICE_CONNECTED", "CMD_SERVICE_DISCONNECTED", "CMD_COMMAND_COMPLETE", "CMD_GET_EID", "CMD_GET_DOWNLOADABLE_SUBSCRIPTION_METADATA", "CMD_DOWNLOAD_SUBSCRIPTION", "CMD_GET_EUICC_PROFILE_INFO_LIST", "CMD_GET_DEFAULT_DOWNLOADABLE_SUBSCRIPTION_LIST", "CMD_GET_EUICC_INFO", "CMD_DELETE_SUBSCRIPTION", "CMD_SWITCH_TO_SUBSCRIPTION", "CMD_UPDATE_SUBSCRIPTION_NICKNAME", "CMD_ERASE_SUBSCRIPTIONS", "CMD_RETAIN_SUBSCRIPTIONS", "CMD_GET_OTA_STATUS", "CMD_START_OTA_IF_NECESSARY", "CMD_ERASE_SUBSCRIPTIONS_WITH_OPTIONS", "CMD_DUMP_EUICC_SERVICE", "CMD_GET_AVAILABLE_MEMORY_IN_BYTES", "EUICC_QUERY_FLAGS", "mContext", "mPm", "mTm", "mSm", "mPackageMonitor", "mUserUnlockedReceiver", "mSelectedComponent", "mEuiccService", "mActiveCommandCallbacks", "mUnavailableState", "mAvailableState", "mBindingState", "mDisconnectedState", "mConnectedState" ]
+}

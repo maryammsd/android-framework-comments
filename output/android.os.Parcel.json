@@ -3,7 +3,7 @@
   "packageName" : "android.os",
   "className" : "Parcel",
   "comment" : "\n * Container for a message (data and object references) that can\n * be sent through an IBinder.  A Parcel can contain both flattened data\n * that will be unflattened on the other side of the IPC (using the various\n * methods here for writing specific types, or the general\n * {@link Parcelable} interface), and references to live {@link IBinder}\n * objects that will result in the other side receiving a proxy IBinder\n * connected with the original IBinder in the Parcel.\n *\n * <p class=\"note\">Parcel is <strong>not</strong> a general-purpose\n * serialization mechanism.  This class (and the corresponding\n * {@link Parcelable} API for placing arbitrary objects into a Parcel) is\n * designed as a high-performance IPC transport.  As such, it is not\n * appropriate to place any Parcel data in to persistent storage: changes\n * in the underlying implementation of any of the data in the Parcel can\n * render older data unreadable.</p>\n *\n * <p>The bulk of the Parcel API revolves around reading and writing data\n * of various types.  There are six major classes of such functions available.</p>\n *\n * <h3>Primitives</h3>\n *\n * <p>The most basic data functions are for writing and reading primitive\n * data types: {@link #writeByte}, {@link #readByte}, {@link #writeDouble},\n * {@link #readDouble}, {@link #writeFloat}, {@link #readFloat}, {@link #writeInt},\n * {@link #readInt}, {@link #writeLong}, {@link #readLong},\n * {@link #writeString}, {@link #readString}.  Most other\n * data operations are built on top of these.  The given data is written and\n * read using the endianess of the host CPU.</p>\n *\n * <h3>Primitive Arrays</h3>\n *\n * <p>There are a variety of methods for reading and writing raw arrays\n * of primitive objects, which generally result in writing a 4-byte length\n * followed by the primitive data items.  The methods for reading can either\n * read the data into an existing array, or create and return a new array.\n * These available types are:</p>\n *\n * <ul>\n * <li> {@link #writeBooleanArray(boolean[])},\n * {@link #readBooleanArray(boolean[])}, {@link #createBooleanArray()}\n * <li> {@link #writeByteArray(byte[])},\n * {@link #writeByteArray(byte[], int, int)}, {@link #readByteArray(byte[])},\n * {@link #createByteArray()}\n * <li> {@link #writeCharArray(char[])}, {@link #readCharArray(char[])},\n * {@link #createCharArray()}\n * <li> {@link #writeDoubleArray(double[])}, {@link #readDoubleArray(double[])},\n * {@link #createDoubleArray()}\n * <li> {@link #writeFloatArray(float[])}, {@link #readFloatArray(float[])},\n * {@link #createFloatArray()}\n * <li> {@link #writeIntArray(int[])}, {@link #readIntArray(int[])},\n * {@link #createIntArray()}\n * <li> {@link #writeLongArray(long[])}, {@link #readLongArray(long[])},\n * {@link #createLongArray()}\n * <li> {@link #writeStringArray(String[])}, {@link #readStringArray(String[])},\n * {@link #createStringArray()}.\n * <li> {@link #writeSparseBooleanArray(SparseBooleanArray)},\n * {@link #readSparseBooleanArray()}.\n * </ul>\n *\n * <h3>Parcelables</h3>\n *\n * <p>The {@link Parcelable} protocol provides an extremely efficient (but\n * low-level) protocol for objects to write and read themselves from Parcels.\n * You can use the direct methods {@link #writeParcelable(Parcelable, int)}\n * and {@link #readParcelable(ClassLoader)} or\n * {@link #writeParcelableArray} and\n * {@link #readParcelableArray(ClassLoader)} to write or read.  These\n * methods write both the class type and its data to the Parcel, allowing\n * that class to be reconstructed from the appropriate class loader when\n * later reading.</p>\n *\n * <p>There are also some methods that provide a more efficient way to work\n * with Parcelables: {@link #writeTypedObject}, {@link #writeTypedArray},\n * {@link #writeTypedList}, {@link #readTypedObject},\n * {@link #createTypedArray} and {@link #createTypedArrayList}.  These methods\n * do not write the class information of the original object: instead, the\n * caller of the read function must know what type to expect and pass in the\n * appropriate {@link Parcelable.Creator Parcelable.Creator} instead to\n * properly construct the new object and read its data.  (To more efficient\n * write and read a single Parcelable object that is not null, you can directly\n * call {@link Parcelable#writeToParcel Parcelable.writeToParcel} and\n * {@link Parcelable.Creator#createFromParcel Parcelable.Creator.createFromParcel}\n * yourself.)</p>\n *\n * <h3>Bundles</h3>\n *\n * <p>A special type-safe container, called {@link Bundle}, is available\n * for key/value maps of heterogeneous values.  This has many optimizations\n * for improved performance when reading and writing data, and its type-safe\n * API avoids difficult to debug type errors when finally marshalling the\n * data contents into a Parcel.  The methods to use are\n * {@link #writeBundle(Bundle)}, {@link #readBundle()}, and\n * {@link #readBundle(ClassLoader)}.\n *\n * <h3>Active Objects</h3>\n *\n * <p>An unusual feature of Parcel is the ability to read and write active\n * objects.  For these objects the actual contents of the object is not\n * written, rather a special token referencing the object is written.  When\n * reading the object back from the Parcel, you do not get a new instance of\n * the object, but rather a handle that operates on the exact same object that\n * was originally written.  There are two forms of active objects available.</p>\n *\n * <p>{@link Binder} objects are a core facility of Android's general cross-process\n * communication system.  The {@link IBinder} interface describes an abstract\n * protocol with a Binder object.  Any such interface can be written in to\n * a Parcel, and upon reading you will receive either the original object\n * implementing that interface or a special proxy implementation\n * that communicates calls back to the original object.  The methods to use are\n * {@link #writeStrongBinder(IBinder)},\n * {@link #writeStrongInterface(IInterface)}, {@link #readStrongBinder()},\n * {@link #writeBinderArray(IBinder[])}, {@link #readBinderArray(IBinder[])},\n * {@link #createBinderArray()},\n * {@link #writeInterfaceArray(T[])}, {@link #readInterfaceArray(T[], Function)},\n * {@link #createInterfaceArray(IntFunction, Function)},\n * {@link #writeBinderList(List)}, {@link #readBinderList(List)},\n * {@link #createBinderArrayList()},\n * {@link #writeInterfaceList(List)}, {@link #readInterfaceList(List, Function)},\n * {@link #createInterfaceArrayList(Function)}.</p>\n *\n * <p>FileDescriptor objects, representing raw Linux file descriptor identifiers,\n * can be written and {@link ParcelFileDescriptor} objects returned to operate\n * on the original file descriptor.  The returned file descriptor is a dup\n * of the original file descriptor: the object and fd is different, but\n * operating on the same underlying file stream, with the same position, etc.\n * The methods to use are {@link #writeFileDescriptor(FileDescriptor)},\n * {@link #readFileDescriptor()}.\n *\n  * <h3>Parcelable Containers</h3>\n *\n * <p>A final class of methods are for writing and reading standard Java\n * containers of arbitrary types.  These all revolve around the\n * {@link #writeValue(Object)} and {@link #readValue(ClassLoader)} methods\n * which define the types of objects allowed.  The container methods are\n * {@link #writeArray(Object[])}, {@link #readArray(ClassLoader)},\n * {@link #writeList(List)}, {@link #readList(List, ClassLoader)},\n * {@link #readArrayList(ClassLoader)},\n * {@link #writeMap(Map)}, {@link #readMap(Map, ClassLoader)},\n * {@link #writeSparseArray(SparseArray)},\n * {@link #readSparseArray(ClassLoader)}.\n *\n * <h3>Restricted Parcelable Containers</h3>\n *\n * <p>A final class of methods are for reading standard Java containers of restricted types.\n * These methods replace methods for reading containers of arbitrary types from previous section\n * starting from Android {@link Build.VERSION_CODES#TIRAMISU}. The pairing writing methods are\n * still the same from previous section.\n * These methods accepts additional {@code clazz} parameters as the required types.\n * The Restricted Parcelable container methods are {@link #readArray(ClassLoader, Class)},\n * {@link #readList(List, ClassLoader, Class)},\n * {@link #readArrayList(ClassLoader, Class)},\n * {@link #readMap(Map, ClassLoader, Class, Class)},\n * {@link #readSparseArray(ClassLoader, Class)}.\n ",
-  "links" : [ "#readSparseBooleanArray()", "android.os.Bundle", "android.os.ParcelFileDescriptor", "Build.VERSION_CODES#TIRAMISU", "#writeFileDescriptor(FileDescriptor)", "#writeTypedObject", "#writeLong", "#readInterfaceList(List", "#createByteArray()", "android.os.IBinder", "#readInterfaceArray(T", "#writeDouble", "#createFloatArray()", "#readBinderList(List)", "#readArray(ClassLoader)", "#writeBundle(Bundle)", "#readParcelable(ClassLoader)", "#createInterfaceArrayList(Function)", "#writeIntArray(int", "#createBooleanArray()", "#readBinderArray(IBinder", "#writeFloatArray(float", "#createTypedArray", "#readArray(ClassLoader", "#readBundle()", "#writeArray(Object", "#createDoubleArray()", "#readFloatArray(float", "#writeInterfaceList(List)", "#writeByteArray(byte", "#writeTypedArray", "#readStringArray(String", "#readSparseArray(ClassLoader)", "#readByteArray(byte", "#writeStrongBinder(IBinder)", "#writeMap(Map)", "#readList(List", "#writeString", "#readStrongBinder()", "#createStringArray()", "#readBundle(ClassLoader)", "#writeStringArray(String", "#createTypedArrayList", "#readArrayList(ClassLoader)", "#createLongArray()", "#writeSparseArray(SparseArray)", "#writeDoubleArray(double", "#readParcelableArray(ClassLoader)", "#readIntArray(int", "android.os.Binder", "#readBooleanArray(boolean", "#writeBinderList(List)", "#writeFloat", "#readArrayList(ClassLoader", "#readInt", "#writeBooleanArray(boolean", "#writeParcelableArray", "#writeStrongInterface(IInterface)", "#readValue(ClassLoader)", "#writeSparseBooleanArray(SparseBooleanArray)", "#writeInterfaceArray(T", "#createInterfaceArray(IntFunction", "#readString", "#readTypedObject", "#readDoubleArray(double", "#createIntArray()", "#writeLongArray(long", "android.os.Parcelable", "#readSparseArray(ClassLoader", "#readLongArray(long", "#readFileDescriptor()", "Parcelable.Creator#createFromParcel", "#createBinderArrayList()", "#writeByte", "#readFloat", "#writeValue(Object)", "#writeParcelable(Parcelable", "#writeTypedList", "#writeBinderArray(IBinder", "#createBinderArray()", "#readMap(Map", "#readLong", "#writeInt", "#createCharArray()", "#readCharArray(char", "#writeList(List)", "#readByte", "#readDouble", "#writeCharArray(char", "android.os.Parcelable#writeToParcel", "Parcelable.Creator" ],
+  "links" : [ "#readSparseBooleanArray()", "Build.VERSION_CODES#TIRAMISU", "#writeFileDescriptor(FileDescriptor)", "#writeTypedObject", "#writeLong", "#readInterfaceList(List", "#createByteArray()", "#writeToParcel", "#readInterfaceArray(T", "IBinder", "#writeDouble", "#createFloatArray()", "#readBinderList(List)", "#readArray(ClassLoader)", "#writeBundle(Bundle)", "#readParcelable(ClassLoader)", "#createInterfaceArrayList(Function)", "#writeIntArray(int", "#createBooleanArray()", "#readBinderArray(IBinder", "#writeFloatArray(float", "#createTypedArray", "#readArray(ClassLoader", "#readBundle()", "#writeArray(Object", "#createDoubleArray()", "#readFloatArray(float", "#writeInterfaceList(List)", "#writeByteArray(byte", "#writeTypedArray", "Parcelable", "#readStringArray(String", "#readSparseArray(ClassLoader)", "#readByteArray(byte", "#writeStrongBinder(IBinder)", "#writeMap(Map)", "#readList(List", "ParcelFileDescriptor", "#writeString", "#readStrongBinder()", "#createStringArray()", "#readBundle(ClassLoader)", "#writeStringArray(String", "#createTypedArrayList", "#readArrayList(ClassLoader)", "#createLongArray()", "#writeSparseArray(SparseArray)", "#writeDoubleArray(double", "#readParcelableArray(ClassLoader)", "#readIntArray(int", "Binder", "#readBooleanArray(boolean", "#writeBinderList(List)", "#writeFloat", "#readArrayList(ClassLoader", "#readInt", "#writeBooleanArray(boolean", "#writeParcelableArray", "#writeStrongInterface(IInterface)", "#readValue(ClassLoader)", "#writeSparseBooleanArray(SparseBooleanArray)", "#writeInterfaceArray(T", "#createInterfaceArray(IntFunction", "#readString", "#readTypedObject", "#readDoubleArray(double", "#createIntArray()", "#writeLongArray(long", "#readSparseArray(ClassLoader", "#readLongArray(long", "#readFileDescriptor()", "Bundle", "Parcelable.Creator#createFromParcel", "#createBinderArrayList()", "#writeByte", "#readFloat", "#writeValue(Object)", "#writeParcelable(Parcelable", "#writeTypedList", "#writeBinderArray(IBinder", "#createBinderArray()", "#readMap(Map", "#readLong", "#writeInt", "#createCharArray()", "#readCharArray(char", "#writeList(List)", "#readByte", "#readDouble", "#writeCharArray(char", "Parcelable.Creator" ],
   "variables" : [ {
     "name" : "DEBUG_RECYCLE",
     "type" : "boolean",
@@ -83,12 +83,12 @@
     "name" : "sOwnedPool",
     "type" : "Parcel",
     "comment" : " Head of a linked list pool of {@link Parcel} objects ",
-    "links" : [ "android.os.Parcel" ]
+    "links" : [ "Parcel" ]
   }, {
     "name" : "sHolderPool",
     "type" : "Parcel",
     "comment" : " Head of a linked list pool of {@link Parcel} objects ",
-    "links" : [ "android.os.Parcel" ]
+    "links" : [ "Parcel" ]
   }, {
     "name" : "sOwnedPoolSize",
     "type" : "int",
@@ -884,7 +884,7 @@
     "name" : "public static boolean hasFileDescriptors(Object value)",
     "returnType" : "boolean",
     "comment" : "\n     * Check if the object has file descriptors.\n     *\n     * <p>Objects supported are {@link Parcel} and objects that can be passed to {@link\n     * #writeValue(Object)}}\n     *\n     * <p>For most cases, it will use the self-reported {@link Parcelable#describeContents()} method\n     * for that.\n     *\n     * @throws IllegalArgumentException if you provide any object not supported by above methods\n     *     (including if the unsupported object is inside a nested container).\n     *\n     * @hide\n     ",
-    "links" : [ "android.os.Parcelable#describeContents()", "#writeValue(Object)", "android.os.Parcel" ]
+    "links" : [ "Parcel", "#describeContents()", "#writeValue(Object)" ]
   }, {
     "name" : "public boolean hasBinders()",
     "returnType" : "boolean",
@@ -894,7 +894,7 @@
     "name" : "public boolean hasBinders(int offset, int length)",
     "returnType" : "boolean",
     "comment" : "\n     * Report whether the parcel contains any marshalled {@link IBinder} objects in the range\n     * defined by {@code offset} and {@code length}.\n     *\n     * @param offset The offset from which the range starts. Should be between 0 and\n     *               {@link #dataSize()}.\n     * @param length The length of the range. Should be between 0 and {@link #dataSize()} - {@code\n     *               offset}.\n     * @return whether there are binders in the range or not.\n     * @throws IllegalArgumentException if the parameters are out of the permitted ranges.\n     *\n     * @hide\n     ",
-    "links" : [ "#dataSize()", "android.os.IBinder" ]
+    "links" : [ "IBinder", "#dataSize()" ]
   }, {
     "name" : "public final void writeInterfaceToken(@NonNull String interfaceName)",
     "returnType" : "void",
@@ -919,7 +919,7 @@
     "name" : "public int readCallingWorkSourceUid()",
     "returnType" : "int",
     "comment" : "\n     * Reads the work source uid from the request headers.\n     *\n     * <p>Unlike other read methods, this method does not read the parcel at the current\n     * {@link #dataPosition}. It will set the {@link #dataPosition} before the read and restore the\n     * position after reading the request header.\n     *\n     * @return the work source uid or {@link Binder#UNSET_WORKSOURCE} if headers have not been\n     * written/parsed yet.\n     *\n     * @hide\n     ",
-    "links" : [ "android.os.Binder#UNSET_WORKSOURCE", "#dataPosition" ]
+    "links" : [ "#UNSET_WORKSOURCE", "#dataPosition" ]
   }, {
     "name" : "public final void writeByteArray(@Nullable byte[] b)",
     "returnType" : "void",
@@ -1014,7 +1014,7 @@
     "name" : "public final void writeFileDescriptor(@NonNull FileDescriptor val)",
     "returnType" : "void",
     "comment" : "\n     * Write a FileDescriptor into the parcel at the current dataPosition(),\n     * growing dataCapacity() if needed.\n     *\n     * <p class=\"caution\">The file descriptor will not be closed, which may\n     * result in file descriptor leaks when objects are returned from Binder\n     * calls.  Use {@link ParcelFileDescriptor#writeToParcel} instead, which\n     * accepts contextual flags and will close the original file descriptor\n     * if {@link Parcelable#PARCELABLE_WRITE_RETURN_VALUE} is set.</p>\n     ",
-    "links" : [ "android.os.Parcelable#PARCELABLE_WRITE_RETURN_VALUE", "android.os.ParcelFileDescriptor#writeToParcel" ]
+    "links" : [ "#writeToParcel", "#PARCELABLE_WRITE_RETURN_VALUE" ]
   }, {
     "name" : "public final void writeRawFileDescriptor(@NonNull FileDescriptor val)",
     "returnType" : "void",
@@ -1324,7 +1324,7 @@
     "name" : "public void writeTypedList(@Nullable List<T> val, int parcelableFlags)",
     "returnType" : "void",
     "comment" : "\n     * Flatten a List containing a particular object type into the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  The\n     * type of the objects in the list must be one that implements Parcelable.\n     * Unlike the generic writeList() method, however, only the raw data of the\n     * objects is written and not their type, so you must use the corresponding\n     * readTypedList() to unmarshall them.\n     *\n     * @param val The list of objects to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #createTypedArrayList\n     * @see #readTypedList\n     * @see Parcelable\n     ",
-    "links" : [ "android.os.Parcelable#writeToParcel(Parcel" ]
+    "links" : [ "#writeToParcel(Parcel" ]
   }, {
     "name" : "public final void writeStringList(@Nullable List<String> val)",
     "returnType" : "void",
@@ -1349,17 +1349,17 @@
     "name" : "public final void writeTypedArray(@Nullable T[] val, int parcelableFlags)",
     "returnType" : "void",
     "comment" : "\n     * Flatten a homogeneous array containing a particular object type into\n     * the parcel, at\n     * the current dataPosition() and growing dataCapacity() if needed.  The\n     * type of the objects in the array must be one that implements Parcelable.\n     * Unlike the {@link #writeParcelableArray} method, however, only the\n     * raw data of the objects is written and not their type, so you must use\n     * {@link #readTypedArray} with the correct corresponding\n     * {@link Parcelable.Creator} implementation to unmarshall them.\n     *\n     * @param val The array of objects to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #readTypedArray\n     * @see #writeParcelableArray\n     * @see Parcelable.Creator\n     ",
-    "links" : [ "android.os.Parcelable#writeToParcel(Parcel", "#writeParcelableArray", "#readTypedArray", "Parcelable.Creator" ]
+    "links" : [ "#writeParcelableArray", "#readTypedArray", "#writeToParcel(Parcel", "Parcelable.Creator" ]
   }, {
     "name" : "public final void writeTypedObject(@Nullable T val, int parcelableFlags)",
     "returnType" : "void",
     "comment" : "\n     * Flatten the Parcelable object into the parcel.\n     *\n     * @param val The Parcelable object to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #readTypedObject\n     ",
-    "links" : [ "android.os.Parcelable#writeToParcel(Parcel" ]
+    "links" : [ "#writeToParcel(Parcel" ]
   }, {
     "name" : "public void writeFixedArray(@Nullable T val, int parcelableFlags, @NonNull int... dimensions)",
     "returnType" : "void",
     "comment" : "\n     * Flatten a homogeneous multi-dimensional array with fixed-size.  This delegates to other\n     * APIs to write a one-dimensional array.  Use {@link #readFixedArray(Object)} or\n     * {@link #createFixedArray(Class, int[])} with the same dimensions to unmarshal.\n     *\n     * @param val The array to be written.\n     * @param parcelableFlags Contextual flags as per\n     *   {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *   Used only if val is an array of Parcelable objects.\n     * @param dimensions an array of int representing length of each dimension. The array should be\n     *   sized with the exact size of dimensions.\n     *\n     * @see #readFixedArray\n     * @see #createFixedArray createFixedArray(Class&lt;T&gt;, Parcelable.Creator&lt;S&gt;, int...)\n     * @see #writeBooleanArray\n     * @see #writeByteArray\n     * @see #writeCharArray\n     * @see #writeIntArray\n     * @see #writeLongArray\n     * @see #writeFloatArray\n     * @see #writeDoubleArray\n     * @see #writeBinderArray\n     * @see #writeInterfaceArray\n     * @see #writeTypedArray\n     * @throws BadParcelableException If the array's component type is not supported or if its\n     *   size doesn't match with the given dimensions.\n     ",
-    "links" : [ "#readFixedArray(Object)", "android.os.Parcelable#writeToParcel(Parcel", "#createFixedArray(Class" ]
+    "links" : [ "#readFixedArray(Object)", "#createFixedArray(Class", "#writeToParcel(Parcel" ]
   }, {
     "name" : "private void writeFixedArrayInternal(T val, int parcelableFlags, int index, int[] dimensions)",
     "returnType" : "void",
@@ -1369,7 +1369,7 @@
     "name" : "public final void writeValue(@Nullable Object v)",
     "returnType" : "void",
     "comment" : "\n     * Flatten a generic object in to a parcel.  The given Object value may\n     * currently be one of the following types:\n     *\n     * <ul>\n     * <li> null\n     * <li> String\n     * <li> Byte\n     * <li> Short\n     * <li> Integer\n     * <li> Long\n     * <li> Float\n     * <li> Double\n     * <li> Boolean\n     * <li> String[]\n     * <li> boolean[]\n     * <li> byte[]\n     * <li> int[]\n     * <li> long[]\n     * <li> Object[] (supporting objects of the same type defined here).\n     * <li> {@link Bundle}\n     * <li> Map (as supported by {@link #writeMap}).\n     * <li> Any object that implements the {@link Parcelable} protocol.\n     * <li> Parcelable[]\n     * <li> CharSequence (as supported by {@link TextUtils#writeToParcel}).\n     * <li> List (as supported by {@link #writeList}).\n     * <li> {@link SparseArray} (as supported by {@link #writeSparseArray(SparseArray)}).\n     * <li> {@link IBinder}\n     * <li> Any object that implements Serializable (but see\n     *      {@link #writeSerializable} for caveats).  Note that all of the\n     *      previous types have relatively efficient implementations for\n     *      writing to a Parcel; having to rely on the generic serialization\n     *      approach is much less efficient and should be avoided whenever\n     *      possible.\n     * </ul>\n     *\n     * <p class=\"caution\">{@link Parcelable} objects are written with\n     * {@link Parcelable#writeToParcel} using contextual flags of 0.  When\n     * serializing objects containing {@link ParcelFileDescriptor}s,\n     * this may result in file descriptor leaks when they are returned from\n     * Binder calls (where {@link Parcelable#PARCELABLE_WRITE_RETURN_VALUE}\n     * should be used).</p>\n     ",
-    "links" : [ "android.util.SparseArray", "#writeSerializable", "android.os.Parcelable#PARCELABLE_WRITE_RETURN_VALUE", "android.os.Bundle", "android.os.Parcelable", "android.os.ParcelFileDescriptor", "android.text.TextUtils#writeToParcel", "#writeList", "#writeSparseArray(SparseArray)", "#writeMap", "android.os.Parcelable#writeToParcel", "android.os.IBinder" ]
+    "links" : [ "#writeToParcel", "android.util.SparseArray", "#writeSerializable", "IBinder", "android.text.TextUtils#writeToParcel", "Bundle", "ParcelFileDescriptor", "#writeList", "#PARCELABLE_WRITE_RETURN_VALUE", "Parcelable", "#writeSparseArray(SparseArray)", "#writeMap" ]
   }, {
     "name" : "public static int getValueType(@Nullable Object v)",
     "returnType" : "int",
@@ -1384,7 +1384,7 @@
     "name" : "public final void writeParcelable(@Nullable Parcelable p, int parcelableFlags)",
     "returnType" : "void",
     "comment" : "\n     * Flatten the name of the class of the Parcelable and its contents\n     * into the parcel.\n     *\n     * @param p The Parcelable object to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     ",
-    "links" : [ "android.os.Parcelable#writeToParcel(Parcel" ]
+    "links" : [ "#writeToParcel(Parcel" ]
   }, {
     "name" : "public final void writeParcelableCreator(@NonNull Parcelable p)",
     "returnType" : "void",
@@ -1399,7 +1399,7 @@
     "name" : "public boolean allowSquashing()",
     "returnType" : "boolean",
     "comment" : "\n     * Allow \"squashing\" writes in {@link #maybeWriteSquashed}. This allows subsequent calls to\n     * {@link #maybeWriteSquashed(Parcelable)} to \"squash\" the same instances into one in a Parcel.\n     *\n     * Typically, this method is called at the beginning of {@link Parcelable#writeToParcel}. The\n     * caller must retain the return value from this method and call {@link #restoreAllowSquashing}\n     * with it.\n     *\n     * See {@link #maybeWriteSquashed(Parcelable)} for the details.\n     *\n     * @see #restoreAllowSquashing(boolean)\n     * @see #maybeWriteSquashed(Parcelable)\n     * @see #readSquashed(SquashReadHelper)\n     *\n     * @hide\n     ",
-    "links" : [ "#maybeWriteSquashed(Parcelable)", "#restoreAllowSquashing", "#maybeWriteSquashed", "android.os.Parcelable#writeToParcel" ]
+    "links" : [ "#writeToParcel", "#maybeWriteSquashed(Parcelable)", "#restoreAllowSquashing", "#maybeWriteSquashed" ]
   }, {
     "name" : "public void restoreAllowSquashing(boolean previous)",
     "returnType" : "void",
@@ -1419,12 +1419,12 @@
     "name" : "public boolean maybeWriteSquashed(@NonNull Parcelable p)",
     "returnType" : "boolean",
     "comment" : "\n     * Write a parcelable with \"squash\" -- that is, when the same instance is written to the\n     * same Parcelable multiple times, instead of writing the entire instance multiple times,\n     * only write it once, and in subsequent writes we'll only write the offset to the original\n     * object.\n     *\n     * This approach does not work of the resulting Parcel is copied with {@link #appendFrom} with\n     * a non-zero offset, so we do not enable this behavior by default. Instead, we only enable\n     * it between {@link #allowSquashing} and {@link #restoreAllowSquashing}, in order to make sure\n     * we only do so within each \"top level\" Parcelable.\n     *\n     * Usage: Use this method in {@link Parcelable#writeToParcel}.\n     * If this method returns TRUE, it's a subsequent call, and the offset is already written,\n     * so the caller doesn't have to do anything. If this method returns FALSE, it's the first\n     * time for the instance to be written to this parcel. The caller has to proceed with its\n     * {@link Parcelable#writeToParcel}.\n     *\n     * (See {@code ApplicationInfo} for the example.)\n     *\n     * @param p the target Parcelable to write.\n     *\n     * @see #allowSquashing()\n     * @see #restoreAllowSquashing(boolean)\n     * @see #readSquashed(SquashReadHelper)\n     *\n     * @hide\n     ",
-    "links" : [ "#allowSquashing", "#restoreAllowSquashing", "android.os.Parcelable#writeToParcel", "#appendFrom" ]
+    "links" : [ "#writeToParcel", "#allowSquashing", "#restoreAllowSquashing", "#appendFrom" ]
   }, {
     "name" : "public T readSquashed(SquashReadHelper<T> reader)",
     "returnType" : "T",
     "comment" : "\n     * Read a {@link Parcelable} that's written with {@link #maybeWriteSquashed}.\n     *\n     * @param reader a callback function that instantiates an instance from a parcel.\n     * Typicallly, a lambda to the instructor that takes a {@link Parcel} is passed.\n     *\n     * @see #maybeWriteSquashed(Parcelable)\n     *\n     * @hide\n     ",
-    "links" : [ "android.os.Parcelable", "#maybeWriteSquashed", "android.os.Parcel" ]
+    "links" : [ "Parcel", "Parcelable", "#maybeWriteSquashed" ]
   }, {
     "name" : "public final void writeSerializable(@Nullable Serializable s)",
     "returnType" : "void",
@@ -1439,7 +1439,7 @@
     "name" : "public final void writeException(@NonNull Exception e)",
     "returnType" : "void",
     "comment" : "\n     * Special function for writing an exception result at the header of\n     * a parcel, to be used when returning an exception from a transaction.\n     * Note that this currently only supports a few exception types; any other\n     * exception will be re-thrown by this function as a RuntimeException\n     * (to be caught by the system's last-resort exception handling when\n     * dispatching a transaction).\n     *\n     * <p>The supported exception types are:\n     * <ul>\n     * <li>{@link BadParcelableException}\n     * <li>{@link IllegalArgumentException}\n     * <li>{@link IllegalStateException}\n     * <li>{@link NullPointerException}\n     * <li>{@link SecurityException}\n     * <li>{@link UnsupportedOperationException}\n     * <li>{@link NetworkOnMainThreadException}\n     * </ul>\n     *\n     * @param e The Exception to be written.\n     *\n     * @see #writeNoException\n     * @see #readException\n     ",
-    "links" : [ "IllegalStateException", "NullPointerException", "android.os.BadParcelableException", "SecurityException", "android.os.NetworkOnMainThreadException", "IllegalArgumentException", "UnsupportedOperationException" ]
+    "links" : [ "IllegalStateException", "NullPointerException", "SecurityException", "BadParcelableException", "IllegalArgumentException", "UnsupportedOperationException", "NetworkOnMainThreadException" ]
   }, {
     "name" : "public final void writeException$ravenwood(@NonNull Exception e)",
     "returnType" : "void",
@@ -1599,7 +1599,7 @@
     "name" : "public void readList(@NonNull List<? super T> outVal, @Nullable ClassLoader loader, @NonNull Class<T> clazz)",
     "returnType" : "void",
     "comment" : "\n     * Same as {@link #readList(List, ClassLoader)} but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readList(List, ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readList(List", "android.os.Parcelable" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readList(List", "Parcelable" ]
   }, {
     "name" : "public HashMap readHashMap(@Nullable ClassLoader loader)",
     "returnType" : "HashMap",
@@ -1679,7 +1679,7 @@
     "name" : "public ArrayList<T> readArrayList(@Nullable ClassLoader loader, @NonNull Class<? extends T> clazz)",
     "returnType" : "ArrayList<T>",
     "comment" : "\n     * Same as {@link #readArrayList(ClassLoader)} but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readArrayList(ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "android.os.Parcelable", "#readArrayList(ClassLoader)" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readArrayList(ClassLoader)", "Parcelable" ]
   }, {
     "name" : "public Object[] readArray(@Nullable ClassLoader loader)",
     "returnType" : "Object[]",
@@ -1689,7 +1689,7 @@
     "name" : "public T[] readArray(@Nullable ClassLoader loader, @NonNull Class<T> clazz)",
     "returnType" : "T[]",
     "comment" : "\n     * Same as {@link #readArray(ClassLoader)} but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readArray(ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "android.os.Parcelable", "#readArray(ClassLoader)" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readArray(ClassLoader)", "Parcelable" ]
   }, {
     "name" : "public SparseArray<T> readSparseArray(@Nullable ClassLoader loader)",
     "returnType" : "SparseArray<T>",
@@ -1699,7 +1699,7 @@
     "name" : "public SparseArray<T> readSparseArray(@Nullable ClassLoader loader, @NonNull Class<? extends T> clazz)",
     "returnType" : "SparseArray<T>",
     "comment" : "\n     * Same as {@link #readSparseArray(ClassLoader)} but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readSparseArray(ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "android.os.Parcelable", "#readSparseArray(ClassLoader)" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "Parcelable", "#readSparseArray(ClassLoader)" ]
   }, {
     "name" : "public final SparseBooleanArray readSparseBooleanArray()",
     "returnType" : "SparseBooleanArray",
@@ -1769,7 +1769,7 @@
     "name" : "public List<T> readParcelableList(@NonNull List<T> list, @Nullable ClassLoader cl, @NonNull Class<? extends T> clazz)",
     "returnType" : "List<T>",
     "comment" : "\n     * Same as {@link #readParcelableList(List, ClassLoader)} but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> if the list contains items implementing the {@link Parcelable} interface,\n     * the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readParcelableList(List, ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readParcelableList(List", "android.os.Parcelable" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readParcelableList(List", "Parcelable" ]
   }, {
     "name" : "private List<T> readParcelableListInternal(@NonNull List<T> list, @Nullable ClassLoader cl, @Nullable Class<? extends T> clazz)",
     "returnType" : "List<T>",
@@ -1834,7 +1834,7 @@
     "name" : "public final void writeParcelableArray(@Nullable T[] value, int parcelableFlags)",
     "returnType" : "void",
     "comment" : "\n     * Write a heterogeneous array of Parcelable objects into the Parcel.\n     * Each object in the array is written along with its class name, so\n     * that the correct class can later be instantiated.  As a result, this\n     * has significantly more overhead than {@link #writeTypedArray}, but will\n     * correctly handle an array containing more than one type of object.\n     *\n     * @param value The array of objects to be written.\n     * @param parcelableFlags Contextual flags as per\n     * {@link Parcelable#writeToParcel(Parcel, int) Parcelable.writeToParcel()}.\n     *\n     * @see #writeTypedArray\n     ",
-    "links" : [ "android.os.Parcelable#writeToParcel(Parcel", "#writeTypedArray" ]
+    "links" : [ "#writeTypedArray", "#writeToParcel(Parcel" ]
   }, {
     "name" : "public final Object readValue(@Nullable ClassLoader loader)",
     "returnType" : "Object",
@@ -1884,7 +1884,7 @@
     "name" : "public T readParcelable(@Nullable ClassLoader loader, @NonNull Class<T> clazz)",
     "returnType" : "T",
     "comment" : "\n     * Same as {@link #readParcelable(ClassLoader)} but accepts {@code clazz} parameter as the type\n     * required for each item.\n     *\n     * <p><b>Warning: </b> the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readParcelable(ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "android.os.Parcelable", "#readParcelable(ClassLoader)" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "Parcelable", "#readParcelable(ClassLoader)" ]
   }, {
     "name" : "private T readParcelableInternal(@Nullable ClassLoader loader, @Nullable Class<T> clazz)",
     "returnType" : "T",
@@ -1904,7 +1904,7 @@
     "name" : "public Parcelable.Creator<T> readParcelableCreator(@Nullable ClassLoader loader, @NonNull Class<T> clazz)",
     "returnType" : "Parcelable.Creator<T>",
     "comment" : "\n     * Same as {@link #readParcelableCreator(ClassLoader)} but accepts {@code clazz} parameter\n     * as the required type.\n     *\n     * <p><b>Warning: </b> the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readParcelableCreator(ClassLoader) instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there there was an error\n     * trying to read the {@link Parcelable.Creator}.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readParcelableCreator(ClassLoader)", "android.os.Parcelable", "Parcelable.Creator" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "#readParcelableCreator(ClassLoader)", "Parcelable", "Parcelable.Creator" ]
   }, {
     "name" : "private Parcelable.Creator<T> readParcelableCreatorInternal(@Nullable ClassLoader loader, @Nullable Class<T> clazz)",
     "returnType" : "Parcelable.Creator<T>",
@@ -1919,7 +1919,7 @@
     "name" : "public T[] readParcelableArray(@Nullable ClassLoader loader, @NonNull Class<T> clazz)",
     "returnType" : "T[]",
     "comment" : "\n     * Same as {@link #readParcelableArray(ClassLoader)}  but accepts {@code clazz} parameter as\n     * the type required for each item.\n     *\n     * <p><b>Warning: </b> the class that implements {@link Parcelable} has to be the immediately\n     * enclosing class of the runtime type of its CREATOR field (that is,\n     * {@link Class#getEnclosingClass()} has to return the parcelable implementing class),\n     * otherwise this method might throw an exception. If the Parcelable class does not enclose the\n     * CREATOR, use the deprecated {@link #readParcelableArray(ClassLoader)} instead.\n     *\n     * @throws BadParcelableException Throws BadParcelableException if the item to be deserialized\n     * is not an instance of that class or any of its children classes or there was an error\n     * trying to instantiate an element.\n     ",
-    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "android.os.Parcelable", "#readParcelableArray(ClassLoader)" ]
+    "links" : [ "android.ravenwood.annotation.RavenwoodKeepWholeClass#getEnclosingClass()", "Parcelable", "#readParcelableArray(ClassLoader)" ]
   }, {
     "name" : "private T[] readParcelableArrayInternal(@Nullable ClassLoader loader, @Nullable Class<T> clazz)",
     "returnType" : "T[]",
@@ -1999,7 +1999,7 @@
     "name" : " int readArrayMap(ArrayMap<? super String, Object> map, int size, boolean sorted, boolean lazy, @Nullable ClassLoader loader)",
     "returnType" : "int",
     "comment" : "\n     * Reads a map into {@code map}.\n     *\n     * @param sorted Whether the keys are sorted by their hashes, if so we use an optimized path.\n     * @param lazy   Whether to populate the map with lazy {@link Function} objects for\n     *               length-prefixed values. See {@link Parcel#readLazyValue(ClassLoader)} for more\n     *               details.\n     * @return a count of the lazy values in the map\n     * @hide\n     ",
-    "links" : [ "java.util.function.BiFunction", "android.os.Parcel#readLazyValue(ClassLoader)" ]
+    "links" : [ "java.util.function.BiFunction", "#readLazyValue(ClassLoader)" ]
   }, {
     "name" : "public void readArrayMap(@NonNull ArrayMap<? super String, Object> outVal, @Nullable ClassLoader loader)",
     "returnType" : "void",

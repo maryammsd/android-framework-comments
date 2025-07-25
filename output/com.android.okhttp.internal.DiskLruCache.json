@@ -1,0 +1,296 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/okhttp/internal/DiskLruCache.java",
+  "packageName" : "com.android.okhttp.internal",
+  "className" : "DiskLruCache",
+  "comment" : "\n * A cache that uses a bounded amount of space on a filesystem. Each cache\n * entry has a string key and a fixed number of values. Each key must match\n * the regex <strong>[a-z0-9_-]{1,64}</strong>. Values are byte sequences,\n * accessible as streams or files. Each value must be between {@code 0} and\n * {@code Integer.MAX_VALUE} bytes in length.\n *\n * <p>The cache stores its data in a directory on the filesystem. This\n * directory must be exclusive to the cache; the cache may delete or overwrite\n * files from its directory. It is an error for multiple processes to use the\n * same cache directory at the same time.\n *\n * <p>This cache limits the number of bytes that it will store on the\n * filesystem. When the number of stored bytes exceeds the limit, the cache will\n * remove entries in the background until the limit is satisfied. The limit is\n * not strict: the cache may temporarily exceed it while waiting for files to be\n * deleted. The limit does not include filesystem overhead or the cache\n * journal so space-sensitive applications should set a conservative limit.\n *\n * <p>Clients call {@link #edit} to create or update the values of an entry. An\n * entry may have only one editor at one time; if a value is not available to be\n * edited then {@link #edit} will return null.\n * <ul>\n *     <li>When an entry is being <strong>created</strong> it is necessary to\n *         supply a full set of values; the empty value should be used as a\n *         placeholder if necessary.\n *     <li>When an entry is being <strong>edited</strong>, it is not necessary\n *         to supply data for every value; values default to their previous\n *         value.\n * </ul>\n * Every {@link #edit} call must be matched by a call to {@link Editor#commit}\n * or {@link Editor#abort}. Committing is atomic: a read observes the full set\n * of values as they were before or after the commit, but never a mix of values.\n *\n * <p>Clients call {@link #get} to read a snapshot of an entry. The read will\n * observe the value at the time that {@link #get} was called. Updates and\n * removals after the call do not impact ongoing reads.\n *\n * <p>This class is tolerant of some I/O errors. If files are missing from the\n * filesystem, the corresponding entries will be dropped from the cache. If\n * an error occurs while writing a cache value, the edit will fail silently.\n * Callers should handle other problems by catching {@code IOException} and\n * responding appropriately.\n * @hide This class is not part of the Android public SDK API\n ",
+  "links" : [ "#edit", "#get", "#commit", "#abort" ],
+  "variables" : [ {
+    "name" : "JOURNAL_FILE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "JOURNAL_FILE_TEMP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "JOURNAL_FILE_BACKUP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MAGIC",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VERSION_1",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ANY_SEQUENCE_NUMBER",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "LEGAL_KEY_PATTERN",
+    "type" : "Pattern",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CLEAN",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DIRTY",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "REMOVE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "READ",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "fileSystem",
+    "type" : "FileSystem",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "directory",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "journalFile",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "journalFileTmp",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "journalFileBackup",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "appVersion",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "maxSize",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "valueCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "size",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "journalWriter",
+    "type" : "BufferedSink",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "lruEntries",
+    "type" : "LinkedHashMap<String, Entry>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "redundantOpCount",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hasJournalErrors",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "initialized",
+    "type" : "boolean",
+    "comment" : " Must be read and written when synchronized on 'this'.",
+    "links" : [ ]
+  }, {
+    "name" : "closed",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "nextSequenceNumber",
+    "type" : "long",
+    "comment" : "\n   * To differentiate between old and current snapshots, each entry is given\n   * a sequence number each time an edit is committed. A snapshot is stale if\n   * its sequence number is not equal to its entry's sequence number.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "executor",
+    "type" : "Executor",
+    "comment" : " Used to run 'cleanupRunnable' for journal rebuilds. ",
+    "links" : [ ]
+  }, {
+    "name" : "cleanupRunnable",
+    "type" : "Runnable",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "NULL_SINK",
+    "type" : "Sink",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public synchronized void initialize() throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static DiskLruCache create(FileSystem fileSystem, File directory, int appVersion, int valueCount, long maxSize)",
+    "returnType" : "DiskLruCache",
+    "comment" : "\n   * Create a cache which will reside in {@code directory}. This cache is lazily initialized on\n   * first access and will be created if it does not exist.\n   *\n   * @param directory a writable directory\n   * @param valueCount the number of values per cache entry. Must be positive.\n   * @param maxSize the maximum number of bytes this cache should use to store\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void readJournal() throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private BufferedSink newJournalWriter() throws FileNotFoundException",
+    "returnType" : "BufferedSink",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void readJournalLine(String line) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void processJournal() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Computes the initial size and collects garbage as a part of opening the\n   * cache. Dirty entries are assumed to be inconsistent and will be deleted.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized void rebuildJournal() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Creates a new journal that omits redundant information. This replaces the\n   * current journal if it exists.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized Snapshot get(String key) throws IOException",
+    "returnType" : "Snapshot",
+    "comment" : "\n   * Returns a snapshot of the entry named {@code key}, or null if it doesn't\n   * exist is not currently readable. If a value is returned, it is moved to\n   * the head of the LRU queue.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public Editor edit(String key) throws IOException",
+    "returnType" : "Editor",
+    "comment" : "\n   * Returns an editor for the entry named {@code key}, or null if another\n   * edit is in progress.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized Editor edit(String key, long expectedSequenceNumber) throws IOException",
+    "returnType" : "Editor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public File getDirectory()",
+    "returnType" : "File",
+    "comment" : " Returns the directory where this cache stores its data. ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized long getMaxSize()",
+    "returnType" : "long",
+    "comment" : "\n   * Returns the maximum number of bytes that this cache should use to store\n   * its data.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void setMaxSize(long maxSize)",
+    "returnType" : "void",
+    "comment" : "\n   * Changes the maximum number of bytes the cache can store and queues a job\n   * to trim the existing store, if necessary.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized long size() throws IOException",
+    "returnType" : "long",
+    "comment" : "\n   * Returns the number of bytes currently being used to store the values in\n   * this cache. This may be greater than the max size if a background\n   * deletion is pending.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized void completeEdit(Editor editor, boolean success) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean journalRebuildRequired()",
+    "returnType" : "boolean",
+    "comment" : "\n   * We only rebuild the journal when it will halve the size of the journal\n   * and eliminate at least 2000 ops.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean remove(String key) throws IOException",
+    "returnType" : "boolean",
+    "comment" : "\n   * Drops the entry for {@code key} if it exists and can be removed. If the\n   * entry for {@code key} is currently being edited, that edit will complete\n   * normally but its value will not be stored.\n   *\n   * @return true if an entry was removed.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean removeEntry(Entry entry) throws IOException",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isClosed()",
+    "returnType" : "boolean",
+    "comment" : " Returns true if this cache has been closed. ",
+    "links" : [ ]
+  }, {
+    "name" : "private synchronized void checkNotClosed()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void flush() throws IOException",
+    "returnType" : "void",
+    "comment" : " Force buffered operations to the filesystem. ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void close() throws IOException",
+    "returnType" : "void",
+    "comment" : " Closes this cache. Stored values will remain on the filesystem. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void trimToSize() throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void delete() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Closes the cache and deletes all of its stored values. This will delete\n   * all files in the cache directory including files that weren't created by\n   * the cache.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void evictAll() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Deletes all stored values from the cache. In-flight edits will complete\n   * normally but their values will not be stored.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private void validateKey(String key)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized Iterator<Snapshot> snapshots() throws IOException",
+    "returnType" : "Iterator<Snapshot>",
+    "comment" : "\n   * Returns an iterator over the cache's current entries. This iterator doesn't throw {@code\n   * ConcurrentModificationException}, but if new entries are added while iterating, those new\n   * entries will not be returned by the iterator. If existing entries are removed during iteration,\n   * they will be absent (unless they were already returned).\n   *\n   * <p>If there are I/O problems during iteration, this iterator fails silently. For example, if\n   * the hosting filesystem becomes unreachable, the iterator will omit elements rather than\n   * throwing exceptions.\n   *\n   * <p><strong>The caller must {@link Snapshot#close close}</strong> each snapshot returned by\n   * {@link Iterator#next}. Failing to do so leaks open files!\n   *\n   * <p>The returned iterator supports {@link Iterator#remove}.\n   ",
+    "links" : [ "java.util.Iterator#next", "java.util.Iterator#remove", "#close" ]
+  } ],
+  "methodNames" : [ "public synchronized void initialize() throws IOException", "public static DiskLruCache create(FileSystem fileSystem, File directory, int appVersion, int valueCount, long maxSize)", "private void readJournal() throws IOException", "private BufferedSink newJournalWriter() throws FileNotFoundException", "private void readJournalLine(String line) throws IOException", "private void processJournal() throws IOException", "private synchronized void rebuildJournal() throws IOException", "public synchronized Snapshot get(String key) throws IOException", "public Editor edit(String key) throws IOException", "private synchronized Editor edit(String key, long expectedSequenceNumber) throws IOException", "public File getDirectory()", "public synchronized long getMaxSize()", "public synchronized void setMaxSize(long maxSize)", "public synchronized long size() throws IOException", "private synchronized void completeEdit(Editor editor, boolean success) throws IOException", "private boolean journalRebuildRequired()", "public synchronized boolean remove(String key) throws IOException", "private boolean removeEntry(Entry entry) throws IOException", "public synchronized boolean isClosed()", "private synchronized void checkNotClosed()", "public synchronized void flush() throws IOException", "public synchronized void close() throws IOException", "private void trimToSize() throws IOException", "public void delete() throws IOException", "public synchronized void evictAll() throws IOException", "private void validateKey(String key)", "public synchronized Iterator<Snapshot> snapshots() throws IOException" ],
+  "variableNames" : [ "JOURNAL_FILE", "JOURNAL_FILE_TEMP", "JOURNAL_FILE_BACKUP", "MAGIC", "VERSION_1", "ANY_SEQUENCE_NUMBER", "LEGAL_KEY_PATTERN", "CLEAN", "DIRTY", "REMOVE", "READ", "fileSystem", "directory", "journalFile", "journalFileTmp", "journalFileBackup", "appVersion", "maxSize", "valueCount", "size", "journalWriter", "lruEntries", "redundantOpCount", "hasJournalErrors", "initialized", "closed", "nextSequenceNumber", "executor", "cleanupRunnable", "NULL_SINK" ]
+}

@@ -1,0 +1,161 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/os/KernelCpuProcStringReader.java",
+  "packageName" : "com.android.internal.os",
+  "className" : "KernelCpuProcStringReader",
+  "comment" : "\n * Reads human-readable cpu time proc files.\n *\n * It is implemented as singletons for built-in kernel proc files. Get___Instance() method will\n * return corresponding reader instance. In order to prevent frequent GC, it reuses the same char[]\n * to store data read from proc files.\n *\n * A KernelCpuProcStringReader instance keeps an error counter. When the number of read errors\n * within that instance accumulates to 5, this instance will reject all further read requests.\n *\n * Data fetched within last 500ms is considered fresh, since the reading lifecycle can take up to\n * 100ms. KernelCpuProcStringReader always tries to use cache if it is fresh and valid, but it can\n * be disabled through a parameter.\n *\n * A KernelCpuProcReader instance is thread-safe. It acquires a write lock when reading the proc\n * file, releases it right after, then acquires a read lock before returning a ProcFileIterator.\n * Caller is responsible for closing ProcFileIterator (also auto-closable) after reading, otherwise\n * deadlock will occur.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ERROR_THRESHOLD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FRESHNESS",
+    "type" : "long",
+    "comment" : " Data read within the last 500ms is considered fresh.",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_BUFFER_SIZE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROC_UID_FREQ_TIME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROC_UID_ACTIVE_TIME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROC_UID_CLUSTER_TIME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PROC_UID_USER_SYS_TIME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "FREQ_TIME_READER",
+    "type" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ACTIVE_TIME_READER",
+    "type" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CLUSTER_TIME_READER",
+    "type" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "USER_SYS_TIME_READER",
+    "type" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mErrors",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mFile",
+    "type" : "Path",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mClock",
+    "type" : "Clock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mBuf",
+    "type" : "char[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSize",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastReadTime",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLock",
+    "type" : "ReentrantReadWriteLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReadLock",
+    "type" : "ReentrantReadWriteLock.ReadLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWriteLock",
+    "type" : "ReentrantReadWriteLock.WriteLock",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static KernelCpuProcStringReader getFreqTimeReaderInstance()",
+    "returnType" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static KernelCpuProcStringReader getActiveTimeReaderInstance()",
+    "returnType" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static KernelCpuProcStringReader getClusterTimeReaderInstance()",
+    "returnType" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static KernelCpuProcStringReader getUserSysTimeReaderInstance()",
+    "returnType" : "KernelCpuProcStringReader",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public ProcFileIterator open()",
+    "returnType" : "ProcFileIterator",
+    "comment" : "\n     * @see #open(boolean) Default behavior is trying to use cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public ProcFileIterator open(boolean ignoreCache)",
+    "returnType" : "ProcFileIterator",
+    "comment" : "\n     * Opens the proc file and buffers all its content, which can be traversed through a\n     * ProcFileIterator.\n     *\n     * This method will tolerate at most 5 errors. After that, it will always return null. This is\n     * to save resources and to prevent log spam.\n     *\n     * This method is thread-safe. It first checks if there are other threads holding read/write\n     * lock. If there are, it assumes data is fresh and reuses the data.\n     *\n     * A read lock is automatically acquired when a valid ProcFileIterator is returned. Caller MUST\n     * call {@link ProcFileIterator#close()} when it is done to release the lock.\n     *\n     * @param ignoreCache If true, ignores the cache and refreshes the data anyway.\n     * @return A {@link ProcFileIterator} to iterate through the file content, or null if there is\n     * error.\n     ",
+    "links" : [ "ProcFileIterator", "#close()" ]
+  }, {
+    "name" : "private boolean dataValid()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int asLongs(CharBuffer buf, long[] array)",
+    "returnType" : "int",
+    "comment" : "\n     * Converts all numbers in the CharBuffer into longs, and puts into the given long[].\n     *\n     * Space and colon are treated as delimiters. All other chars are not allowed. All numbers\n     * are non-negative. To avoid GC, caller should try to use the same array for all calls.\n     *\n     * This method also resets the given buffer to the original position before return so that\n     * it can be read again.\n     *\n     * @param buf   The char buffer to be converted.\n     * @param array An array to store the parsed numbers.\n     * @return The number of elements written to the given array. -1 if buf is null, -2 if buf\n     * contains invalid char, -3 if any number overflows.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean isNumber(char c)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ " static KernelCpuProcStringReader getFreqTimeReaderInstance()", " static KernelCpuProcStringReader getActiveTimeReaderInstance()", " static KernelCpuProcStringReader getClusterTimeReaderInstance()", " static KernelCpuProcStringReader getUserSysTimeReaderInstance()", "public ProcFileIterator open()", "public ProcFileIterator open(boolean ignoreCache)", "private boolean dataValid()", "public static int asLongs(CharBuffer buf, long[] array)", "private static boolean isNumber(char c)" ],
+  "variableNames" : [ "TAG", "ERROR_THRESHOLD", "FRESHNESS", "MAX_BUFFER_SIZE", "PROC_UID_FREQ_TIME", "PROC_UID_ACTIVE_TIME", "PROC_UID_CLUSTER_TIME", "PROC_UID_USER_SYS_TIME", "FREQ_TIME_READER", "ACTIVE_TIME_READER", "CLUSTER_TIME_READER", "USER_SYS_TIME_READER", "mErrors", "mFile", "mClock", "mBuf", "mSize", "mLastReadTime", "mLock", "mReadLock", "mWriteLock" ]
+}

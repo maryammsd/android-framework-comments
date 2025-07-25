@@ -1,0 +1,141 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/support/v4/content/FileProvider.java",
+  "packageName" : "android.support.v4.content",
+  "className" : "FileProvider",
+  "comment" : "\n * FileProvider is a special subclass of {@link ContentProvider} that facilitates secure sharing\n * of files associated with an app by creating a <code>content://</code> {@link Uri} for a file\n * instead of a <code>file:///</code> {@link Uri}.\n * <p>\n * A content URI allows you to grant read and write access using\n * temporary access permissions. When you create an {@link Intent} containing\n * a content URI, in order to send the content URI\n * to a client app, you can also call {@link Intent#setFlags(int) Intent.setFlags()} to add\n * permissions. These permissions are available to the client app for as long as the stack for\n * a receiving {@link android.app.Activity} is active. For an {@link Intent} going to a\n * {@link android.app.Service}, the permissions are available as long as the\n * {@link android.app.Service} is running.\n * <p>\n * In comparison, to control access to a <code>file:///</code> {@link Uri} you have to modify the\n * file system permissions of the underlying file. The permissions you provide become available to\n * <em>any</em> app, and remain in effect until you change them. This level of access is\n * fundamentally insecure.\n * <p>\n * The increased level of file access security offered by a content URI\n * makes FileProvider a key part of Android's security infrastructure.\n * <p>\n * This overview of FileProvider includes the following topics:\n * </p>\n * <ol>\n *     <li><a href=\"#ProviderDefinition\">Defining a FileProvider</a></li>\n *     <li><a href=\"#SpecifyFiles\">Specifying Available Files</a></li>\n *     <li><a href=\"#GetUri\">Retrieving the Content URI for a File</li>\n *     <li><a href=\"#Permissions\">Granting Temporary Permissions to a URI</a></li>\n *     <li><a href=\"#ServeUri\">Serving a Content URI to Another App</a></li>\n * </ol>\n * <h3 id=\"ProviderDefinition\">Defining a FileProvider</h3>\n * <p>\n * Since the default functionality of FileProvider includes content URI generation for files, you\n * don't need to define a subclass in code. Instead, you can include a FileProvider in your app\n * by specifying it entirely in XML. To specify the FileProvider component itself, add a\n * <code><a href=\"{@docRoot}guide/topics/manifest/provider-element.html\">&lt;provider&gt;</a></code>\n * element to your app manifest. Set the <code>android:name</code> attribute to\n * <code>android.support.v4.content.FileProvider</code>. Set the <code>android:authorities</code>\n * attribute to a URI authority based on a domain you control; for example, if you control the\n * domain <code>mydomain.com</code> you should use the authority\n * <code>com.mydomain.fileprovider</code>. Set the <code>android:exported</code> attribute to\n * <code>false</code>; the FileProvider does not need to be public. Set the\n * <a href=\"{@docRoot}guide/topics/manifest/provider-element.html#gprmsn\"\n * >android:grantUriPermissions</a> attribute to <code>true</code>, to allow you\n * to grant temporary access to files. For example:\n * <pre class=\"prettyprint\">\n *&lt;manifest&gt;\n *    ...\n *    &lt;application&gt;\n *        ...\n *        &lt;provider\n *            android:name=\"android.support.v4.content.FileProvider\"\n *            android:authorities=\"com.mydomain.fileprovider\"\n *            android:exported=\"false\"\n *            android:grantUriPermissions=\"true\"&gt;\n *            ...\n *        &lt;/provider&gt;\n *        ...\n *    &lt;/application&gt;\n *&lt;/manifest&gt;</pre>\n * <p>\n * If you want to override any of the default behavior of FileProvider methods, extend\n * the FileProvider class and use the fully-qualified class name in the <code>android:name</code>\n * attribute of the <code>&lt;provider&gt;</code> element.\n * <h3 id=\"SpecifyFiles\">Specifying Available Files</h3>\n * A FileProvider can only generate a content URI for files in directories that you specify\n * beforehand. To specify a directory, specify the its storage area and path in XML, using child\n * elements of the <code>&lt;paths&gt;</code> element.\n * For example, the following <code>paths</code> element tells FileProvider that you intend to\n * request content URIs for the <code>images/</code> subdirectory of your private file area.\n * <pre class=\"prettyprint\">\n *&lt;paths xmlns:android=\"http://schemas.android.com/apk/res/android\"&gt;\n *    &lt;files-path name=\"my_images\" path=\"images/\"/&gt;\n *    ...\n *&lt;/paths&gt;\n *</pre>\n * <p>\n * The <code>&lt;paths&gt;</code> element must contain one or more of the following child elements:\n * </p>\n * <dl>\n *     <dt>\n * <pre class=\"prettyprint\">\n *&lt;files-path name=\"<i>name</i>\" path=\"<i>path</i>\" /&gt;\n *</pre>\n *     </dt>\n *     <dd>\n *     Represents files in the <code>files/</code> subdirectory of your app's internal storage\n *     area. This subdirectory is the same as the value returned by {@link Context#getFilesDir()\n *     Context.getFilesDir()}.\n *     <dt>\n * <pre class=\"prettyprint\">\n *&lt;external-path name=\"<i>name</i>\" path=\"<i>path</i>\" /&gt;\n *</pre>\n *     </dt>\n *     <dd>\n *     Represents files in the root of your app's external storage area. The path\n *     {@link Context#getExternalFilesDir(String) Context.getExternalFilesDir()} returns the\n *     <code>files/</code> subdirectory of this this root.\n *     </dd>\n *     <dt>\n * <pre>\n *&lt;cache-path name=\"<i>name</i>\" path=\"<i>path</i>\" /&gt;\n *</pre>\n *     <dt>\n *     <dd>\n *     Represents files in the cache subdirectory of your app's internal storage area. The root path\n *     of this subdirectory is the same as the value returned by {@link Context#getCacheDir()\n *     getCacheDir()}.\n *     </dd>\n * </dl>\n * <p>\n *     These child elements all use the same attributes:\n * </p>\n * <dl>\n *     <dt>\n *         <code>name=\"<i>name</i>\"</code>\n *     </dt>\n *     <dd>\n *         A URI path segment. To enforce security, this value hides the name of the subdirectory\n *         you're sharing. The subdirectory name for this value is contained in the\n *         <code>path</code> attribute.\n *     </dd>\n *     <dt>\n *         <code>path=\"<i>path</i>\"</code>\n *     </dt>\n *     <dd>\n *         The subdirectory you're sharing. While the <code>name</code> attribute is a URI path\n *         segment, the <code>path</code> value is an actual subdirectory name. Notice that the\n *         value refers to a <b>subdirectory</b>, not an individual file or files. You can't\n *         share a single file by its file name, nor can you specify a subset of files using\n *         wildcards.\n *     </dd>\n * </dl>\n * <p>\n * You must specify a child element of <code>&lt;paths&gt;</code> for each directory that contains\n * files for which you want content URIs. For example, these XML elements specify two directories:\n * <pre class=\"prettyprint\">\n *&lt;paths xmlns:android=\"http://schemas.android.com/apk/res/android\"&gt;\n *    &lt;files-path name=\"my_images\" path=\"images/\"/&gt;\n *    &lt;files-path name=\"my_docs\" path=\"docs/\"/&gt;\n *&lt;/paths&gt;\n *</pre>\n * <p>\n * Put the <code>&lt;paths&gt;</code> element and its children in an XML file in your project.\n * For example, you can add them to a new file called <code>res/xml/file_paths.xml</code>.\n * To link this file to the FileProvider, add a\n * <a href=\"{@docRoot}guide/topics/manifest/meta-data-element.html\">&lt;meta-data&gt;</a> element\n * as a child of the <code>&lt;provider&gt;</code> element that defines the FileProvider. Set the\n * <code>&lt;meta-data&gt;</code> element's \"android:name\" attribute to\n * <code>android.support.FILE_PROVIDER_PATHS</code>. Set the element's \"android:resource\" attribute\n * to <code>&#64;xml/file_paths</code> (notice that you don't specify the <code>.xml</code>\n * extension). For example:\n * <pre class=\"prettyprint\">\n *&lt;provider\n *    android:name=\"android.support.v4.content.FileProvider\"\n *    android:authorities=\"com.mydomain.fileprovider\"\n *    android:exported=\"false\"\n *    android:grantUriPermissions=\"true\"&gt;\n *    &lt;meta-data\n *        android:name=\"android.support.FILE_PROVIDER_PATHS\"\n *        android:resource=\"&#64;xml/file_paths\" /&gt;\n *&lt;/provider&gt;\n *</pre>\n * <h3 id=\"GetUri\">Generating the Content URI for a File</h3>\n * <p>\n * To share a file with another app using a content URI, your app has to generate the content URI.\n * To generate the content URI, create a new {@link File} for the file, then pass the {@link File}\n * to {@link #getUriForFile(Context, String, File) getUriForFile()}. You can send the content URI\n * returned by {@link #getUriForFile(Context, String, File) getUriForFile()} to another app in an\n * {@link android.content.Intent}. The client app that receives the content URI can open the file\n * and access its contents by calling\n * {@link android.content.ContentResolver#openFileDescriptor(Uri, String)\n * ContentResolver.openFileDescriptor} to get a {@link ParcelFileDescriptor}.\n * <p>\n * For example, suppose your app is offering files to other apps with a FileProvider that has the\n * authority <code>com.mydomain.fileprovider</code>. To get a content URI for the file\n * <code>default_image.jpg</code> in the <code>images/</code> subdirectory of your internal storage\n * add the following code:\n * <pre class=\"prettyprint\">\n *File imagePath = new File(Context.getFilesDir(), \"images\");\n *File newFile = new File(imagePath, \"default_image.jpg\");\n *Uri contentUri = getUriForFile(getContext(), \"com.mydomain.fileprovider\", newFile);\n *</pre>\n * As a result of the previous snippet,\n * {@link #getUriForFile(Context, String, File) getUriForFile()} returns the content URI\n * <code>content://com.mydomain.fileprovider/my_images/default_image.jpg</code>.\n * <h3 id=\"Permissions\">Granting Temporary Permissions to a URI</h3>\n * To grant an access permission to a content URI returned from\n * {@link #getUriForFile(Context, String, File) getUriForFile()}, do one of the following:\n * <ul>\n * <li>\n *     Call the method\n *     {@link Context#grantUriPermission(String, Uri, int)\n *     Context.grantUriPermission(package, Uri, mode_flags)} for the <code>content://</code>\n *     {@link Uri}, using the desired mode flags. This grants temporary access permission for the\n *     content URI to the specified package, according to the value of the\n *     the <code>mode_flags</code> parameter, which you can set to\n *     {@link Intent#FLAG_GRANT_READ_URI_PERMISSION}, {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION}\n *     or both. The permission remains in effect until you revoke it by calling\n *     {@link Context#revokeUriPermission(Uri, int) revokeUriPermission()} or until the device\n *     reboots.\n * </li>\n * <li>\n *     Put the content URI in an {@link Intent} by calling {@link Intent#setData(Uri) setData()}.\n * </li>\n * <li>\n *     Next, call the method {@link Intent#setFlags(int) Intent.setFlags()} with either\n *     {@link Intent#FLAG_GRANT_READ_URI_PERMISSION} or\n *     {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION} or both.\n * </li>\n * <li>\n *     Finally, send the {@link Intent} to\n *     another app. Most often, you do this by calling\n *     {@link android.app.Activity#setResult(int, android.content.Intent) setResult()}.\n *     <p>\n *     Permissions granted in an {@link Intent} remain in effect while the stack of the receiving\n *     {@link android.app.Activity} is active. When the stack finishes, the permissions are\n *     automatically removed. Permissions granted to one {@link android.app.Activity} in a client\n *     app are automatically extended to other components of that app.\n *     </p>\n * </li>\n * </ul>\n * <h3 id=\"ServeUri\">Serving a Content URI to Another App</h3>\n * <p>\n * There are a variety of ways to serve the content URI for a file to a client app. One common way\n * is for the client app to start your app by calling\n * {@link android.app.Activity#startActivityForResult(Intent, int, Bundle) startActivityResult()},\n * which sends an {@link Intent} to your app to start an {@link android.app.Activity} in your app.\n * In response, your app can immediately return a content URI to the client app or present a user\n * interface that allows the user to pick a file. In the latter case, once the user picks the file\n * your app can return its content URI. In both cases, your app returns the content URI in an\n * {@link Intent} sent via {@link android.app.Activity#setResult(int, Intent) setResult()}.\n * </p>\n * <p>\n *  You can also put the content URI in a {@link android.content.ClipData} object and then add the\n *  object to an {@link Intent} you send to a client app. To do this, call\n *  {@link Intent#setClipData(ClipData) Intent.setClipData()}. When you use this approach, you can\n *  add multiple {@link android.content.ClipData} objects to the {@link Intent}, each with its own\n *  content URI. When you call {@link Intent#setFlags(int) Intent.setFlags()} on the {@link Intent}\n *  to set temporary access permissions, the same permissions are applied to all of the content\n *  URIs.\n * </p>\n * <p class=\"note\">\n *  <strong>Note:</strong> The {@link Intent#setClipData(ClipData) Intent.setClipData()} method is\n *  only available in platform version 16 (Android 4.1) and later. If you want to maintain\n *  compatibility with previous versions, you should send one content URI at a time in the\n *  {@link Intent}. Set the action to {@link Intent#ACTION_SEND} and put the URI in data by calling\n *  {@link Intent#setData setData()}.\n * </p>\n * <h3 id=\"\">More Information</h3>\n * <p>\n *    To learn more about FileProvider, see the Android training class\n *    <a href=\"{@docRoot}training/secure-file-sharing/index.html\">Sharing Files Securely with URIs</a>.\n * </p>\n ",
+  "links" : [ "android.os.ParcelFileDescriptor", "android.content.Intent#ACTION_SEND", "android.content.Intent#setFlags(int)", "android.app.Service", "android.net.Uri", "android.content.Intent", "android.content.Context#getExternalFilesDir(String)", "android.content.Intent#setData", "android.content.Intent#FLAG_GRANT_WRITE_URI_PERMISSION", "android.content.ContentProvider", "android.content.Intent#setClipData(ClipData)", "android.content.Context#getFilesDir()", "java.io.File", "android.content.Intent#setData(Uri)", "android.content.ClipData", "android.content.Context#revokeUriPermission(Uri", "#getUriForFile(Context", "android.app.Activity#startActivityForResult(Intent", "android.content.Context#getCacheDir()", "android.content.ContentResolver#openFileDescriptor(Uri", "android.content.Intent#FLAG_GRANT_READ_URI_PERMISSION", "android.app.Activity", "android.app.Activity#setResult(int", "android.content.Context#grantUriPermission(String" ],
+  "variables" : [ {
+    "name" : "COLUMNS",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "META_DATA_FILE_PROVIDER_PATHS",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_ROOT_PATH",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_FILES_PATH",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_CACHE_PATH",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TAG_EXTERNAL",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ATTR_NAME",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ATTR_PATH",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DEVICE_ROOT",
+    "type" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sCache",
+    "type" : "HashMap<String, PathStrategy>",
+    "comment" : " @GuardedBy(\"sCache\")",
+    "links" : [ ]
+  }, {
+    "name" : "mStrategy",
+    "type" : "PathStrategy",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public boolean onCreate()",
+    "returnType" : "boolean",
+    "comment" : "\n     * The default FileProvider implementation does not need to be initialized. If you want to\n     * override this method, you must provide your own subclass of FileProvider.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void attachInfo(Context context, ProviderInfo info)",
+    "returnType" : "void",
+    "comment" : "\n     * After the FileProvider is instantiated, this method is called to provide the system with\n     * information about the provider.\n     *\n     * @param context A {@link Context} for the current component.\n     * @param info A {@link ProviderInfo} for the new provider.\n     ",
+    "links" : [ "android.content.Context", "android.content.pm.ProviderInfo" ]
+  }, {
+    "name" : "public static Uri getUriForFile(Context context, String authority, File file)",
+    "returnType" : "Uri",
+    "comment" : "\n     * Return a content URI for a given {@link File}. Specific temporary\n     * permissions for the content URI can be set with\n     * {@link Context#grantUriPermission(String, Uri, int)}, or added\n     * to an {@link Intent} by calling {@link Intent#setData(Uri) setData()} and then\n     * {@link Intent#setFlags(int) setFlags()}; in both cases, the applicable flags are\n     * {@link Intent#FLAG_GRANT_READ_URI_PERMISSION} and\n     * {@link Intent#FLAG_GRANT_WRITE_URI_PERMISSION}. A FileProvider can only return a\n     * <code>content</code> {@link Uri} for file paths defined in their <code>&lt;paths&gt;</code>\n     * meta-data element. See the Class Overview for more information.\n     *\n     * @param context A {@link Context} for the current component.\n     * @param authority The authority of a {@link FileProvider} defined in a\n     *            {@code <provider>} element in your app's manifest.\n     * @param file A {@link File} pointing to the filename for which you want a\n     * <code>content</code> {@link Uri}.\n     * @return A content URI for the file.\n     * @throws IllegalArgumentException When the given {@link File} is outside\n     * the paths supported by the provider.\n     ",
+    "links" : [ "android.content.Context", "android.content.Intent#setFlags(int)", "android.net.Uri", "android.content.Intent", "android.content.Intent#FLAG_GRANT_READ_URI_PERMISSION", "android.content.Intent#FLAG_GRANT_WRITE_URI_PERMISSION", "java.io.File", "android.content.Intent#setData(Uri)", "android.content.Context#grantUriPermission(String", "android.support.v4.content.FileProvider" ]
+  }, {
+    "name" : "public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)",
+    "returnType" : "Cursor",
+    "comment" : "\n     * Use a content URI returned by\n     * {@link #getUriForFile(Context, String, File) getUriForFile()} to get information about a file\n     * managed by the FileProvider.\n     * FileProvider reports the column names defined in {@link android.provider.OpenableColumns}:\n     * <ul>\n     * <li>{@link android.provider.OpenableColumns#DISPLAY_NAME}</li>\n     * <li>{@link android.provider.OpenableColumns#SIZE}</li>\n     * </ul>\n     * For more information, see\n     * {@link ContentProvider#query(Uri, String[], String, String[], String)\n     * ContentProvider.query()}.\n     *\n     * @param uri A content URI returned by {@link #getUriForFile}.\n     * @param projection The list of columns to put into the {@link Cursor}. If null all columns are\n     * included.\n     * @param selection Selection criteria to apply. If null then all data that matches the content\n     * URI is returned.\n     * @param selectionArgs An array of {@link java.lang.String}, containing arguments to bind to\n     * the <i>selection</i> parameter. The <i>query</i> method scans <i>selection</i> from left to\n     * right and iterates through <i>selectionArgs</i>, replacing the current \"?\" character in\n     * <i>selection</i> with the value at the current position in <i>selectionArgs</i>. The\n     * values are bound to <i>selection</i> as {@link java.lang.String} values.\n     * @param sortOrder A {@link java.lang.String} containing the column name(s) on which to sort\n     * the resulting {@link Cursor}.\n     * @return A {@link Cursor} containing the results of the query.\n     *\n     ",
+    "links" : [ "android.content.ContentProvider#query(Uri", "#getUriForFile", "#getUriForFile(Context", "java.lang.String", "android.provider.OpenableColumns", "android.provider.OpenableColumns#SIZE", "android.provider.OpenableColumns#DISPLAY_NAME", "android.database.Cursor" ]
+  }, {
+    "name" : "public String getType(Uri uri)",
+    "returnType" : "String",
+    "comment" : "\n     * Returns the MIME type of a content URI returned by\n     * {@link #getUriForFile(Context, String, File) getUriForFile()}.\n     *\n     * @param uri A content URI returned by\n     * {@link #getUriForFile(Context, String, File) getUriForFile()}.\n     * @return If the associated file has an extension, the MIME type associated with that\n     * extension; otherwise <code>application/octet-stream</code>.\n     ",
+    "links" : [ "#getUriForFile(Context" ]
+  }, {
+    "name" : "public Uri insert(Uri uri, ContentValues values)",
+    "returnType" : "Uri",
+    "comment" : "\n     * By default, this method throws an {@link java.lang.UnsupportedOperationException}. You must\n     * subclass FileProvider if you want to provide different functionality.\n     ",
+    "links" : [ "java.lang.UnsupportedOperationException" ]
+  }, {
+    "name" : "public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * By default, this method throws an {@link java.lang.UnsupportedOperationException}. You must\n     * subclass FileProvider if you want to provide different functionality.\n     ",
+    "links" : [ "java.lang.UnsupportedOperationException" ]
+  }, {
+    "name" : "public int delete(Uri uri, String selection, String[] selectionArgs)",
+    "returnType" : "int",
+    "comment" : "\n     * Deletes the file associated with the specified content URI, as\n     * returned by {@link #getUriForFile(Context, String, File) getUriForFile()}. Notice that this\n     * method does <b>not</b> throw an {@link java.io.IOException}; you must check its return value.\n     *\n     * @param uri A content URI for a file, as returned by\n     * {@link #getUriForFile(Context, String, File) getUriForFile()}.\n     * @param selection Ignored. Set to {@code null}.\n     * @param selectionArgs Ignored. Set to {@code null}.\n     * @return 1 if the delete succeeds; otherwise, 0.\n     ",
+    "links" : [ "#getUriForFile(Context", "java.io.IOException" ]
+  }, {
+    "name" : "public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException",
+    "returnType" : "ParcelFileDescriptor",
+    "comment" : "\n     * By default, FileProvider automatically returns the\n     * {@link ParcelFileDescriptor} for a file associated with a <code>content://</code>\n     * {@link Uri}. To get the {@link ParcelFileDescriptor}, call\n     * {@link android.content.ContentResolver#openFileDescriptor(Uri, String)\n     * ContentResolver.openFileDescriptor}.\n     *\n     * To override this method, you must provide your own subclass of FileProvider.\n     *\n     * @param uri A content URI associated with a file, as returned by\n     * {@link #getUriForFile(Context, String, File) getUriForFile()}.\n     * @param mode Access mode for the file. May be \"r\" for read-only access, \"rw\" for read and\n     * write access, or \"rwt\" for read and write access that truncates any existing file.\n     * @return A new {@link ParcelFileDescriptor} with which you can access the file.\n     ",
+    "links" : [ "android.os.ParcelFileDescriptor", "#getUriForFile(Context", "android.net.Uri", "android.content.ContentResolver#openFileDescriptor(Uri" ]
+  }, {
+    "name" : "private static PathStrategy getPathStrategy(Context context, String authority)",
+    "returnType" : "PathStrategy",
+    "comment" : "\n     * Return {@link PathStrategy} for given authority, either by parsing or\n     * returning from cache.\n     ",
+    "links" : [ "PathStrategy" ]
+  }, {
+    "name" : "private static PathStrategy parsePathStrategy(Context context, String authority) throws IOException, XmlPullParserException",
+    "returnType" : "PathStrategy",
+    "comment" : "\n     * Parse and return {@link PathStrategy} for given authority as defined in\n     * {@link #META_DATA_FILE_PROVIDER_PATHS} {@code <meta-data>}.\n     *\n     * @see #getPathStrategy(Context, String)\n     ",
+    "links" : [ "PathStrategy", "#META_DATA_FILE_PROVIDER_PATHS" ]
+  }, {
+    "name" : "private static int modeToMode(String mode)",
+    "returnType" : "int",
+    "comment" : "\n     * Copied from ContentResolver.java\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static File buildPath(File base, String... segments)",
+    "returnType" : "File",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String[] copyOf(String[] original, int newLength)",
+    "returnType" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static Object[] copyOf(Object[] original, int newLength)",
+    "returnType" : "Object[]",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public boolean onCreate()", "public void attachInfo(Context context, ProviderInfo info)", "public static Uri getUriForFile(Context context, String authority, File file)", "public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)", "public String getType(Uri uri)", "public Uri insert(Uri uri, ContentValues values)", "public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)", "public int delete(Uri uri, String selection, String[] selectionArgs)", "public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException", "private static PathStrategy getPathStrategy(Context context, String authority)", "private static PathStrategy parsePathStrategy(Context context, String authority) throws IOException, XmlPullParserException", "private static int modeToMode(String mode)", "private static File buildPath(File base, String... segments)", "private static String[] copyOf(String[] original, int newLength)", "private static Object[] copyOf(Object[] original, int newLength)" ],
+  "variableNames" : [ "COLUMNS", "META_DATA_FILE_PROVIDER_PATHS", "TAG_ROOT_PATH", "TAG_FILES_PATH", "TAG_CACHE_PATH", "TAG_EXTERNAL", "ATTR_NAME", "ATTR_PATH", "DEVICE_ROOT", "sCache", "mStrategy" ]
+}

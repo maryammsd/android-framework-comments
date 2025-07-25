@@ -1,0 +1,111 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/util/CallbackRegistry.java",
+  "packageName" : "com.android.internal.util",
+  "className" : "CallbackRegistry",
+  "comment" : "\n * Tracks callbacks for the event. This class supports reentrant modification\n * of the callbacks during notification without adversely disrupting notifications.\n * A common pattern for callbacks is to receive a notification and then remove\n * themselves. This class handles this behavior with constant memory under\n * most circumstances.\n *\n * <p>A subclass of {@link CallbackRegistry.NotifierCallback} must be passed to\n * the constructor to define how notifications should be called. That implementation\n * does the actual notification on the listener.</p>\n *\n * <p>This class supports only callbacks with at most two parameters.\n * Typically, these are the notification originator and a parameter, but these may\n * be used as required. If more than two parameters are required or primitive types\n * must be used, <code>A</code> should be some kind of containing structure that\n * the subclass may reuse between notifications.</p>\n *\n * @param <C> The callback type.\n * @param <T> The notification sender type. Typically this is the containing class.\n * @param <A> Opaque argument used to pass additional data beyond an int.\n ",
+  "links" : [ "CallbackRegistry.NotifierCallback" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCallbacks",
+    "type" : "List<C>",
+    "comment" : " An ordered collection of listeners waiting to be notified. ",
+    "links" : [ ]
+  }, {
+    "name" : "mFirst64Removed",
+    "type" : "long",
+    "comment" : "\n     * A bit flag for the first 64 listeners that are removed during notification.\n     * The lowest significant bit corresponds to the 0th index into mCallbacks.\n     * For a small number of callbacks, no additional array of objects needs to\n     * be allocated.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mRemainderRemoved",
+    "type" : "long[]",
+    "comment" : "\n     * Bit flags for the remaining callbacks that are removed during notification.\n     * When there are more than 64 callbacks and one is marked for removal, a dynamic\n     * array of bits are allocated for the callbacks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mNotificationLevel",
+    "type" : "int",
+    "comment" : "\n     * The reentrancy level of the notification. When we notify a callback, it may cause\n     * further notifications. The reentrancy level must be tracked to let us clean up\n     * the callback state when all notifications have been processed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mNotifier",
+    "type" : "NotifierCallback<C, T, A>",
+    "comment" : " The notification mechanism for notifying an event. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public synchronized void notifyCallbacks(T sender, int arg, A arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify all callbacks.\n     *\n     * @param sender The originator. This is an opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg2 An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     ",
+    "links" : [ "CallbackRegistry.NotifierCallback#onNotifyCallback(Object" ]
+  }, {
+    "name" : "private void notifyFirst64Locked(T sender, int arg, A arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify up to the first Long.SIZE callbacks that don't have a bit set in <code>removed</code>.\n     *\n     * @param sender The originator. This is an opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg2 An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     ",
+    "links" : [ "CallbackRegistry.NotifierCallback#onNotifyCallback(Object" ]
+  }, {
+    "name" : "private void notifyRecurseLocked(T sender, int arg, A arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify all callbacks using a recursive algorithm to avoid allocating on the heap.\n     * This part captures the callbacks beyond Long.SIZE that have no bits allocated for\n     * removal before it recurses into {@link #notifyRemainderLocked(Object, int, A, int)}.\n     * <p>\n     * Recursion is used to avoid allocating temporary state on the heap. Each stack has one\n     * long (64 callbacks) worth of information of which has been removed.\n     *\n     * @param sender The originator. This is an opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg2 An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     ",
+    "links" : [ "CallbackRegistry.NotifierCallback#onNotifyCallback(Object", "#notifyRemainderLocked(Object" ]
+  }, {
+    "name" : "private void notifyRemainderLocked(T sender, int arg, A arg2, int remainderIndex)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify callbacks that have mRemainderRemoved bits set for remainderIndex. If\n     * remainderIndex is -1, the first 64 will be notified instead.\n     *\n     * @param sender The originator. This is an opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg2 An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param remainderIndex The index into mRemainderRemoved that should be notified.\n     ",
+    "links" : [ "CallbackRegistry.NotifierCallback#onNotifyCallback(Object" ]
+  }, {
+    "name" : "private void notifyCallbacksLocked(T sender, int arg, A arg2, final int startIndex, final int endIndex, final long bits)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify callbacks from startIndex to endIndex, using bits as the bit status\n     * for whether they have been removed or not. bits should be from mRemainderRemoved or\n     * mFirst64Removed. bits set to 0 indicates that all callbacks from startIndex to\n     * endIndex should be notified.\n     *\n     * @param sender The originator. This is an opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param arg2 An opaque parameter passed to\n     *      {@link CallbackRegistry.NotifierCallback#onNotifyCallback(Object, Object, int, A)}\n     * @param startIndex The index into the mCallbacks to start notifying.\n     * @param endIndex One past the last index into mCallbacks to notify.\n     * @param bits A bit field indicating which callbacks have been removed and shouldn't\n     *             be notified.\n     ",
+    "links" : [ "CallbackRegistry.NotifierCallback#onNotifyCallback(Object" ]
+  }, {
+    "name" : "public synchronized void add(C callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a callback to be notified. If the callback is already in the list, another won't\n     * be added. This does not affect current notifications.\n     * @param callback The callback to add.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isRemovedLocked(int index)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if the callback at index has been marked for removal.\n     *\n     * @param index The index into mCallbacks to check.\n     * @return true if the callback at index has been marked for removal.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void removeRemovedCallbacks(int startIndex, long removed)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes callbacks from startIndex to startIndex + Long.SIZE, based\n     * on the bits set in removed.\n     * @param startIndex The index into the mCallbacks to start removing callbacks.\n     * @param removed The bits indicating removal, where each bit is set for one callback\n     *                to be removed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void remove(C callback)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a callback. This callback won't be notified after this call completes.\n     * @param callback The callback to remove.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void setRemovalBitLocked(int index)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized ArrayList<C> copyListeners()",
+    "returnType" : "ArrayList<C>",
+    "comment" : "\n     * Makes a copy of the registered callbacks and returns it.\n     *\n     * @return a copy of the registered callbacks.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns true if there are no registered callbacks or false otherwise.\n     *\n     * @return true if there are no registered callbacks or false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized void clear()",
+    "returnType" : "void",
+    "comment" : "\n     * Removes all callbacks from the list.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized CallbackRegistry<C, T, A> clone()",
+    "returnType" : "CallbackRegistry<C, T, A>",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public synchronized void notifyCallbacks(T sender, int arg, A arg2)", "private void notifyFirst64Locked(T sender, int arg, A arg2)", "private void notifyRecurseLocked(T sender, int arg, A arg2)", "private void notifyRemainderLocked(T sender, int arg, A arg2, int remainderIndex)", "private void notifyCallbacksLocked(T sender, int arg, A arg2, final int startIndex, final int endIndex, final long bits)", "public synchronized void add(C callback)", "private boolean isRemovedLocked(int index)", "private void removeRemovedCallbacks(int startIndex, long removed)", "public synchronized void remove(C callback)", "private void setRemovalBitLocked(int index)", "public synchronized ArrayList<C> copyListeners()", "public synchronized boolean isEmpty()", "public synchronized void clear()", "public synchronized CallbackRegistry<C, T, A> clone()" ],
+  "variableNames" : [ "TAG", "mCallbacks", "mFirst64Removed", "mRemainderRemoved", "mNotificationLevel", "mNotifier" ]
+}

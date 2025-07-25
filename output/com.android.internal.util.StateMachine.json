@@ -1,0 +1,411 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/util/StateMachine.java",
+  "packageName" : "com.android.internal.util",
+  "className" : "StateMachine",
+  "comment" : "\n * {@hide}\n *\n * <p>The state machine defined here is a hierarchical state machine which processes messages\n * and can have states arranged hierarchically.</p>\n *\n * <p>A state is a <code>State</code> object and must implement\n * <code>processMessage</code> and optionally <code>enter/exit/getName</code>.\n * The enter/exit methods are equivalent to the construction and destruction\n * in Object Oriented programming and are used to perform initialization and\n * cleanup of the state respectively. The <code>getName</code> method returns the\n * name of the state; the default implementation returns the class name. It may be\n * desirable to have <code>getName</code> return the state instance name instead,\n * in particular if a particular state class has multiple instances.</p>\n *\n * <p>When a state machine is created, <code>addState</code> is used to build the\n * hierarchy and <code>setInitialState</code> is used to identify which of these\n * is the initial state. After construction the programmer calls <code>start</code>\n * which initializes and starts the state machine. The first action the StateMachine\n * is to the invoke <code>enter</code> for all of the initial state's hierarchy,\n * starting at its eldest parent. The calls to enter will be done in the context\n * of the StateMachine's Handler, not in the context of the call to start, and they\n * will be invoked before any messages are processed. For example, given the simple\n * state machine below, mP1.enter will be invoked and then mS1.enter. Finally,\n * messages sent to the state machine will be processed by the current state;\n * in our simple state machine below that would initially be mS1.processMessage.</p>\n<pre>\n        mP1\n       /   \\\n      mS2   mS1 ----&gt; initial state\n</pre>\n * <p>After the state machine is created and started, messages are sent to a state\n * machine using <code>sendMessage</code> and the messages are created using\n * <code>obtainMessage</code>. When the state machine receives a message the\n * current state's <code>processMessage</code> is invoked. In the above example\n * mS1.processMessage will be invoked first. The state may use <code>transitionTo</code>\n * to change the current state to a new state.</p>\n *\n * <p>Each state in the state machine may have a zero or one parent states. If\n * a child state is unable to handle a message it may have the message processed\n * by its parent by returning false or NOT_HANDLED. If a message is not handled by\n * a child state or any of its ancestors, <code>unhandledMessage</code> will be invoked\n * to give one last chance for the state machine to process the message.</p>\n *\n * <p>When all processing is completed a state machine may choose to call\n * <code>transitionToHaltingState</code>. When the current <code>processingMessage</code>\n * returns the state machine will transfer to an internal <code>HaltingState</code>\n * and invoke <code>halting</code>. Any message subsequently received by the state\n * machine will cause <code>haltedProcessMessage</code> to be invoked.</p>\n *\n * <p>If it is desirable to completely stop the state machine call <code>quit</code> or\n * <code>quitNow</code>. These will call <code>exit</code> of the current state and its parents,\n * call <code>onQuitting</code> and then exit Thread/Loopers.</p>\n *\n * <p>In addition to <code>processMessage</code> each <code>State</code> has\n * an <code>enter</code> method and <code>exit</code> method which may be overridden.</p>\n *\n * <p>Since the states are arranged in a hierarchy transitioning to a new state\n * causes current states to be exited and new states to be entered. To determine\n * the list of states to be entered/exited the common parent closest to\n * the current state is found. We then exit from the current state and its\n * parent's up to but not including the common parent state and then enter all\n * of the new states below the common parent down to the destination state.\n * If there is no common parent all states are exited and then the new states\n * are entered.</p>\n *\n * <p>Two other methods that states can use are <code>deferMessage</code> and\n * <code>sendMessageAtFrontOfQueue</code>. The <code>sendMessageAtFrontOfQueue</code> sends\n * a message but places it on the front of the queue rather than the back. The\n * <code>deferMessage</code> causes the message to be saved on a list until a\n * transition is made to a new state. At which time all of the deferred messages\n * will be put on the front of the state machine queue with the oldest message\n * at the front. These will then be processed by the new current state before\n * any other messages that are on the queue or might be added later. Both of\n * these are protected and may only be invoked from within a state machine.</p>\n *\n * <p>To illustrate some of these properties we'll use state machine with an 8\n * state hierarchy:</p>\n<pre>\n          mP0\n         /   \\\n        mP1   mS0\n       /   \\\n      mS2   mS1\n     /  \\    \\\n    mS3  mS4  mS5  ---&gt; initial state\n</pre>\n * <p>After starting mS5 the list of active states is mP0, mP1, mS1 and mS5.\n * So the order of calling processMessage when a message is received is mS5,\n * mS1, mP1, mP0 assuming each processMessage indicates it can't handle this\n * message by returning false or NOT_HANDLED.</p>\n *\n * <p>Now assume mS5.processMessage receives a message it can handle, and during\n * the handling determines the machine should change states. It could call\n * transitionTo(mS4) and return true or HANDLED. Immediately after returning from\n * processMessage the state machine runtime will find the common parent,\n * which is mP1. It will then call mS5.exit, mS1.exit, mS2.enter and then\n * mS4.enter. The new list of active states is mP0, mP1, mS2 and mS4. So\n * when the next message is received mS4.processMessage will be invoked.</p>\n *\n * <p>Now for some concrete examples, here is the canonical HelloWorld as a state machine.\n * It responds with \"Hello World\" being printed to the log for every message.</p>\n<pre>\nclass HelloWorld extends StateMachine {\n    HelloWorld(String name) {\n        super(name);\n        addState(mState1);\n        setInitialState(mState1);\n    }\n\n    public static HelloWorld makeHelloWorld() {\n        HelloWorld hw = new HelloWorld(\"hw\");\n        hw.start();\n        return hw;\n    }\n\n    class State1 extends State {\n        &#64;Override public boolean processMessage(Message message) {\n            log(\"Hello World\");\n            return HANDLED;\n        }\n    }\n    State1 mState1 = new State1();\n}\n\nvoid testHelloWorld() {\n    HelloWorld hw = makeHelloWorld();\n    hw.sendMessage(hw.obtainMessage());\n}\n</pre>\n * <p>A more interesting state machine is one with four states\n * with two independent parent states.</p>\n<pre>\n        mP1      mP2\n       /   \\\n      mS2   mS1\n</pre>\n * <p>Here is a description of this state machine using pseudo code.</p>\n <pre>\nstate mP1 {\n     enter { log(\"mP1.enter\"); }\n     exit { log(\"mP1.exit\");  }\n     on msg {\n         CMD_2 {\n             send(CMD_3);\n             defer(msg);\n             transitionTo(mS2);\n             return HANDLED;\n         }\n         return NOT_HANDLED;\n     }\n}\n\nINITIAL\nstate mS1 parent mP1 {\n     enter { log(\"mS1.enter\"); }\n     exit  { log(\"mS1.exit\");  }\n     on msg {\n         CMD_1 {\n             transitionTo(mS1);\n             return HANDLED;\n         }\n         return NOT_HANDLED;\n     }\n}\n\nstate mS2 parent mP1 {\n     enter { log(\"mS2.enter\"); }\n     exit  { log(\"mS2.exit\");  }\n     on msg {\n         CMD_2 {\n             send(CMD_4);\n             return HANDLED;\n         }\n         CMD_3 {\n             defer(msg);\n             transitionTo(mP2);\n             return HANDLED;\n         }\n         return NOT_HANDLED;\n     }\n}\n\nstate mP2 {\n     enter {\n         log(\"mP2.enter\");\n         send(CMD_5);\n     }\n     exit { log(\"mP2.exit\"); }\n     on msg {\n         CMD_3, CMD_4 { return HANDLED; }\n         CMD_5 {\n             transitionTo(HaltingState);\n             return HANDLED;\n         }\n         return NOT_HANDLED;\n     }\n}\n</pre>\n * <p>The implementation is below and also in StateMachineTest:</p>\n<pre>\nclass Hsm1 extends StateMachine {\n    public static final int CMD_1 = 1;\n    public static final int CMD_2 = 2;\n    public static final int CMD_3 = 3;\n    public static final int CMD_4 = 4;\n    public static final int CMD_5 = 5;\n\n    public static Hsm1 makeHsm1() {\n        log(\"makeHsm1 E\");\n        Hsm1 sm = new Hsm1(\"hsm1\");\n        sm.start();\n        log(\"makeHsm1 X\");\n        return sm;\n    }\n\n    Hsm1(String name) {\n        super(name);\n        log(\"ctor E\");\n\n        // Add states, use indentation to show hierarchy\n        addState(mP1);\n            addState(mS1, mP1);\n            addState(mS2, mP1);\n        addState(mP2);\n\n        // Set the initial state\n        setInitialState(mS1);\n        log(\"ctor X\");\n    }\n\n    class P1 extends State {\n        &#64;Override public void enter() {\n            log(\"mP1.enter\");\n        }\n        &#64;Override public boolean processMessage(Message message) {\n            boolean retVal;\n            log(\"mP1.processMessage what=\" + message.what);\n            switch(message.what) {\n            case CMD_2:\n                // CMD_2 will arrive in mS2 before CMD_3\n                sendMessage(obtainMessage(CMD_3));\n                deferMessage(message);\n                transitionTo(mS2);\n                retVal = HANDLED;\n                break;\n            default:\n                // Any message we don't understand in this state invokes unhandledMessage\n                retVal = NOT_HANDLED;\n                break;\n            }\n            return retVal;\n        }\n        &#64;Override public void exit() {\n            log(\"mP1.exit\");\n        }\n    }\n\n    class S1 extends State {\n        &#64;Override public void enter() {\n            log(\"mS1.enter\");\n        }\n        &#64;Override public boolean processMessage(Message message) {\n            log(\"S1.processMessage what=\" + message.what);\n            if (message.what == CMD_1) {\n                // Transition to ourself to show that enter/exit is called\n                transitionTo(mS1);\n                return HANDLED;\n            } else {\n                // Let parent process all other messages\n                return NOT_HANDLED;\n            }\n        }\n        &#64;Override public void exit() {\n            log(\"mS1.exit\");\n        }\n    }\n\n    class S2 extends State {\n        &#64;Override public void enter() {\n            log(\"mS2.enter\");\n        }\n        &#64;Override public boolean processMessage(Message message) {\n            boolean retVal;\n            log(\"mS2.processMessage what=\" + message.what);\n            switch(message.what) {\n            case(CMD_2):\n                sendMessage(obtainMessage(CMD_4));\n                retVal = HANDLED;\n                break;\n            case(CMD_3):\n                deferMessage(message);\n                transitionTo(mP2);\n                retVal = HANDLED;\n                break;\n            default:\n                retVal = NOT_HANDLED;\n                break;\n            }\n            return retVal;\n        }\n        &#64;Override public void exit() {\n            log(\"mS2.exit\");\n        }\n    }\n\n    class P2 extends State {\n        &#64;Override public void enter() {\n            log(\"mP2.enter\");\n            sendMessage(obtainMessage(CMD_5));\n        }\n        &#64;Override public boolean processMessage(Message message) {\n            log(\"P2.processMessage what=\" + message.what);\n            switch(message.what) {\n            case(CMD_3):\n                break;\n            case(CMD_4):\n                break;\n            case(CMD_5):\n                transitionToHaltingState();\n                break;\n            }\n            return HANDLED;\n        }\n        &#64;Override public void exit() {\n            log(\"mP2.exit\");\n        }\n    }\n\n    &#64;Override\n    void onHalting() {\n        log(\"halting\");\n        synchronized (this) {\n            this.notifyAll();\n        }\n    }\n\n    P1 mP1 = new P1();\n    S1 mS1 = new S1();\n    S2 mS2 = new S2();\n    P2 mP2 = new P2();\n}\n</pre>\n * <p>If this is executed by sending two messages CMD_1 and CMD_2\n * (Note the synchronize is only needed because we use hsm.wait())</p>\n<pre>\nHsm1 hsm = makeHsm1();\nsynchronize(hsm) {\n     hsm.sendMessage(obtainMessage(hsm.CMD_1));\n     hsm.sendMessage(obtainMessage(hsm.CMD_2));\n     try {\n          // wait for the messages to be handled\n          hsm.wait();\n     } catch (InterruptedException e) {\n          loge(\"exception while waiting \" + e.getMessage());\n     }\n}\n</pre>\n * <p>The output is:</p>\n<pre>\nD/hsm1    ( 1999): makeHsm1 E\nD/hsm1    ( 1999): ctor E\nD/hsm1    ( 1999): ctor X\nD/hsm1    ( 1999): mP1.enter\nD/hsm1    ( 1999): mS1.enter\nD/hsm1    ( 1999): makeHsm1 X\nD/hsm1    ( 1999): mS1.processMessage what=1\nD/hsm1    ( 1999): mS1.exit\nD/hsm1    ( 1999): mS1.enter\nD/hsm1    ( 1999): mS1.processMessage what=2\nD/hsm1    ( 1999): mP1.processMessage what=2\nD/hsm1    ( 1999): mS1.exit\nD/hsm1    ( 1999): mS2.enter\nD/hsm1    ( 1999): mS2.processMessage what=2\nD/hsm1    ( 1999): mS2.processMessage what=3\nD/hsm1    ( 1999): mS2.exit\nD/hsm1    ( 1999): mP1.exit\nD/hsm1    ( 1999): mP2.enter\nD/hsm1    ( 1999): mP2.processMessage what=3\nD/hsm1    ( 1999): mP2.processMessage what=4\nD/hsm1    ( 1999): mP2.processMessage what=5\nD/hsm1    ( 1999): mP2.exit\nD/hsm1    ( 1999): halting\n</pre>\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "mName",
+    "type" : "String",
+    "comment" : " Name of the state machine and used as logging tag",
+    "links" : [ ]
+  }, {
+    "name" : "SM_QUIT_CMD",
+    "type" : "int",
+    "comment" : " Message.what value when quitting ",
+    "links" : [ ]
+  }, {
+    "name" : "SM_INIT_CMD",
+    "type" : "int",
+    "comment" : " Message.what value when initializing ",
+    "links" : [ ]
+  }, {
+    "name" : "HANDLED",
+    "type" : "boolean",
+    "comment" : "\n     * Convenience constant that maybe returned by processMessage\n     * to indicate the message was processed and is not to be\n     * processed by parent states\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "NOT_HANDLED",
+    "type" : "boolean",
+    "comment" : "\n     * Convenience constant that maybe returned by processMessage\n     * to indicate the message was NOT processed and is to be\n     * processed by parent states\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mSmHandler",
+    "type" : "SmHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSmThread",
+    "type" : "HandlerThread",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private void initStateMachine(String name, Looper looper)",
+    "returnType" : "void",
+    "comment" : "\n     * Initialize.\n     *\n     * @param looper for this state machine\n     * @param name of the state machine\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onPreHandleMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies subclass that the StateMachine handler is about to process the Message msg\n     * @param msg The message that is being handled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onPostHandleMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Notifies subclass that the StateMachine handler has finished processing the Message msg and\n     * has possibly transitioned to a new state.\n     * @param msg The message that is being handled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void addState(State state, State parent)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a new state to the state machine\n     * @param state the state to add\n     * @param parent the parent of state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void addState(State state)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a new state to the state machine, parent will be null\n     * @param state to add\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void removeState(State state)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a state from the state machine, unless it is currently active or if it has children.\n     * @param state state to remove\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setInitialState(State initialState)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the initial state. This must be invoked before\n     * and messages are sent to the state machine.\n     *\n     * @param initialState is the state which will receive the first message.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message getCurrentMessage()",
+    "returnType" : "Message",
+    "comment" : "\n     * @return current message\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final IState getCurrentState()",
+    "returnType" : "IState",
+    "comment" : "\n     * @return current state\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void transitionTo(IState destState)",
+    "returnType" : "void",
+    "comment" : "\n     * transition to destination state. Upon returning\n     * from processMessage the current state's exit will\n     * be executed and upon the next message arriving\n     * destState.enter will be invoked.\n     *\n     * this function can also be called inside the enter function of the\n     * previous transition target, but the behavior is undefined when it is\n     * called mid-way through a previous transition (for example, calling this\n     * in the enter() routine of a intermediate node when the current transition\n     * target is one of the nodes descendants).\n     *\n     * @param destState will be the state that receives the next message.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void transitionToHaltingState()",
+    "returnType" : "void",
+    "comment" : "\n     * transition to halt state. Upon returning\n     * from processMessage we will exit all current\n     * states, execute the onHalting() method and then\n     * for all subsequent messages haltedProcessMessage\n     * will be called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void deferMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Defer this message until next state transition.\n     * Upon transitioning all deferred messages will be\n     * placed on the queue and reprocessed in the original\n     * order. (i.e. The next state the oldest messages will\n     * be processed first)\n     *\n     * @param msg is deferred until the next transition.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void unhandledMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Called when message wasn't handled\n     *\n     * @param msg that couldn't be handled.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void haltedProcessMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Called for any message that is received after\n     * transitionToHalting is called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onHalting()",
+    "returnType" : "void",
+    "comment" : "\n     * This will be called once after handling a message that called\n     * transitionToHalting. All subsequent messages will invoke\n     * {@link StateMachine#haltedProcessMessage(Message)}\n     ",
+    "links" : [ "#haltedProcessMessage(Message)" ]
+  }, {
+    "name" : "protected void onQuitting()",
+    "returnType" : "void",
+    "comment" : "\n     * This will be called once after a quit message that was NOT handled by\n     * the derived StateMachine. The StateMachine will stop and any subsequent messages will be\n     * ignored. In addition, if this StateMachine created the thread, the thread will\n     * be stopped after this method returns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String getName()",
+    "returnType" : "String",
+    "comment" : "\n     * @return the name\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setLogRecSize(int maxSize)",
+    "returnType" : "void",
+    "comment" : "\n     * Set number of log records to maintain and clears all current records.\n     *\n     * @param maxSize number of messages to maintain at anyone time.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void setLogOnlyTransitions(boolean enable)",
+    "returnType" : "void",
+    "comment" : "\n     * Set to log only messages that cause a state transition\n     *\n     * @param enable {@code true} to enable, {@code false} to disable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getLogRecSize()",
+    "returnType" : "int",
+    "comment" : "\n     * @return the number of log records currently readable\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getLogRecMaxSize()",
+    "returnType" : "int",
+    "comment" : "\n     * @return the number of log records we can store\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final int getLogRecCount()",
+    "returnType" : "int",
+    "comment" : "\n     * @return the total number of records processed\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final LogRec getLogRec(int index)",
+    "returnType" : "LogRec",
+    "comment" : "\n     * @return a log record, or null if index is out of range\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Collection<LogRec> copyLogRecs()",
+    "returnType" : "Collection<LogRec>",
+    "comment" : "\n     * @return a copy of LogRecs as a collection\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void addLogRec(String string)",
+    "returnType" : "void",
+    "comment" : "\n     * Add the string to LogRecords.\n     *\n     * @param string the info message to add\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected boolean recordLogRec(Message msg)",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return true if msg should be saved in the log, default is true.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String getLogRecString(Message msg)",
+    "returnType" : "String",
+    "comment" : "\n     * Return a string to be logged by LogRec, default\n     * is an empty string. Override if additional information is desired.\n     *\n     * @param msg that was processed\n     * @return information to be logged as a String\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected String getWhatToString(int what)",
+    "returnType" : "String",
+    "comment" : "\n     * @return the string for msg.what\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Handler getHandler()",
+    "returnType" : "Handler",
+    "comment" : "\n     * @return Handler, maybe null if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage()",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler.\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage(int what)",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler, what.\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @param what is the assigned to Message.what.\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage(int what, Object obj)",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler,\n     * what and obj.\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @param what is the assigned to Message.what.\n     * @param obj is assigned to Message.obj.\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage(int what, int arg1)",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler,\n     * what, arg1 and arg2\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @param what  is assigned to Message.what\n     * @param arg1  is assigned to Message.arg1\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage(int what, int arg1, int arg2)",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler,\n     * what, arg1 and arg2\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @param what  is assigned to Message.what\n     * @param arg1  is assigned to Message.arg1\n     * @param arg2  is assigned to Message.arg2\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final Message obtainMessage(int what, int arg1, int arg2, Object obj)",
+    "returnType" : "Message",
+    "comment" : "\n     * Get a message and set Message.target state machine handler,\n     * what, arg1, arg2 and obj\n     *\n     * Note: The handler can be null if the state machine has quit,\n     * which means target will be null and may cause a AndroidRuntimeException\n     * in MessageQueue#enqueMessage if sent directly or if sent using\n     * StateMachine#sendMessage the message will just be ignored.\n     *\n     * @param what  is assigned to Message.what\n     * @param arg1  is assigned to Message.arg1\n     * @param arg2  is assigned to Message.arg2\n     * @param obj is assigned to Message.obj\n     * @return  A Message object from the global pool\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1, int arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1, int arg2, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(int what, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(int what, Object obj, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(int what, int arg1, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(int what, int arg1, int arg2, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(int what, int arg1, int arg2, Object obj, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessageDelayed(Message msg, long delayMillis)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to this state machine after a delay.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(int what, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(int what, int arg1)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(int what, int arg1, int arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(int what, int arg1, int arg2, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void sendMessageAtFrontOfQueue(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Enqueue a message to the front of the queue for this state machine.\n     * Protected, may only be called by instances of StateMachine.\n     *\n     * Message is ignored if state machine has quit.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void removeMessages(int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a message from the message queue.\n     * Protected, may only be called by instances of StateMachine.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final void removeDeferredMessages(int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Removes a message from the deferred messages queue.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final boolean hasDeferredMessages(int what)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check if there are any pending messages with code 'what' in deferred messages queue.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final boolean hasMessages(int what)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Check if there are any pending posts of messages with code 'what' in\n     * the message queue. This does NOT check messages in deferred message queue.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected final boolean isQuit(Message msg)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Validate that the message was sent by\n     * {@link StateMachine#quit} or {@link StateMachine#quitNow}.\n     ",
+    "links" : [ "#quit", "#quitNow" ]
+  }, {
+    "name" : "public final void quit()",
+    "returnType" : "void",
+    "comment" : "\n     * Quit the state machine after all currently queued up messages are processed.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void quitNow()",
+    "returnType" : "void",
+    "comment" : "\n     * Quit the state machine immediately all currently queued messages will be discarded.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isDbg()",
+    "returnType" : "boolean",
+    "comment" : "\n     * @return if debugging is enabled\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDbg(boolean dbg)",
+    "returnType" : "void",
+    "comment" : "\n     * Set debug enable/disabled.\n     *\n     * @param dbg is true to enable debugging.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void start()",
+    "returnType" : "void",
+    "comment" : "\n     * Start the state machine.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump the current state.\n     *\n     * @param fd the fd to dump to\n     * @param pw the writer\n     * @param args arguments passed to the dump command\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logAndAddLogRec(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug and add to the LogRecords.\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void log(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logd(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug attribute\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logv(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with verbose attribute\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logi(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with info attribute\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logw(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with warning attribute\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void loge(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error attribute\n     *\n     * @param s is string log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void loge(String s, Throwable e)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error attribute\n     *\n     * @param s is string log\n     * @param e is a Throwable which logs additional information.\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private void initStateMachine(String name, Looper looper)", "protected void onPreHandleMessage(Message msg)", "protected void onPostHandleMessage(Message msg)", "public final void addState(State state, State parent)", "public final void addState(State state)", "public final void removeState(State state)", "public final void setInitialState(State initialState)", "public final Message getCurrentMessage()", "public final IState getCurrentState()", "public final void transitionTo(IState destState)", "public final void transitionToHaltingState()", "public final void deferMessage(Message msg)", "protected void unhandledMessage(Message msg)", "protected void haltedProcessMessage(Message msg)", "protected void onHalting()", "protected void onQuitting()", "public final String getName()", "public final void setLogRecSize(int maxSize)", "public final void setLogOnlyTransitions(boolean enable)", "public final int getLogRecSize()", "public final int getLogRecMaxSize()", "public final int getLogRecCount()", "public final LogRec getLogRec(int index)", "public final Collection<LogRec> copyLogRecs()", "public void addLogRec(String string)", "protected boolean recordLogRec(Message msg)", "protected String getLogRecString(Message msg)", "protected String getWhatToString(int what)", "public final Handler getHandler()", "public final Message obtainMessage()", "public final Message obtainMessage(int what)", "public final Message obtainMessage(int what, Object obj)", "public final Message obtainMessage(int what, int arg1)", "public final Message obtainMessage(int what, int arg1, int arg2)", "public final Message obtainMessage(int what, int arg1, int arg2, Object obj)", "public void sendMessage(int what)", "public void sendMessage(int what, Object obj)", "public void sendMessage(int what, int arg1)", "public void sendMessage(int what, int arg1, int arg2)", "public void sendMessage(int what, int arg1, int arg2, Object obj)", "public void sendMessage(Message msg)", "public void sendMessageDelayed(int what, long delayMillis)", "public void sendMessageDelayed(int what, Object obj, long delayMillis)", "public void sendMessageDelayed(int what, int arg1, long delayMillis)", "public void sendMessageDelayed(int what, int arg1, int arg2, long delayMillis)", "public void sendMessageDelayed(int what, int arg1, int arg2, Object obj, long delayMillis)", "public void sendMessageDelayed(Message msg, long delayMillis)", "protected final void sendMessageAtFrontOfQueue(int what)", "protected final void sendMessageAtFrontOfQueue(int what, Object obj)", "protected final void sendMessageAtFrontOfQueue(int what, int arg1)", "protected final void sendMessageAtFrontOfQueue(int what, int arg1, int arg2)", "protected final void sendMessageAtFrontOfQueue(int what, int arg1, int arg2, Object obj)", "protected final void sendMessageAtFrontOfQueue(Message msg)", "protected final void removeMessages(int what)", "protected final void removeDeferredMessages(int what)", "protected final boolean hasDeferredMessages(int what)", "protected final boolean hasMessages(int what)", "protected final boolean isQuit(Message msg)", "public final void quit()", "public final void quitNow()", "public boolean isDbg()", "public void setDbg(boolean dbg)", "public void start()", "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)", "public String toString()", "protected void logAndAddLogRec(String s)", "protected void log(String s)", "protected void logd(String s)", "protected void logv(String s)", "protected void logi(String s)", "protected void logw(String s)", "protected void loge(String s)", "protected void loge(String s, Throwable e)" ],
+  "variableNames" : [ "mName", "SM_QUIT_CMD", "SM_INIT_CMD", "HANDLED", "NOT_HANDLED", "mSmHandler", "mSmThread" ]
+}

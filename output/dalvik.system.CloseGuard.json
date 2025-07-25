@@ -1,0 +1,91 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/dalvik/system/CloseGuard.java",
+  "packageName" : "dalvik.system",
+  "className" : "CloseGuard",
+  "comment" : "\n * CloseGuard is a mechanism for flagging implicit finalizer cleanup of\n * resources that should have been cleaned up by explicit close\n * methods (aka \"explicit termination methods\" in Effective Java).\n * <p>\n * A simple example: <pre>   {@code\n *   class Foo {\n *\n *       {@literal @}ReachabilitySensitive\n *       private final CloseGuard guard = CloseGuard.get();\n *\n *       ...\n *\n *       public Foo() {\n *           ...;\n *           guard.open(\"cleanup\");\n *       }\n *\n *       public void cleanup() {\n *          guard.close();\n *          ...;\n *       }\n *\n *       protected void finalize() throws Throwable {\n *           try {\n *               // Note that guard could be null if the constructor threw.\n *               if (guard != null) {\n *                   guard.warnIfOpen();\n *               }\n *               cleanup();\n *           } finally {\n *               super.finalize();\n *           }\n *       }\n *   }\n * }</pre>\n *\n * In usage where the resource to be explicitly cleaned up is\n * allocated after object construction, CloseGuard protection can\n * be deferred. For example: <pre>   {@code\n *   class Bar {\n *\n *       {@literal @}ReachabilitySensitive\n *       private final CloseGuard guard = CloseGuard.get();\n *\n *       ...\n *\n *       public Bar() {\n *           ...;\n *       }\n *\n *       public void connect() {\n *          ...;\n *          guard.open(\"cleanup\");\n *       }\n *\n *       public void cleanup() {\n *          guard.close();\n *          ...;\n *       }\n *\n *       protected void finalize() throws Throwable {\n *           try {\n *               // Note that guard could be null if the constructor threw.\n *               if (guard != null) {\n *                   guard.warnIfOpen();\n *               }\n *               cleanup();\n *           } finally {\n *               super.finalize();\n *           }\n *       }\n *   }\n * }</pre>\n *\n * When used in a constructor, calls to {@code open} should occur at\n * the end of the constructor since an exception that would cause\n * abrupt termination of the constructor will mean that the user will\n * not have a reference to the object to cleanup explicitly. When used\n * in a method, the call to {@code open} should occur just after\n * resource acquisition.\n *\n * The @ReachabilitySensitive annotation ensures that finalize() cannot be\n * called during the explicit call to cleanup(), prior to the guard.close call.\n * There is an extremely small chance that, for code that neglects to call\n * cleanup(), finalize() and thus cleanup() will be called while a method on\n * the object is still active, but the \"this\" reference is no longer required.\n * If missing cleanup() calls are expected, additional @ReachabilitySensitive\n * annotations or reachabilityFence() calls may be required.\n *\n * @hide\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "stackAndTrackingEnabled",
+    "type" : "boolean",
+    "comment" : "\n     * True if collection of call-site information (the expensive operation\n     * here)  and tracking via a Tracker (see below) are enabled.\n     * Enabled by default so we can diagnose issues early in VM startup.\n     * Note, however, that Android disables this early in its startup,\n     * but enables it with DropBoxing for system apps on debug builds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "reporter",
+    "type" : "Reporter",
+    "comment" : "\n     * Hook for customizing how CloseGuard issues are reported.\n     * Bypassed if stackAndTrackingEnabled was false when open was called.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "currentTracker",
+    "type" : "Tracker",
+    "comment" : " Disabled by default.",
+    "links" : [ ]
+  }, {
+    "name" : "MESSAGE",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "closerNameOrAllocationInfo",
+    "type" : "Object",
+    "comment" : " We keep them in a single field only to minimize overhead.",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public static CloseGuard get()",
+    "returnType" : "CloseGuard",
+    "comment" : "\n     * Returns a CloseGuard instance. {@code #open(String)} can be used to set\n     * up the instance to warn on failure to close.\n     *\n     * @return {@link CloseGuard} instance.\n     *\n     * @hide\n     ",
+    "links" : [ "CloseGuard" ]
+  }, {
+    "name" : "public static void setEnabled(boolean enabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Enables/disables stack capture and tracking. A call stack is captured\n     * during open(), and open/close events are reported to the Tracker, only\n     * if enabled is true. If a stack trace was captured, the {@link\n     * #getReporter() reporter} is informed of unclosed resources; otherwise a\n     * one-line warning is logged.\n     *\n     * @param enabled whether stack capture and tracking is enabled.\n     *\n     * @hide\n     ",
+    "links" : [ "#getReporter()" ]
+  }, {
+    "name" : "public static boolean isEnabled()",
+    "returnType" : "boolean",
+    "comment" : "\n     * True if CloseGuard stack capture and tracking are enabled.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setReporter(Reporter rep)",
+    "returnType" : "void",
+    "comment" : "\n     * Used to replace default Reporter used to warn of CloseGuard\n     * violations when stack tracking is enabled. Must be non-null.\n     *\n     * @param rep replacement for default Reporter.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Reporter getReporter()",
+    "returnType" : "Reporter",
+    "comment" : "\n     * Returns non-null CloseGuard.Reporter.\n     *\n     * @return CloseGuard's Reporter.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static void setTracker(Tracker tracker)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the {@link Tracker} that is notified when resources are allocated and released.\n     * The Tracker is invoked only if CloseGuard {@link #isEnabled()} held when {@link #open()}\n     * was called. A null argument disables tracking.\n     *\n     * <p>This is only intended for use by {@code dalvik.system.CloseGuardSupport} class and so\n     * MUST NOT be used for any other purposes.\n     *\n     * @hide\n     ",
+    "links" : [ "Tracker", "#open()", "#isEnabled()" ]
+  }, {
+    "name" : "public static Tracker getTracker()",
+    "returnType" : "Tracker",
+    "comment" : "\n     * Returns {@link #setTracker(Tracker) last Tracker that was set}, or null to indicate\n     * there is none.\n     *\n     * <p>This is only intended for use by {@code dalvik.system.CloseGuardSupport} class and so\n     * MUST NOT be used for any other purposes.\n     *\n     * @hide\n     ",
+    "links" : [ "#setTracker(Tracker)" ]
+  }, {
+    "name" : "public void open(String closer)",
+    "returnType" : "void",
+    "comment" : "\n     * {@code open} initializes the instance with a warning that the caller\n     * should have explicitly called the {@code closer} method instead of\n     * relying on finalization.\n     *\n     * @param closer non-null name of explicit termination method. Printed by warnIfOpen.\n     * @throws NullPointerException if closer is null.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void openWithCallSite(String closer, String callsite)",
+    "returnType" : "void",
+    "comment" : "\n     * Like {@link #open(String)}, but with explicit callsite string being passed in for better\n     * performance.\n     * <p>\n     * This only has better performance than {@link #open(String)} if {@link #isEnabled()} returns {@code true}, which\n     * usually shouldn't happen on release builds.\n     *\n     * @param closer Non-null name of explicit termination method. Printed by warnIfOpen.\n     * @param callsite Non-null string uniquely identifying the callsite.\n     *\n     * @hide\n     ",
+    "links" : [ "#open(String)", "#isEnabled()" ]
+  }, {
+    "name" : "public void close()",
+    "returnType" : "void",
+    "comment" : "\n     * Marks this CloseGuard instance as closed to avoid warnings on\n     * finalization.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void warnIfOpen()",
+    "returnType" : "void",
+    "comment" : "\n     * Logs a warning if the caller did not properly cleanup by calling an\n     * explicit close method before finalization. If CloseGuard was enabled\n     * when the CloseGuard was created, passes the stacktrace associated with\n     * the allocation to the current reporter. If it was not enabled, it just\n     * directly logs a brief message.\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public static CloseGuard get()", "public static void setEnabled(boolean enabled)", "public static boolean isEnabled()", "public static void setReporter(Reporter rep)", "public static Reporter getReporter()", "public static void setTracker(Tracker tracker)", "public static Tracker getTracker()", "public void open(String closer)", "public void openWithCallSite(String closer, String callsite)", "public void close()", "public void warnIfOpen()" ],
+  "variableNames" : [ "stackAndTrackingEnabled", "reporter", "currentTracker", "MESSAGE", "closerNameOrAllocationInfo" ]
+}

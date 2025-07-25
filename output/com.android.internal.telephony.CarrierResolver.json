@@ -1,0 +1,311 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/telephony/CarrierResolver.java",
+  "packageName" : "com.android.internal.telephony",
+  "className" : "CarrierResolver",
+  "comment" : "\n * CarrierResolver identifies the subscription carrier and returns a canonical carrier Id\n * and a user friendly carrier name. CarrierResolver reads subscription info and check against\n * all carrier matching rules stored in CarrierIdProvider. It is msim aware, each phone has a\n * dedicated CarrierResolver.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DBG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VDBG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SIM_LOAD_EVENT",
+    "type" : "int",
+    "comment" : " events to trigger carrier identification",
+    "links" : [ ]
+  }, {
+    "name" : "ICC_CHANGED_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PREFER_APN_UPDATE_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CARRIER_ID_DB_UPDATE_EVENT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CONTENT_URL_PREFER_APN",
+    "type" : "Uri",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "TEST_ACTION",
+    "type" : "String",
+    "comment" : " Test purpose only.",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierListVersion",
+    "type" : "Integer",
+    "comment" : " cached version of the carrier list, so that we don't need to re-query it every time.",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierMatchingRulesOnMccMnc",
+    "type" : "List<CarrierMatchingRule>",
+    "comment" : " cached matching rules based mccmnc to speed up resolution",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierId",
+    "type" : "int",
+    "comment" : " cached carrier Id",
+    "links" : [ ]
+  }, {
+    "name" : "mSpecificCarrierId",
+    "type" : "int",
+    "comment" : " cached specific carrier Id",
+    "links" : [ ]
+  }, {
+    "name" : "mMnoCarrierId",
+    "type" : "int",
+    "comment" : " the cid.",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierName",
+    "type" : "String",
+    "comment" : " cached carrier name",
+    "links" : [ ]
+  }, {
+    "name" : "mSpecificCarrierName",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPreferApn",
+    "type" : "String",
+    "comment" : " cached preferapn name",
+    "links" : [ ]
+  }, {
+    "name" : "mTestOverrideApn",
+    "type" : "String",
+    "comment" : " override for testing purpose",
+    "links" : [ ]
+  }, {
+    "name" : "mTestOverrideCarrierPriviledgeRule",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSpn",
+    "type" : "String",
+    "comment" : " should specify \"\" spn explicitly.",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPhone",
+    "type" : "Phone",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIccRecords",
+    "type" : "IccRecords",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierIdLocalLog",
+    "type" : "LocalLog",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTelephonyMgr",
+    "type" : "TelephonyManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContentObserver",
+    "type" : "ContentObserver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierIdTestReceiver",
+    "type" : "BroadcastReceiver",
+    "comment" : "\n     * A broadcast receiver used for overriding carrier id for testing. There are six parameters,\n     * only override_carrier_id is required, the others are options.\n     *\n     * To override carrier id by adb command, e.g.:\n     * adb shell am broadcast -a com.android.internal.telephony.ACTION_TEST_OVERRIDE_CARRIER_ID \\\n     * --ei override_carrier_id 1\n     * --ei override_specific_carrier_id 1\n     * --ei override_mno_carrier_id 1\n     * --es override_carrier_name test\n     * --es override_specific_carrier_name test\n     * --ei sub_id 1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mPhoneStateListener",
+    "type" : "PhoneStateListener",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void resolveSubscriptionCarrierId(String simState)",
+    "returnType" : "void",
+    "comment" : "\n     * This is triggered from UiccController after sim state change.\n     * The sequence of sim loading would be\n     *  1. OnSubscriptionsChangedListener\n     *  2. ACTION_SIM_STATE_CHANGED/ACTION_SIM_CARD_STATE_CHANGED\n     *  /ACTION_SIM_APPLICATION_STATE_CHANGED\n     *  3. ACTION_SUBSCRIPTION_CARRIER_IDENTITY_CHANGED\n     *\n     *  For SIM refresh either reset or init refresh type, UiccController will re-trigger\n     *  carrier identification with sim loaded state. Framework today silently handle single file\n     *  refresh type.\n     *  TODO: check fileId from single file refresh, if the refresh file is IMSI, gid1 or other\n     *  records which might change carrier id, framework should trigger sim loaded state just like\n     *  other refresh events: INIT or RESET and which will ultimately trigger carrier\n     *  re-identification.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleSimLoaded(boolean isSimOverride)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleSimAbsent()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void handleMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Entry point for the carrier identification.\n     *\n     *    1. SIM_LOAD_EVENT\n     *        This indicates that all SIM records has been loaded and its first entry point for the\n     *        carrier identification. Note, there are other attributes could be changed on the fly\n     *        like APN. We cached all carrier matching rules based on MCCMNC to speed\n     *        up carrier resolution on following trigger events.\n     *\n     *    2. PREFER_APN_UPDATE_EVENT\n     *        This indicates prefer apn has been changed. It could be triggered when user modified\n     *        APN settings or when default data connection first establishes on the current carrier.\n     *        We follow up on this by querying prefer apn sqlite and re-issue carrier identification\n     *        with the updated prefer apn name.\n     *\n     *    3. CARRIER_ID_DB_UPDATE_EVENT\n     *        This indicates that carrierIdentification database which stores all matching rules\n     *        has been updated. It could be triggered from OTA or assets update.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void loadCarrierMatchingRulesOnMccMnc(boolean updateCarrierConfig, boolean isSimOverride)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String getCarrierNameFromId(int cid)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static List<CarrierMatchingRule> getCarrierMatchingRulesFromMccMnc(@NonNull Context context, String mccmnc)",
+    "returnType" : "List<CarrierMatchingRule>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String getPreferApn()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isPreferApnUserEdited(@NonNull String preferApn)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTestOverrideApn(String apn)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTestOverrideCarrierPriviledgeRule(String rule)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateCarrierIdAndName(int cid, String name, int specificCarrierId, String specificCarrierName, int mnoCid, boolean isSimOverride)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static CarrierMatchingRule makeCarrierMatchingRule(Cursor cursor)",
+    "returnType" : "CarrierMatchingRule",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private CarrierMatchingRule getSubscriptionMatchingRule()",
+    "returnType" : "CarrierMatchingRule",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void updateCarrierConfig()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void matchSubscriptionCarrier(boolean updateCarrierConfig, boolean isSimOverride)",
+    "returnType" : "void",
+    "comment" : "\n     * find the best matching carrier from candidates with matched subscription MCCMNC.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCarrierListVersion()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getCarrierId()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSpecificCarrierId()",
+    "returnType" : "int",
+    "comment" : "\n     * Returns fine-grained carrier id of the current subscription. Carrier ids with a valid parent\n     * id are specific carrier ids.\n     *\n     * A specific carrier ID can represent the fact that a carrier may be in effect an aggregation\n     * of other carriers (ie in an MVNO type scenario) where each of these specific carriers which\n     * are used to make up the actual carrier service may have different carrier configurations.\n     * A specific carrier ID could also be used, for example, in a scenario where a carrier requires\n     * different carrier configuration for different service offering such as a prepaid plan.\n     * e.g, {@link #getCarrierId()} will always return Tracfone (id 2022) for a Tracfone SIM, while\n     * {@link #getSpecificCarrierId()} can return Tracfone AT&T or Tracfone T-Mobile based on the\n     * IMSI from the current subscription.\n     *\n     * For carriers without any fine-grained carrier ids, return {@link #getCarrierId()}\n     ",
+    "links" : [ "#getSpecificCarrierId()", "#getCarrierId()" ]
+  }, {
+    "name" : "public String getCarrierName()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public String getSpecificCarrierName()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMnoCarrierId()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getCarrierIdFromIdentifier(@NonNull Context context, @NonNull CarrierIdentifier carrierIdentifier)",
+    "returnType" : "int",
+    "comment" : "\n     * a util function to convert carrierIdentifier to the best matching carrier id.\n     *\n     * @return the best matching carrier id.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static List<Integer> getCarrierIdsFromApnQuery(@NonNull Context context, String mccmnc, String mvnoCase, String mvnoData)",
+    "returnType" : "List<Integer>",
+    "comment" : "\n     * a util function to convert {mccmnc, mvno_type, mvno_data} to all matching carrier ids.\n     *\n     * @return a list of id with matching {mccmnc, mvno_type, mvno_data}\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int getCarrierIdFromMccMnc(@NonNull Context context, String mccmnc)",
+    "returnType" : "int",
+    "comment" : " static helper function to get carrier id from mccmnc",
+    "links" : [ ]
+  }, {
+    "name" : "public static String getCarrierNameFromMccMnc(@NonNull Context context, String mccmnc)",
+    "returnType" : "String",
+    "comment" : "\n     * Static helper function to get carrier name from mccmnc\n     * @param context Context\n     * @param mccmnc PLMN\n     * @return Carrier name string given mccmnc/PLMN\n     *\n     * @hide\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static Cursor getCursorForMccMnc(@NonNull Context context, String mccmnc)",
+    "returnType" : "Cursor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static boolean equals(String a, String b, boolean ignoreCase)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void logd(String str)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void loge(String str)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void logd(String str, int phoneId)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void resolveSubscriptionCarrierId(String simState)", "private void handleSimLoaded(boolean isSimOverride)", "private void handleSimAbsent()", "public void handleMessage(Message msg)", "private void loadCarrierMatchingRulesOnMccMnc(boolean updateCarrierConfig, boolean isSimOverride)", "private String getCarrierNameFromId(int cid)", "private static List<CarrierMatchingRule> getCarrierMatchingRulesFromMccMnc(@NonNull Context context, String mccmnc)", "private String getPreferApn()", "private boolean isPreferApnUserEdited(@NonNull String preferApn)", "public void setTestOverrideApn(String apn)", "public void setTestOverrideCarrierPriviledgeRule(String rule)", "private void updateCarrierIdAndName(int cid, String name, int specificCarrierId, String specificCarrierName, int mnoCid, boolean isSimOverride)", "private static CarrierMatchingRule makeCarrierMatchingRule(Cursor cursor)", "private CarrierMatchingRule getSubscriptionMatchingRule()", "private void updateCarrierConfig()", "private void matchSubscriptionCarrier(boolean updateCarrierConfig, boolean isSimOverride)", "public int getCarrierListVersion()", "public int getCarrierId()", "public int getSpecificCarrierId()", "public String getCarrierName()", "public String getSpecificCarrierName()", "public int getMnoCarrierId()", "public static int getCarrierIdFromIdentifier(@NonNull Context context, @NonNull CarrierIdentifier carrierIdentifier)", "public static List<Integer> getCarrierIdsFromApnQuery(@NonNull Context context, String mccmnc, String mvnoCase, String mvnoData)", "public static int getCarrierIdFromMccMnc(@NonNull Context context, String mccmnc)", "public static String getCarrierNameFromMccMnc(@NonNull Context context, String mccmnc)", "private static Cursor getCursorForMccMnc(@NonNull Context context, String mccmnc)", "private static boolean equals(String a, String b, boolean ignoreCase)", "private static void logd(String str)", "private static void loge(String str)", "private static void logd(String str, int phoneId)", "public void dump(FileDescriptor fd, PrintWriter pw, String[] args)" ],
+  "variableNames" : [ "LOG_TAG", "DBG", "VDBG", "SIM_LOAD_EVENT", "ICC_CHANGED_EVENT", "PREFER_APN_UPDATE_EVENT", "CARRIER_ID_DB_UPDATE_EVENT", "CONTENT_URL_PREFER_APN", "TEST_ACTION", "mCarrierListVersion", "mCarrierMatchingRulesOnMccMnc", "mCarrierId", "mSpecificCarrierId", "mMnoCarrierId", "mCarrierName", "mSpecificCarrierName", "mPreferApn", "mTestOverrideApn", "mTestOverrideCarrierPriviledgeRule", "mSpn", "mContext", "mPhone", "mIccRecords", "mCarrierIdLocalLog", "mTelephonyMgr", "mContentObserver", "mCarrierIdTestReceiver", "mPhoneStateListener" ]
+}

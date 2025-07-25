@@ -1,0 +1,86 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/androidx/recyclerview/widget/AsyncListDiffer.java",
+  "packageName" : "androidx.recyclerview.widget",
+  "className" : "AsyncListDiffer",
+  "comment" : "\n * Helper for computing the difference between two lists via {@link DiffUtil} on a background\n * thread.\n * <p>\n * It can be connected to a\n * {@link RecyclerView.Adapter RecyclerView.Adapter}, and will signal the\n * adapter of changes between sumbitted lists.\n * <p>\n * For simplicity, the {@link ListAdapter} wrapper class can often be used instead of the\n * AsyncListDiffer directly. This AsyncListDiffer can be used for complex cases, where overriding an\n * adapter base class to support asynchronous List diffing isn't convenient.\n * <p>\n * The AsyncListDiffer can consume the values from a LiveData of <code>List</code> and present the\n * data simply for an adapter. It computes differences in list contents via {@link DiffUtil} on a\n * background thread as new <code>List</code>s are received.\n * <p>\n * Use {@link #getCurrentList()} to access the current List, and present its data objects. Diff\n * results will be dispatched to the ListUpdateCallback immediately before the current list is\n * updated. If you're dispatching list updates directly to an Adapter, this means the Adapter can\n * safely access list items and total size via {@link #getCurrentList()}.\n * <p>\n * A complete usage pattern with Room would look like this:\n * <pre>\n * {@literal @}Dao\n * interface UserDao {\n *     {@literal @}Query(\"SELECT * FROM user ORDER BY lastName ASC\")\n *     public abstract LiveData&lt;List&lt;User>> usersByLastName();\n * }\n *\n * class MyViewModel extends ViewModel {\n *     public final LiveData&lt;List&lt;User>> usersList;\n *     public MyViewModel(UserDao userDao) {\n *         usersList = userDao.usersByLastName();\n *     }\n * }\n *\n * class MyActivity extends AppCompatActivity {\n *     {@literal @}Override\n *     public void onCreate(Bundle savedState) {\n *         super.onCreate(savedState);\n *         MyViewModel viewModel = new ViewModelProvider(this).get(MyViewModel.class);\n *         RecyclerView recyclerView = findViewById(R.id.user_list);\n *         UserAdapter adapter = new UserAdapter();\n *         viewModel.usersList.observe(this, list -> adapter.submitList(list));\n *         recyclerView.setAdapter(adapter);\n *     }\n * }\n *\n * class UserAdapter extends RecyclerView.Adapter&lt;UserViewHolder> {\n *     private final AsyncListDiffer&lt;User> mDiffer = new AsyncListDiffer(this, DIFF_CALLBACK);\n *     {@literal @}Override\n *     public int getItemCount() {\n *         return mDiffer.getCurrentList().size();\n *     }\n *     public void submitList(List&lt;User> list) {\n *         mDiffer.submitList(list);\n *     }\n *     {@literal @}Override\n *     public void onBindViewHolder(UserViewHolder holder, int position) {\n *         User user = mDiffer.getCurrentList().get(position);\n *         holder.bindTo(user);\n *     }\n *     public static final DiffUtil.ItemCallback&lt;User> DIFF_CALLBACK\n *             = new DiffUtil.ItemCallback&lt;User>() {\n *         {@literal @}Override\n *         public boolean areItemsTheSame(\n *                 {@literal @}NonNull User oldUser, {@literal @}NonNull User newUser) {\n *             // User properties may have changed if reloaded from the DB, but ID is fixed\n *             return oldUser.getId() == newUser.getId();\n *         }\n *         {@literal @}Override\n *         public boolean areContentsTheSame(\n *                 {@literal @}NonNull User oldUser, {@literal @}NonNull User newUser) {\n *             // NOTE: if you use equals, your object must properly override Object#equals()\n *             // Incorrectly returning false here will result in too many animations.\n *             return oldUser.equals(newUser);\n *         }\n *     }\n * }</pre>\n *\n * @param <T> Type of the lists this AsyncListDiffer will receive.\n *\n * @see DiffUtil\n * @see AdapterListUpdateCallback\n ",
+  "links" : [ "RecyclerView.Adapter", "DiffUtil", "#getCurrentList()", "ListAdapter" ],
+  "variables" : [ {
+    "name" : "mUpdateCallback",
+    "type" : "ListUpdateCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mConfig",
+    "type" : "AsyncDifferConfig<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMainThreadExecutor",
+    "type" : "Executor",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sMainThreadExecutor",
+    "type" : "Executor",
+    "comment" : " TODO: use MainThreadExecutor from supportlib once one exists",
+    "links" : [ ]
+  }, {
+    "name" : "mListeners",
+    "type" : "List<ListListener<T>>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mList",
+    "type" : "List<T>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReadOnlyList",
+    "type" : "List<T>",
+    "comment" : "\n     * Non-null, unmodifiable version of mList.\n     * <p>\n     * Collections.emptyList when mList is null, wrapped by Collections.unmodifiableList otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mMaxScheduledGeneration",
+    "type" : "int",
+    "comment" : " Max generation of currently scheduled runnable",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public List<T> getCurrentList()",
+    "returnType" : "List<T>",
+    "comment" : "\n     * Get the current List - any diffing to present this list has already been computed and\n     * dispatched via the ListUpdateCallback.\n     * <p>\n     * If a <code>null</code> List, or no List has been submitted, an empty list will be returned.\n     * <p>\n     * The returned list may not be mutated - mutations to content must be done through\n     * {@link #submitList(List)}.\n     *\n     * @return current List.\n     ",
+    "links" : [ "#submitList(List)" ]
+  }, {
+    "name" : "public void submitList(@Nullable final List<T> newList)",
+    "returnType" : "void",
+    "comment" : "\n     * Pass a new List to the AdapterHelper. Adapter updates will be computed on a background\n     * thread.\n     * <p>\n     * If a List is already present, a diff will be computed asynchronously on a background thread.\n     * When the diff is computed, it will be applied (dispatched to the {@link ListUpdateCallback}),\n     * and the new List will be swapped in.\n     *\n     * @param newList The new List.\n     ",
+    "links" : [ "ListUpdateCallback" ]
+  }, {
+    "name" : "public void submitList(@Nullable final List<T> newList, @Nullable final Runnable commitCallback)",
+    "returnType" : "void",
+    "comment" : "\n     * Pass a new List to the AdapterHelper. Adapter updates will be computed on a background\n     * thread.\n     * <p>\n     * If a List is already present, a diff will be computed asynchronously on a background thread.\n     * When the diff is computed, it will be applied (dispatched to the {@link ListUpdateCallback}),\n     * and the new List will be swapped in.\n     * <p>\n     * The commit callback can be used to know when the List is committed, but note that it\n     * may not be executed. If List B is submitted immediately after List A, and is\n     * committed directly, the callback associated with List A will not be run.\n     *\n     * @param newList The new List.\n     * @param commitCallback Optional runnable that is executed when the List is committed, if\n     *                       it is committed.\n     ",
+    "links" : [ "ListUpdateCallback" ]
+  }, {
+    "name" : " void latchList(@NonNull List<T> newList, DiffUtil.@NonNull DiffResult diffResult, @Nullable Runnable commitCallback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void onCurrentListChanged(@NonNull List<T> previousList, @Nullable Runnable commitCallback)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void addListListener(@NonNull ListListener<T> listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Add a ListListener to receive updates when the current List changes.\n     *\n     * @param listener Listener to receive updates.\n     *\n     * @see #getCurrentList()\n     * @see #removeListListener(ListListener)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void removeListListener(@NonNull ListListener<T> listener)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a previously registered ListListener.\n     *\n     * @param listener Previously registered listener.\n     * @see #getCurrentList()\n     * @see #addListListener(ListListener)\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public List<T> getCurrentList()", "public void submitList(@Nullable final List<T> newList)", "public void submitList(@Nullable final List<T> newList, @Nullable final Runnable commitCallback)", " void latchList(@NonNull List<T> newList, DiffUtil.@NonNull DiffResult diffResult, @Nullable Runnable commitCallback)", "private void onCurrentListChanged(@NonNull List<T> previousList, @Nullable Runnable commitCallback)", "public void addListListener(@NonNull ListListener<T> listener)", "public void removeListListener(@NonNull ListListener<T> listener)" ],
+  "variableNames" : [ "mUpdateCallback", "mConfig", "mMainThreadExecutor", "sMainThreadExecutor", "mListeners", "mList", "mReadOnlyList", "mMaxScheduledGeneration" ]
+}

@@ -1,0 +1,216 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/i18n/timezone/WallTime.java",
+  "packageName" : "com.android.i18n.timezone",
+  "className" : "WallTime",
+  "comment" : "\n * A class that represents a \"wall time\". This class is modeled on the C tm struct and\n * is used to support android.text.format.Time behavior. Unlike the tm struct the year is\n * represented as the full year, not the years since 1900.\n *\n * <p>This class contains a rewrite of various native functions that android.text.format.Time\n * once relied on such as mktime_tz and localtime_tz. This replacement does not support leap\n * seconds but does try to preserve behavior around ambiguous date/times found in the BSD\n * version of mktime that was previously used.\n *\n * <p>The original native code used a 32-bit value for time_t on 32-bit Android, which\n * was the only variant of Android available at the time. To preserve old behavior this code\n * deliberately uses {@code int} rather than {@code long} for most things and performs\n * calculations in seconds. This creates deliberate truncation issues for date / times before\n * 1901 and after 2038. This is intentional but might be fixed in future if all the knock-ons\n * can be resolved: Application code may have come to rely on the range so previously values\n * like zero for year could indicate an invalid date but if we move to long the year zero would\n * be valid.\n *\n * <p>All offsets are considered to be safe for addition / subtraction / multiplication without\n * worrying about overflow. All absolute time arithmetic is checked for overflow / underflow.\n *\n * @hide\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "calendar",
+    "type" : "GregorianCalendar",
+    "comment" : " automatically normalize it, so we must copy values into and out of it as needed.",
+    "links" : [ ]
+  }, {
+    "name" : "year",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "month",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "monthDay",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hour",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "minute",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "second",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "weekDay",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "yearDay",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "isDst",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "gmtOffsetSeconds",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void localtime(int timeSeconds, ZoneInfoData zoneInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Sets the wall time to a point in time using the time zone information provided. This\n     * is a replacement for the old native localtime_tz() function.\n     *\n     * <p>When going from an instant to a wall time it is always unambiguous because there\n     * is only one offset rule acting at any given instant. We do not consider leap seconds.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int mktime(ZoneInfoData zoneInfo)",
+    "returnType" : "int",
+    "comment" : "\n     * Returns the time in seconds since beginning of the Unix epoch for the wall time using the\n     * time zone information provided. This is a replacement for an old native mktime_tz() C\n     * function.\n     *\n     * <p>When going from a wall time to an instant the answer can be ambiguous. A wall\n     * time can map to zero, one or two instants given rational date/time transitions. Rational\n     * in this case means that transitions occur less frequently than the offset\n     * differences between them (which could cause all sorts of craziness like the\n     * skipping out of transitions).\n     *\n     * <p>For example, this is not fully supported:\n     * <ul>\n     *     <li>t1 { time = 1, offset = 0 }\n     *     <li>t2 { time = 2, offset = -1 }\n     *     <li>t3 { time = 3, offset = -2 }\n     * </ul>\n     * A wall time in this case might map to t1, t2 or t3.\n     *\n     * <p>We do not handle leap seconds.\n     * <p>We assume that no timezone offset transition has an absolute offset > 24 hours.\n     * <p>We do not assume that adjacent transitions modify the DST state; adjustments can\n     * occur for other reasons such as when a zone changes its raw offset.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Integer tryOffsetAdjustments(ZoneInfoData zoneInfo, int oldWallTimeSeconds, OffsetInterval targetInterval, int transitionIndex, int isDstToFind) throws CheckedArithmeticException",
+    "returnType" : "Integer",
+    "comment" : "\n     * Attempt to apply DST adjustments to {@code oldWallTimeSeconds} to create a wall time in\n     * {@code targetInterval}.\n     *\n     * <p>This is used when a caller has made an assertion about standard time / DST that cannot\n     * be matched to any offset interval that exists. We must therefore assume that the isDst\n     * assertion is incorrect and the invalid wall time is the result of some modification the\n     * caller made to a valid wall time that pushed them outside of the offset interval they\n     * were in. We must correct for any DST change that should have been applied when they did\n     * so.\n     *\n     * <p>Unfortunately, we have no information about what adjustment they made and so cannot\n     * know which offset interval they were previously in. For example, they may have added a\n     * second or a year to a valid time to arrive at what they have.\n     *\n     * <p>We try all offset types that are not the same as the isDst the caller asserted. For\n     * each possible offset we work out the offset difference between that and\n     * {@code targetInterval}, apply it, and see if we are still in {@code targetInterval}. If\n     * we are, then we have found an adjustment.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int[] getOffsetsOfType(ZoneInfoData zoneInfo, int startIndex, int isDst)",
+    "returnType" : "int[]",
+    "comment" : "\n     * Return an array of offsets that have the requested {@code isDst} value.\n     * The {@code startIndex} is used as a starting point so transitions nearest\n     * to that index are returned first.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private Integer doWallTimeSearch(ZoneInfoData zoneInfo, int initialTransitionIndex, int wallTimeSeconds, boolean mustMatchDst) throws CheckedArithmeticException",
+    "returnType" : "Integer",
+    "comment" : "\n     * Find a time <em>in seconds</em> the same or close to {@code wallTimeSeconds} that\n     * satisfies {@code mustMatchDst}. The search begins around the timezone offset transition\n     * with {@code initialTransitionIndex}.\n     *\n     * <p>If {@code mustMatchDst} is {@code true} the method can only return times that\n     * use timezone offsets that satisfy the {@code this.isDst} requirements.\n     * If {@code this.isDst == -1} it means that any offset can be used.\n     *\n     * <p>If {@code mustMatchDst} is {@code false} any offset that covers the\n     * currently set time is acceptable. That is: if {@code this.isDst} == -1, any offset\n     * transition can be used, if it is 0 or 1 the offset used must match {@code this.isDst}.\n     *\n     * <p>Note: This method both uses and can modify field state. It returns the matching time\n     * in seconds if a match has been found and modifies fields, or it returns {@code null} and\n     * leaves the field state unmodified.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setYear(int year)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMonth(int month)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMonthDay(int monthDay)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHour(int hour)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMinute(int minute)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSecond(int second)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWeekDay(int weekDay)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setYearDay(int yearDay)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setIsDst(int isDst)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void setGmtOffset(int gmtoff)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getYear()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMonth()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMonthDay()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getHour()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getMinute()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getSecond()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWeekDay()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getYearDay()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getGmtOffset()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getIsDst()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void copyFieldsToCalendar()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void copyFieldsFromCalendar()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static int checked32BitAdd(long a, int b) throws CheckedArithmeticException",
+    "returnType" : "int",
+    "comment" : "\n     * Calculate (a + b). The result must be in the Integer range otherwise an exception is thrown.\n     *\n     * @throws CheckedArithmeticException if overflow or underflow occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int checked32BitSubtract(long a, int b) throws CheckedArithmeticException",
+    "returnType" : "int",
+    "comment" : "\n     * Calculate (a - b). The result must be in the Integer range otherwise an exception is thrown.\n     *\n     * @throws CheckedArithmeticException if overflow or underflow occurs\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int saturated32BitAdd(long a, int b)",
+    "returnType" : "int",
+    "comment" : "\n     * Calculate (a + b). If the result would overflow or underflow outside of the Integer range\n     * Integer.MAX_VALUE or Integer.MIN_VALUE will be returned, respectively.\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void localtime(int timeSeconds, ZoneInfoData zoneInfo)", "public int mktime(ZoneInfoData zoneInfo)", "private Integer tryOffsetAdjustments(ZoneInfoData zoneInfo, int oldWallTimeSeconds, OffsetInterval targetInterval, int transitionIndex, int isDstToFind) throws CheckedArithmeticException", "private static int[] getOffsetsOfType(ZoneInfoData zoneInfo, int startIndex, int isDst)", "private Integer doWallTimeSearch(ZoneInfoData zoneInfo, int initialTransitionIndex, int wallTimeSeconds, boolean mustMatchDst) throws CheckedArithmeticException", "public void setYear(int year)", "public void setMonth(int month)", "public void setMonthDay(int monthDay)", "public void setHour(int hour)", "public void setMinute(int minute)", "public void setSecond(int second)", "public void setWeekDay(int weekDay)", "public void setYearDay(int yearDay)", "public void setIsDst(int isDst)", "public void setGmtOffset(int gmtoff)", "public int getYear()", "public int getMonth()", "public int getMonthDay()", "public int getHour()", "public int getMinute()", "public int getSecond()", "public int getWeekDay()", "public int getYearDay()", "public int getGmtOffset()", "public int getIsDst()", "private void copyFieldsToCalendar()", "private void copyFieldsFromCalendar()", "private static int checked32BitAdd(long a, int b) throws CheckedArithmeticException", "private static int checked32BitSubtract(long a, int b) throws CheckedArithmeticException", "private static int saturated32BitAdd(long a, int b)" ],
+  "variableNames" : [ "calendar", "year", "month", "monthDay", "hour", "minute", "second", "weekDay", "yearDay", "isDst", "gmtOffsetSeconds" ]
+}

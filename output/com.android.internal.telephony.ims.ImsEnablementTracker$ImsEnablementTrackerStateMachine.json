@@ -1,0 +1,111 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/telephony/ims/ImsEnablementTracker.java",
+  "packageName" : "com.android.internal.telephony.ims",
+  "className" : "ImsEnablementTrackerStateMachine",
+  "comment" : "\n     * Provides Ims Enablement Tracker State Machine responsible for ims enable/disable/reset\n     * command interactions with Ims service controller binder.\n     * The enable/disable/reset ims commands have a time interval of at least\n     * {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second between\n     * processing each command.\n     * For example, the enableIms command is received and the binder's enableIms is called.\n     * After that, if the disableIms command is received, the binder's disableIms will be\n     * called after {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second.\n     * A time of {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} will be used\n     * {@link Handler#sendMessageDelayed(Message, long)},\n     * and the enabled, disabled and reset states are responsible for waiting for\n     * that delay message.\n     ",
+  "links" : [ "android.os.Handler#sendMessageDelayed(Message", "#REQUEST_THROTTLE_TIME_MS" ],
+  "variables" : [ {
+    "name" : "mDefault",
+    "type" : "Default",
+    "comment" : "\n         * The initial state of this class and waiting for an ims commands.\n         ",
+    "links" : [ ]
+  }, {
+    "name" : "mEnabled",
+    "type" : "Enabled",
+    "comment" : "\n         * Indicates that {@link IImsServiceController#enableIms(int, int)} has been called and\n         * waiting for an ims commands.\n         * Common transitions are to\n         * {@link #mDisabling} state when the disable command is received\n         * or {@link #mResetting} state when the reset command is received\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "#mDisconnected", "android.telephony.ims.aidl.IImsServiceController#enableIms(int", "#mDisabling", "#mResetting" ]
+  }, {
+    "name" : "mDisabling",
+    "type" : "Disabling",
+    "comment" : "\n         * Indicates that the state waiting for the throttle time to elapse before calling\n         * {@link IImsServiceController#disableIms(int, int)}.\n         * Common transitions are to\n         * {@link #mEnabled} when the enable command is received.\n         * or {@link #mResetting} when the reset command is received.\n         * or {@link #mDisabled} the previous binder API call has passed\n         * {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second, and if\n         * {@link IImsServiceController#disableIms(int, int)} called.\n         * or {@link #mDisabling} received a disableIms message and the previous binder API call\n         * has not passed {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second.\n         * Then send a disableIms message with delay.\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "#mEnabled", "#mDisconnected", "android.telephony.ims.aidl.IImsServiceController#disableIms(int", "#REQUEST_THROTTLE_TIME_MS", "#mDisabling", "#mDisabled", "#mResetting" ]
+  }, {
+    "name" : "mDisabled",
+    "type" : "Disabled",
+    "comment" : "\n         * Indicates that {@link IImsServiceController#disableIms(int, int)} has been called and\n         * waiting for an ims commands.\n         * Common transitions are to\n         * {@link #mEnabling} state when the enable command is received.\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "#mEnabling", "#mDisconnected", "android.telephony.ims.aidl.IImsServiceController#disableIms(int" ]
+  }, {
+    "name" : "mEnabling",
+    "type" : "Enabling",
+    "comment" : "\n         * Indicates that the state waiting for the throttle time to elapse before calling\n         * {@link IImsServiceController#enableIms(int, int)}.\n         * Common transitions are to\n         * {@link #mEnabled} the previous binder API call has passed\n         * {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second, and\n         * {@link IImsServiceController#enableIms(int, int)} called.\n         * or {@link #mDisabled} when the disable command is received.\n         * or {@link #mEnabling} received an enableIms message and the previous binder API call\n         * has not passed {@link ImsEnablementTracker#REQUEST_THROTTLE_TIME_MS} second.\n         * Then send an enableIms message with delay.\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "#mEnabling", "#mEnabled", "#mDisconnected", "android.telephony.ims.aidl.IImsServiceController#enableIms(int", "#REQUEST_THROTTLE_TIME_MS", "#mDisabled" ]
+  }, {
+    "name" : "mResetting",
+    "type" : "Resetting",
+    "comment" : "\n         * Indicates that the state waiting for the throttle time to elapse before calling\n         * {@link IImsServiceController#resetIms(int, int)}.\n         * Common transitions are to\n         * {@link #mPostResetting} state to call either enableIms or disableIms after calling\n         * {@link IImsServiceController#resetIms(int, int)}\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "android.telephony.ims.aidl.IImsServiceController#resetIms(int", "#mDisconnected", "#mPostResetting" ]
+  }, {
+    "name" : "mPostResetting",
+    "type" : "PostResetting",
+    "comment" : "\n         * Indicates that the state waiting after resetIms for the throttle time to elapse before\n         * calling {@link IImsServiceController#enableIms(int, int)} or\n         * {@link IImsServiceController#disableIms(int, int)}.\n         * Common transitions are to\n         * {@link #mEnabled} state when the disable command is received,\n         * {@link #mDisabled} state when the enable command is received after calling\n         * {@link IImsServiceController#enableIms(int, int)},\n         * {@link IImsServiceController#disableIms(int, int)}\n         * or {@link #mDisconnected} if the binder is disconnected.\n         ",
+    "links" : [ "#mEnabled", "#mDisconnected", "android.telephony.ims.aidl.IImsServiceController#enableIms(int", "android.telephony.ims.aidl.IImsServiceController#disableIms(int", "#mDisabled" ]
+  }, {
+    "name" : "mDisconnected",
+    "type" : "Disconnected",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSlotId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSubId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPhoneId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPreviousState",
+    "type" : "IState",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLastMsg",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void clearAllMessage()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void serviceBinderConnected()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void serviceBinderDisconnected()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public boolean isState(int state)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private State getState(int state)",
+    "returnType" : "State",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleInvalidSubIdMessage()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void transitionState(State state)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void clearAllMessage()", "public void serviceBinderConnected()", "public void serviceBinderDisconnected()", "public boolean isState(int state)", "private State getState(int state)", "private void handleInvalidSubIdMessage()", "private void transitionState(State state)" ],
+  "variableNames" : [ "mDefault", "mEnabled", "mDisabling", "mDisabled", "mEnabling", "mResetting", "mPostResetting", "mDisconnected", "mSlotId", "mSubId", "mPhoneId", "mPreviousState", "mLastMsg" ]
+}

@@ -1,0 +1,96 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/google/android/exoplayer2/util/TimestampAdjuster.java",
+  "packageName" : "com.google.android.exoplayer2.util",
+  "className" : "TimestampAdjuster",
+  "comment" : "\n * Adjusts and offsets sample timestamps. MPEG-2 TS timestamps scaling and adjustment is supported,\n * taking into account timestamp rollover.\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "MODE_NO_OFFSET",
+    "type" : "long",
+    "comment" : "\n   * A special {@code firstSampleTimestampUs} value indicating that presentation timestamps should\n   * not be offset. In this mode:\n   *\n   * <ul>\n   *   <li>{@link #getFirstSampleTimestampUs()} will always return {@link C#TIME_UNSET}.\n   *   <li>The only timestamp adjustment performed is to account for MPEG-2 TS timestamp rollover.\n   * </ul>\n   ",
+    "links" : [ "com.google.android.exoplayer2.C#TIME_UNSET", "#getFirstSampleTimestampUs()" ]
+  }, {
+    "name" : "MODE_SHARED",
+    "type" : "long",
+    "comment" : "\n   * A special {@code firstSampleTimestampUs} value indicating that the adjuster will be shared by\n   * multiple threads. In this mode:\n   *\n   * <ul>\n   *   <li>{@link #getFirstSampleTimestampUs()} will always return {@link C#TIME_UNSET}.\n   *   <li>Calling threads must call {@link #sharedInitializeOrWait} prior to adjusting timestamps.\n   * </ul>\n   ",
+    "links" : [ "com.google.android.exoplayer2.C#TIME_UNSET", "#sharedInitializeOrWait", "#getFirstSampleTimestampUs()" ]
+  }, {
+    "name" : "MAX_PTS_PLUS_ONE",
+    "type" : "long",
+    "comment" : "\n   * The value one greater than the largest representable (33 bit) MPEG-2 TS 90 kHz clock\n   * presentation timestamp.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "firstSampleTimestampUs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "timestampOffsetUs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "lastUnadjustedTimestampUs",
+    "type" : "long",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "nextSampleTimestampUs",
+    "type" : "ThreadLocal<Long>",
+    "comment" : "\n   * Next sample timestamps for calling threads in shared mode when {@link #timestampOffsetUs} has\n   * not yet been set.\n   ",
+    "links" : [ "#timestampOffsetUs" ]
+  } ],
+  "methods" : [ {
+    "name" : "public synchronized void sharedInitializeOrWait(boolean canInitialize, long nextSampleTimestampUs) throws InterruptedException",
+    "returnType" : "void",
+    "comment" : "\n   * For shared timestamp adjusters, performs necessary initialization actions for a caller.\n   *\n   * <ul>\n   *   <li>If the adjuster has already established a {@link #getTimestampOffsetUs timestamp offset}\n   *       then this method is a no-op.\n   *   <li>If {@code canInitialize} is {@code true} and the adjuster has not yet established a\n   *       timestamp offset, then the adjuster records the desired first sample timestamp for the\n   *       calling thread and returns to allow the caller to proceed. If the timestamp offset has\n   *       still not been established when the caller attempts to adjust its first timestamp, then\n   *       the recorded timestamp is used to set it.\n   *   <li>If {@code canInitialize} is {@code false} and the adjuster has not yet established a\n   *       timestamp offset, then the call blocks until the timestamp offset is set.\n   * </ul>\n   *\n   * @param canInitialize Whether the caller is able to initialize the adjuster, if needed.\n   * @param nextSampleTimestampUs The desired timestamp for the next sample loaded by the calling\n   *     thread, in microseconds. Only used if {@code canInitialize} is {@code true}.\n   * @throws InterruptedException If the thread is interrupted whilst blocked waiting for\n   *     initialization to complete.\n   ",
+    "links" : [ "#getTimestampOffsetUs" ]
+  }, {
+    "name" : "public synchronized long getFirstSampleTimestampUs()",
+    "returnType" : "long",
+    "comment" : "\n   * Returns the value of the first adjusted sample timestamp in microseconds, or {@link\n   * C#TIME_UNSET} if timestamps will not be offset or if the adjuster is in shared mode.\n   ",
+    "links" : [ "com.google.android.exoplayer2.C#TIME_UNSET" ]
+  }, {
+    "name" : "public synchronized long getLastAdjustedTimestampUs()",
+    "returnType" : "long",
+    "comment" : "\n   * Returns the last adjusted timestamp, in microseconds. If no timestamps have been adjusted yet\n   * then the result of {@link #getFirstSampleTimestampUs()} is returned.\n   ",
+    "links" : [ "#getFirstSampleTimestampUs()" ]
+  }, {
+    "name" : "public synchronized long getTimestampOffsetUs()",
+    "returnType" : "long",
+    "comment" : "\n   * Returns the offset between the input of {@link #adjustSampleTimestamp(long)} and its output, or\n   * {@link C#TIME_UNSET} if the offset has not yet been determined.\n   ",
+    "links" : [ "#adjustSampleTimestamp(long)", "com.google.android.exoplayer2.C#TIME_UNSET" ]
+  }, {
+    "name" : "public synchronized void reset(long firstSampleTimestampUs)",
+    "returnType" : "void",
+    "comment" : "\n   * Resets the instance.\n   *\n   * @param firstSampleTimestampUs The desired value of the first adjusted sample timestamp after\n   *     this reset in microseconds, or {@link #MODE_NO_OFFSET} if timestamps should not be offset,\n   *     or {@link #MODE_SHARED} if the adjuster will be used in shared mode.\n   ",
+    "links" : [ "#MODE_NO_OFFSET", "#MODE_SHARED" ]
+  }, {
+    "name" : "public synchronized long adjustTsTimestamp(long pts90Khz)",
+    "returnType" : "long",
+    "comment" : "\n   * Scales and offsets an MPEG-2 TS presentation timestamp considering wraparound.\n   *\n   * @param pts90Khz A 90 kHz clock MPEG-2 TS presentation timestamp.\n   * @return The adjusted timestamp in microseconds.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public synchronized long adjustSampleTimestamp(long timeUs)",
+    "returnType" : "long",
+    "comment" : "\n   * Offsets a timestamp in microseconds.\n   *\n   * @param timeUs The timestamp to adjust in microseconds.\n   * @return The adjusted timestamp in microseconds.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long ptsToUs(long pts)",
+    "returnType" : "long",
+    "comment" : "\n   * Converts a 90 kHz clock timestamp to a timestamp in microseconds.\n   *\n   * @param pts A 90 kHz clock timestamp.\n   * @return The corresponding value in microseconds.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long usToWrappedPts(long us)",
+    "returnType" : "long",
+    "comment" : "\n   * Converts a timestamp in microseconds to a 90 kHz clock timestamp, performing wraparound to keep\n   * the result within 33-bits.\n   *\n   * @param us A value in microseconds.\n   * @return The corresponding value as a 90 kHz clock timestamp, wrapped to 33 bits.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long usToNonWrappedPts(long us)",
+    "returnType" : "long",
+    "comment" : "\n   * Converts a timestamp in microseconds to a 90 kHz clock timestamp.\n   *\n   * <p>Does not perform any wraparound. To get a 90 kHz timestamp suitable for use with MPEG-TS,\n   * use {@link #usToWrappedPts(long)}.\n   *\n   * @param us A value in microseconds.\n   * @return The corresponding value as a 90 kHz clock timestamp.\n   ",
+    "links" : [ "#usToWrappedPts(long)" ]
+  } ],
+  "methodNames" : [ "public synchronized void sharedInitializeOrWait(boolean canInitialize, long nextSampleTimestampUs) throws InterruptedException", "public synchronized long getFirstSampleTimestampUs()", "public synchronized long getLastAdjustedTimestampUs()", "public synchronized long getTimestampOffsetUs()", "public synchronized void reset(long firstSampleTimestampUs)", "public synchronized long adjustTsTimestamp(long pts90Khz)", "public synchronized long adjustSampleTimestamp(long timeUs)", "public static long ptsToUs(long pts)", "public static long usToWrappedPts(long us)", "public static long usToNonWrappedPts(long us)" ],
+  "variableNames" : [ "MODE_NO_OFFSET", "MODE_SHARED", "MAX_PTS_PLUS_ONE", "firstSampleTimestampUs", "timestampOffsetUs", "lastUnadjustedTimestampUs", "nextSampleTimestampUs" ]
+}

@@ -1,0 +1,376 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/google/protobuf/ByteString.java",
+  "packageName" : "com.google.protobuf",
+  "className" : "ByteString",
+  "comment" : "\n * Immutable sequence of bytes. Provides conversions to and from {@code byte[]}, {@link\n * java.lang.String}, {@link ByteBuffer}, {@link InputStream}, {@link OutputStream}. Also provides a\n * conversion to {@link CodedInputStream}.\n *\n * <p>Like {@link String}, the contents of a {@link ByteString} can never be observed to change, not\n * even in the presence of a data race or incorrect API usage in the client code.\n *\n * <p>Substring is supported by sharing the reference to the immutable underlying bytes.\n * Concatenation is likewise supported without copying (long strings) by building a tree of pieces\n * in {@link RopeByteString}.\n *\n * @author crazybob@google.com Bob Lee\n * @author kenton@google.com Kenton Varda\n * @author carlanton@google.com Carl Haverl\n * @author martinrb@google.com Martin Buchholz\n ",
+  "links" : [ "java.io.ByteArrayInputStream", "java.io.ByteArrayOutputStream", "CodedInputStream", "ByteString", "RopeByteString", "java.lang.String", "java.lang.Integer.toHexString", "java.nio.ByteBuffer" ],
+  "variables" : [ {
+    "name" : "CONCATENATE_BY_COPY_SIZE",
+    "type" : "int",
+    "comment" : "\n   * When two strings to be concatenated have a combined length shorter than this, we just copy\n   * their bytes on {@link #concat(ByteString)}. The trade-off is copy size versus the overhead of\n   * creating tree nodes in {@link RopeByteString}.\n   ",
+    "links" : [ "RopeByteString", "#concat(ByteString)" ]
+  }, {
+    "name" : "MIN_READ_FROM_CHUNK_SIZE",
+    "type" : "int",
+    "comment" : " 256b",
+    "links" : [ ]
+  }, {
+    "name" : "MAX_READ_FROM_CHUNK_SIZE",
+    "type" : "int",
+    "comment" : " 8k",
+    "links" : [ ]
+  }, {
+    "name" : "EMPTY",
+    "type" : "ByteString",
+    "comment" : " Empty {@code ByteString}. ",
+    "links" : [ ]
+  }, {
+    "name" : "byteArrayCopier",
+    "type" : "ByteArrayCopier",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "hash",
+    "type" : "int",
+    "comment" : "\n   * Cached hash value. Intentionally accessed via a data race, which is safe because of the Java\n   * Memory Model's \"no out-of-thin-air values\" guarantees for ints. A value of 0 implies that the\n   * hash has not been set.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "UNSIGNED_BYTE_MASK",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "UNSIGNED_LEXICOGRAPHICAL_COMPARATOR",
+    "type" : "Comparator<ByteString>",
+    "comment" : "\n   * Compares two {@link ByteString}s lexicographically, treating their contents as unsigned byte\n   * values between 0 and 255 (inclusive).\n   *\n   * <p>For example, {@code (byte) -1} is considered to be greater than {@code (byte) 1} because it\n   * is interpreted as an unsigned value, {@code 255}.\n   ",
+    "links" : [ "ByteString" ]
+  } ],
+  "methods" : [ {
+    "name" : "public abstract byte byteAt(int index)",
+    "returnType" : "byte",
+    "comment" : "\n   * Gets the byte at the given index. This method should be used only for random access to\n   * individual bytes. To access bytes sequentially, use the {@link ByteIterator} returned by {@link\n   * #iterator()}, and call {@link #substring(int, int)} first if necessary.\n   *\n   * @param index index of byte\n   * @return the value\n   * @throws IndexOutOfBoundsException {@code index < 0 or index >= size}\n   ",
+    "links" : [ "#substring(int", "#iterator()", "ByteIterator" ]
+  }, {
+    "name" : " abstract byte internalByteAt(int index)",
+    "returnType" : "byte",
+    "comment" : "\n   * Gets the byte at the given index, assumes bounds checking has already been performed.\n   *\n   * @param index index of byte\n   * @return the value\n   * @throws IndexOutOfBoundsException {@code index < 0 or index >= size}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public ByteIterator iterator()",
+    "returnType" : "ByteIterator",
+    "comment" : "\n   * Return a {@link ByteString.ByteIterator} over the bytes in the ByteString. To avoid\n   * auto-boxing, you may get the iterator manually and call {@link ByteIterator#nextByte()}.\n   *\n   * @return the iterator\n   ",
+    "links" : [ "ByteString.ByteIterator", "#nextByte()" ]
+  }, {
+    "name" : "public abstract int size()",
+    "returnType" : "int",
+    "comment" : "\n   * Gets the number of bytes.\n   *\n   * @return size in bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean isEmpty()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Returns {@code true} if the size is {@code 0}, {@code false} otherwise.\n   *\n   * @return true if this is zero bytes long\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static final ByteString empty()",
+    "returnType" : "ByteString",
+    "comment" : " Returns an empty {@code ByteString} of size {@code 0}. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int toInt(byte value)",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the value of the given byte as an integer, interpreting the byte as an unsigned value.\n   * That is, returns {@code value + 256} if {@code value} is negative; {@code value} itself\n   * otherwise.\n   *\n   * <p>Note: This code was copied from {@link com.google.common.primitives.UnsignedBytes#toInt}, as\n   * Guava libraries cannot be used in the {@code com.google.protobuf} package.\n   ",
+    "links" : [ "com.google.common.primitives.UnsignedBytes#toInt" ]
+  }, {
+    "name" : "private static int hexDigit(char c)",
+    "returnType" : "int",
+    "comment" : " Returns the numeric value of the given character in hex, or -1 if invalid. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static int extractHexDigit(String hexString, int index)",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the numeric value of the given character at index in hexString.\n   *\n   * @throws NumberFormatException if the hexString character is invalid.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static Comparator<ByteString> unsignedLexicographicalComparator()",
+    "returnType" : "Comparator<ByteString>",
+    "comment" : "\n   * Returns a {@link Comparator} which compares {@link ByteString}-s lexicographically as sequences\n   * of unsigned bytes (i.e. values between 0 and 255, inclusive).\n   *\n   * <p>For example, {@code (byte) -1} is considered to be greater than {@code (byte) 1} because it\n   * is interpreted as an unsigned value, {@code 255}:\n   *\n   * <ul>\n   *   <li>{@code `-1` -> 0b11111111 (two's complement) -> 255}\n   *   <li>{@code `1` -> 0b00000001 -> 1}\n   * </ul>\n   ",
+    "links" : [ "ByteString", "java.util.Comparator" ]
+  }, {
+    "name" : "public final ByteString substring(int beginIndex)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Return the substring from {@code beginIndex}, inclusive, to the end of the string.\n   *\n   * @param beginIndex start at this index\n   * @return substring sharing underlying data\n   * @throws IndexOutOfBoundsException if {@code beginIndex < 0} or {@code beginIndex > size()}.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract ByteString substring(int beginIndex, int endIndex)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Return the substring from {@code beginIndex}, inclusive, to {@code endIndex}, exclusive.\n   *\n   * @param beginIndex start at this index\n   * @param endIndex the last character is the one before this index\n   * @return substring sharing underlying data\n   * @throws IndexOutOfBoundsException if {@code beginIndex < 0}, {@code endIndex > size()}, or\n   *     {@code beginIndex > endIndex}.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final boolean startsWith(ByteString prefix)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tests if this bytestring starts with the specified prefix. Similar to {@link\n   * String#startsWith(String)}\n   *\n   * @param prefix the prefix.\n   * @return <code>true</code> if the byte sequence represented by the argument is a prefix of the\n   *     byte sequence represented by this string; <code>false</code> otherwise.\n   ",
+    "links" : [ "java.lang.Integer.toHexString#startsWith(String)" ]
+  }, {
+    "name" : "public final boolean endsWith(ByteString suffix)",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tests if this bytestring ends with the specified suffix. Similar to {@link\n   * String#endsWith(String)}\n   *\n   * @param suffix the suffix.\n   * @return <code>true</code> if the byte sequence represented by the argument is a suffix of the\n   *     byte sequence represented by this string; <code>false</code> otherwise.\n   ",
+    "links" : [ "java.lang.Integer.toHexString#endsWith(String)" ]
+  }, {
+    "name" : "public static ByteString fromHex(@CompileTimeConstant String hexString)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Returns a {@code ByteString} from a hexadecimal String. Alternative CharSequences should use\n   * {@link ByteStrings#decode(CharSequence, BaseEncoding)}\n   *\n   * @param hexString String of hexadecimal digits to create {@code ByteString} from.\n   * @throws NumberFormatException if the hexString does not contain a parsable hex String.\n   ",
+    "links" : [ "#decode(CharSequence" ]
+  }, {
+    "name" : "public static ByteString copyFrom(byte[] bytes, int offset, int size)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Copies the given bytes into a {@code ByteString}.\n   *\n   * @param bytes source array\n   * @param offset offset in source array\n   * @param size number of bytes to copy\n   * @return new {@code ByteString}\n   * @throws IndexOutOfBoundsException if {@code offset} or {@code size} are out of bounds\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFrom(byte[] bytes)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Copies the given bytes into a {@code ByteString}.\n   *\n   * @param bytes to copy\n   * @return new {@code ByteString}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static ByteString wrap(ByteBuffer buffer)",
+    "returnType" : "ByteString",
+    "comment" : " Wraps the given bytes into a {@code ByteString}. Intended for internal only usage. ",
+    "links" : [ ]
+  }, {
+    "name" : " static ByteString wrap(byte[] bytes)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Wraps the given bytes into a {@code ByteString}. Intended for internal only usage to force a\n   * classload of ByteString before LiteralByteString.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static ByteString wrap(byte[] bytes, int offset, int length)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Wraps the given bytes into a {@code ByteString}. Intended for internal only usage to force a\n   * classload of ByteString before BoundedByteString and LiteralByteString.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFrom(ByteBuffer bytes, int size)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Copies the next {@code size} bytes from a {@code java.nio.ByteBuffer} into a {@code\n   * ByteString}.\n   *\n   * @param bytes source buffer\n   * @param size number of bytes to copy\n   * @return new {@code ByteString}\n   * @throws IndexOutOfBoundsException if {@code size > bytes.remaining()}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFrom(ByteBuffer bytes)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Copies the remaining bytes from a {@code java.nio.ByteBuffer} into a {@code ByteString}.\n   *\n   * @param bytes sourceBuffer\n   * @return new {@code ByteString}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFrom(String text, String charsetName) throws UnsupportedEncodingException",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Encodes {@code text} into a sequence of bytes using the named charset and returns the result as\n   * a {@code ByteString}.\n   *\n   * @param text source string\n   * @param charsetName encoding to use\n   * @return new {@code ByteString}\n   * @throws UnsupportedEncodingException if the encoding isn't found\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFrom(String text, Charset charset)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Encodes {@code text} into a sequence of bytes using the named charset and returns the result as\n   * a {@code ByteString}.\n   *\n   * @param text source string\n   * @param charset encode using this charset\n   * @return new {@code ByteString}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString copyFromUtf8(String text)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Encodes {@code text} into a sequence of UTF-8 bytes and returns the result as a {@code\n   * ByteString}.\n   *\n   * @param text source string\n   * @return new {@code ByteString}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString readFrom(InputStream streamToDrain) throws IOException",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Completely reads the given stream's bytes into a {@code ByteString}, blocking if necessary\n   * until all bytes are read through to the end of the stream.\n   *\n   * <p><b>Performance notes:</b> The returned {@code ByteString} is an immutable tree of byte\n   * arrays (\"chunks\") of the stream data. The first chunk is small, with subsequent chunks each\n   * being double the size, up to 8K.\n   *\n   * <p>Each byte read from the input stream will be copied twice to ensure that the resulting\n   * ByteString is truly immutable.\n   *\n   * @param streamToDrain The source stream, which is read completely but not closed.\n   * @return A new {@code ByteString} which is made up of chunks of various sizes, depending on the\n   *     behavior of the underlying stream.\n   * @throws IOException if there is a problem reading the underlying stream\n   * @throws IllegalArgumentException if the stream supplies more than Integer.MAX_VALUE bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString readFrom(InputStream streamToDrain, int chunkSize) throws IOException",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Completely reads the given stream's bytes into a {@code ByteString}, blocking if necessary\n   * until all bytes are read through to the end of the stream.\n   *\n   * <p><b>Performance notes:</b> The returned {@code ByteString} is an immutable tree of byte\n   * arrays (\"chunks\") of the stream data. The chunkSize parameter sets the size of these byte\n   * arrays.\n   *\n   * <p>Each byte read from the input stream will be copied twice to ensure that the resulting\n   * ByteString is truly immutable.\n   *\n   * @param streamToDrain The source stream, which is read completely but not closed.\n   * @param chunkSize The size of the chunks in which to read the stream.\n   * @return A new {@code ByteString} which is made up of chunks of the given size.\n   * @throws IOException if there is a problem reading the underlying stream\n   * @throws IllegalArgumentException if the stream supplies more than Integer.MAX_VALUE bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static ByteString readFrom(InputStream streamToDrain, int minChunkSize, int maxChunkSize) throws IOException",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Helper method that takes the chunk size range as a parameter.\n   *\n   * @param streamToDrain the source stream, which is read completely but not closed\n   * @param minChunkSize the minimum size of the chunks in which to read the stream\n   * @param maxChunkSize the maximum size of the chunks in which to read the stream\n   * @return a new {@code ByteString} which is made up of chunks within the given size range\n   * @throws IOException if there is a problem reading the underlying stream\n   * @throws IllegalArgumentException if the stream supplies more than Integer.MAX_VALUE bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ByteString readChunk(InputStream in, final int chunkSize) throws IOException",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Blocks until a chunk of the given size can be made from the stream, or EOF is reached. Calls\n   * read() repeatedly in case the given stream implementation doesn't completely fill the given\n   * buffer in one read() call.\n   *\n   * @return A chunk of the desired size, or else a chunk as large as was available when end of\n   *     stream was reached. Returns null if the given stream had no more data in it.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final ByteString concat(ByteString other)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Concatenate the given {@code ByteString} to this one. Short concatenations, of total size\n   * smaller than {@link ByteString#CONCATENATE_BY_COPY_SIZE}, are produced by copying the\n   * underlying bytes (as per Rope.java, <a\n   * href=\"http://www.cs.ubc.ca/local/reading/proceedings/spe91-95/spe/vol25/issue12/spe986.pdf\">\n   * BAP95 </a>. In general, the concatenate involves no copying.\n   *\n   * @param other string to concatenate\n   * @return a new {@code ByteString} instance\n   * @throws IllegalArgumentException if the combined size of the two byte strings exceeds\n   *     Integer.MAX_VALUE\n   ",
+    "links" : [ "#CONCATENATE_BY_COPY_SIZE" ]
+  }, {
+    "name" : "public static ByteString copyFrom(Iterable<ByteString> byteStrings)",
+    "returnType" : "ByteString",
+    "comment" : "\n   * Concatenates all byte strings in the iterable and returns the result. This is designed to run\n   * in O(list size), not O(total bytes).\n   *\n   * <p>The returned {@code ByteString} is not necessarily a unique object. If the list is empty,\n   * the returned object is the singleton empty {@code ByteString}. If the list has only one\n   * element, that {@code ByteString} will be returned without copying.\n   *\n   * @param byteStrings strings to be concatenated\n   * @return new {@code ByteString}\n   * @throws IllegalArgumentException if the combined size of the byte strings exceeds\n   *     Integer.MAX_VALUE\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "private static ByteString balancedConcat(Iterator<ByteString> iterator, int length)",
+    "returnType" : "ByteString",
+    "comment" : " iterable.",
+    "links" : [ ]
+  }, {
+    "name" : "public void copyTo(byte[] target, int offset)",
+    "returnType" : "void",
+    "comment" : "\n   * Copies bytes into a buffer at the given offset.\n   *\n   * <p>To copy a subset of bytes, you call this method on the return value of {@link\n   * #substring(int, int)}. Example: {@code byteString.substring(start, end).copyTo(target, offset)}\n   *\n   * @param target buffer to copy into\n   * @param offset in the target buffer\n   * @throws IndexOutOfBoundsException if the offset is negative or too large\n   ",
+    "links" : [ "#substring(int" ]
+  }, {
+    "name" : "public final void copyTo(byte[] target, int sourceOffset, int targetOffset, int numberToCopy)",
+    "returnType" : "void",
+    "comment" : "\n   * Copies bytes into a buffer.\n   *\n   * @param target buffer to copy into\n   * @param sourceOffset offset within these bytes\n   * @param targetOffset offset within the target buffer\n   * @param numberToCopy number of bytes to copy\n   * @throws IndexOutOfBoundsException if an offset or size is negative or too large\n   * @deprecated Instead, call {@code byteString.substring(sourceOffset, sourceOffset +\n   *     numberToCopy).copyTo(target, targetOffset)}\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract void copyToInternal(byte[] target, int sourceOffset, int targetOffset, int numberToCopy)",
+    "returnType" : "void",
+    "comment" : "\n   * Internal (package private) implementation of {@link #copyTo(byte[],int,int,int)}. It assumes\n   * that all error checking has already been performed and that {@code numberToCopy > 0}.\n   ",
+    "links" : [ "#copyTo(byte" ]
+  }, {
+    "name" : "public abstract void copyTo(ByteBuffer target)",
+    "returnType" : "void",
+    "comment" : "\n   * Copies bytes into a ByteBuffer.\n   *\n   * <p>To copy a subset of bytes, you call this method on the return value of {@link\n   * #substring(int, int)}. Example: {@code byteString.substring(start, end).copyTo(target)}\n   *\n   * @param target ByteBuffer to copy into.\n   * @throws java.nio.ReadOnlyBufferException if the {@code target} is read-only\n   * @throws java.nio.BufferOverflowException if the {@code target}'s remaining() space is not large\n   *     enough to hold the data.\n   ",
+    "links" : [ "#substring(int" ]
+  }, {
+    "name" : "public final byte[] toByteArray()",
+    "returnType" : "byte[]",
+    "comment" : "\n   * Copies bytes to a {@code byte[]}.\n   *\n   * @return copied bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeTo(OutputStream out) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Writes a copy of the contents of this byte string to the specified output stream argument.\n   *\n   * @param out the output stream to which to write the data.\n   * @throws IOException if an I/O error occurs.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " final void writeTo(OutputStream out, int sourceOffset, int numberToWrite) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Writes a specified part of this byte string to an output stream.\n   *\n   * @param out the output stream to which to write the data.\n   * @param sourceOffset offset within these bytes\n   * @param numberToWrite number of bytes to write\n   * @throws IOException if an I/O error occurs.\n   * @throws IndexOutOfBoundsException if an offset or size is negative or too large\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " abstract void writeToInternal(OutputStream out, int sourceOffset, int numberToWrite) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Internal version of {@link #writeTo(OutputStream,int,int)} that assumes all error checking has\n   * already been done.\n   ",
+    "links" : [ "#writeTo(OutputStream" ]
+  }, {
+    "name" : " abstract void writeTo(ByteOutput byteOutput) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Writes this {@link ByteString} to the provided {@link ByteOutput}. Calling this method may\n   * result in multiple operations on the target {@link ByteOutput}.\n   *\n   * <p>This method may expose internal backing buffers of the {@link ByteString} to the {@link\n   * ByteOutput} in order to avoid additional copying overhead. It would be possible for a malicious\n   * {@link ByteOutput} to corrupt the {@link ByteString}. Use with caution!\n   *\n   * @param byteOutput the output target to receive the bytes\n   * @throws IOException if an I/O error occurs\n   * @see UnsafeByteOperations#unsafeWriteTo(ByteString, ByteOutput)\n   ",
+    "links" : [ "ByteOutput", "ByteString" ]
+  }, {
+    "name" : " abstract void writeToReverse(ByteOutput byteOutput) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * This method behaves exactly the same as {@link #writeTo(ByteOutput)} unless the {@link\n   * ByteString} is a rope. For ropes, the leaf nodes are written in reverse order to the {@code\n   * byteOutput}.\n   *\n   * @param byteOutput the output target to receive the bytes\n   * @throws IOException if an I/O error occurs\n   * @see UnsafeByteOperations#unsafeWriteToReverse(ByteString, ByteOutput)\n   ",
+    "links" : [ "ByteString", "#writeTo(ByteOutput)" ]
+  }, {
+    "name" : "public abstract ByteBuffer asReadOnlyByteBuffer()",
+    "returnType" : "ByteBuffer",
+    "comment" : "\n   * Constructs a read-only {@code java.nio.ByteBuffer} whose content is equal to the contents of\n   * this byte string. The result uses the same backing array as the byte string, if possible.\n   *\n   * @return wrapped bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract List<ByteBuffer> asReadOnlyByteBufferList()",
+    "returnType" : "List<ByteBuffer>",
+    "comment" : "\n   * Constructs a list of read-only {@code java.nio.ByteBuffer} objects such that the concatenation\n   * of their contents is equal to the contents of this byte string. The result uses the same\n   * backing arrays as the byte string.\n   *\n   * <p>By returning a list, implementations of this method may be able to avoid copying even when\n   * there are multiple backing arrays.\n   *\n   * @return a list of wrapped bytes\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String toString(String charsetName) throws UnsupportedEncodingException",
+    "returnType" : "String",
+    "comment" : "\n   * Constructs a new {@code String} by decoding the bytes using the specified charset.\n   *\n   * @param charsetName encode using this charset\n   * @return new string\n   * @throws UnsupportedEncodingException if charset isn't recognized\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String toString(Charset charset)",
+    "returnType" : "String",
+    "comment" : "\n   * Constructs a new {@code String} by decoding the bytes using the specified charset. Returns the\n   * same empty String if empty.\n   *\n   * @param charset encode using this charset\n   * @return new string\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract String toStringInternal(Charset charset)",
+    "returnType" : "String",
+    "comment" : "\n   * Constructs a new {@code String} by decoding the bytes using the specified charset.\n   *\n   * @param charset encode using this charset\n   * @return new string\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String toStringUtf8()",
+    "returnType" : "String",
+    "comment" : "\n   * Constructs a new {@code String} by decoding the bytes as UTF-8.\n   *\n   * @return new string using UTF-8 encoding\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract boolean isValidUtf8()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Tells whether this {@code ByteString} represents a well-formed UTF-8 byte sequence, such that\n   * the original bytes can be converted to a String object and then round tripped back to bytes\n   * without loss.\n   *\n   * <p>More precisely, returns {@code true} whenever:\n   *\n   * <pre>{@code\n   * Arrays.equals(byteString.toByteArray(),\n   *     new String(byteString.toByteArray(), \"UTF-8\").getBytes(\"UTF-8\"))\n   * }</pre>\n   *\n   * <p>This method returns {@code false} for \"overlong\" byte sequences, as well as for 3-byte\n   * sequences that would map to a surrogate character, in accordance with the restricted definition\n   * of UTF-8 introduced in Unicode 3.1. Note that the UTF-8 decoder included in Oracle's JDK has\n   * been modified to also reject \"overlong\" byte sequences, but (as of 2011) still accepts 3-byte\n   * surrogate character byte sequences.\n   *\n   * <p>See the Unicode Standard,<br>\n   * Table 3-6. <em>UTF-8 Bit Distribution</em>,<br>\n   * Table 3-7. <em>Well Formed UTF-8 Byte Sequences</em>.\n   *\n   * @return whether the bytes in this {@code ByteString} are a well-formed UTF-8 byte sequence\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int partialIsValidUtf8(int state, int offset, int length)",
+    "returnType" : "int",
+    "comment" : "\n   * Tells whether the given byte sequence is a well-formed, malformed, or incomplete UTF-8 byte\n   * sequence. This method accepts and returns a partial state result, allowing the bytes for a\n   * complete UTF-8 byte sequence to be composed from multiple {@code ByteString} segments.\n   *\n   * @param state either {@code 0} (if this is the initial decoding operation) or the value returned\n   *     from a call to a partial decoding method for the previous bytes\n   * @param offset offset of the first byte to check\n   * @param length number of bytes to check\n   * @return {@code -1} if the partial byte sequence is definitely malformed, {@code 0} if it is\n   *     well-formed (no additional input needed), or, if the byte sequence is \"incomplete\", i.e.\n   *     apparently terminated in the middle of a character, an opaque integer \"state\" value\n   *     containing enough information to decode the character when passed to a subsequent\n   *     invocation of a partial decoding method.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract boolean equals(Object o)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final int hashCode()",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the hashCode using the traditional algorithm from {@link ByteString}.\n   *\n   * @return hashCode value\n   ",
+    "links" : [ "ByteString" ]
+  }, {
+    "name" : "public abstract InputStream newInput()",
+    "returnType" : "InputStream",
+    "comment" : "\n   * Creates an {@code InputStream} which can be used to read the bytes.\n   *\n   * <p>The {@link InputStream} returned by this method is guaranteed to be completely non-blocking.\n   * The method {@link InputStream#available()} returns the number of bytes remaining in the stream.\n   * The methods {@link InputStream#read(byte[])}, {@link InputStream#read(byte[],int,int)} and\n   * {@link InputStream#skip(long)} will read/skip as many bytes as are available. The method {@link\n   * InputStream#markSupported()} returns {@code true}.\n   *\n   * <p>The methods in the returned {@link InputStream} might <b>not</b> be thread safe.\n   *\n   * @return an input stream that returns the bytes of this byte string.\n   ",
+    "links" : [ "java.io.ByteArrayInputStream#read(byte", "java.io.ByteArrayInputStream", "java.io.ByteArrayInputStream#markSupported()", "java.io.ByteArrayInputStream#available()", "java.io.ByteArrayInputStream#skip(long)" ]
+  }, {
+    "name" : "public abstract CodedInputStream newCodedInput()",
+    "returnType" : "CodedInputStream",
+    "comment" : "\n   * Creates a {@link CodedInputStream} which can be used to read the bytes. Using this is often\n   * more efficient than creating a {@link CodedInputStream} that wraps the result of {@link\n   * #newInput()}.\n   *\n   * @return stream based on wrapped data\n   ",
+    "links" : [ "#newInput()", "CodedInputStream" ]
+  }, {
+    "name" : "public static Output newOutput(int initialCapacity)",
+    "returnType" : "Output",
+    "comment" : "\n   * Creates a new {@link Output} with the given initial capacity. Call {@link\n   * Output#toByteString()} to create the {@code ByteString} instance.\n   *\n   * <p>A {@link ByteString.Output} offers the same functionality as a {@link\n   * ByteArrayOutputStream}, except that it returns a {@link ByteString} rather than a {@code byte}\n   * array.\n   *\n   * @param initialCapacity estimate of number of bytes to be written\n   * @return {@code OutputStream} for building a {@code ByteString}\n   ",
+    "links" : [ "java.io.ByteArrayOutputStream", "ByteString.Output", "ByteString", "Output", "#toByteString()" ]
+  }, {
+    "name" : "public static Output newOutput()",
+    "returnType" : "Output",
+    "comment" : "\n   * Creates a new {@link Output}. Call {@link Output#toByteString()} to create the {@code\n   * ByteString} instance.\n   *\n   * <p>A {@link ByteString.Output} offers the same functionality as a {@link\n   * ByteArrayOutputStream}, except that it returns a {@link ByteString} rather than a {@code byte\n   * array}.\n   *\n   * @return {@code OutputStream} for building a {@code ByteString}\n   ",
+    "links" : [ "java.io.ByteArrayOutputStream", "ByteString.Output", "ByteString", "Output", "#toByteString()" ]
+  }, {
+    "name" : " static CodedBuilder newCodedBuilder(int size)",
+    "returnType" : "CodedBuilder",
+    "comment" : "\n   * Constructs a new {@code ByteString} builder, which allows you to efficiently construct a {@code\n   * ByteString} by writing to a {@link CodedOutputStream}. Using this is much more efficient than\n   * calling {@code newOutput()} and wrapping that in a {@code CodedOutputStream}.\n   *\n   * <p>This is package-private because it's a somewhat confusing interface. Users can call {@link\n   * Message#toByteString()} instead of calling this directly.\n   *\n   * @param size The target byte size of the {@code ByteString}. You must write exactly this many\n   *     bytes before building the result.\n   * @return the builder\n   ",
+    "links" : [ "CodedOutputStream", "#toByteString()" ]
+  }, {
+    "name" : "protected abstract int getTreeDepth()",
+    "returnType" : "int",
+    "comment" : "\n   * Return the depth of the tree representing this {@code ByteString}, if any, whose root is this\n   * node. If this is a leaf node, return 0.\n   *\n   * @return tree depth or zero\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract boolean isBalanced()",
+    "returnType" : "boolean",
+    "comment" : "\n   * Return {@code true} if this ByteString is literal (a leaf node) or a flat-enough tree in the\n   * sense of {@link RopeByteString}.\n   *\n   * @return true if the tree is flat enough\n   ",
+    "links" : [ "RopeByteString" ]
+  }, {
+    "name" : "protected final int peekCachedHashCode()",
+    "returnType" : "int",
+    "comment" : "\n   * Return the cached hash code if available.\n   *\n   * @return value of cached hash code or 0 if not computed yet\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract int partialHash(int h, int offset, int length)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the hash across the value bytes starting with the given hash, and return the result.\n   * This is used to compute the hash across strings represented as a set of pieces by allowing the\n   * hash computation to be continued from piece to piece.\n   *\n   * @param h starting hash value\n   * @param offset offset into this value to start looking at data values\n   * @param length number of data values to include in the hash computation\n   * @return ending hash value\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static void checkIndex(int index, int size)",
+    "returnType" : "void",
+    "comment" : "\n   * Checks that the given index falls within the specified array size.\n   *\n   * @param index the index position to be tested\n   * @param size the length of the array\n   * @throws IndexOutOfBoundsException if the index does not fall within the array.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static int checkRange(int startIndex, int endIndex, int size)",
+    "returnType" : "int",
+    "comment" : "\n   * Checks that the given range falls within the bounds of an array\n   *\n   * @param startIndex the start index of the range (inclusive)\n   * @param endIndex the end index of the range (exclusive)\n   * @param size the size of the array.\n   * @return the length of the range.\n   * @throws IndexOutOfBoundsException some or all of the range falls outside of the array.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final String toString()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private String truncateAndEscapeForDisplay()",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public abstract byte byteAt(int index)", " abstract byte internalByteAt(int index)", "public ByteIterator iterator()", "public abstract int size()", "public final boolean isEmpty()", "public static final ByteString empty()", "private static int toInt(byte value)", "private static int hexDigit(char c)", "private static int extractHexDigit(String hexString, int index)", "public static Comparator<ByteString> unsignedLexicographicalComparator()", "public final ByteString substring(int beginIndex)", "public abstract ByteString substring(int beginIndex, int endIndex)", "public final boolean startsWith(ByteString prefix)", "public final boolean endsWith(ByteString suffix)", "public static ByteString fromHex(@CompileTimeConstant String hexString)", "public static ByteString copyFrom(byte[] bytes, int offset, int size)", "public static ByteString copyFrom(byte[] bytes)", " static ByteString wrap(ByteBuffer buffer)", " static ByteString wrap(byte[] bytes)", " static ByteString wrap(byte[] bytes, int offset, int length)", "public static ByteString copyFrom(ByteBuffer bytes, int size)", "public static ByteString copyFrom(ByteBuffer bytes)", "public static ByteString copyFrom(String text, String charsetName) throws UnsupportedEncodingException", "public static ByteString copyFrom(String text, Charset charset)", "public static ByteString copyFromUtf8(String text)", "public static ByteString readFrom(InputStream streamToDrain) throws IOException", "public static ByteString readFrom(InputStream streamToDrain, int chunkSize) throws IOException", "public static ByteString readFrom(InputStream streamToDrain, int minChunkSize, int maxChunkSize) throws IOException", "private static ByteString readChunk(InputStream in, final int chunkSize) throws IOException", "public final ByteString concat(ByteString other)", "public static ByteString copyFrom(Iterable<ByteString> byteStrings)", "private static ByteString balancedConcat(Iterator<ByteString> iterator, int length)", "public void copyTo(byte[] target, int offset)", "public final void copyTo(byte[] target, int sourceOffset, int targetOffset, int numberToCopy)", "protected abstract void copyToInternal(byte[] target, int sourceOffset, int targetOffset, int numberToCopy)", "public abstract void copyTo(ByteBuffer target)", "public final byte[] toByteArray()", "public abstract void writeTo(OutputStream out) throws IOException", " final void writeTo(OutputStream out, int sourceOffset, int numberToWrite) throws IOException", " abstract void writeToInternal(OutputStream out, int sourceOffset, int numberToWrite) throws IOException", " abstract void writeTo(ByteOutput byteOutput) throws IOException", " abstract void writeToReverse(ByteOutput byteOutput) throws IOException", "public abstract ByteBuffer asReadOnlyByteBuffer()", "public abstract List<ByteBuffer> asReadOnlyByteBufferList()", "public final String toString(String charsetName) throws UnsupportedEncodingException", "public final String toString(Charset charset)", "protected abstract String toStringInternal(Charset charset)", "public final String toStringUtf8()", "public abstract boolean isValidUtf8()", "protected abstract int partialIsValidUtf8(int state, int offset, int length)", "public abstract boolean equals(Object o)", "public final int hashCode()", "public abstract InputStream newInput()", "public abstract CodedInputStream newCodedInput()", "public static Output newOutput(int initialCapacity)", "public static Output newOutput()", " static CodedBuilder newCodedBuilder(int size)", "protected abstract int getTreeDepth()", "protected abstract boolean isBalanced()", "protected final int peekCachedHashCode()", "protected abstract int partialHash(int h, int offset, int length)", " static void checkIndex(int index, int size)", " static int checkRange(int startIndex, int endIndex, int size)", "public final String toString()", "private String truncateAndEscapeForDisplay()" ],
+  "variableNames" : [ "CONCATENATE_BY_COPY_SIZE", "MIN_READ_FROM_CHUNK_SIZE", "MAX_READ_FROM_CHUNK_SIZE", "EMPTY", "byteArrayCopier", "hash", "UNSIGNED_BYTE_MASK", "UNSIGNED_LEXICOGRAPHICAL_COMPARATOR" ]
+}

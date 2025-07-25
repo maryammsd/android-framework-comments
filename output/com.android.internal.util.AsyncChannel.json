@@ -1,0 +1,291 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/util/AsyncChannel.java",
+  "packageName" : "com.android.internal.util",
+  "className" : "AsyncChannel",
+  "comment" : "\n * <p>An asynchronous channel between two handlers.</p>\n *\n * <p>The handlers maybe in the same process or in another process. There\n * are two protocol styles that can be used with an AysncChannel. The\n * first is a simple request/reply protocol where the server does\n * not need to know which client is issuing the request.</p>\n *\n * <p>In a simple request/reply protocol the client/source sends requests to the\n * server/destination. And the server uses the replyToMessage methods.\n * In this usage model there is no need for the destination to\n * use the connect methods. The typical sequence of operations is:</p>\n *<ol>\n *   <li>Client calls AsyncChannel#connectSync or Asynchronously:</li>\n *      <ol>For an asynchronous half connection client calls AsyncChannel#connect.</ol>\n *          <li>Client receives CMD_CHANNEL_HALF_CONNECTED from AsyncChannel</li>\n *      </ol>\n *   <li><code>comm-loop:</code></li>\n *   <li>Client calls AsyncChannel#sendMessage</li>\n *   <li>Server processes messages and optionally replies using AsyncChannel#replyToMessage\n *   <li>Loop to <code>comm-loop</code> until done</li>\n *   <li>When done Client calls {@link AsyncChannel#disconnect}</li>\n *   <li>Client/Server receives CMD_CHANNEL_DISCONNECTED from AsyncChannel</li>\n *</ol>\n *<br/>\n * <p>A second usage model is where the server/destination needs to know\n * which client it's connected too. For example the server needs to\n * send unsolicited messages back to the client. Or the server keeps\n * different state for each client. In this model the server will also\n * use the connect methods. The typical sequence of operation is:</p>\n *<ol>\n *   <li>Client calls AsyncChannel#fullyConnectSync or Asynchronously:<li>\n *      <ol>For an asynchronous full connection it calls AsyncChannel#connect</li>\n *          <li>Client receives CMD_CHANNEL_HALF_CONNECTED from AsyncChannel</li>\n *          <li>Client calls AsyncChannel#sendMessage(CMD_CHANNEL_FULL_CONNECTION)</li>\n *      </ol>\n *   <li>Server receives CMD_CHANNEL_FULL_CONNECTION</li>\n *   <li>Server calls AsyncChannel#connected</li>\n *   <li>Server sends AsyncChannel#sendMessage(CMD_CHANNEL_FULLY_CONNECTED)</li>\n *   <li>Client receives CMD_CHANNEL_FULLY_CONNECTED</li>\n *   <li><code>comm-loop:</code></li>\n *   <li>Client/Server uses AsyncChannel#sendMessage/replyToMessage\n *       to communicate and perform work</li>\n *   <li>Loop to <code>comm-loop</code> until done</li>\n *   <li>When done Client/Server calls {@link AsyncChannel#disconnect}</li>\n *   <li>Client/Server receives CMD_CHANNEL_DISCONNECTED from AsyncChannel</li>\n *</ol>\n *\n * TODO: Consider simplifying where we have connect and fullyConnect with only one response\n * message RSP_CHANNEL_CONNECT instead of two, CMD_CHANNEL_HALF_CONNECTED and\n * CMD_CHANNEL_FULLY_CONNECTED. We'd also change CMD_CHANNEL_FULL_CONNECTION to REQ_CHANNEL_CONNECT.\n ",
+  "links" : [ "#disconnect" ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : " Log tag ",
+    "links" : [ ]
+  }, {
+    "name" : "DBG",
+    "type" : "boolean",
+    "comment" : " Enable to turn on debugging ",
+    "links" : [ ]
+  }, {
+    "name" : "BASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_CHANNEL_HALF_CONNECTED",
+    "type" : "int",
+    "comment" : "\n     * Command sent when the channel is half connected. Half connected\n     * means that the channel can be used to send commends to the destination\n     * but the destination is unaware that the channel exists. The first\n     * command sent to the destination is typically CMD_CHANNEL_FULL_CONNECTION if\n     * it is desired to establish a long term connection, but any command maybe\n     * sent.\n     *\n     * msg.arg1 == 0 : STATUS_SUCCESSFUL\n     *             1 : STATUS_BINDING_UNSUCCESSFUL\n     * msg.obj  == the AsyncChannel\n     * msg.replyTo == dstMessenger if successful\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_CHANNEL_FULL_CONNECTION",
+    "type" : "int",
+    "comment" : "\n     * Command typically sent when after receiving the CMD_CHANNEL_HALF_CONNECTED.\n     * This is used to initiate a long term connection with the destination and\n     * typically the destination will reply with CMD_CHANNEL_FULLY_CONNECTED.\n     *\n     * msg.replyTo = srcMessenger.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_CHANNEL_FULLY_CONNECTED",
+    "type" : "int",
+    "comment" : "\n     * Command typically sent after the destination receives a CMD_CHANNEL_FULL_CONNECTION.\n     * This signifies the acceptance or rejection of the channel by the sender.\n     *\n     * msg.arg1 == 0 : Accept connection\n     *               : All other values signify the destination rejected the connection\n     *                 and {@link AsyncChannel#disconnect} would typically be called.\n     ",
+    "links" : [ "#disconnect" ]
+  }, {
+    "name" : "CMD_CHANNEL_DISCONNECT",
+    "type" : "int",
+    "comment" : "\n     * Command sent when one side or the other wishes to disconnect. The sender\n     * may or may not be able to receive a reply depending upon the protocol and\n     * the state of the connection. The receiver should call {@link AsyncChannel#disconnect}\n     * to close its side of the channel and it will receive a CMD_CHANNEL_DISCONNECTED\n     * when the channel is closed.\n     *\n     * msg.replyTo = messenger that is disconnecting\n     ",
+    "links" : [ "#disconnect" ]
+  }, {
+    "name" : "CMD_CHANNEL_DISCONNECTED",
+    "type" : "int",
+    "comment" : "\n     * Command sent when the channel becomes disconnected. This is sent when the\n     * channel is forcibly disconnected by the system or as a reply to CMD_CHANNEL_DISCONNECT.\n     *\n     * msg.arg1 == 0 : STATUS_SUCCESSFUL\n     *             1 : STATUS_BINDING_UNSUCCESSFUL\n     *             2 : STATUS_SEND_UNSUCCESSFUL\n     *               : All other values signify failure and the channel state is indeterminate\n     * msg.obj  == the AsyncChannel\n     * msg.replyTo = messenger disconnecting or null if it was never connected.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_TO_STRING_COUNT",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sCmdToString",
+    "type" : "String[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_SUCCESSFUL",
+    "type" : "int",
+    "comment" : " Successful status always 0, !0 is an unsuccessful status ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_BINDING_UNSUCCESSFUL",
+    "type" : "int",
+    "comment" : " Error attempting to bind on a connect ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_SEND_UNSUCCESSFUL",
+    "type" : "int",
+    "comment" : " Error attempting to send a message ",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_FULL_CONNECTION_REFUSED_ALREADY_CONNECTED",
+    "type" : "int",
+    "comment" : " CMD_FULLY_CONNECTED refused because a connection already exists",
+    "links" : [ ]
+  }, {
+    "name" : "STATUS_REMOTE_DISCONNECTION",
+    "type" : "int",
+    "comment" : " Error indicating abnormal termination of destination messenger ",
+    "links" : [ ]
+  }, {
+    "name" : "mConnection",
+    "type" : "AsyncChannelConnection",
+    "comment" : " Service connection ",
+    "links" : [ ]
+  }, {
+    "name" : "mSrcContext",
+    "type" : "Context",
+    "comment" : " Context for source ",
+    "links" : [ ]
+  }, {
+    "name" : "mSrcHandler",
+    "type" : "Handler",
+    "comment" : " Handler for source ",
+    "links" : [ ]
+  }, {
+    "name" : "mSrcMessenger",
+    "type" : "Messenger",
+    "comment" : " Messenger for source ",
+    "links" : [ ]
+  }, {
+    "name" : "mDstMessenger",
+    "type" : "Messenger",
+    "comment" : " Messenger for destination ",
+    "links" : [ ]
+  }, {
+    "name" : "mDeathMonitor",
+    "type" : "DeathMonitor",
+    "comment" : " Death Monitor for destination messenger ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "protected static String cmdToString(int cmd)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int connectSrcHandlerToPackageSync(Context srcContext, Handler srcHandler, String dstPackageName, String dstClassName)",
+    "returnType" : "int",
+    "comment" : "\n     * Connect handler to named package/class synchronously.\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstPackageName is the destination package name\n     * @param dstClassName is the fully qualified class name (i.e. contains\n     *            package name)\n     *\n     * @return STATUS_SUCCESSFUL on success any other value is an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int connectSync(Context srcContext, Handler srcHandler, Messenger dstMessenger)",
+    "returnType" : "int",
+    "comment" : "\n     * Connect a handler to Messenger synchronously.\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstMessenger is the hander to send messages to.\n     *\n     * @return STATUS_SUCCESSFUL on success any other value is an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int connectSync(Context srcContext, Handler srcHandler, Handler dstHandler)",
+    "returnType" : "int",
+    "comment" : "\n     * connect two local Handlers synchronously.\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstHandler is the hander to send messages to.\n     *\n     * @return STATUS_SUCCESSFUL on success any other value is an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public int fullyConnectSync(Context srcContext, Handler srcHandler, Handler dstHandler)",
+    "returnType" : "int",
+    "comment" : "\n     * Fully connect two local Handlers synchronously.\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstHandler is the hander to send messages to.\n     *\n     * @return STATUS_SUCCESSFUL on success any other value is an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connect(Context srcContext, Handler srcHandler, String dstPackageName, String dstClassName)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect handler to named package/class.\n     *\n     * Sends a CMD_CHANNEL_HALF_CONNECTED message to srcHandler when complete.\n     *      msg.arg1 = status\n     *      msg.obj = the AsyncChannel\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstPackageName is the destination package name\n     * @param dstClassName is the fully qualified class name (i.e. contains\n     *            package name)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connect(Context srcContext, Handler srcHandler, Class<?> klass)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect handler to a class\n     *\n     * Sends a CMD_CHANNEL_HALF_CONNECTED message to srcHandler when complete.\n     *      msg.arg1 = status\n     *      msg.obj = the AsyncChannel\n     *\n     * @param srcContext\n     * @param srcHandler\n     * @param klass is the class to send messages to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connect(Context srcContext, Handler srcHandler, Messenger dstMessenger)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect handler and messenger.\n     *\n     * Sends a CMD_CHANNEL_HALF_CONNECTED message to srcHandler when complete.\n     *      msg.arg1 = status\n     *      msg.obj = the AsyncChannel\n     *\n     * @param srcContext\n     * @param srcHandler\n     * @param dstMessenger\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connected(Context srcContext, Handler srcHandler, Messenger dstMessenger)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect handler to messenger. This method is typically called\n     * when a server receives a CMD_CHANNEL_FULL_CONNECTION request\n     * and initializes the internal instance variables to allow communication\n     * with the dstMessenger.\n     *\n     * @param srcContext\n     * @param srcHandler\n     * @param dstMessenger\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connect(Context srcContext, Handler srcHandler, Handler dstHandler)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect two local Handlers.\n     *\n     * @param srcContext is the context of the source\n     * @param srcHandler is the hander to receive CONNECTED & DISCONNECTED\n     *            messages\n     * @param dstHandler is the hander to send messages to.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void connect(AsyncService srcAsyncService, Messenger dstMessenger)",
+    "returnType" : "void",
+    "comment" : "\n     * Connect service and messenger.\n     *\n     * Sends a CMD_CHANNEL_HALF_CONNECTED message to srcAsyncService when complete.\n     *      msg.arg1 = status\n     *      msg.obj = the AsyncChannel\n     *\n     * @param srcAsyncService\n     * @param dstMessenger\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disconnected()",
+    "returnType" : "void",
+    "comment" : "\n     * To close the connection call when handler receives CMD_CHANNEL_DISCONNECTED\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void disconnect()",
+    "returnType" : "void",
+    "comment" : "\n     * Disconnect\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(Message msg)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler.\n     *\n     * @param msg\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler\n     *\n     * @param what\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler\n     *\n     * @param what\n     * @param arg1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1, int arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler\n     *\n     * @param what\n     * @param arg1\n     * @param arg2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, int arg1, int arg2, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler\n     *\n     * @param what\n     * @param arg1\n     * @param arg2\n     * @param obj\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void sendMessage(int what, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Send a message to the destination handler\n     *\n     * @param what\n     * @param obj\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, Message dstMsg)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg sending dstMsg\n     *\n     * @param srcMsg\n     * @param dstMsg\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, int what)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg\n     *\n     * @param srcMsg\n     * @param what\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, int what, int arg1)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg\n     *\n     * @param srcMsg\n     * @param what\n     * @param arg1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, int what, int arg1, int arg2)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg\n     *\n     * @param srcMsg\n     * @param what\n     * @param arg1\n     * @param arg2\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, int what, int arg1, int arg2, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg\n     *\n     * @param srcMsg\n     * @param what\n     * @param arg1\n     * @param arg2\n     * @param obj\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void replyToMessage(Message srcMsg, int what, Object obj)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to srcMsg\n     *\n     * @param srcMsg\n     * @param what\n     * @param obj\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(Message msg)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param msg to send\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(int what)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param what\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(int what, int arg1)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param what\n     * @param arg1\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(int what, int arg1, int arg2)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param what\n     * @param arg1\n     * @param arg2\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(int what, int arg1, int arg2, Object obj)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param what\n     * @param arg1\n     * @param arg2\n     * @param obj\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Message sendMessageSynchronously(int what, Object obj)",
+    "returnType" : "Message",
+    "comment" : "\n     * Send the Message synchronously.\n     *\n     * @param what\n     * @param obj\n     * @return reply message or null if an error.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void replyHalfConnected(int status)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to the src handler that we're half connected.\n     * see: CMD_CHANNEL_HALF_CONNECTED for message contents\n     *\n     * @param status to be stored in msg.arg1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean linkToDeathMonitor()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Link to death monitor for destination messenger. Returns true if successfully binded to\n     * destination messenger; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void replyDisconnected(int status)",
+    "returnType" : "void",
+    "comment" : "\n     * Reply to the src handler that we are disconnected\n     * see: CMD_CHANNEL_DISCONNECTED for message contents\n     *\n     * @param status to be stored in msg.arg1\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void log(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log the string.\n     *\n     * @param s\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "protected static String cmdToString(int cmd)", "public int connectSrcHandlerToPackageSync(Context srcContext, Handler srcHandler, String dstPackageName, String dstClassName)", "public int connectSync(Context srcContext, Handler srcHandler, Messenger dstMessenger)", "public int connectSync(Context srcContext, Handler srcHandler, Handler dstHandler)", "public int fullyConnectSync(Context srcContext, Handler srcHandler, Handler dstHandler)", "public void connect(Context srcContext, Handler srcHandler, String dstPackageName, String dstClassName)", "public void connect(Context srcContext, Handler srcHandler, Class<?> klass)", "public void connect(Context srcContext, Handler srcHandler, Messenger dstMessenger)", "public void connected(Context srcContext, Handler srcHandler, Messenger dstMessenger)", "public void connect(Context srcContext, Handler srcHandler, Handler dstHandler)", "public void connect(AsyncService srcAsyncService, Messenger dstMessenger)", "public void disconnected()", "public void disconnect()", "public void sendMessage(Message msg)", "public void sendMessage(int what)", "public void sendMessage(int what, int arg1)", "public void sendMessage(int what, int arg1, int arg2)", "public void sendMessage(int what, int arg1, int arg2, Object obj)", "public void sendMessage(int what, Object obj)", "public void replyToMessage(Message srcMsg, Message dstMsg)", "public void replyToMessage(Message srcMsg, int what)", "public void replyToMessage(Message srcMsg, int what, int arg1)", "public void replyToMessage(Message srcMsg, int what, int arg1, int arg2)", "public void replyToMessage(Message srcMsg, int what, int arg1, int arg2, Object obj)", "public void replyToMessage(Message srcMsg, int what, Object obj)", "public Message sendMessageSynchronously(Message msg)", "public Message sendMessageSynchronously(int what)", "public Message sendMessageSynchronously(int what, int arg1)", "public Message sendMessageSynchronously(int what, int arg1, int arg2)", "public Message sendMessageSynchronously(int what, int arg1, int arg2, Object obj)", "public Message sendMessageSynchronously(int what, Object obj)", "private void replyHalfConnected(int status)", "private boolean linkToDeathMonitor()", "private void replyDisconnected(int status)", "private static void log(String s)" ],
+  "variableNames" : [ "TAG", "DBG", "BASE", "CMD_CHANNEL_HALF_CONNECTED", "CMD_CHANNEL_FULL_CONNECTION", "CMD_CHANNEL_FULLY_CONNECTED", "CMD_CHANNEL_DISCONNECT", "CMD_CHANNEL_DISCONNECTED", "CMD_TO_STRING_COUNT", "sCmdToString", "STATUS_SUCCESSFUL", "STATUS_BINDING_UNSUCCESSFUL", "STATUS_SEND_UNSUCCESSFUL", "STATUS_FULL_CONNECTION_REFUSED_ALREADY_CONNECTED", "STATUS_REMOTE_DISCONNECTION", "mConnection", "mSrcContext", "mSrcHandler", "mSrcMessenger", "mDstMessenger", "mDeathMonitor" ]
+}

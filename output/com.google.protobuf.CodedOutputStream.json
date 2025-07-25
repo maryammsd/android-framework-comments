@@ -1,0 +1,716 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/google/protobuf/CodedOutputStream.java",
+  "packageName" : "com.google.protobuf",
+  "className" : "CodedOutputStream",
+  "comment" : "\n * Encodes and writes protocol message fields.\n *\n * <p>This class contains two kinds of methods: methods that write specific protocol message\n * constructs and field types (e.g. {@link #writeTag} and {@link #writeInt32}) and methods that\n * write low-level values (e.g. {@link #writeRawVarint32} and {@link #writeRawBytes}). If you are\n * writing encoded protocol messages, you should use the former methods, but if you are writing some\n * other format of your own design, use the latter.\n *\n * <p>This class is totally unsynchronized.\n ",
+  "links" : [ "#writeRawVarint32", "#writeTag", "#writeInt32", "#writeRawBytes" ],
+  "variables" : [ {
+    "name" : "logger",
+    "type" : "Logger",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "HAS_UNSAFE_ARRAY_OPERATIONS",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "wrapper",
+    "type" : "CodedOutputStreamWriter",
+    "comment" : " Used to adapt to the experimental {@link Writer} interface. ",
+    "links" : [ "Writer" ]
+  }, {
+    "name" : "LITTLE_ENDIAN_32_SIZE",
+    "type" : "int",
+    "comment" : " @deprecated Use {@link #computeFixed32SizeNoTag(int)} instead. ",
+    "links" : [ "#computeFixed32SizeNoTag(int)" ]
+  }, {
+    "name" : "DEFAULT_BUFFER_SIZE",
+    "type" : "int",
+    "comment" : " The buffer size used in {@link #newInstance(OutputStream)}. ",
+    "links" : [ "#newInstance(OutputStream)" ]
+  }, {
+    "name" : "serializationDeterministic",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : " static int computePreferredBufferSize(int dataLength)",
+    "returnType" : "int",
+    "comment" : "\n   * Returns the buffer size to efficiently write dataLength bytes to this CodedOutputStream. Used\n   * by AbstractMessageLite.\n   *\n   * @return the buffer size to efficiently write dataLength bytes to this CodedOutputStream.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(final OutputStream output)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} wrapping the given {@code OutputStream}.\n   *\n   * <p>NOTE: The provided {@link OutputStream} <strong>MUST NOT</strong> retain access or modify\n   * the provided byte arrays. Doing so may result in corrupted data, which would be difficult to\n   * debug.\n   ",
+    "links" : [ "java.io.OutputStream" ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(final OutputStream output, final int bufferSize)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} wrapping the given {@code OutputStream} with a given\n   * buffer size.\n   *\n   * <p>NOTE: The provided {@link OutputStream} <strong>MUST NOT</strong> retain access or modify\n   * the provided byte arrays. Doing so may result in corrupted data, which would be difficult to\n   * debug.\n   ",
+    "links" : [ "java.io.OutputStream" ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(final byte[] flatArray)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} that writes directly to the given byte array. If more\n   * bytes are written than fit in the array, {@link OutOfSpaceException} will be thrown. Writing\n   * directly to a flat array is faster than writing to an {@code OutputStream}. See also {@link\n   * ByteString#newCodedBuilder}.\n   ",
+    "links" : [ "#newCodedBuilder", "OutOfSpaceException" ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(final byte[] flatArray, final int offset, final int length)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} that writes directly to the given byte array slice. If\n   * more bytes are written than fit in the slice, {@link OutOfSpaceException} will be thrown.\n   * Writing directly to a flat array is faster than writing to an {@code OutputStream}. See also\n   * {@link ByteString#newCodedBuilder}.\n   ",
+    "links" : [ "#newCodedBuilder", "OutOfSpaceException" ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(ByteBuffer buffer)",
+    "returnType" : "CodedOutputStream",
+    "comment" : " Create a new {@code CodedOutputStream} that writes to the given {@link ByteBuffer}. ",
+    "links" : [ "java.nio.ByteBuffer" ]
+  }, {
+    "name" : " static CodedOutputStream newUnsafeInstance(ByteBuffer buffer)",
+    "returnType" : "CodedOutputStream",
+    "comment" : " For testing purposes only. ",
+    "links" : [ ]
+  }, {
+    "name" : " static CodedOutputStream newSafeInstance(ByteBuffer buffer)",
+    "returnType" : "CodedOutputStream",
+    "comment" : " For testing purposes only. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void useDeterministicSerialization()",
+    "returnType" : "void",
+    "comment" : "\n   * Configures serialization to be deterministic.\n   *\n   * <p>The deterministic serialization guarantees that for a given binary, equal (defined by the\n   * {@code equals()} methods in protos) messages will always be serialized to the same bytes. This\n   * implies:\n   *\n   * <ul>\n   *   <li>repeated serialization of a message will return the same bytes\n   *   <li>different processes of the same binary (which may be executing on different machines)\n   *       will serialize equal messages to the same bytes.\n   * </ul>\n   *\n   * <p>Note the deterministic serialization is NOT canonical across languages; it is also unstable\n   * across different builds with schema changes due to unknown fields. Users who need canonical\n   * serialization, e.g. persistent storage in a canonical form, fingerprinting, etc, should define\n   * their own canonicalization specification and implement the serializer using reflection APIs\n   * rather than relying on this API.\n   *\n   * <p>Once set, the serializer will: (Note this is an implementation detail and may subject to\n   * change in the future)\n   *\n   * <ul>\n   *   <li>sort map entries by keys in lexicographical order or numerical order. Note: For string\n   *       keys, the order is based on comparing the Unicode value of each character in the strings.\n   *       The order may be different from the deterministic serialization in other languages where\n   *       maps are sorted on the lexicographical order of the UTF8 encoded keys.\n   * </ul>\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " boolean isSerializationDeterministic()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static CodedOutputStream newInstance(ByteBuffer byteBuffer, @SuppressWarnings(\"unused\") int unused)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} that writes to the given {@link ByteBuffer}.\n   *\n   * @deprecated the size parameter is no longer used since use of an internal buffer is useless\n   *     (and wasteful) when writing to a {@link ByteBuffer}. Use {@link #newInstance(ByteBuffer)}\n   *     instead.\n   ",
+    "links" : [ "#newInstance(ByteBuffer)", "java.nio.ByteBuffer" ]
+  }, {
+    "name" : " static CodedOutputStream newInstance(ByteOutput byteOutput, int bufferSize)",
+    "returnType" : "CodedOutputStream",
+    "comment" : "\n   * Create a new {@code CodedOutputStream} that writes to the provided {@link ByteOutput}.\n   *\n   * <p>NOTE: The {@link ByteOutput} <strong>MUST NOT</strong> modify the provided buffers. Doing so\n   * may result in corrupted data, which would be difficult to debug.\n   *\n   * @param byteOutput the output target for encoded bytes.\n   * @param bufferSize the size of the internal scratch buffer to be used for string encoding.\n   *     Setting this to {@code 0} will disable buffering, requiring an allocation for each encoded\n   *     string.\n   ",
+    "links" : [ "ByteOutput" ]
+  }, {
+    "name" : "public abstract void writeTag(int fieldNumber, int wireType) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeInt32(int fieldNumber, int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeUInt32(int fieldNumber, int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSInt32(final int fieldNumber, final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code sint32} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeFixed32(int fieldNumber, int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSFixed32(final int fieldNumber, final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an {@code sfixed32} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeInt64(final int fieldNumber, final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an {@code int64} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeUInt64(int fieldNumber, long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSInt64(final int fieldNumber, final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an {@code sint64} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeFixed64(int fieldNumber, long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSFixed64(final int fieldNumber, final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an {@code sfixed64} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeFloat(final int fieldNumber, final float value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code float} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeDouble(final int fieldNumber, final double value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code double} field, including tag, to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeBool(int fieldNumber, boolean value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeEnum(final int fieldNumber, final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write an enum field, including tag, to the stream. The provided value is the numeric value used\n   * to represent the enum value on the wire (not the enum ordinal value).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeString(int fieldNumber, String value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeBytes(int fieldNumber, ByteString value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeByteArray(int fieldNumber, byte[] value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeByteArray(int fieldNumber, byte[] value, int offset, int length) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeByteBuffer(int fieldNumber, ByteBuffer value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawByte(final byte value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a single byte. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawByte(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a single byte, represented by an integer value. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawBytes(final byte[] value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an array of bytes. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawBytes(final byte[] value, int offset, int length) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write part of an array of bytes. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawBytes(final ByteString value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a byte string. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeRawBytes(final ByteBuffer value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeMessage(final int fieldNumber, final MessageLite value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : " abstract void writeMessage(final int fieldNumber, final MessageLite value, Schema schema) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeMessageSetExtension(final int fieldNumber, final MessageLite value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeRawMessageSetExtension(final int fieldNumber, final ByteString value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeInt32NoTag(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeUInt32NoTag(int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSInt32NoTag(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code sint32} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeFixed32NoTag(int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSFixed32NoTag(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code sfixed32} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeInt64NoTag(final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write an {@code int64} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeUInt64NoTag(long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSInt64NoTag(final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code sint64} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeFixed64NoTag(long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeSFixed64NoTag(final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code sfixed64} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeFloatNoTag(final float value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code float} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeDoubleNoTag(final double value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code double} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeBoolNoTag(final boolean value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code bool} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeEnumNoTag(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write an enum field to the stream. The provided value is the numeric value used to represent\n   * the enum value on the wire (not the enum ordinal value).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeStringNoTag(String value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeBytesNoTag(final ByteString value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeByteArrayNoTag(final byte[] value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code bytes} field to the stream. ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeMessageNoTag(final MessageLite value) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : " abstract void writeMessageNoTag(final MessageLite value, Schema schema) throws IOException",
+    "returnType" : "void",
+    "comment" : " Abstract to avoid overhead of additional virtual method calls.",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void write(byte value) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void write(byte[] value, int offset, int length) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeLazy(byte[] value, int offset, int length) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void write(ByteBuffer value) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void writeLazy(ByteBuffer value) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeInt32Size(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code int32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeUInt32Size(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code uint32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSInt32Size(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code sint32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFixed32Size(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code fixed32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSFixed32Size(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code sfixed32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeInt64Size(final int fieldNumber, final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code int64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeUInt64Size(final int fieldNumber, final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code uint64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSInt64Size(final int fieldNumber, final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code sint64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFixed64Size(final int fieldNumber, final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code fixed64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSFixed64Size(final int fieldNumber, final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code sfixed64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFloatSize(final int fieldNumber, final float value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code float} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeDoubleSize(final int fieldNumber, final double value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code double} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeBoolSize(final int fieldNumber, final boolean value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code bool} field, including tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeEnumSize(final int fieldNumber, final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an enum field, including tag. The\n   * provided value is the numeric value used to represent the enum value on the wire (not the enum\n   * ordinal value).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeStringSize(final int fieldNumber, final String value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code string} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeBytesSize(final int fieldNumber, final ByteString value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code bytes} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeByteArraySize(final int fieldNumber, final byte[] value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code bytes} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeByteBufferSize(final int fieldNumber, final ByteBuffer value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code bytes} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeLazyFieldSize(final int fieldNumber, final LazyFieldLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an embedded message in lazy field,\n   * including tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeMessageSize(final int fieldNumber, final MessageLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an embedded message field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static int computeMessageSize(final int fieldNumber, final MessageLite value, final Schema schema)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an embedded message field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeMessageSetExtensionSize(final int fieldNumber, final MessageLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a MessageSet extension to the\n   * stream. For historical reasons, the wire format differs from normal fields.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeRawMessageSetExtensionSize(final int fieldNumber, final ByteString value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an unparsed MessageSet extension\n   * field to the stream. For historical reasons, the wire format differs from normal fields.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeLazyFieldMessageSetExtensionSize(final int fieldNumber, final LazyFieldLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a lazily parsed MessageSet\n   * extension field to the stream. For historical reasons, the wire format differs from normal\n   * fields.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeTagSize(final int fieldNumber)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a tag. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeInt32SizeNoTag(final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code int32} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeUInt32SizeNoTag(final int value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code uint32} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSInt32SizeNoTag(final int value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an {@code sint32} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFixed32SizeNoTag(@SuppressWarnings(\"unused\") final int unused)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code fixed32} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSFixed32SizeNoTag(@SuppressWarnings(\"unused\") final int unused)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an {@code sfixed32} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeInt64SizeNoTag(final long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an {@code int64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeUInt64SizeNoTag(long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code uint64} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSInt64SizeNoTag(final long value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an {@code sint64} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFixed64SizeNoTag(@SuppressWarnings(\"unused\") final long unused)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code fixed64} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeSFixed64SizeNoTag(@SuppressWarnings(\"unused\") final long unused)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an {@code sfixed64} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeFloatSizeNoTag(@SuppressWarnings(\"unused\") final float unused)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code float} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeDoubleSizeNoTag(@SuppressWarnings(\"unused\") final double unused)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code double} field, including\n   * tag.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeBoolSizeNoTag(@SuppressWarnings(\"unused\") final boolean unused)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code bool} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeEnumSizeNoTag(final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an enum field. The provided value is\n   * the numeric value used to represent the enum value on the wire (not the enum ordinal value).\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeStringSizeNoTag(final String value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code string} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeLazyFieldSizeNoTag(final LazyFieldLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode an embedded message stored in lazy\n   * field.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeBytesSizeNoTag(final ByteString value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code bytes} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeByteArraySizeNoTag(final byte[] value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code bytes} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeByteBufferSizeNoTag(final ByteBuffer value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code bytes} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeMessageSizeNoTag(final MessageLite value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an embedded message field. ",
+    "links" : [ ]
+  }, {
+    "name" : " static int computeMessageSizeNoTag(final MessageLite value, final Schema schema)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode an embedded message field. ",
+    "links" : [ ]
+  }, {
+    "name" : " static int computeLengthDelimitedFieldSize(int fieldLength)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public static int encodeZigZag32(final int n)",
+    "returnType" : "int",
+    "comment" : "\n   * Encode a ZigZag-encoded 32-bit value. ZigZag encodes signed integers into values that can be\n   * efficiently encoded with varint. (Otherwise, negative values must be sign-extended to 64 bits\n   * to be varint encoded, thus always taking 10 bytes on the wire.)\n   *\n   * @param n A signed 32-bit integer.\n   * @return An unsigned 32-bit integer, stored in a signed int because Java has no explicit\n   *     unsigned support.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static long encodeZigZag64(final long n)",
+    "returnType" : "long",
+    "comment" : "\n   * Encode a ZigZag-encoded 64-bit value. ZigZag encodes signed integers into values that can be\n   * efficiently encoded with varint. (Otherwise, negative values must be sign-extended to 64 bits\n   * to be varint encoded, thus always taking 10 bytes on the wire.)\n   *\n   * @param n A signed 64-bit integer.\n   * @return An unsigned 64-bit integer, stored in a signed int because Java has no explicit\n   *     unsigned support.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract void flush() throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Flushes the stream and forces any buffered bytes to be written. This does not flush the\n   * underlying OutputStream.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public abstract int spaceLeft()",
+    "returnType" : "int",
+    "comment" : "\n   * If writing to a flat array, return the space left in the array. Otherwise, throws {@code\n   * UnsupportedOperationException}.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void checkNoSpaceLeft()",
+    "returnType" : "void",
+    "comment" : "\n   * Verifies that {@link #spaceLeft()} returns zero. It's common to create a byte array that is\n   * exactly big enough to hold a message, then write to it with a {@code CodedOutputStream}.\n   * Calling {@code checkNoSpaceLeft()} after writing verifies that the message was actually as big\n   * as expected, which can help catch bugs.\n   ",
+    "links" : [ "#spaceLeft()" ]
+  }, {
+    "name" : "public abstract int getTotalBytesWritten()",
+    "returnType" : "int",
+    "comment" : "\n   * Get the total number of bytes successfully written to this stream. The returned value is not\n   * guaranteed to be accurate if exceptions have been found in the middle of writing.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " abstract void writeByteArrayNoTag(final byte[] value, final int offset, final int length) throws IOException",
+    "returnType" : "void",
+    "comment" : " Write a {@code bytes} field to the stream. Visible for testing. ",
+    "links" : [ ]
+  }, {
+    "name" : " final void inefficientWriteStringNoTag(String value, UnpairedSurrogateException cause) throws IOException",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeGroup(final int fieldNumber, final MessageLite value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a {@code group} field, including tag, to the stream.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " final void writeGroup(final int fieldNumber, final MessageLite value, Schema schema) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a {@code group} field, including tag, to the stream.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeGroupNoTag(final MessageLite value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a {@code group} field to the stream.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " final void writeGroupNoTag(final MessageLite value, Schema schema) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a {@code group} field to the stream.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeGroupSize(final int fieldNumber, final MessageLite value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code group} field, including\n   * tag.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : " static int computeGroupSize(final int fieldNumber, final MessageLite value, Schema schema)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a {@code group} field, including\n   * tag.\n   *\n   * @deprecated groups are deprecated.\n   ",
+    "links" : [ ]
+  }, {
+    "name" : "public static int computeGroupSizeNoTag(final MessageLite value)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code group} field. ",
+    "links" : [ ]
+  }, {
+    "name" : " static int computeGroupSizeNoTag(final MessageLite value, Schema schema)",
+    "returnType" : "int",
+    "comment" : " Compute the number of bytes that would be needed to encode a {@code group} field. ",
+    "links" : [ ]
+  }, {
+    "name" : "public final void writeRawVarint32(int value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Encode and write a varint. {@code value} is treated as unsigned, so it won't be sign-extended\n   * if negative.\n   *\n   * @deprecated use {@link #writeUInt32NoTag} instead.\n   ",
+    "links" : [ "#writeUInt32NoTag" ]
+  }, {
+    "name" : "public final void writeRawVarint64(long value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Encode and write a varint.\n   *\n   * @deprecated use {@link #writeUInt64NoTag} instead.\n   ",
+    "links" : [ "#writeUInt64NoTag" ]
+  }, {
+    "name" : "public static int computeRawVarint32Size(final int value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a varint. {@code value} is treated\n   * as unsigned, so it won't be sign-extended if negative.\n   *\n   * @deprecated use {@link #computeUInt32SizeNoTag(int)} instead.\n   ",
+    "links" : [ "#computeUInt32SizeNoTag(int)" ]
+  }, {
+    "name" : "public static int computeRawVarint64Size(long value)",
+    "returnType" : "int",
+    "comment" : "\n   * Compute the number of bytes that would be needed to encode a varint.\n   *\n   * @deprecated use {@link #computeUInt64SizeNoTag(long)} instead.\n   ",
+    "links" : [ "#computeUInt64SizeNoTag(long)" ]
+  }, {
+    "name" : "public final void writeRawLittleEndian32(final int value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a little-endian 32-bit integer.\n   *\n   * @deprecated Use {@link #writeFixed32NoTag} instead.\n   ",
+    "links" : [ "#writeFixed32NoTag" ]
+  }, {
+    "name" : "public final void writeRawLittleEndian64(final long value) throws IOException",
+    "returnType" : "void",
+    "comment" : "\n   * Write a little-endian 64-bit integer.\n   *\n   * @deprecated Use {@link #writeFixed64NoTag} instead.\n   ",
+    "links" : [ "#writeFixed64NoTag" ]
+  } ],
+  "methodNames" : [ " static int computePreferredBufferSize(int dataLength)", "public static CodedOutputStream newInstance(final OutputStream output)", "public static CodedOutputStream newInstance(final OutputStream output, final int bufferSize)", "public static CodedOutputStream newInstance(final byte[] flatArray)", "public static CodedOutputStream newInstance(final byte[] flatArray, final int offset, final int length)", "public static CodedOutputStream newInstance(ByteBuffer buffer)", " static CodedOutputStream newUnsafeInstance(ByteBuffer buffer)", " static CodedOutputStream newSafeInstance(ByteBuffer buffer)", "public void useDeterministicSerialization()", " boolean isSerializationDeterministic()", "public static CodedOutputStream newInstance(ByteBuffer byteBuffer, @SuppressWarnings(\"unused\") int unused)", " static CodedOutputStream newInstance(ByteOutput byteOutput, int bufferSize)", "public abstract void writeTag(int fieldNumber, int wireType) throws IOException", "public abstract void writeInt32(int fieldNumber, int value) throws IOException", "public abstract void writeUInt32(int fieldNumber, int value) throws IOException", "public final void writeSInt32(final int fieldNumber, final int value) throws IOException", "public abstract void writeFixed32(int fieldNumber, int value) throws IOException", "public final void writeSFixed32(final int fieldNumber, final int value) throws IOException", "public final void writeInt64(final int fieldNumber, final long value) throws IOException", "public abstract void writeUInt64(int fieldNumber, long value) throws IOException", "public final void writeSInt64(final int fieldNumber, final long value) throws IOException", "public abstract void writeFixed64(int fieldNumber, long value) throws IOException", "public final void writeSFixed64(final int fieldNumber, final long value) throws IOException", "public final void writeFloat(final int fieldNumber, final float value) throws IOException", "public final void writeDouble(final int fieldNumber, final double value) throws IOException", "public abstract void writeBool(int fieldNumber, boolean value) throws IOException", "public final void writeEnum(final int fieldNumber, final int value) throws IOException", "public abstract void writeString(int fieldNumber, String value) throws IOException", "public abstract void writeBytes(int fieldNumber, ByteString value) throws IOException", "public abstract void writeByteArray(int fieldNumber, byte[] value) throws IOException", "public abstract void writeByteArray(int fieldNumber, byte[] value, int offset, int length) throws IOException", "public abstract void writeByteBuffer(int fieldNumber, ByteBuffer value) throws IOException", "public final void writeRawByte(final byte value) throws IOException", "public final void writeRawByte(final int value) throws IOException", "public final void writeRawBytes(final byte[] value) throws IOException", "public final void writeRawBytes(final byte[] value, int offset, int length) throws IOException", "public final void writeRawBytes(final ByteString value) throws IOException", "public abstract void writeRawBytes(final ByteBuffer value) throws IOException", "public abstract void writeMessage(final int fieldNumber, final MessageLite value) throws IOException", " abstract void writeMessage(final int fieldNumber, final MessageLite value, Schema schema) throws IOException", "public abstract void writeMessageSetExtension(final int fieldNumber, final MessageLite value) throws IOException", "public abstract void writeRawMessageSetExtension(final int fieldNumber, final ByteString value) throws IOException", "public abstract void writeInt32NoTag(final int value) throws IOException", "public abstract void writeUInt32NoTag(int value) throws IOException", "public final void writeSInt32NoTag(final int value) throws IOException", "public abstract void writeFixed32NoTag(int value) throws IOException", "public final void writeSFixed32NoTag(final int value) throws IOException", "public final void writeInt64NoTag(final long value) throws IOException", "public abstract void writeUInt64NoTag(long value) throws IOException", "public final void writeSInt64NoTag(final long value) throws IOException", "public abstract void writeFixed64NoTag(long value) throws IOException", "public final void writeSFixed64NoTag(final long value) throws IOException", "public final void writeFloatNoTag(final float value) throws IOException", "public final void writeDoubleNoTag(final double value) throws IOException", "public final void writeBoolNoTag(final boolean value) throws IOException", "public final void writeEnumNoTag(final int value) throws IOException", "public abstract void writeStringNoTag(String value) throws IOException", "public abstract void writeBytesNoTag(final ByteString value) throws IOException", "public final void writeByteArrayNoTag(final byte[] value) throws IOException", "public abstract void writeMessageNoTag(final MessageLite value) throws IOException", " abstract void writeMessageNoTag(final MessageLite value, Schema schema) throws IOException", "public abstract void write(byte value) throws IOException", "public abstract void write(byte[] value, int offset, int length) throws IOException", "public abstract void writeLazy(byte[] value, int offset, int length) throws IOException", "public abstract void write(ByteBuffer value) throws IOException", "public abstract void writeLazy(ByteBuffer value) throws IOException", "public static int computeInt32Size(final int fieldNumber, final int value)", "public static int computeUInt32Size(final int fieldNumber, final int value)", "public static int computeSInt32Size(final int fieldNumber, final int value)", "public static int computeFixed32Size(final int fieldNumber, final int value)", "public static int computeSFixed32Size(final int fieldNumber, final int value)", "public static int computeInt64Size(final int fieldNumber, final long value)", "public static int computeUInt64Size(final int fieldNumber, final long value)", "public static int computeSInt64Size(final int fieldNumber, final long value)", "public static int computeFixed64Size(final int fieldNumber, final long value)", "public static int computeSFixed64Size(final int fieldNumber, final long value)", "public static int computeFloatSize(final int fieldNumber, final float value)", "public static int computeDoubleSize(final int fieldNumber, final double value)", "public static int computeBoolSize(final int fieldNumber, final boolean value)", "public static int computeEnumSize(final int fieldNumber, final int value)", "public static int computeStringSize(final int fieldNumber, final String value)", "public static int computeBytesSize(final int fieldNumber, final ByteString value)", "public static int computeByteArraySize(final int fieldNumber, final byte[] value)", "public static int computeByteBufferSize(final int fieldNumber, final ByteBuffer value)", "public static int computeLazyFieldSize(final int fieldNumber, final LazyFieldLite value)", "public static int computeMessageSize(final int fieldNumber, final MessageLite value)", " static int computeMessageSize(final int fieldNumber, final MessageLite value, final Schema schema)", "public static int computeMessageSetExtensionSize(final int fieldNumber, final MessageLite value)", "public static int computeRawMessageSetExtensionSize(final int fieldNumber, final ByteString value)", "public static int computeLazyFieldMessageSetExtensionSize(final int fieldNumber, final LazyFieldLite value)", "public static int computeTagSize(final int fieldNumber)", "public static int computeInt32SizeNoTag(final int value)", "public static int computeUInt32SizeNoTag(final int value)", "public static int computeSInt32SizeNoTag(final int value)", "public static int computeFixed32SizeNoTag(@SuppressWarnings(\"unused\") final int unused)", "public static int computeSFixed32SizeNoTag(@SuppressWarnings(\"unused\") final int unused)", "public static int computeInt64SizeNoTag(final long value)", "public static int computeUInt64SizeNoTag(long value)", "public static int computeSInt64SizeNoTag(final long value)", "public static int computeFixed64SizeNoTag(@SuppressWarnings(\"unused\") final long unused)", "public static int computeSFixed64SizeNoTag(@SuppressWarnings(\"unused\") final long unused)", "public static int computeFloatSizeNoTag(@SuppressWarnings(\"unused\") final float unused)", "public static int computeDoubleSizeNoTag(@SuppressWarnings(\"unused\") final double unused)", "public static int computeBoolSizeNoTag(@SuppressWarnings(\"unused\") final boolean unused)", "public static int computeEnumSizeNoTag(final int value)", "public static int computeStringSizeNoTag(final String value)", "public static int computeLazyFieldSizeNoTag(final LazyFieldLite value)", "public static int computeBytesSizeNoTag(final ByteString value)", "public static int computeByteArraySizeNoTag(final byte[] value)", "public static int computeByteBufferSizeNoTag(final ByteBuffer value)", "public static int computeMessageSizeNoTag(final MessageLite value)", " static int computeMessageSizeNoTag(final MessageLite value, final Schema schema)", " static int computeLengthDelimitedFieldSize(int fieldLength)", "public static int encodeZigZag32(final int n)", "public static long encodeZigZag64(final long n)", "public abstract void flush() throws IOException", "public abstract int spaceLeft()", "public final void checkNoSpaceLeft()", "public abstract int getTotalBytesWritten()", " abstract void writeByteArrayNoTag(final byte[] value, final int offset, final int length) throws IOException", " final void inefficientWriteStringNoTag(String value, UnpairedSurrogateException cause) throws IOException", "public final void writeGroup(final int fieldNumber, final MessageLite value) throws IOException", " final void writeGroup(final int fieldNumber, final MessageLite value, Schema schema) throws IOException", "public final void writeGroupNoTag(final MessageLite value) throws IOException", " final void writeGroupNoTag(final MessageLite value, Schema schema) throws IOException", "public static int computeGroupSize(final int fieldNumber, final MessageLite value)", " static int computeGroupSize(final int fieldNumber, final MessageLite value, Schema schema)", "public static int computeGroupSizeNoTag(final MessageLite value)", " static int computeGroupSizeNoTag(final MessageLite value, Schema schema)", "public final void writeRawVarint32(int value) throws IOException", "public final void writeRawVarint64(long value) throws IOException", "public static int computeRawVarint32Size(final int value)", "public static int computeRawVarint64Size(long value)", "public final void writeRawLittleEndian32(final int value) throws IOException", "public final void writeRawLittleEndian64(final long value) throws IOException" ],
+  "variableNames" : [ "logger", "HAS_UNSAFE_ARRAY_OPERATIONS", "wrapper", "LITTLE_ENDIAN_32_SIZE", "DEFAULT_BUFFER_SIZE", "serializationDeterministic" ]
+}

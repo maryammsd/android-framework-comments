@@ -3,12 +3,12 @@
   "packageName" : "android.net",
   "className" : "NetworkAgent",
   "comment" : "\n * A utility class for handling for communicating between bearer-specific\n * code and ConnectivityService.\n *\n * An agent manages the life cycle of a network. A network starts its\n * life cycle when {@link register} is called on NetworkAgent. The network\n * is then connecting. When full L3 connectivity has been established,\n * the agent should call {@link markConnected} to inform the system that\n * this network is ready to use. When the network disconnects its life\n * ends and the agent should call {@link unregister}, at which point the\n * system will clean up and free resources.\n * Any reconnection becomes a new logical network, so after a network\n * is disconnected the agent cannot be used any more. Network providers\n * should create a new NetworkAgent instance to handle new connections.\n *\n * A bearer may have more than one NetworkAgent if it can simultaneously\n * support separate networks (IMS / Internet / MMS Apns on cellular, or\n * perhaps connections with different SSID or P2P for Wi-Fi).\n *\n * This class supports methods to start and stop sending keepalive packets.\n * Keepalive packets are typically sent at periodic intervals over a network\n * with NAT when there is no other traffic to avoid the network forcefully\n * closing the connection. NetworkAgents that manage technologies that\n * have hardware support for keepalive should implement the related\n * methods to save battery life. NetworkAgent that cannot get support\n * without waking up the CPU should not, as this would be prohibitive in\n * terms of battery - these agents should simply not override the related\n * methods, which results in the implementation returning\n * {@link SocketKeepalive.ERROR_UNSUPPORTED} as appropriate.\n *\n * Keepalive packets need to be sent at relatively frequent intervals\n * (a few seconds to a few minutes). As the contents of keepalive packets\n * depend on the current network status, hardware needs to be configured\n * to send them and has a limited amount of memory to do so. The HAL\n * formalizes this as slots that an implementation can configure to send\n * the correct packets. Devices typically have a small number of slots\n * per radio technology, and the specific number of slots for each\n * technology is specified in configuration files.\n * See {@link SocketKeepalive} for details.\n *\n * @hide\n ",
-  "links" : [ "android.net.SocketKeepalive", "markConnected", "unregister", "SocketKeepalive.ERROR_UNSUPPORTED", "register" ],
+  "links" : [ "markConnected", "unregister", "SocketKeepalive", "SocketKeepalive.ERROR_UNSUPPORTED", "register" ],
   "variables" : [ {
     "name" : "mNetwork",
     "type" : "Network",
     "comment" : "\n     * The {@link Network} corresponding to this object.\n     ",
-    "links" : [ "android.net.Network" ]
+    "links" : [ "Network" ]
   }, {
     "name" : "mRegistry",
     "type" : "INetworkAgentRegistry",
@@ -78,7 +78,7 @@
     "name" : "providerId",
     "type" : "int",
     "comment" : "\n     * The ID of the {@link NetworkProvider} that created this object, or\n     * {@link NetworkProvider#ID_NONE} if unknown.\n     * @hide\n     ",
-    "links" : [ "android.net.NetworkProvider", "android.net.NetworkProvider#ID_NONE" ]
+    "links" : [ "#ID_NONE", "NetworkProvider" ]
   }, {
     "name" : "BASE",
     "type" : "int",
@@ -188,7 +188,7 @@
     "name" : "EVENT_SOCKET_KEEPALIVE",
     "type" : "int",
     "comment" : "\n     * Sent by the NetworkAgent to ConnectivityService to provide status on a socket keepalive\n     * request. This may either be the reply to a CMD_START_SOCKET_KEEPALIVE, or an asynchronous\n     * error notification.\n     *\n     * This is also sent by KeepaliveTracker to the app's {@link SocketKeepalive},\n     * so that the app's {@link SocketKeepalive.Callback} methods can be called.\n     *\n     * arg1 = hardware slot number of the keepalive\n     * arg2 = error code\n     * @hide\n     ",
-    "links" : [ "android.net.SocketKeepalive", "SocketKeepalive.Callback" ]
+    "links" : [ "SocketKeepalive.Callback", "SocketKeepalive" ]
   }, {
     "name" : "CMD_SET_SIGNAL_STRENGTH_THRESHOLDS",
     "type" : "int",
@@ -223,22 +223,22 @@
     "name" : "CMD_REGISTER_QOS_CALLBACK",
     "type" : "int",
     "comment" : "\n     * Sent by QosCallbackTracker to {@link NetworkAgent} to register a new filter with\n     * callback.\n     *\n     * arg1 = QoS agent callback ID\n     * obj = {@link QosFilter}\n     * @hide\n     ",
-    "links" : [ "android.net.QosFilter", "android.net.NetworkAgent" ]
+    "links" : [ "NetworkAgent", "QosFilter" ]
   }, {
     "name" : "CMD_UNREGISTER_QOS_CALLBACK",
     "type" : "int",
     "comment" : "\n     * Sent by QosCallbackTracker to {@link NetworkAgent} to unregister a callback.\n     *\n     * arg1 = QoS agent callback ID\n     * @hide\n     ",
-    "links" : [ "android.net.NetworkAgent" ]
+    "links" : [ "NetworkAgent" ]
   }, {
     "name" : "CMD_NETWORK_CREATED",
     "type" : "int",
     "comment" : "\n     * Sent by ConnectivityService to {@link NetworkAgent} to inform the agent that its native\n     * network was created and the Network object is now valid.\n     *\n     * @hide\n     ",
-    "links" : [ "android.net.NetworkAgent" ]
+    "links" : [ "NetworkAgent" ]
   }, {
     "name" : "CMD_NETWORK_DESTROYED",
     "type" : "int",
     "comment" : "\n     * Sent by ConnectivityService to {@link NetworkAgent} to inform the agent that its native\n     * network was destroyed.\n     *\n     * @hide\n     ",
-    "links" : [ "android.net.NetworkAgent" ]
+    "links" : [ "NetworkAgent" ]
   }, {
     "name" : "EVENT_LINGER_DURATION_CHANGED",
     "type" : "int",
@@ -263,7 +263,7 @@
     "name" : "CMD_DSCP_POLICY_STATUS",
     "type" : "int",
     "comment" : "\n     * Sent by ConnectivityService to {@link NetworkAgent} to inform the agent of an updated\n     * status for a DSCP policy.\n     *\n     * @hide\n     ",
-    "links" : [ "android.net.NetworkAgent" ]
+    "links" : [ "NetworkAgent" ]
   }, {
     "name" : "EVENT_UNREGISTER_AFTER_REPLACEMENT",
     "type" : "int",
@@ -344,12 +344,12 @@
     "name" : "public void sendLinkProperties(@NonNull LinkProperties linkProperties)",
     "returnType" : "void",
     "comment" : "\n     * Must be called by the agent when the network's {@link LinkProperties} change.\n     * @param linkProperties the new LinkProperties.\n     ",
-    "links" : [ "android.net.LinkProperties" ]
+    "links" : [ "LinkProperties" ]
   }, {
     "name" : "public void setUnderlyingNetworks(@SuppressLint(\"NullableCollection\") @Nullable List<Network> underlyingNetworks)",
     "returnType" : "void",
     "comment" : "\n     * Must be called by the agent when the network's underlying networks change.\n     *\n     * <p>{@code networks} is one of the following:\n     * <ul>\n     * <li><strong>a non-empty array</strong>: an array of one or more {@link Network}s, in\n     * decreasing preference order. For example, if this VPN uses both wifi and mobile (cellular)\n     * networks to carry app traffic, but prefers or uses wifi more than mobile, wifi should appear\n     * first in the array.</li>\n     * <li><strong>an empty array</strong>: a zero-element array, meaning that the VPN has no\n     * underlying network connection, and thus, app traffic will not be sent or received.</li>\n     * <li><strong>null</strong>: (default) signifies that the VPN uses whatever is the system's\n     * default network. I.e., it doesn't use the {@code bindSocket} or {@code bindDatagramSocket}\n     * APIs mentioned above to send traffic over specific channels.</li>\n     * </ul>\n     *\n     * @param underlyingNetworks the new list of underlying networks.\n     * @see {@link VpnService.Builder#setUnderlyingNetworks(Network[])}\n     ",
-    "links" : [ "VpnService.Builder#setUnderlyingNetworks(Network", "android.net.Network" ]
+    "links" : [ "VpnService.Builder#setUnderlyingNetworks(Network", "Network" ]
   }, {
     "name" : "public void markConnected()",
     "returnType" : "void",
@@ -369,7 +369,7 @@
     "name" : "public void unregisterAfterReplacement(@IntRange(from = 0, to = MAX_TEARDOWN_DELAY_MS) int timeoutMillis)",
     "returnType" : "void",
     "comment" : "\n     * Indicates that this agent will likely soon be replaced by another agent for a very similar\n     * network (e.g., same Wi-Fi SSID).\n     *\n     * If the network is not currently satisfying any {@link NetworkRequest}s, it will be torn down.\n     * If it is satisfying requests, then the native network corresponding to the agent will be\n     * destroyed immediately, but the agent will remain registered and will continue to satisfy\n     * requests until {@link #unregister} is called, the network is replaced by an equivalent or\n     * better network, or the specified timeout expires. During this time:\n     *\n     * <ul>\n     * <li>The agent may not send any further updates, for example by calling methods\n     *    such as {@link #sendNetworkCapabilities}, {@link #sendLinkProperties},\n     *    {@link #sendNetworkScore(NetworkScore)} and so on. Any such updates will be ignored.\n     * <li>The network will remain connected and continue to satisfy any requests that it would\n     *    otherwise satisfy (including, possibly, the default request).\n     * <li>The validation state of the network will not change, and calls to\n     *    {@link ConnectivityManager#reportNetworkConnectivity(Network, boolean)} will be ignored.\n     * </ul>\n     *\n     * Once this method is called, it is not possible to restore the agent to a functioning state.\n     * If a replacement network becomes available, then a new agent must be registered. When that\n     * replacement network is fully capable of replacing this network (including, possibly, being\n     * validated), this agent will no longer be needed and will be torn down. Otherwise, this agent\n     * can be disconnected by calling {@link #unregister}. If {@link #unregister} is not called,\n     * this agent will automatically be unregistered when the specified timeout expires. Any\n     * teardown delay previously set using{@link #setTeardownDelayMillis} is ignored.\n     *\n     * <p>This method has no effect if {@link #markConnected} has not yet been called.\n     * <p>This method may only be called once.\n     *\n     * @param timeoutMillis the timeout after which this network will be unregistered even if\n     *                      {@link #unregister} was not called.\n     ",
-    "links" : [ "#sendNetworkCapabilities", "#sendLinkProperties", "#unregister", "android.net.ConnectivityManager#reportNetworkConnectivity(Network", "#markConnected", "#sendNetworkScore(NetworkScore)", "android.net.NetworkRequest", "#setTeardownDelayMillis" ]
+    "links" : [ "#sendNetworkCapabilities", "#sendLinkProperties", "#unregister", "#reportNetworkConnectivity(Network", "NetworkRequest", "#markConnected", "#sendNetworkScore(NetworkScore)", "#setTeardownDelayMillis" ]
   }, {
     "name" : "public void setLegacySubtype(final int legacySubtype, @NonNull final String legacySubtypeName)",
     "returnType" : "void",
@@ -394,12 +394,12 @@
     "name" : "public void sendNetworkCapabilities(@NonNull NetworkCapabilities networkCapabilities)",
     "returnType" : "void",
     "comment" : "\n     * Must be called by the agent when the network's {@link NetworkCapabilities} change.\n     * @param networkCapabilities the new NetworkCapabilities.\n     ",
-    "links" : [ "android.net.NetworkCapabilities" ]
+    "links" : [ "NetworkCapabilities" ]
   }, {
     "name" : "public void sendLocalNetworkConfig(@NonNull LocalNetworkConfig config)",
     "returnType" : "void",
     "comment" : "\n     * Must be called by the agent when the network's {@link LocalNetworkConfig} changes.\n     * @param config the new LocalNetworkConfig\n     * @hide\n     ",
-    "links" : [ "android.net.LocalNetworkConfig" ]
+    "links" : [ "LocalNetworkConfig" ]
   }, {
     "name" : "public void sendNetworkScore(@NonNull NetworkScore score)",
     "returnType" : "void",
@@ -444,7 +444,7 @@
     "name" : "public void onValidationStatus(@ValidationStatus int status, @Nullable Uri redirectUri)",
     "returnType" : "void",
     "comment" : "\n     * Called when the system determines the usefulness of this network.\n     *\n     * The system attempts to validate Internet connectivity on networks that provide the\n     * {@link NetworkCapabilities#NET_CAPABILITY_INTERNET} capability.\n     *\n     * Currently there are two possible values:\n     * {@code VALIDATION_STATUS_VALID} if Internet connectivity was validated,\n     * {@code VALIDATION_STATUS_NOT_VALID} if Internet connectivity was not validated.\n     *\n     * This is guaranteed to be called again when the network status changes, but the system\n     * may also call this multiple times even if the status does not change.\n     *\n     * @param status one of {@code VALIDATION_STATUS_VALID} or {@code VALIDATION_STATUS_NOT_VALID}.\n     * @param redirectUri If Internet connectivity is being redirected (e.g., on a captive portal),\n     *        this is the destination the probes are being redirected to, otherwise {@code null}.\n     ",
-    "links" : [ "android.net.NetworkCapabilities#NET_CAPABILITY_INTERNET" ]
+    "links" : [ "#NET_CAPABILITY_INTERNET" ]
   }, {
     "name" : "protected void networkStatus(int status, String redirectUrl)",
     "returnType" : "void",

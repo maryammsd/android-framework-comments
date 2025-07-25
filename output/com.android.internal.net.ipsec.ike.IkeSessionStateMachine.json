@@ -1,0 +1,701 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/net/ipsec/ike/IkeSessionStateMachine.java",
+  "packageName" : "com.android.internal.net.ipsec.ike",
+  "className" : "IkeSessionStateMachine",
+  "comment" : "\n * IkeSessionStateMachine tracks states and manages exchanges of this IKE session.\n *\n * <p>IkeSessionStateMachine has two types of states. One type are states where there is no ongoing\n * procedure affecting IKE session (non-procedure state), including Initial, Idle and Receiving. All\n * other states are \"procedure\" states which are named as follows:\n *\n * <pre>\n * State Name = [Procedure Type] + [Exchange Initiator] + [Exchange Type].\n * - An IKE procedure consists of one or two IKE exchanges:\n *      Procedure Type = {CreateIke | DeleteIke | Info | RekeyIke | SimulRekeyIke}.\n * - Exchange Initiator indicates whether local or remote peer is the exchange initiator:\n *      Exchange Initiator = {Local | Remote}\n * - Exchange type defines the function of this exchange. To make it more descriptive, we separate\n *      Delete Exchange from generic Informational Exchange:\n *      Exchange Type = {IkeInit | IkeAuth | Create | Delete | Info}\n * </pre>\n ",
+  "links" : [ ],
+  "variables" : [ {
+    "name" : "TAG",
+    "type" : "String",
+    "comment" : " Package private",
+    "links" : [ ]
+  }, {
+    "name" : "FORCE_ENCAP_FAKE_LOCAL_ADDRESS_IPV4",
+    "type" : "InetAddress",
+    "comment" : " \"192.0.2.0\" is selected from RFC5737, \"IPv4 Address Blocks Reserved for Documentation\"",
+    "links" : [ ]
+  }, {
+    "name" : "FORCE_ENCAP_FAKE_LOCAL_ADDRESS_IPV6",
+    "type" : "InetAddress",
+    "comment" : " \"001:DB8::\" is selected from RFC3849, \"IPv6 Address Prefix Reserved for Documentation\"",
+    "links" : [ ]
+  }, {
+    "name" : "BUSY_WAKE_LOCK_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sContextToIkeSmMap",
+    "type" : "HashMap<Context, Set<IkeSessionStateMachine>>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sIkeAlarmReceiver",
+    "type" : "IkeAlarmReceiver",
+    "comment" : " Alarm receiver that will be shared by all IkeSessionStateMachine ",
+    "links" : [ ]
+  }, {
+    "name" : "sIntentFilter",
+    "type" : "IntentFilter",
+    "comment" : " The only read/write operation is in a static block which is thread safe.",
+    "links" : [ ]
+  }, {
+    "name" : "sIkeSessionIdGenerator",
+    "type" : "AtomicInteger",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "BUNDLE_KEY_IKE_REMOTE_SPI",
+    "type" : "String",
+    "comment" : " Bundle key for remote IKE SPI. Package private",
+    "links" : [ ]
+  }, {
+    "name" : "BUNDLE_KEY_CHILD_REMOTE_SPI",
+    "type" : "String",
+    "comment" : " Bundle key for remote Child SPI. Package private",
+    "links" : [ ]
+  }, {
+    "name" : "DEFAULT_FRAGMENT_SIZE",
+    "type" : "int",
+    "comment" : " Default fragment size in bytes.",
+    "links" : [ ]
+  }, {
+    "name" : "TEMP_FAILURE_RETRY_TIMEOUT_MS",
+    "type" : "long",
+    "comment" : " indicates that something has gone wrong, and we are out of sync.",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_GENERAL_BASE",
+    "type" : "int",
+    "comment" : " Package private signals accessible for testing code. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_RECEIVE_IKE_PACKET",
+    "type" : "int",
+    "comment" : " Receive encoded IKE packet on IkeSessionStateMachine. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_RECEIVE_PACKET_INVALID_IKE_SPI",
+    "type" : "int",
+    "comment" : " Receive encoded IKE packet with unrecognized IKE SPI on IkeSessionStateMachine. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_RECEIVE_REQUEST_FOR_CHILD",
+    "type" : "int",
+    "comment" : " Receive an remote request for a Child procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_OUTBOUND_CHILD_PAYLOADS_READY",
+    "type" : "int",
+    "comment" : " Receive payloads from Child Session for building an outbound IKE message. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_CHILD_PROCEDURE_FINISHED",
+    "type" : "int",
+    "comment" : " A Child Session has finished its procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_HANDLE_FIRST_CHILD_NEGOTIATION",
+    "type" : "int",
+    "comment" : " Send request/response payloads to ChildSessionStateMachine for further processing. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EXECUTE_LOCAL_REQ",
+    "type" : "int",
+    "comment" : " Receive a local request to execute from the scheduler ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_RETRANSMIT",
+    "type" : "int",
+    "comment" : " Trigger a retransmission. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EAP_START_EAP_AUTH",
+    "type" : "int",
+    "comment" : " Send EAP request payloads to EapAuthenticator for further processing. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EAP_OUTBOUND_MSG_READY",
+    "type" : "int",
+    "comment" : " Send the outbound IKE-wrapped EAP-Response message. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EAP_ERRORED",
+    "type" : "int",
+    "comment" : " Proxy to IkeSessionStateMachine handler to notify of errors ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EAP_FAILED",
+    "type" : "int",
+    "comment" : " Proxy to IkeSessionStateMachine handler to notify of failures ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_EAP_FINISH_EAP_AUTH",
+    "type" : "int",
+    "comment" : " Proxy to IkeSessionStateMachine handler to notify of success, to continue to post-auth ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_ALARM_FIRED",
+    "type" : "int",
+    "comment" : " Alarm goes off for a scheduled event, check {@link Message.arg2} for event type ",
+    "links" : [ "Message.arg2" ]
+  }, {
+    "name" : "CMD_SEND_KEEPALIVE",
+    "type" : "int",
+    "comment" : " Send keepalive packet ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_SET_NETWORK",
+    "type" : "int",
+    "comment" : "\n     * Update the Session's underlying Network\n     * obj = NetworkParams : params containing network, IP version, encap type and keepalive delay.\n     *",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_IKE_FATAL_ERROR_FROM_CHILD",
+    "type" : "int",
+    "comment" : "\n     * Proxy to IkeSessionStateMachine handler to notify of the IKE fatal error hit in a Child\n     * procedure\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_SET_UNDERPINNED_NETWORK",
+    "type" : "int",
+    "comment" : "\n     * Set the underpinned network\n     * obj = Network : the underpinned network\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_REQUEST_LIVENESS_CHECK",
+    "type" : "int",
+    "comment" : " Initiate liveness check and sends callbacks. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_UNDERLYING_NETWORK_DIED_WITH_MOBILITY",
+    "type" : "int",
+    "comment" : " Event for underlying network died with mobility ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_UNDERLYING_NETWORK_UPDATED_WITH_MOBILITY",
+    "type" : "int",
+    "comment" : " Event for underlying network updated with mobility ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_FORCE_TRANSITION",
+    "type" : "int",
+    "comment" : " Force state machine to a target state for testing purposes. ",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_IKE_LOCAL_REQUEST_BASE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_CREATE_IKE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_DELETE_IKE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_REKEY_IKE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_INFO",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_DPD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_MOBIKE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_LOCAL_REQUEST_ON_DEMAND_DPD",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "CMD_TO_STR",
+    "type" : "SparseArray<String>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSessionParams",
+    "type" : "IkeSessionParams",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalSpiToIkeSaRecordMap",
+    "type" : "LongSparseArray<IkeSaRecord>",
+    "comment" : " Map that stores all IkeSaRecords, keyed by locally generated IKE SPI. ",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteSpiToChildSessionMap",
+    "type" : "SparseArray<ChildSessionStateMachine>",
+    "comment" : "\n     * Map that stores all ChildSessionStateMachines, keyed by remotely generated Child SPI for\n     * sending IPsec packet. Different SPIs may point to the same ChildSessionStateMachine if this\n     * Child Session is doing Rekey.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSessionId",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIpSecManager",
+    "type" : "IpSecManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mAlarmManager",
+    "type" : "AlarmManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mScheduler",
+    "type" : "IkeLocalRequestScheduler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSessionCallback",
+    "type" : "IkeSessionCallback",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mTempFailHandler",
+    "type" : "TempFailureHandler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDeps",
+    "type" : "Dependencies",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeConnectionCtrl",
+    "type" : "IkeConnectionController",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalRequestFactory",
+    "type" : "LocalRequestFactory",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSpiGenerator",
+    "type" : "IkeSpiGenerator",
+    "comment" : "\n     * mIkeSpiGenerator will be used by all IKE SA creations in this IKE Session to avoid SPI\n     * collision in test mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mIpSecSpiGenerator",
+    "type" : "IpSecSpiGenerator",
+    "comment" : "\n     * mIpSecSpiGenerator will be shared by all Child Sessions under this IKE Session to avoid SPI\n     * collision in test mode.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "mBusyWakeLock",
+    "type" : "PowerManager.WakeLock",
+    "comment" : " Ensures that the system does not go to sleep in the middle of an exchange. ",
+    "links" : [ ]
+  }, {
+    "name" : "mChildCbToSessions",
+    "type" : "HashMap<ChildSessionCallback, ChildSessionStateMachine>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSaProposal",
+    "type" : "IkeSaProposal",
+    "comment" : " Package private IkeSaProposal that represents the negotiated IKE SA proposal. ",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeCipher",
+    "type" : "IkeCipher",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeIntegrity",
+    "type" : "IkeMacIntegrity",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIkePrf",
+    "type" : "IkeMacPrf",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteVendorIds",
+    "type" : "List<byte[]>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mEnabledExtensions",
+    "type" : "List<Integer>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCurrentIkeSaRecord",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalInitNewIkeSaRecord",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mRemoteInitNewIkeSaRecord",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSaRecordSurviving",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSaRecordAwaitingLocalDel",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mIkeSaRecordAwaitingRemoteDel",
+    "type" : "IkeSaRecord",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mIke3gppExtensionExchange",
+    "type" : "Ike3gppExtensionExchange",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLivenessAssister",
+    "type" : "LivenessAssister",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mIsRetransmitSuspended",
+    "type" : "boolean",
+    "comment" : " Package ",
+    "links" : [ ]
+  }, {
+    "name" : "mKillIkeSessionParent",
+    "type" : "KillIkeSessionParent",
+    "comment" : " States",
+    "links" : [ ]
+  }, {
+    "name" : "mInitial",
+    "type" : "Initial",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mIdle",
+    "type" : "Idle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mChildProcedureOngoing",
+    "type" : "ChildProcedureOngoing",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mReceiving",
+    "type" : "Receiving",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCreateIkeLocalIkeInit",
+    "type" : "CreateIkeLocalIkeInit",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCreateIkeLocalIkeAuth",
+    "type" : "CreateIkeLocalIkeAuth",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCreateIkeLocalIkeAuthInEap",
+    "type" : "CreateIkeLocalIkeAuthInEap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCreateIkeLocalIkeAuthPostEap",
+    "type" : "CreateIkeLocalIkeAuthPostEap",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRekeyIkeLocalCreate",
+    "type" : "RekeyIkeLocalCreate",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSimulRekeyIkeLocalCreate",
+    "type" : "SimulRekeyIkeLocalCreate",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSimulRekeyIkeLocalDeleteRemoteDelete",
+    "type" : "SimulRekeyIkeLocalDeleteRemoteDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSimulRekeyIkeLocalDelete",
+    "type" : "SimulRekeyIkeLocalDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mSimulRekeyIkeRemoteDelete",
+    "type" : "SimulRekeyIkeRemoteDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRekeyIkeLocalDelete",
+    "type" : "RekeyIkeLocalDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mRekeyIkeRemoteDelete",
+    "type" : "RekeyIkeRemoteDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDeleteIkeLocalDelete",
+    "type" : "DeleteIkeLocalDelete",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDpdIkeLocalInfo",
+    "type" : "DpdIkeLocalInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mDpdOnDemandIkeLocalInfo",
+    "type" : "DpdOnDemandIkeLocalInfo",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMobikeLocalInfo",
+    "type" : "MobikeLocalInfo",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private boolean hasChildSessionCallback(ChildSessionCallback callback)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void registerChildSessionCallback(ChildSessionParams childParams, ChildSessionCallback callbacks, boolean isFirstChild)",
+    "returnType" : "void",
+    "comment" : "\n     * Synchronously builds and registers a child session.\n     *\n     * <p>Setup of the child state machines MUST be done in two stages to ensure that if an external\n     * caller calls openChildSession and then calls closeChildSession before the state machine has\n     * gotten a chance to negotiate the sessions, a valid callback mapping exists (and does not\n     * throw an exception that the callback was not found).\n     *\n     * <p>In the edge case where a child creation fails, and deletes itself, all pending requests\n     * will no longer find the session in the map. Assume it has errored/failed, and skip/ignore.\n     * This is safe, as closeChildSession() (previously) validated that the callback was registered.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void openSession()",
+    "returnType" : "void",
+    "comment" : " Initiates IKE setup procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void openChildSession(ChildSessionParams childSessionParams, ChildSessionCallback childSessionCallback)",
+    "returnType" : "void",
+    "comment" : " Schedules a Create Child procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void closeChildSession(ChildSessionCallback childSessionCallback)",
+    "returnType" : "void",
+    "comment" : " Schedules a Delete Child procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void closeSession()",
+    "returnType" : "void",
+    "comment" : " Initiates Delete IKE procedure. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNetwork(Network network, @IkeSessionParams.EspIpVersion int ipVersion, @IkeSessionParams.EspEncapType int encapType, int keepaliveDelaySeconds)",
+    "returnType" : "void",
+    "comment" : " Update the IkeSessionStateMachine to use the specified Network. ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUnderpinnedNetwork(@NonNull Network underpinnedNetwork)",
+    "returnType" : "void",
+    "comment" : "\n     * Update the IkeSessionMachine to know that it underpins the specified Network.\n     *\n     * In particular, this is used to tell the system to stop keepalives when there are no\n     * open connections on the underpinned network, if automatic on/off keepalives are turned on.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void requestLivenessCheck()",
+    "returnType" : "void",
+    "comment" : "\n     * Schedules checking liveness procedure. The on-demand DPD may be triggered or check with\n     * existing any IKE message.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void scheduleRetry(LocalRequest localRequest)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean needEnableForceUdpEncap()",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void addIkeSaRecord(IkeSaRecord record)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void removeIkeSaRecord(IkeSaRecord record)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onQuitting()",
+    "returnType" : "void",
+    "comment" : " Called when this StateMachine quits. ",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeAllSaRecords(boolean expectSaClosed)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void closeIkeSaRecord(IkeSaRecord ikeSaRecord, boolean expectSaClosed)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleIkeFatalError(Exception error)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleIkeFatalError(Exception error, boolean isFromChild)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static void setupAlarmReceiver(Handler ikeHandler, Context context, IkeSessionStateMachine ike, int ikeSessionId)",
+    "returnType" : "void",
+    "comment" : " This method should always run on the IKE worker thread",
+    "links" : [ ]
+  }, {
+    "name" : "private static void releaseAlarmReceiver(Context context, IkeSessionStateMachine ike, int ikeSessionId)",
+    "returnType" : "void",
+    "comment" : " This method should always run on the IKE worker thread",
+    "links" : [ ]
+  }, {
+    "name" : "private static String getIntentIdentifier(int ikeSessionId, long remoteIkeSpi)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private Message getIntentIkeSmMsg(int localRequestType, long remoteIkeSpi)",
+    "returnType" : "Message",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " SaLifetimeAlarmScheduler buildSaLifetimeAlarmScheduler(long remoteSpi)",
+    "returnType" : "SaLifetimeAlarmScheduler",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void sendEncryptedIkeMessage(IkeMessage msg)",
+    "returnType" : "void",
+    "comment" : " Sends the provided IkeMessage using the current IKE SA record",
+    "links" : [ ]
+  }, {
+    "name" : " void sendEncryptedIkeMessage(IkeSaRecord ikeSaRecord, IkeMessage msg)",
+    "returnType" : "void",
+    "comment" : " Sends the provided IkeMessage using the provided IKE SA record",
+    "links" : [ ]
+  }, {
+    "name" : "private void sendEncryptedIkePackets(byte[][] packetList)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " void buildAndSendErrorNotificationResponse(IkeSaRecord ikeSaRecord, int messageId, @ErrorType int errorType)",
+    "returnType" : "void",
+    "comment" : " Builds and sends IKE-level error notification response on the provided IKE SA record",
+    "links" : [ ]
+  }, {
+    "name" : " void buildAndSendNotificationResponse(IkeSaRecord ikeSaRecord, int messageId, IkeNotifyPayload notifyPayload)",
+    "returnType" : "void",
+    "comment" : " Builds and sends error notification response on the provided IKE SA record",
+    "links" : [ ]
+  }, {
+    "name" : " IkeMessage buildEncryptedInformationalMessage(IkeInformationalPayload[] payloads, boolean isResponse, int messageId)",
+    "returnType" : "IkeMessage",
+    "comment" : " current IKE SA record.",
+    "links" : [ ]
+  }, {
+    "name" : " IkeMessage buildEncryptedInformationalMessage(IkeSaRecord saRecord, IkeInformationalPayload[] payloads, boolean isResponse, int messageId)",
+    "returnType" : "IkeMessage",
+    "comment" : " provided IKE SA record.",
+    "links" : [ ]
+  }, {
+    "name" : " IkeMessage buildEncryptedNotificationMessage(IkeSaRecord saRecord, IkeInformationalPayload[] payloads, @ExchangeType int exchangeType, boolean isResponse, int messageId)",
+    "returnType" : "IkeMessage",
+    "comment" : " SA record and exchange type.",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean didPeerIncludeNattDetectionPayloads(List<IkeNotifyPayload> natSourcePayloads, IkeNotifyPayload natDestPayload) throws InvalidSyntaxException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns if the peer included NAT-T detection payloads\n     *\n     * @throws InvalidSyntaxException if an invalid combination of NAT-T detection payloads are\n     *     received.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isLocalOrRemoteNatDetected(long initIkeSpi, long respIkeSpi, List<IkeNotifyPayload> natSourcePayloads, IkeNotifyPayload natDestPayload)",
+    "returnType" : "boolean",
+    "comment" : " Returns whether the local or remote peer is a behind NAT. ",
+    "links" : [ ]
+  }, {
+    "name" : "private static void addNatDetectionPayloadsToList(List<IkePayload> payloadList, InetAddress localAddr, InetAddress remoteAddr, int localPort, int remotePort, long initIkeSpi, long respIkeSpi, boolean isForceUdpEncapEnabled)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(PrintWriter pw)",
+    "returnType" : "void",
+    "comment" : "\n     * Dumps the state of {@link IkeSessionStateMachine}\n     *\n     * @param pw {@link PrintWriter} to write the state of the object.\n     ",
+    "links" : [ "java.io.PrintWriter", "IkeSessionStateMachine" ]
+  }, {
+    "name" : "public void onUnderlyingNetworkUpdated()",
+    "returnType" : "void",
+    "comment" : " This call will be only fired when mIkeConnectionCtrl.isMobilityEnabled() is true",
+    "links" : [ ]
+  }, {
+    "name" : "public void onUnderlyingNetworkDied(Network network)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onError(IkeException exception)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onIkePacketReceived(IkeHeader ikeHeader, byte[] ikePacketBytes)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onNonFatalError(Exception e)",
+    "returnType" : "void",
+    "comment" : " Implementation of IIkeSessionStateMachineShim",
+    "links" : [ ]
+  }, {
+    "name" : "public void onFatalError(Exception e)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "protected int getMetricsSessionType()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void onLivenessCheckCompleted(int elapsedTimeInMillis, int numberOfOnGoing, boolean resultSuccess)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "private boolean hasChildSessionCallback(ChildSessionCallback callback)", " void registerChildSessionCallback(ChildSessionParams childParams, ChildSessionCallback callbacks, boolean isFirstChild)", "public void openSession()", "public void openChildSession(ChildSessionParams childSessionParams, ChildSessionCallback childSessionCallback)", "public void closeChildSession(ChildSessionCallback childSessionCallback)", "public void closeSession()", "public void setNetwork(Network network, @IkeSessionParams.EspIpVersion int ipVersion, @IkeSessionParams.EspEncapType int encapType, int keepaliveDelaySeconds)", "public void setUnderpinnedNetwork(@NonNull Network underpinnedNetwork)", "public void requestLivenessCheck()", "private void scheduleRetry(LocalRequest localRequest)", "private boolean needEnableForceUdpEncap()", " void addIkeSaRecord(IkeSaRecord record)", " void removeIkeSaRecord(IkeSaRecord record)", "protected void onQuitting()", "private void closeAllSaRecords(boolean expectSaClosed)", "private void closeIkeSaRecord(IkeSaRecord ikeSaRecord, boolean expectSaClosed)", "private void handleIkeFatalError(Exception error)", "private void handleIkeFatalError(Exception error, boolean isFromChild)", "private static void setupAlarmReceiver(Handler ikeHandler, Context context, IkeSessionStateMachine ike, int ikeSessionId)", "private static void releaseAlarmReceiver(Context context, IkeSessionStateMachine ike, int ikeSessionId)", "private static String getIntentIdentifier(int ikeSessionId, long remoteIkeSpi)", "private Message getIntentIkeSmMsg(int localRequestType, long remoteIkeSpi)", " SaLifetimeAlarmScheduler buildSaLifetimeAlarmScheduler(long remoteSpi)", " void sendEncryptedIkeMessage(IkeMessage msg)", " void sendEncryptedIkeMessage(IkeSaRecord ikeSaRecord, IkeMessage msg)", "private void sendEncryptedIkePackets(byte[][] packetList)", " void buildAndSendErrorNotificationResponse(IkeSaRecord ikeSaRecord, int messageId, @ErrorType int errorType)", " void buildAndSendNotificationResponse(IkeSaRecord ikeSaRecord, int messageId, IkeNotifyPayload notifyPayload)", " IkeMessage buildEncryptedInformationalMessage(IkeInformationalPayload[] payloads, boolean isResponse, int messageId)", " IkeMessage buildEncryptedInformationalMessage(IkeSaRecord saRecord, IkeInformationalPayload[] payloads, boolean isResponse, int messageId)", " IkeMessage buildEncryptedNotificationMessage(IkeSaRecord saRecord, IkeInformationalPayload[] payloads, @ExchangeType int exchangeType, boolean isResponse, int messageId)", "private boolean didPeerIncludeNattDetectionPayloads(List<IkeNotifyPayload> natSourcePayloads, IkeNotifyPayload natDestPayload) throws InvalidSyntaxException", "private boolean isLocalOrRemoteNatDetected(long initIkeSpi, long respIkeSpi, List<IkeNotifyPayload> natSourcePayloads, IkeNotifyPayload natDestPayload)", "private static void addNatDetectionPayloadsToList(List<IkePayload> payloadList, InetAddress localAddr, InetAddress remoteAddr, int localPort, int remotePort, long initIkeSpi, long respIkeSpi, boolean isForceUdpEncapEnabled)", "public void dump(PrintWriter pw)", "public void onUnderlyingNetworkUpdated()", "public void onUnderlyingNetworkDied(Network network)", "public void onError(IkeException exception)", "public void onIkePacketReceived(IkeHeader ikeHeader, byte[] ikePacketBytes)", "public void onNonFatalError(Exception e)", "public void onFatalError(Exception e)", "protected int getMetricsSessionType()", "public void onLivenessCheckCompleted(int elapsedTimeInMillis, int numberOfOnGoing, boolean resultSuccess)" ],
+  "variableNames" : [ "TAG", "FORCE_ENCAP_FAKE_LOCAL_ADDRESS_IPV4", "FORCE_ENCAP_FAKE_LOCAL_ADDRESS_IPV6", "BUSY_WAKE_LOCK_TAG", "sContextToIkeSmMap", "sIkeAlarmReceiver", "sIntentFilter", "sIkeSessionIdGenerator", "BUNDLE_KEY_IKE_REMOTE_SPI", "BUNDLE_KEY_CHILD_REMOTE_SPI", "DEFAULT_FRAGMENT_SIZE", "TEMP_FAILURE_RETRY_TIMEOUT_MS", "CMD_GENERAL_BASE", "CMD_RECEIVE_IKE_PACKET", "CMD_RECEIVE_PACKET_INVALID_IKE_SPI", "CMD_RECEIVE_REQUEST_FOR_CHILD", "CMD_OUTBOUND_CHILD_PAYLOADS_READY", "CMD_CHILD_PROCEDURE_FINISHED", "CMD_HANDLE_FIRST_CHILD_NEGOTIATION", "CMD_EXECUTE_LOCAL_REQ", "CMD_RETRANSMIT", "CMD_EAP_START_EAP_AUTH", "CMD_EAP_OUTBOUND_MSG_READY", "CMD_EAP_ERRORED", "CMD_EAP_FAILED", "CMD_EAP_FINISH_EAP_AUTH", "CMD_ALARM_FIRED", "CMD_SEND_KEEPALIVE", "CMD_SET_NETWORK", "CMD_IKE_FATAL_ERROR_FROM_CHILD", "CMD_SET_UNDERPINNED_NETWORK", "CMD_REQUEST_LIVENESS_CHECK", "CMD_UNDERLYING_NETWORK_DIED_WITH_MOBILITY", "CMD_UNDERLYING_NETWORK_UPDATED_WITH_MOBILITY", "CMD_FORCE_TRANSITION", "CMD_IKE_LOCAL_REQUEST_BASE", "CMD_LOCAL_REQUEST_CREATE_IKE", "CMD_LOCAL_REQUEST_DELETE_IKE", "CMD_LOCAL_REQUEST_REKEY_IKE", "CMD_LOCAL_REQUEST_INFO", "CMD_LOCAL_REQUEST_DPD", "CMD_LOCAL_REQUEST_MOBIKE", "CMD_LOCAL_REQUEST_ON_DEMAND_DPD", "CMD_TO_STR", "mIkeSessionParams", "mLocalSpiToIkeSaRecordMap", "mRemoteSpiToChildSessionMap", "mIkeSessionId", "mIpSecManager", "mAlarmManager", "mScheduler", "mIkeSessionCallback", "mTempFailHandler", "mDeps", "mIkeConnectionCtrl", "mLocalRequestFactory", "mIkeSpiGenerator", "mIpSecSpiGenerator", "mBusyWakeLock", "mChildCbToSessions", "mSaProposal", "mIkeCipher", "mIkeIntegrity", "mIkePrf", "mRemoteVendorIds", "mEnabledExtensions", "mCurrentIkeSaRecord", "mLocalInitNewIkeSaRecord", "mRemoteInitNewIkeSaRecord", "mIkeSaRecordSurviving", "mIkeSaRecordAwaitingLocalDel", "mIkeSaRecordAwaitingRemoteDel", "mIke3gppExtensionExchange", "mLivenessAssister", "mIsRetransmitSuspended", "mKillIkeSessionParent", "mInitial", "mIdle", "mChildProcedureOngoing", "mReceiving", "mCreateIkeLocalIkeInit", "mCreateIkeLocalIkeAuth", "mCreateIkeLocalIkeAuthInEap", "mCreateIkeLocalIkeAuthPostEap", "mRekeyIkeLocalCreate", "mSimulRekeyIkeLocalCreate", "mSimulRekeyIkeLocalDeleteRemoteDelete", "mSimulRekeyIkeLocalDelete", "mSimulRekeyIkeRemoteDelete", "mRekeyIkeLocalDelete", "mRekeyIkeRemoteDelete", "mDeleteIkeLocalDelete", "mDpdIkeLocalInfo", "mDpdOnDemandIkeLocalInfo", "mMobikeLocalInfo" ]
+}

@@ -1,0 +1,571 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/telephony/InboundSmsHandler.java",
+  "packageName" : "com.android.internal.telephony",
+  "className" : "InboundSmsHandler",
+  "comment" : "\n * This class broadcasts incoming SMS messages to interested apps after storing them in the\n * SmsProvider \"raw\" table and ACKing them to the SMSC. After each message has been broadcast, its\n * parts are removed from the raw table. If the device crashes after ACKing but before the broadcast\n * completes, the pending messages will be rebroadcast on the next boot.\n *\n * <p>The state machine starts in {@link IdleState} state. When we receive a new SMS from the radio,\n * the wakelock is acquired, then transition to {@link DeliveringState} state, where the message is\n * saved to the raw table, then acknowledged to the modem which in turn acknowledges it to the SMSC.\n *\n * <p>After saving the SMS, if the message is complete (either single-part or the final segment of a\n * multi-part SMS), we broadcast the completed PDUs as an ordered broadcast, then transition to\n * {@link WaitingState} state to wait for the broadcast to complete. When the local\n * {@link BroadcastReceiver} is called with the result, it sends {@link #EVENT_BROADCAST_COMPLETE}\n * to the state machine, causing us to either broadcast the next pending message (if one has arrived\n * while waiting for the broadcast to complete), or to transition back to the halted state after all\n * messages are processed. Then the wakelock is released and we wait for the next SMS.\n ",
+  "links" : [ "IdleState", "WaitingState", "#EVENT_BROADCAST_COMPLETE", "DeliveringState", "android.content.BroadcastReceiver" ],
+  "variables" : [ {
+    "name" : "DBG",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VDBG",
+    "type" : "boolean",
+    "comment" : " STOPSHIP if true, logs user data",
+    "links" : [ ]
+  }, {
+    "name" : "PDU_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SEQUENCE_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DESTINATION_PORT_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DATE_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "REFERENCE_NUMBER_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "COUNT_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ADDRESS_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "ID_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "MESSAGE_BODY_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DISPLAY_ADDRESS_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DELETED_FLAG_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "SUBID_COLUMN",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "PDU_DELETED_FLAG_PROJECTION",
+    "type" : "String[]",
+    "comment" : " Query projection for checking for duplicate message segments. ",
+    "links" : [ ]
+  }, {
+    "name" : "PDU_DELETED_FLAG_PROJECTION_INDEX_MAPPING",
+    "type" : "Map<Integer, Integer>",
+    "comment" : " Mapping from DB COLUMN to PDU_SEQUENCE_PORT PROJECTION index ",
+    "links" : [ ]
+  }, {
+    "name" : "PDU_SEQUENCE_PORT_PROJECTION",
+    "type" : "String[]",
+    "comment" : " Query projection for combining concatenated message segments. ",
+    "links" : [ ]
+  }, {
+    "name" : "PDU_SEQUENCE_PORT_PROJECTION_INDEX_MAPPING",
+    "type" : "Map<Integer, Integer>",
+    "comment" : " Mapping from DB COLUMN to PDU_SEQUENCE_PORT PROJECTION index ",
+    "links" : [ ]
+  }, {
+    "name" : "SELECT_BY_ID",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_NEW_SMS",
+    "type" : "int",
+    "comment" : " New SMS received as an AsyncResult. ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_BROADCAST_SMS",
+    "type" : "int",
+    "comment" : " Message type containing a {@link InboundSmsTracker} ready to broadcast to listeners. ",
+    "links" : [ "InboundSmsTracker" ]
+  }, {
+    "name" : "EVENT_BROADCAST_COMPLETE",
+    "type" : "int",
+    "comment" : " Message from resultReceiver notifying {@link WaitingState} of a completed broadcast. ",
+    "links" : [ "WaitingState" ]
+  }, {
+    "name" : "EVENT_RETURN_TO_IDLE",
+    "type" : "int",
+    "comment" : " Sent on exit from {@link WaitingState} to return to idle after sending all broadcasts. ",
+    "links" : [ "WaitingState" ]
+  }, {
+    "name" : "EVENT_RELEASE_WAKELOCK",
+    "type" : "int",
+    "comment" : " Release wakelock after {@link #mWakeLockTimeout} when returning to idle state. ",
+    "links" : [ "#mWakeLockTimeout" ]
+  }, {
+    "name" : "EVENT_START_ACCEPTING_SMS",
+    "type" : "int",
+    "comment" : " Sent by {@link SmsBroadcastUndelivered} after cleaning the raw table. ",
+    "links" : [ "SmsBroadcastUndelivered" ]
+  }, {
+    "name" : "EVENT_INJECT_SMS",
+    "type" : "int",
+    "comment" : " New SMS received as an AsyncResult. ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_UPDATE_TRACKER",
+    "type" : "int",
+    "comment" : " Update the sms tracker ",
+    "links" : [ ]
+  }, {
+    "name" : "EVENT_RECEIVER_TIMEOUT",
+    "type" : "int",
+    "comment" : " BroadcastReceiver timed out waiting for an intent ",
+    "links" : [ ]
+  }, {
+    "name" : "WAKELOCK_TIMEOUT",
+    "type" : "int",
+    "comment" : " Wakelock release delay when returning to idle state. ",
+    "links" : [ ]
+  }, {
+    "name" : "SOURCE_NOT_INJECTED",
+    "type" : "int",
+    "comment" : " Received SMS was not injected. ",
+    "links" : [ ]
+  }, {
+    "name" : "SOURCE_INJECTED_FROM_IMS",
+    "type" : "int",
+    "comment" : " Received SMS was received over IMS and injected. ",
+    "links" : [ ]
+  }, {
+    "name" : "SOURCE_INJECTED_FROM_UNKNOWN",
+    "type" : "int",
+    "comment" : " Received SMS was injected from source different than IMS. ",
+    "links" : [ ]
+  }, {
+    "name" : "NOTIFICATION_TAG",
+    "type" : "String",
+    "comment" : " and notification id should be unique within the phone app.",
+    "links" : [ ]
+  }, {
+    "name" : "NOTIFICATION_ID_NEW_MESSAGE",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sRawUri",
+    "type" : "Uri",
+    "comment" : " URI for raw table of SMS provider. ",
+    "links" : [ ]
+  }, {
+    "name" : "sRawUriPermanentDelete",
+    "type" : "Uri",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mResolver",
+    "type" : "ContentResolver",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWapPush",
+    "type" : "WapPushOverSms",
+    "comment" : " Special handler for WAP push messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "mWakeLock",
+    "type" : "PowerManager.WakeLock",
+    "comment" : " Wake lock to ensure device stays awake while dispatching the SMS intents. ",
+    "links" : [ ]
+  }, {
+    "name" : "mDefaultState",
+    "type" : "DefaultState",
+    "comment" : " DefaultState throws an exception or logs an error for unhandled message types. ",
+    "links" : [ ]
+  }, {
+    "name" : "mStartupState",
+    "type" : "StartupState",
+    "comment" : " Startup state. Waiting for {@link SmsBroadcastUndelivered} to complete. ",
+    "links" : [ "SmsBroadcastUndelivered" ]
+  }, {
+    "name" : "mIdleState",
+    "type" : "IdleState",
+    "comment" : " Idle state. Waiting for messages to process. ",
+    "links" : [ ]
+  }, {
+    "name" : "mDeliveringState",
+    "type" : "DeliveringState",
+    "comment" : " Delivering state. Saves the PDU in the raw table and acknowledges to SMSC. ",
+    "links" : [ ]
+  }, {
+    "name" : "mWaitingState",
+    "type" : "WaitingState",
+    "comment" : " Broadcasting state. Waits for current broadcast to complete before delivering next. ",
+    "links" : [ ]
+  }, {
+    "name" : "mStorageMonitor",
+    "type" : "SmsStorageMonitor",
+    "comment" : " Helper class to check whether storage is available for incoming messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "mSmsReceiveDisabled",
+    "type" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPhone",
+    "type" : "Phone",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mUserManager",
+    "type" : "UserManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mMetrics",
+    "type" : "TelephonyMetrics",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalLog",
+    "type" : "LocalLog",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCarrierServiceLocalLog",
+    "type" : "LocalLog",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mPowerWhitelistManager",
+    "type" : "PowerWhitelistManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mCellBroadcastServiceManager",
+    "type" : "CellBroadcastServiceManager",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "DELETE_PERMANENTLY",
+    "type" : "int",
+    "comment" : " Delete permanently from raw table",
+    "links" : [ ]
+  }, {
+    "name" : "MARK_DELETED",
+    "type" : "int",
+    "comment" : " Only mark deleted, but keep in db for message de-duping",
+    "links" : [ ]
+  }, {
+    "name" : "ACTION_OPEN_SMS_APP",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "mWakeLockTimeout",
+    "type" : "int",
+    "comment" : " Timeout for releasing wakelock ",
+    "links" : [ ]
+  }, {
+    "name" : "mSmsFilters",
+    "type" : "List<SmsFilter>",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "sTimeoutDurationMillis",
+    "type" : "int",
+    "comment" : "",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "public void dispose()",
+    "returnType" : "void",
+    "comment" : "\n     * Tell the state machine to quit after processing all messages.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void onQuitting()",
+    "returnType" : "void",
+    "comment" : "\n     * Dispose of the WAP push object and release the wakelock.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public Phone getPhone()",
+    "returnType" : "Phone",
+    "comment" : " CAF_MSIM Is this used anywhere ? if not remove it",
+    "links" : [ ]
+  }, {
+    "name" : "protected String getWhatToString(int what)",
+    "returnType" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleNewSms(AsyncResult ar)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void handleInjectSms(AsyncResult ar, boolean isOverIms, int token)",
+    "returnType" : "void",
+    "comment" : "\n     * This method is called when a new SMS PDU is injected into application framework.\n     * @param ar is the AsyncResult that has the SMS PDU to be injected.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int dispatchMessage(SmsMessageBase smsb, @SmsSource int smsSource, int token)",
+    "returnType" : "int",
+    "comment" : "\n     * Process an SMS message from the RIL, calling subclass methods to handle 3GPP and\n     * 3GPP2-specific message types.\n     *\n     * @param smsb the SmsMessageBase object from the RIL\n     * @param smsSource the source of the SMS message\n     * @return a result code from {@link android.provider.Telephony.Sms.Intents},\n     *  or {@link Activity#RESULT_OK} for delayed acknowledgment to SMSC\n     ",
+    "links" : [ "android.provider.Telephony.Sms.Intents", "android.app.Activity#RESULT_OK" ]
+  }, {
+    "name" : "protected abstract int dispatchMessageRadioSpecific(SmsMessageBase smsb, @SmsSource int smsSource, int token)",
+    "returnType" : "int",
+    "comment" : "\n     * Process voicemail notification, SMS-PP data download, CDMA CMAS, CDMA WAP push, and other\n     * 3GPP/3GPP2-specific messages. Regular SMS messages are handled by calling the shared\n     * {@link #dispatchNormalMessage} from this class.\n     *\n     * @param smsb the SmsMessageBase object from the RIL\n     * @param smsSource the source of the SMS message\n     * @return a result code from {@link android.provider.Telephony.Sms.Intents},\n     *  or {@link Activity#RESULT_OK} for delayed acknowledgment to SMSC\n     ",
+    "links" : [ "android.provider.Telephony.Sms.Intents", "android.app.Activity#RESULT_OK", "#dispatchNormalMessage" ]
+  }, {
+    "name" : "protected abstract void acknowledgeLastIncomingSms(boolean success, int result, Message response)",
+    "returnType" : "void",
+    "comment" : "\n     * Send an acknowledge message to the SMSC.\n     * @param success indicates that last message was successfully received.\n     * @param result result code indicating any error\n     * @param response callback message sent when operation completes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void notifyAndAcknowledgeLastIncomingSms(boolean success, int result, Message response)",
+    "returnType" : "void",
+    "comment" : "\n     * Notify interested apps if the framework has rejected an incoming SMS,\n     * and send an acknowledge message to the network.\n     * @param success indicates that last message was successfully received.\n     * @param result result code indicating any error\n     * @param response callback message sent when operation completes.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected abstract boolean is3gpp2()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Return true if this handler is for 3GPP2 messages; false for 3GPP format.\n     * @return true for the 3GPP2 handler; false for the 3GPP handler\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected int dispatchNormalMessage(SmsMessageBase sms, @SmsSource int smsSource)",
+    "returnType" : "int",
+    "comment" : "\n     * Dispatch a normal incoming SMS. This is called from {@link #dispatchMessageRadioSpecific}\n     * if no format-specific handling was required. Saves the PDU to the SMS provider raw table,\n     * creates an {@link InboundSmsTracker}, then sends it to the state machine as an\n     * {@link #EVENT_BROADCAST_SMS}. Returns {@link Intents#RESULT_SMS_HANDLED} or an error value.\n     *\n     * @param sms the message to dispatch\n     * @param smsSource the source of the SMS message\n     * @return {@link Intents#RESULT_SMS_HANDLED} if the message was accepted, or an error status\n     ",
+    "links" : [ "android.provider.Telephony.Sms.Intents#RESULT_SMS_HANDLED", "#dispatchMessageRadioSpecific", "InboundSmsTracker", "#EVENT_BROADCAST_SMS" ]
+  }, {
+    "name" : "protected int addTrackerToRawTableAndSendMessage(InboundSmsTracker tracker, boolean deDup)",
+    "returnType" : "int",
+    "comment" : "\n     * Helper to add the tracker to the raw table and then send a message to broadcast it, if\n     * successful. Returns the SMS intent status to return to the SMSC.\n     * @param tracker the tracker to save to the raw table and then deliver\n     * @return {@link Intents#RESULT_SMS_HANDLED} or one of these errors:<br>\n     * <code>RESULT_SMS_UNSUPPORTED</code><br>\n     * <code>RESULT_SMS_DUPLICATED</code><br>\n     * <code>RESULT_SMS_DISPATCH_FAILURE</code><br>\n     * <code>RESULT_SMS_NULL_PDU</code><br>\n     * <code>RESULT_SMS_NULL_MESSAGE</code><br>\n     * <code>RESULT_SMS_DATABASE_ERROR</code><br>\n     * <code>RESULT_SMS_INVALID_URI</code><br>\n     ",
+    "links" : [ "android.provider.Telephony.Sms.Intents#RESULT_SMS_HANDLED" ]
+  }, {
+    "name" : "private boolean processMessagePart(InboundSmsTracker tracker)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Process the inbound SMS segment. If the message is complete, send it as an ordered\n     * broadcast to interested receivers and return true. If the message is a segment of an\n     * incomplete multi-part SMS, return false.\n     * @param tracker the tracker containing the message segment to process\n     * @return true if an ordered broadcast was sent; false if waiting for more message segments\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean processMessagePartWithUserLocked(InboundSmsTracker tracker, byte[][] pdus, int destPort, SmsBroadcastReceiver resultReceiver, boolean block)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Processes the message part while the credential-encrypted storage is still locked.\n     *\n     * <p>If the message is a regular MMS, show a new message notification. If the message is a\n     * SMS, ask the carrier app to filter it and show the new message notification if the carrier\n     * app asks to keep the message.\n     *\n     * @return true if an ordered broadcast was sent to the carrier app; false otherwise.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void showNewMessageNotification()",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static void cancelNewMessageNotification(Context context)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private List<SmsFilter> createDefaultSmsFilters()",
+    "returnType" : "List<SmsFilter>",
+    "comment" : "\n     * Creates the default filters used to filter SMS messages.\n     *\n     * <p>Currently 3 filters exist: the carrier package, the VisualVoicemailSmsFilter, and the\n     * missed incoming call SMS filter.\n     *\n     * <p>Since the carrier filter is asynchronous, if a message passes through the carrier filter,\n     * the remaining filters will be applied in the callback.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dropFilteredSms(InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean block)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean filterSms(byte[][] pdus, int destPort, InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean userUnlocked, boolean block)",
+    "returnType" : "boolean",
+    "comment" : "\n     * Filters the SMS.\n     *\n     * <p>Each filter in {@link #mSmsFilters} is invoked sequentially. If any filter returns true,\n     * this method returns true and subsequent filters are ignored.\n     *\n     * @return true if a filter is invoked and the SMS processing flow is diverted, false otherwise.\n     ",
+    "links" : [ "#mSmsFilters" ]
+  }, {
+    "name" : "private static boolean filterSms(byte[][] pdus, int destPort, InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean userUnlocked, boolean block, List<SmsFilter> filters)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public void dispatchIntent(Intent intent, String permission, String appOp, Bundle opts, SmsBroadcastReceiver resultReceiver, UserHandle user, int subId)",
+    "returnType" : "void",
+    "comment" : "\n     * Dispatch the intent with the specified permission, appOp, and result receiver, using\n     * this state machine's handler thread to run the result receiver.\n     *\n     * @param intent the intent to broadcast\n     * @param permission receivers are required to have this permission\n     * @param appOp app op that is being performed when dispatching to a receiver\n     * @param user user to deliver the intent to\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean hasUserRestriction(String restrictionKey, UserHandle userHandle)",
+    "returnType" : "boolean",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void deleteFromRawTable(String deleteWhere, String[] deleteWhereArgs, int deleteType)",
+    "returnType" : "void",
+    "comment" : "\n     * Helper for {@link SmsBroadcastUndelivered} to delete an old message in the raw table.\n     ",
+    "links" : [ "SmsBroadcastUndelivered" ]
+  }, {
+    "name" : "private Bundle handleSmsWhitelisting(ComponentName target, boolean bgActivityStartAllowed)",
+    "returnType" : "Bundle",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void dispatchSmsDeliveryIntent(byte[][] pdus, String format, int destPort, SmsBroadcastReceiver resultReceiver, boolean isClass0, int subId, long messageId)",
+    "returnType" : "void",
+    "comment" : "\n     * Creates and dispatches the intent to the default SMS app, appropriate port or via the {@link\n     * AppSmsManager}.\n     *\n     * @param pdus message pdus\n     * @param format the message format, typically \"3gpp\" or \"3gpp2\"\n     * @param destPort the destination port\n     * @param resultReceiver the receiver handling the delivery result\n     ",
+    "links" : [ "AppSmsManager" ]
+  }, {
+    "name" : "private boolean checkAndHandleDuplicate(InboundSmsTracker tracker) throws SQLException",
+    "returnType" : "boolean",
+    "comment" : "\n     * Function to detect and handle duplicate messages. If the received message should replace an\n     * existing message in the raw db, this function deletes the existing message. If an existing\n     * message takes priority (for eg, existing message has already been broadcast), then this new\n     * message should be dropped.\n     * @return true if the message represented by the passed in tracker should be dropped,\n     * false otherwise\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logDupPduMismatch(Cursor cursor, InboundSmsTracker tracker)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int addTrackerToRawTable(InboundSmsTracker tracker, boolean deDup)",
+    "returnType" : "int",
+    "comment" : "\n     * Insert a message PDU into the raw table so we can acknowledge it immediately.\n     * If the device crashes before the broadcast to listeners completes, it will be delivered\n     * from the raw table on the next device boot. For single-part messages, the deleteWhere\n     * and deleteWhereArgs fields of the tracker will be set to delete the correct row after\n     * the ordered broadcast completes.\n     *\n     * @param tracker the tracker to add to the raw table\n     * @return true on success; false on failure to write to database\n     ",
+    "links" : [ ]
+  }, {
+    "name" : " static boolean isCurrentFormat3gpp2()",
+    "returnType" : "boolean",
+    "comment" : "\n     * Returns whether the default message format for the current radio technology is 3GPP2.\n     * @return true if the radio technology uses 3GPP2 format by default, false for 3GPP format\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void dropSms(SmsBroadcastReceiver receiver)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private boolean isSkipNotifyFlagSet(int callbackResult)",
+    "returnType" : "boolean",
+    "comment" : " Checks whether the flag to skip new message notification is set in the bitmask returned\n     *  from the carrier app.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logWithLocalLog(String logMsg)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug level in logcat and LocalLog\n     * @param logMsg msg to log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logWithLocalLog(String logMsg, long id)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug level in logcat and LocalLog\n     * @param logMsg msg to log\n     * @param id unique message id\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logeWithLocalLog(String logMsg)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error level in logcat and LocalLog\n     * @param logMsg msg to log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void logeWithLocalLog(String logMsg, long id)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error level in logcat and LocalLog\n     * @param logMsg msg to log\n     * @param id unique message id\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void log(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug level.\n     * @param s the string to log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void log(String s, long id)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with debug level.\n     * @param s the string to log\n     * @param id unique message id\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void loge(String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error level.\n     * @param s the string to log\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void loge(String s, long id)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error level.\n     * @param s the string to log\n     * @param id unique message id\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "protected void loge(String s, Throwable e)",
+    "returnType" : "void",
+    "comment" : "\n     * Log with error level.\n     * @param s the string to log\n     * @param e is a Throwable which logs additional information.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private static String buildMessageBodyFromPdus(SmsMessage[] msgs)",
+    "returnType" : "String",
+    "comment" : "\n     * Build up the SMS message body from the SmsMessage array of received SMS\n     *\n     * @param msgs The SmsMessage array of the received SMS\n     * @return The text message body\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(FileDescriptor fd, PrintWriter printWriter, String[] args)",
+    "returnType" : "void",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private static String replaceFormFeeds(String s)",
+    "returnType" : "String",
+    "comment" : " Some providers send formfeeds in their messages. Convert those formfeeds to newlines.",
+    "links" : [ ]
+  }, {
+    "name" : "public PowerManager.WakeLock getWakeLock()",
+    "returnType" : "PowerManager.WakeLock",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "public int getWakeLockTimeout()",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private void setWakeLockTimeout(int timeOut)",
+    "returnType" : "void",
+    "comment" : "\n    * Sets the wakelock timeout to {@link timeOut} milliseconds\n    ",
+    "links" : [ "timeOut" ]
+  }, {
+    "name" : "public void setSmsFiltersForTesting(@Nullable List<SmsFilter> smsFilters)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the SMS filters used by {@link #filterSms} for testing purposes.\n     *\n     * @param smsFilters List of SMS filters, or null to restore the default filters.\n     ",
+    "links" : [ "#filterSms" ]
+  }, {
+    "name" : "protected byte[] decodeHexString(String hexString)",
+    "returnType" : "byte[]",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private byte hexToByte(String hexString)",
+    "returnType" : "byte",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "private int toDigit(char hexChar)",
+    "returnType" : "int",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : " static void registerNewMessageNotificationActionHandler(Context context)",
+    "returnType" : "void",
+    "comment" : "\n     * Registers the broadcast receiver to launch the default SMS app when the user clicks the\n     * new message notification.\n     ",
+    "links" : [ ]
+  } ],
+  "methodNames" : [ "public void dispose()", "protected void onQuitting()", "public Phone getPhone()", "protected String getWhatToString(int what)", "private void handleNewSms(AsyncResult ar)", "private void handleInjectSms(AsyncResult ar, boolean isOverIms, int token)", "private int dispatchMessage(SmsMessageBase smsb, @SmsSource int smsSource, int token)", "protected abstract int dispatchMessageRadioSpecific(SmsMessageBase smsb, @SmsSource int smsSource, int token)", "protected abstract void acknowledgeLastIncomingSms(boolean success, int result, Message response)", "private void notifyAndAcknowledgeLastIncomingSms(boolean success, int result, Message response)", "protected abstract boolean is3gpp2()", "protected int dispatchNormalMessage(SmsMessageBase sms, @SmsSource int smsSource)", "protected int addTrackerToRawTableAndSendMessage(InboundSmsTracker tracker, boolean deDup)", "private boolean processMessagePart(InboundSmsTracker tracker)", "private boolean processMessagePartWithUserLocked(InboundSmsTracker tracker, byte[][] pdus, int destPort, SmsBroadcastReceiver resultReceiver, boolean block)", "private void showNewMessageNotification()", " static void cancelNewMessageNotification(Context context)", "private List<SmsFilter> createDefaultSmsFilters()", "private void dropFilteredSms(InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean block)", "private boolean filterSms(byte[][] pdus, int destPort, InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean userUnlocked, boolean block)", "private static boolean filterSms(byte[][] pdus, int destPort, InboundSmsTracker tracker, SmsBroadcastReceiver resultReceiver, boolean userUnlocked, boolean block, List<SmsFilter> filters)", "public void dispatchIntent(Intent intent, String permission, String appOp, Bundle opts, SmsBroadcastReceiver resultReceiver, UserHandle user, int subId)", "private boolean hasUserRestriction(String restrictionKey, UserHandle userHandle)", "private void deleteFromRawTable(String deleteWhere, String[] deleteWhereArgs, int deleteType)", "private Bundle handleSmsWhitelisting(ComponentName target, boolean bgActivityStartAllowed)", "private void dispatchSmsDeliveryIntent(byte[][] pdus, String format, int destPort, SmsBroadcastReceiver resultReceiver, boolean isClass0, int subId, long messageId)", "private boolean checkAndHandleDuplicate(InboundSmsTracker tracker) throws SQLException", "private void logDupPduMismatch(Cursor cursor, InboundSmsTracker tracker)", "private int addTrackerToRawTable(InboundSmsTracker tracker, boolean deDup)", " static boolean isCurrentFormat3gpp2()", "private void dropSms(SmsBroadcastReceiver receiver)", "private boolean isSkipNotifyFlagSet(int callbackResult)", "protected void logWithLocalLog(String logMsg)", "protected void logWithLocalLog(String logMsg, long id)", "protected void logeWithLocalLog(String logMsg)", "protected void logeWithLocalLog(String logMsg, long id)", "protected void log(String s)", "protected void log(String s, long id)", "protected void loge(String s)", "protected void loge(String s, long id)", "protected void loge(String s, Throwable e)", "private static String buildMessageBodyFromPdus(SmsMessage[] msgs)", "public void dump(FileDescriptor fd, PrintWriter printWriter, String[] args)", "private static String replaceFormFeeds(String s)", "public PowerManager.WakeLock getWakeLock()", "public int getWakeLockTimeout()", "private void setWakeLockTimeout(int timeOut)", "public void setSmsFiltersForTesting(@Nullable List<SmsFilter> smsFilters)", "protected byte[] decodeHexString(String hexString)", "private byte hexToByte(String hexString)", "private int toDigit(char hexChar)", " static void registerNewMessageNotificationActionHandler(Context context)" ],
+  "variableNames" : [ "DBG", "VDBG", "PDU_COLUMN", "SEQUENCE_COLUMN", "DESTINATION_PORT_COLUMN", "DATE_COLUMN", "REFERENCE_NUMBER_COLUMN", "COUNT_COLUMN", "ADDRESS_COLUMN", "ID_COLUMN", "MESSAGE_BODY_COLUMN", "DISPLAY_ADDRESS_COLUMN", "DELETED_FLAG_COLUMN", "SUBID_COLUMN", "PDU_DELETED_FLAG_PROJECTION", "PDU_DELETED_FLAG_PROJECTION_INDEX_MAPPING", "PDU_SEQUENCE_PORT_PROJECTION", "PDU_SEQUENCE_PORT_PROJECTION_INDEX_MAPPING", "SELECT_BY_ID", "EVENT_NEW_SMS", "EVENT_BROADCAST_SMS", "EVENT_BROADCAST_COMPLETE", "EVENT_RETURN_TO_IDLE", "EVENT_RELEASE_WAKELOCK", "EVENT_START_ACCEPTING_SMS", "EVENT_INJECT_SMS", "EVENT_UPDATE_TRACKER", "EVENT_RECEIVER_TIMEOUT", "WAKELOCK_TIMEOUT", "SOURCE_NOT_INJECTED", "SOURCE_INJECTED_FROM_IMS", "SOURCE_INJECTED_FROM_UNKNOWN", "NOTIFICATION_TAG", "NOTIFICATION_ID_NEW_MESSAGE", "sRawUri", "sRawUriPermanentDelete", "mContext", "mResolver", "mWapPush", "mWakeLock", "mDefaultState", "mStartupState", "mIdleState", "mDeliveringState", "mWaitingState", "mStorageMonitor", "mSmsReceiveDisabled", "mPhone", "mUserManager", "mMetrics", "mLocalLog", "mCarrierServiceLocalLog", "mPowerWhitelistManager", "mCellBroadcastServiceManager", "DELETE_PERMANENTLY", "MARK_DELETED", "ACTION_OPEN_SMS_APP", "mWakeLockTimeout", "mSmsFilters", "sTimeoutDurationMillis" ]
+}

@@ -1,0 +1,596 @@
+{
+  "filePath" : "/home/maryam/clearblue/files/android-source-35/com/android/internal/telephony/subscription/SubscriptionDatabaseManager.java",
+  "packageName" : "com.android.internal.telephony.subscription",
+  "className" : "SubscriptionDatabaseManager",
+  "comment" : "\n * The subscription database manager is the wrapper of {@link SimInfo}\n * table. It's a full memory cache of the entire subscription database, and the update can be\n * asynchronously or synchronously. The database's cache allows multi threads to read\n * simultaneously, if no write is ongoing.\n *\n * Note that from Android 14, directly writing into the subscription database through content\n * resolver with {@link SimInfo#CONTENT_URI} will cause cache/db out of sync. All the read/write\n * to the database should go through {@link SubscriptionManagerService}.\n ",
+  "links" : [ "android.provider.Telephony.SimInfo#CONTENT_URI", "android.provider.Telephony.SimInfo", "SubscriptionManagerService" ],
+  "variables" : [ {
+    "name" : "LOG_TAG",
+    "type" : "String",
+    "comment" : "",
+    "links" : [ ]
+  }, {
+    "name" : "VDBG",
+    "type" : "boolean",
+    "comment" : " Whether enabling verbose debugging message or not. ",
+    "links" : [ ]
+  }, {
+    "name" : "INVALID_ROW_INDEX",
+    "type" : "int",
+    "comment" : " Invalid database row index. ",
+    "links" : [ ]
+  }, {
+    "name" : "SUBSCRIPTION_GET_METHOD_MAP",
+    "type" : "Map<String, Function<SubscriptionInfoInternal, ?>>",
+    "comment" : " The mapping from {@link SimInfo} table to {@link SubscriptionInfoInternal} get methods. ",
+    "links" : [ "android.provider.Telephony.SimInfo", "SubscriptionInfoInternal" ]
+  }, {
+    "name" : "SUBSCRIPTION_SET_INTEGER_METHOD_MAP",
+    "type" : "Map<String, TriConsumer<SubscriptionDatabaseManager, Integer, Integer>>",
+    "comment" : "\n     * The mapping from columns in {@link android.provider.Telephony.SimInfo} table to\n     * {@link SubscriptionDatabaseManager} setting integer methods.\n     ",
+    "links" : [ "SubscriptionDatabaseManager", "android.provider.Telephony.SimInfo" ]
+  }, {
+    "name" : "SUBSCRIPTION_SET_STRING_METHOD_MAP",
+    "type" : "Map<String, TriConsumer<SubscriptionDatabaseManager, Integer, String>>",
+    "comment" : "\n     * The mapping from columns in {@link android.provider.Telephony.SimInfo} table to\n     * {@link SubscriptionDatabaseManager} setting string methods.\n     ",
+    "links" : [ "SubscriptionDatabaseManager", "android.provider.Telephony.SimInfo" ]
+  }, {
+    "name" : "SUBSCRIPTION_SET_BYTE_ARRAY_METHOD_MAP",
+    "type" : "Map<String, TriConsumer<SubscriptionDatabaseManager, Integer, byte[]>>",
+    "comment" : "\n     * The mapping from columns in {@link android.provider.Telephony.SimInfo} table to\n     * {@link SubscriptionDatabaseManager} setting byte array methods.\n     ",
+    "links" : [ "SubscriptionDatabaseManager", "android.provider.Telephony.SimInfo" ]
+  }, {
+    "name" : "GROUP_SHARING_COLUMNS",
+    "type" : "Set<String>",
+    "comment" : "\n     * The columns that should be in-sync between the subscriptions in the same group. Changing\n     * the value in those fields will automatically apply to the rest of the subscriptions in the\n     * group.\n     *\n     * @see SubscriptionManager#getSubscriptionsInGroup(ParcelUuid)\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "DEPRECATED_DATABASE_COLUMNS",
+    "type" : "Set<String>",
+    "comment" : "\n     * The deprecated columns that do not have corresponding set methods in\n     * {@link SubscriptionDatabaseManager}.\n     ",
+    "links" : [ "SubscriptionDatabaseManager" ]
+  }, {
+    "name" : "mContext",
+    "type" : "Context",
+    "comment" : " The context ",
+    "links" : [ ]
+  }, {
+    "name" : "mFeatureFlags",
+    "type" : "FeatureFlags",
+    "comment" : " The feature flags ",
+    "links" : [ ]
+  }, {
+    "name" : "mCallback",
+    "type" : "SubscriptionDatabaseManagerCallback",
+    "comment" : " The callback used for passing events back to {@link SubscriptionManagerService}. ",
+    "links" : [ "SubscriptionManagerService" ]
+  }, {
+    "name" : "mUiccController",
+    "type" : "UiccController",
+    "comment" : " UICC controller ",
+    "links" : [ ]
+  }, {
+    "name" : "mReadWriteLock",
+    "type" : "ReadWriteLock",
+    "comment" : "\n     * The read/write lock to protect the entire database access. Using a Re-entrant read lock as\n     * much more read requests are expected than the write requests. All the access to\n     * {@link #mAllSubscriptionInfoInternalCache} needs to be protected by this lock.\n     ",
+    "links" : [ "#mAllSubscriptionInfoInternalCache" ]
+  }, {
+    "name" : "mAsyncMode",
+    "type" : "boolean",
+    "comment" : " Indicating whether access the database asynchronously or not. ",
+    "links" : [ ]
+  }, {
+    "name" : "mLocalLog",
+    "type" : "LocalLog",
+    "comment" : " Local log for most important debug messages. ",
+    "links" : [ ]
+  }, {
+    "name" : "mAllSubscriptionInfoInternalCache",
+    "type" : "Map<Integer, SubscriptionInfoInternal>",
+    "comment" : "\n     * The entire subscription database, including subscriptions from inserted, previously inserted\n     * SIMs. This is the full memory cache of the subscription database. The key is the subscription\n     * id. Note all the access to this map needs to be protected by the re-entrant lock\n     * {@link #mReadWriteLock}.\n     *\n     * @see SimInfo\n     ",
+    "links" : [ "#mReadWriteLock" ]
+  }, {
+    "name" : "mDatabaseInitialized",
+    "type" : "boolean",
+    "comment" : " Whether database has been initialized after boot up. ",
+    "links" : [ ]
+  } ],
+  "methods" : [ {
+    "name" : "private static Object getSubscriptionInfoFieldByColumnName(@NonNull SubscriptionInfoInternal subInfo, @NonNull String columnName)",
+    "returnType" : "Object",
+    "comment" : "\n     * Helper method to get specific field from {@link SubscriptionInfoInternal} by the database\n     * column name. {@link SubscriptionInfoInternal} represent one single record in the\n     * {@link SimInfo} table. So every column has a corresponding get method in\n     * {@link SubscriptionInfoInternal} (except for unused or deprecated columns).\n     *\n     * @param subInfo The subscription info.\n     * @param columnName The database column name.\n     *\n     * @return The corresponding value from {@link SubscriptionInfoInternal}.\n     *\n     * @throws IllegalArgumentException if {@code columnName} is invalid.\n     *\n     * @see android.provider.Telephony.SimInfo for all the columns.\n     ",
+    "links" : [ "android.provider.Telephony.SimInfo", "SubscriptionInfoInternal" ]
+  }, {
+    "name" : "public Object getSubscriptionProperty(int subId, @NonNull String columnName)",
+    "returnType" : "Object",
+    "comment" : "\n     * Get a specific field from the subscription database by {@code subId} and {@code columnName}.\n     *\n     * @param subId The subscription id.\n     * @param columnName The database column name.\n     *\n     * @return The value from subscription database.\n     *\n     * @throws IllegalArgumentException if {@code subId} or {@code columnName} is invalid.\n     *\n     * @see android.provider.Telephony.SimInfo for all the columns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSubscriptionProperty(int subId, @NonNull String columnName, @NonNull Object value)",
+    "returnType" : "void",
+    "comment" : "\n     * Set a field in the subscription database. Note not all fields are supported.\n     *\n     * @param subId Subscription Id of Subscription.\n     * @param columnName Column name in the database. Note not all fields are supported.\n     * @param value Value to store in the database.\n     *\n     * @throws IllegalArgumentException if {@code subId} or {@code columnName} is invalid, or\n     * {@code value} cannot be converted to the corresponding database column format.\n     * @throws NumberFormatException if a string value cannot be converted to integer.\n     * @throws ClassCastException if {@code value} cannot be casted to the required type.\n     *\n     * @see android.provider.Telephony.SimInfo for all the columns.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private ContentValues createDeltaContentValues(@Nullable SubscriptionInfoInternal oldSubInfo, @NonNull SubscriptionInfoInternal newSubInfo)",
+    "returnType" : "ContentValues",
+    "comment" : "\n     * Comparing the old/new {@link SubscriptionInfoInternal} and create content values for database\n     * update. If any field in the new subscription info is different from the old one, then each\n     * delta will be added into the {@link ContentValues}.\n     *\n     * @param oldSubInfo The old {@link SubscriptionInfoInternal}.\n     * @param newSubInfo The new {@link SubscriptionInfoInternal}.\n     *\n     * @return The delta content values for database update.\n     ",
+    "links" : [ "android.content.ContentValues", "SubscriptionInfoInternal" ]
+  }, {
+    "name" : "private int insertNewRecordIntoDatabaseSync(@NonNull ContentValues contentValues)",
+    "returnType" : "int",
+    "comment" : "\n     * Synchronously insert a new record into the database. This operation is synchronous because\n     * we need to convert the inserted row index into the subscription id.\n     *\n     * @param contentValues The fields of the subscription to be inserted into the database.\n     *\n     * @return The row index of the new record. {@link #INVALID_ROW_INDEX} if insertion failed.\n     ",
+    "links" : [ "#INVALID_ROW_INDEX" ]
+  }, {
+    "name" : "public int insertSubscriptionInfo(@NonNull SubscriptionInfoInternal subInfo)",
+    "returnType" : "int",
+    "comment" : "\n     * Insert a new subscription info. The subscription info must have subscription id\n     * {@link SubscriptionManager#INVALID_SUBSCRIPTION_ID}. Note this is a slow method, so be\n     * cautious to call this method.\n     *\n     * @param subInfo The subscription info to update.\n     *\n     * @return The new subscription id. {@link SubscriptionManager#INVALID_SUBSCRIPTION_ID} (-1) if\n     * insertion fails.\n     ",
+    "links" : [ "android.telephony.SubscriptionManager#INVALID_SUBSCRIPTION_ID" ]
+  }, {
+    "name" : "public void removeSubscriptionInfo(int subId)",
+    "returnType" : "void",
+    "comment" : "\n     * Remove a subscription record from the database.\n     *\n     * @param subId The subscription id of the subscription to be deleted.\n     *\n     * @throws IllegalArgumentException If {@code subId} is invalid.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private int updateDatabase(int subId, @NonNull ContentValues contentValues)",
+    "returnType" : "int",
+    "comment" : "\n     * Update a subscription in the database (synchronously or asynchronously).\n     *\n     * @param subId The subscription id of the subscription to be updated.\n     * @param contentValues The fields to be update.\n     *\n     * @return The number of rows updated. Note if the database is configured as asynchronously\n     * update, then this will be always 1.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void writeDatabaseAndCacheHelper(int subId, @NonNull String columnName, @Nullable T newValue, BiFunction<SubscriptionInfoInternal.Builder, T, SubscriptionInfoInternal.Builder> builderSetMethod)",
+    "returnType" : "void",
+    "comment" : "\n     * Update a certain field of subscription in the database. Also update the subscription cache\n     * {@link #mAllSubscriptionInfoInternalCache}.\n     *\n     * @param subId The subscription id.\n     * @param columnName The database column name from the database table {@link SimInfo}.\n     * @param newValue The new value to update the subscription info cache\n     * {@link #mAllSubscriptionInfoInternalCache}.\n     * @param builderSetMethod The {@link SubscriptionInfo.Builder} method to set a specific field\n     * when constructing the new {@link SubscriptionInfo}. This should be one of the\n     * SubscriptionInfoInternal.Builder.setXxxx method.\n     * @param <T> The type of newValue for subscription cache update.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ "#mAllSubscriptionInfoInternalCache", "SubscriptionInfo.Builder", "android.provider.Telephony.SimInfo", "android.telephony.SubscriptionInfo" ]
+  }, {
+    "name" : "public void updateSubscription(@NonNull SubscriptionInfoInternal newSubInfo)",
+    "returnType" : "void",
+    "comment" : "\n     * Update the database with the {@link SubscriptionInfoInternal}, and also update the cache.\n     *\n     * @param newSubInfo The new {@link SubscriptionInfoInternal}.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ "SubscriptionInfoInternal" ]
+  }, {
+    "name" : "public void setIccId(int subId, @NonNull String iccId)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the ICCID of the SIM that is associated with the subscription.\n     *\n     * @param subId Subscription id.\n     * @param iccId The ICCID of the SIM that is associated with this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSimSlotIndex(int subId, int simSlotIndex)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the SIM index of the slot that currently contains the subscription. Set to\n     * {@link SubscriptionManager#INVALID_SIM_SLOT_INDEX} if the subscription is inactive.\n     *\n     * @param subId Subscription id.\n     * @param simSlotIndex The SIM slot index.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ "android.telephony.SubscriptionManager#INVALID_SIM_SLOT_INDEX" ]
+  }, {
+    "name" : "public void setDisplayName(int subId, @NonNull String displayName)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the name displayed to the user that identifies this subscription. This name is used\n     * in Settings page and can be renamed by the user.\n     *\n     * @param subId Subscription id.\n     * @param displayName The display name.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCarrierName(int subId, @NonNull String carrierName)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the name displayed to the user that identifies subscription provider name. This name\n     * is the SPN displayed in status bar and many other places. Can't be renamed by the user.\n     *\n     * @param subId Subscription id.\n     * @param carrierName The carrier name.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDisplayNameSource(int subId, @SimDisplayNameSource int displayNameSource)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the source of the display name.\n     *\n     * @param subId Subscription id.\n     * @param displayNameSource The source of the display name.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     *\n     * @see SubscriptionInfo#getDisplayName()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setIconTint(int subId, @ColorInt int iconTint)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the color to be used for tinting the icon when displaying to the user.\n     *\n     * @param subId Subscription id.\n     * @param iconTint The color to be used for tinting the icon when displaying to the user.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumber(int subId, @NonNull String number)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the number presented to the user identify this subscription.\n     *\n     * @param subId Subscription id.\n     * @param number the number presented to the user identify this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDataRoaming(int subId, @DataRoamingMode int dataRoaming)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether user enables data roaming for this subscription or not.\n     *\n     * @param subId Subscription id.\n     * @param dataRoaming Data roaming mode. Either\n     * {@link SubscriptionManager#DATA_ROAMING_ENABLE} or\n     * {@link SubscriptionManager#DATA_ROAMING_DISABLE}\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ "android.telephony.SubscriptionManager#DATA_ROAMING_ENABLE", "android.telephony.SubscriptionManager#DATA_ROAMING_DISABLE" ]
+  }, {
+    "name" : "public void setMcc(int subId, @NonNull String mcc)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the mobile country code.\n     *\n     * @param subId Subscription id.\n     * @param mcc The mobile country code.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setMnc(int subId, @NonNull String mnc)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the mobile network code.\n     *\n     * @param subId Subscription id.\n     * @param mnc Mobile network code.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEhplmns(int subId, @NonNull String[] ehplmns)",
+    "returnType" : "void",
+    "comment" : "\n     * Set EHPLMNs associated with the subscription.\n     *\n     * @param subId Subscription id.\n     * @param ehplmns EHPLMNs associated with the subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEhplmns(int subId, @NonNull String ehplmns)",
+    "returnType" : "void",
+    "comment" : "\n     * Set EHPLMNs associated with the subscription.\n     *\n     * @param subId Subscription id.\n     * @param ehplmns EHPLMNs associated with the subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHplmns(int subId, @NonNull String[] hplmns)",
+    "returnType" : "void",
+    "comment" : "\n     * Set HPLMNs associated with the subscription.\n     *\n     * @param subId Subscription id.\n     * @param hplmns HPLMNs associated with the subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setHplmns(int subId, @NonNull String hplmns)",
+    "returnType" : "void",
+    "comment" : "\n     * Set HPLMNs associated with the subscription.\n     *\n     * @param subId Subscription id.\n     * @param hplmns HPLMNs associated with the subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEmbedded(int subId, int isEmbedded)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the subscription is from eSIM or not.\n     *\n     * @param subId Subscription id.\n     * @param isEmbedded if the subscription is from eSIM.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEmbedded(int subId, boolean isEmbedded)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the subscription is from eSIM or not.\n     *\n     * @param subId Subscription id.\n     * @param isEmbedded {@code true} if the subscription is from eSIM.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCardString(int subId, @NonNull String cardString)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the card string of the SIM card. This is usually the ICCID or EID.\n     *\n     * @param subId Subscription id.\n     * @param cardString The card string of the SIM card.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     *\n     * @see SubscriptionInfo#getCardString()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCardId(int subId, int cardId)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the card id. This is the non-PII card id converted from\n     * {@link SubscriptionInfoInternal#getCardString()}. This field only exists in\n     * {@link SubscriptionInfo}, but not the database.\n     *\n     * @param subId Subscription id.\n     * @param cardId The card id.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ "#getCardString()", "android.telephony.SubscriptionInfo" ]
+  }, {
+    "name" : "public void setNativeAccessRules(int subId, @NonNull byte[] nativeAccessRules)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the native access rules for this subscription, if it is embedded and defines any.\n     * This does not include access rules for non-embedded subscriptions.\n     *\n     * @param subId Subscription id.\n     * @param nativeAccessRules The native access rules for this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCarrierConfigAccessRules(int subId, @NonNull byte[] carrierConfigAccessRules)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the carrier certificates for this subscription that are saved in carrier configs.\n     * This does not include access rules from the Uicc, whether embedded or non-embedded.\n     *\n     * @param subId Subscription id.\n     * @param carrierConfigAccessRules The carrier certificates for this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCarrierConfigAccessRules(int subId, @NonNull UiccAccessRule[] carrierConfigAccessRules)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the carrier certificates for this subscription that are saved in carrier configs.\n     * This does not include access rules from the Uicc, whether embedded or non-embedded.\n     *\n     * @param subId Subscription id.\n     * @param carrierConfigAccessRules The carrier certificates for this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRemovableEmbedded(int subId, int isRemovableEmbedded)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether an embedded subscription is on a removable card. Such subscriptions are\n     * marked inaccessible as soon as the current card is removed. Otherwise, they will remain\n     * accessible unless explicitly deleted. Only meaningful for embedded subscription.\n     *\n     * @param subId Subscription id.\n     * @param isRemovableEmbedded if the subscription is from the removable embedded SIM.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastExtremeThreatAlertEnabled(int subId, int isExtremeThreatAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast extreme threat alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isExtremeThreatAlertEnabled whether cell broadcast extreme threat alert is enabled by\n     * the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastSevereThreatAlertEnabled(int subId, int isSevereThreatAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast severe threat alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isSevereThreatAlertEnabled whether cell broadcast severe threat alert is enabled by\n     * the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAmberAlertEnabled(int subId, int isAmberAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast amber alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isAmberAlertEnabled whether cell broadcast amber alert is enabled by\n     * the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastEmergencyAlertEnabled(int subId, int isEmergencyAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast emergency alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isEmergencyAlertEnabled whether cell broadcast emergency alert is enabled by\n     * the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAlertSoundDuration(int subId, int alertSoundDuration)",
+    "returnType" : "void",
+    "comment" : "\n     * Set cell broadcast alert sound duration.\n     *\n     * @param subId Subscription id.\n     * @param alertSoundDuration Alert sound duration in seconds.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAlertReminderInterval(int subId, int reminderInterval)",
+    "returnType" : "void",
+    "comment" : "\n     * Set cell broadcast alert reminder interval.\n     *\n     * @param subId Subscription id.\n     * @param reminderInterval Alert reminder interval in milliseconds.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAlertVibrationEnabled(int subId, int isAlertVibrationEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast alert vibration is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isAlertVibrationEnabled whether cell broadcast alert vibration is enabled by the user\n     * or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAlertSpeechEnabled(int subId, int isAlertSpeechEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast alert speech is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isAlertSpeechEnabled whether cell broadcast alert speech is enabled by the user or\n     * not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastEtwsTestAlertEnabled(int subId, int isEtwsTestAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether ETWS test alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isEtwsTestAlertEnabled whether cell broadcast ETWS test alert is enabled by the user\n     * or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastAreaInfoMessageEnabled(int subId, int isAreaInfoMessageEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether area info message is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isAreaInfoMessageEnabled whether cell broadcast area info message is enabled by the\n     * user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastTestAlertEnabled(int subId, int isTestAlertEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast test alert is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isTestAlertEnabled whether cell broadcast test alert is enabled by the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCellBroadcastOptOutDialogEnabled(int subId, int isOptOutDialogEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether cell broadcast opt-out dialog should be shown or not.\n     *\n     * @param subId Subscription id.\n     * @param isOptOutDialogEnabled whether cell broadcast opt-out dialog should be shown or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEnhanced4GModeEnabled(int subId, int isEnhanced4GModeEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether enhanced 4G mode is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isEnhanced4GModeEnabled whether enhanced 4G mode is enabled by the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setVideoTelephonyEnabled(int subId, int isVideoTelephonyEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether video telephony is enabled by the user or not.\n     *\n     * @param subId Subscription id.\n     * @param isVideoTelephonyEnabled whether video telephony is enabled by the user or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWifiCallingEnabled(int subId, int isWifiCallingEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether Wi-Fi calling is enabled by the user or not when the device is not roaming.\n     *\n     * @param subId Subscription id.\n     * @param isWifiCallingEnabled whether Wi-Fi calling is enabled by the user or not when the\n     * device is not roaming.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWifiCallingMode(int subId, @ImsMmTelManager.WiFiCallingMode int wifiCallingMode)",
+    "returnType" : "void",
+    "comment" : "\n     * Set Wi-Fi calling mode when the device is not roaming.\n     *\n     * @param subId Subscription id.\n     * @param wifiCallingMode Wi-Fi calling mode when the device is not roaming.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWifiCallingModeForRoaming(int subId, @ImsMmTelManager.WiFiCallingMode int wifiCallingModeForRoaming)",
+    "returnType" : "void",
+    "comment" : "\n     * Set Wi-Fi calling mode when the device is roaming.\n     *\n     * @param subId Subscription id.\n     * @param wifiCallingModeForRoaming Wi-Fi calling mode when the device is roaming.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setWifiCallingEnabledForRoaming(int subId, int isWifiCallingEnabledForRoaming)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether Wi-Fi calling is enabled by the user or not when the device is roaming.\n     *\n     * @param subId Subscription id.\n     * @param isWifiCallingEnabledForRoaming whether Wi-Fi calling is enabled by the user or not\n     * when the device is roaming.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOpportunistic(int subId, boolean isOpportunistic)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the subscription is opportunistic or not.\n     *\n     * @param subId Subscription id.\n     * @param isOpportunistic if the subscription is opportunistic.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setOpportunistic(int subId, int isOpportunistic)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the subscription is opportunistic or not.\n     *\n     * @param subId Subscription id.\n     * @param isOpportunistic if the subscription is opportunistic.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setGroupUuid(int subId, @NonNull String groupUuid)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the group UUID of the subscription group.\n     *\n     * @param subId Subscription id.\n     * @param groupUuid The group UUID.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     *\n     * @see SubscriptionInfo#getGroupUuid()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCountryIso(int subId, @NonNull String countryIso)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the ISO Country code for the subscription's provider.\n     *\n     * @param subId Subscription id.\n     * @param countryIso The ISO country code for the subscription's provider.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCarrierId(int subId, int carrierId)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the subscription carrier id.\n     *\n     * @param subId Subscription id.\n     * @param carrierId The carrier id.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     *\n     * @see TelephonyManager#getSimCarrierId()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setProfileClass(int subId, @ProfileClass int profileClass)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the profile class populated from the profile metadata if present.\n     *\n     * @param subId Subscription id.\n     * @param profileClass the profile class populated from the profile metadata if present.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     *\n     * @see SubscriptionInfo#getProfileClass()\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSubscriptionType(int subId, @SubscriptionType int type)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the subscription type.\n     *\n     * @param subId Subscription id.\n     * @param type Subscription type.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setGroupOwner(int subId, @NonNull String groupOwner)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the owner package of group the subscription belongs to.\n     *\n     * @param subId Subscription id.\n     * @param groupOwner Owner package of group the subscription belongs to.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setEnabledMobileDataPolicies(int subId, @NonNull String enabledMobileDataPolicies)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the enabled mobile data policies.\n     *\n     * @param subId Subscription id.\n     * @param enabledMobileDataPolicies The enabled mobile data policies.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setImsi(int subId, @NonNull String imsi)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the IMSI (International Mobile Subscriber Identity) of the subscription.\n     *\n     * @param subId Subscription id.\n     * @param imsi The IMSI.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUiccApplicationsEnabled(int subId, boolean areUiccApplicationsEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether Uicc applications are configured to enable or not.\n     *\n     * @param subId Subscription id.\n     * @param areUiccApplicationsEnabled if Uicc applications are configured to enable.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUiccApplicationsEnabled(int subId, int areUiccApplicationsEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether Uicc applications are configured to enable or not.\n     *\n     * @param subId Subscription id.\n     * @param areUiccApplicationsEnabled if Uicc applications are configured to enable.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRcsUceEnabled(int subId, int isRcsUceEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the user has enabled IMS RCS User Capability Exchange (UCE) for this\n     * subscription.\n     *\n     * @param subId Subscription id.\n     * @param isRcsUceEnabled If the user enabled RCS UCE for this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setCrossSimCallingEnabled(int subId, int isCrossSimCallingEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the user has enabled cross SIM calling for this subscription.\n     *\n     * @param subId Subscription id.\n     * @param isCrossSimCallingEnabled If the user enabled cross SIM calling for this\n     * subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setRcsConfig(int subId, @NonNull byte[] rcsConfig)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the RCS config for this subscription.\n     *\n     * @param subId Subscription id.\n     * @param rcsConfig The RCS config for this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setAllowedNetworkTypesForReasons(int subId, @NonNull String allowedNetworkTypesForReasons)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the allowed network types for reasons.\n     *\n     * @param subId Subscription id.\n     * @param allowedNetworkTypesForReasons The allowed network types for reasons in string\n     * format. The format is \"[reason]=[network types bitmask], [reason]=[network types bitmask],\n     * ...\". For example, \"user=1239287394, thermal=298791239, carrier=3456812312\".\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDeviceToDeviceStatusSharingPreference(int subId, @DeviceToDeviceStatusSharingPreference int deviceToDeviceStatusSharingPreference)",
+    "returnType" : "void",
+    "comment" : "\n     * Set device to device sharing status.\n     *\n     * @param subId Subscription id.\n     * @param deviceToDeviceStatusSharingPreference Device to device sharing status.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setVoImsOptInEnabled(int subId, int isVoImsOptInEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the user has opted-in voice over IMS.\n     *\n     * @param subId Subscription id.\n     * @param isVoImsOptInEnabled Whether the user has opted-in voice over IMS.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setDeviceToDeviceStatusSharingContacts(int subId, @NonNull String deviceToDeviceStatusSharingContacts)",
+    "returnType" : "void",
+    "comment" : "\n     * Set contacts information that allow device to device sharing.\n     *\n     * @param subId Subscription id.\n     * @param deviceToDeviceStatusSharingContacts contacts information that allow device to\n     * device sharing.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNrAdvancedCallingEnabled(int subId, int isNrAdvancedCallingEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the user has enabled NR advanced calling.\n     *\n     * @param subId Subscription id.\n     * @param isNrAdvancedCallingEnabled Whether the user has enabled NR advanced calling.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumberFromCarrier(int subId, @NonNull String numberFromCarrier)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the phone number retrieved from carrier.\n     *\n     * @param subId Subscription id.\n     * @param numberFromCarrier The phone number retrieved from carrier.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNumberFromIms(int subId, @NonNull String numberFromIms)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the phone number retrieved from IMS.\n     *\n     * @param subId Subscription id.\n     * @param numberFromIms The phone number retrieved from IMS.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setPortIndex(int subId, int portIndex)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the port index of the Uicc card.\n     *\n     * @param subId Subscription id.\n     * @param portIndex The port index of the Uicc card.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUsageSetting(int subId, @UsageSetting int usageSetting)",
+    "returnType" : "void",
+    "comment" : "\n     * Set subscription's preferred usage setting.\n     *\n     * @param subId Subscription id.\n     * @param usageSetting Subscription's preferred usage setting.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setLastUsedTPMessageReference(int subId, int lastUsedTPMessageReference)",
+    "returnType" : "void",
+    "comment" : "\n     * Set last used TP message reference.\n     *\n     * @param subId Subscription id.\n     * @param lastUsedTPMessageReference Last used TP message reference.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setUserId(int subId, @UserIdInt int userId)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the user id associated with this subscription.\n     *\n     * @param subId Subscription id.\n     * @param userId The user id associated with this subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSatelliteEnabled(int subId, int isSatelliteEnabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether satellite is enabled or not.\n     *\n     * @param subId Subscription id.\n     * @param isSatelliteEnabled if satellite is enabled or not.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSatelliteAttachEnabledForCarrier(int subId, int isSatelliteAttachEnabledForCarrier)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether satellite attach for carrier is enabled or disabled by user.\n     *\n     * @param subId Subscription id.\n     * @param isSatelliteAttachEnabledForCarrier Whether satellite attach for carrier is enabled or\n     * disabled.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setNtn(int subId, int isNtn)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether the subscription is exclusively used for non-terrestrial networks or not.\n     *\n     * @param subId Subscription ID.\n     * @param isNtn {@code 1} if it is a non-terrestrial network subscription.\n     * {@code 0} otherwise.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setGroupDisabled(int subId, boolean isGroupDisabled)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether group of the subscription is disabled. This is only useful if it's a grouped\n     * opportunistic subscription. In this case, if all primary (non-opportunistic)\n     * subscriptions in the group are deactivated (unplugged pSIM or deactivated eSIM profile),\n     * we should disable this opportunistic subscription.\n     *\n     * @param subId Subscription id.\n     * @param isGroupDisabled if group of the subscription is disabled.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setServiceCapabilities(int subId, int capabilities)",
+    "returnType" : "void",
+    "comment" : "\n     * Set service capabilities the subscription support.\n     * @param subId Subscription id.\n     * @param capabilities Service capabilities bitmasks\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSatelliteEntitlementStatus(int subId, int isSatelliteEntitlementStatus)",
+    "returnType" : "void",
+    "comment" : "\n     * Set whether satellite entitlement status is enabled by entitlement query result.\n     *\n     * @param subId Subscription id.\n     * @param isSatelliteEntitlementStatus Whether satellite entitlement status is enabled or\n     * disabled.\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSatelliteEntitlementPlmns(int subId, @NonNull String satelliteEntitlementPlmns)",
+    "returnType" : "void",
+    "comment" : "\n     * Set satellite entitlement plmns by entitlement query result.\n     *\n     * @param subId Subscription id.\n     * @param satelliteEntitlementPlmns Satellite entitlement plmns\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setSatelliteEntitlementPlmnList(int subId, @NonNull List<String> satelliteEntitlementPlmnList)",
+    "returnType" : "void",
+    "comment" : "\n     * Set satellite entitlement plmn list by entitlement query result.\n     *\n     * @param subId Subscription id.\n     * @param satelliteEntitlementPlmnList Satellite entitlement plmn list\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void reloadDatabaseSync()",
+    "returnType" : "void",
+    "comment" : "\n     * Reload the database from content provider to the cache. This must be a synchronous operation\n     * to prevent cache/database out-of-sync. Callers should be cautious to call this method because\n     * it might take longer time to complete.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void loadDatabaseInternal()",
+    "returnType" : "void",
+    "comment" : "\n     * Load the database from content provider to the cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void initializeDatabase()",
+    "returnType" : "void",
+    "comment" : "\n     * Initialize the database cache. Load the entire database into the cache.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private SubscriptionInfoInternal createSubscriptionInfoFromCursor(@NonNull Cursor cursor)",
+    "returnType" : "SubscriptionInfoInternal",
+    "comment" : "\n     * Build the {@link SubscriptionInfoInternal} from database.\n     *\n     * @param cursor  The cursor of the database.\n     *\n     * @return The subscription info from a single database record.\n     ",
+    "links" : [ "SubscriptionInfoInternal" ]
+  }, {
+    "name" : "public void syncToGroup(int subId)",
+    "returnType" : "void",
+    "comment" : "\n     * Sync the group sharing fields from reference subscription to the rest of the subscriptions in\n     * the same group. For example, if user enables wifi calling, the same setting should be applied\n     * to all subscriptions in the same group.\n     *\n     * @param subId The subscription id of reference subscription.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public SubscriptionInfoInternal getSubscriptionInfoInternal(int subId)",
+    "returnType" : "SubscriptionInfoInternal",
+    "comment" : "\n     * Get the subscription info by subscription id.\n     *\n     * @param subId The subscription id.\n     *\n     * @return The subscription info. {@code null} if not found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public List<SubscriptionInfoInternal> getAllSubscriptions()",
+    "returnType" : "List<SubscriptionInfoInternal>",
+    "comment" : "\n     * @return All subscription infos in the database.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public SubscriptionInfoInternal getSubscriptionInfoInternalByIccId(@NonNull String iccId)",
+    "returnType" : "SubscriptionInfoInternal",
+    "comment" : "\n     * Get subscription info by ICCID.\n     *\n     * @param iccId The ICCID of the SIM card.\n     * @return The subscription info if found. {@code null} if not found.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void setTransferStatus(int subId, int status)",
+    "returnType" : "void",
+    "comment" : "\n     * Set the transfer status of the subscriptionInfo that corresponds to subId.\n     *\n     * @param subId Subscription ID.\n     * @param status The transfer status to change.\n     *\n     * @throws IllegalArgumentException if the subscription does not exist.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void log(@NonNull String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log debug messages.\n     *\n     * @param s debug messages\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void loge(@NonNull String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log error messages.\n     *\n     * @param s error messages\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logv(@NonNull String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log verbose messages.\n     *\n     * @param s debug messages.\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logel(@NonNull String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log error messages and also log into the local log.\n     *\n     * @param s debug messages\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "private void logl(@NonNull String s)",
+    "returnType" : "void",
+    "comment" : "\n     * Log debug messages and also log into the local log.\n     *\n     * @param s debug messages\n     ",
+    "links" : [ ]
+  }, {
+    "name" : "public void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter printWriter, @NonNull String[] args)",
+    "returnType" : "void",
+    "comment" : "\n     * Dump the state of {@link SubscriptionDatabaseManager}.\n     *\n     * @param fd File descriptor\n     * @param printWriter Print writer\n     * @param args Arguments\n     ",
+    "links" : [ "SubscriptionDatabaseManager" ]
+  } ],
+  "methodNames" : [ "private static Object getSubscriptionInfoFieldByColumnName(@NonNull SubscriptionInfoInternal subInfo, @NonNull String columnName)", "public Object getSubscriptionProperty(int subId, @NonNull String columnName)", "public void setSubscriptionProperty(int subId, @NonNull String columnName, @NonNull Object value)", "private ContentValues createDeltaContentValues(@Nullable SubscriptionInfoInternal oldSubInfo, @NonNull SubscriptionInfoInternal newSubInfo)", "private int insertNewRecordIntoDatabaseSync(@NonNull ContentValues contentValues)", "public int insertSubscriptionInfo(@NonNull SubscriptionInfoInternal subInfo)", "public void removeSubscriptionInfo(int subId)", "private int updateDatabase(int subId, @NonNull ContentValues contentValues)", "private void writeDatabaseAndCacheHelper(int subId, @NonNull String columnName, @Nullable T newValue, BiFunction<SubscriptionInfoInternal.Builder, T, SubscriptionInfoInternal.Builder> builderSetMethod)", "public void updateSubscription(@NonNull SubscriptionInfoInternal newSubInfo)", "public void setIccId(int subId, @NonNull String iccId)", "public void setSimSlotIndex(int subId, int simSlotIndex)", "public void setDisplayName(int subId, @NonNull String displayName)", "public void setCarrierName(int subId, @NonNull String carrierName)", "public void setDisplayNameSource(int subId, @SimDisplayNameSource int displayNameSource)", "public void setIconTint(int subId, @ColorInt int iconTint)", "public void setNumber(int subId, @NonNull String number)", "public void setDataRoaming(int subId, @DataRoamingMode int dataRoaming)", "public void setMcc(int subId, @NonNull String mcc)", "public void setMnc(int subId, @NonNull String mnc)", "public void setEhplmns(int subId, @NonNull String[] ehplmns)", "public void setEhplmns(int subId, @NonNull String ehplmns)", "public void setHplmns(int subId, @NonNull String[] hplmns)", "public void setHplmns(int subId, @NonNull String hplmns)", "public void setEmbedded(int subId, int isEmbedded)", "public void setEmbedded(int subId, boolean isEmbedded)", "public void setCardString(int subId, @NonNull String cardString)", "public void setCardId(int subId, int cardId)", "public void setNativeAccessRules(int subId, @NonNull byte[] nativeAccessRules)", "public void setCarrierConfigAccessRules(int subId, @NonNull byte[] carrierConfigAccessRules)", "public void setCarrierConfigAccessRules(int subId, @NonNull UiccAccessRule[] carrierConfigAccessRules)", "public void setRemovableEmbedded(int subId, int isRemovableEmbedded)", "public void setCellBroadcastExtremeThreatAlertEnabled(int subId, int isExtremeThreatAlertEnabled)", "public void setCellBroadcastSevereThreatAlertEnabled(int subId, int isSevereThreatAlertEnabled)", "public void setCellBroadcastAmberAlertEnabled(int subId, int isAmberAlertEnabled)", "public void setCellBroadcastEmergencyAlertEnabled(int subId, int isEmergencyAlertEnabled)", "public void setCellBroadcastAlertSoundDuration(int subId, int alertSoundDuration)", "public void setCellBroadcastAlertReminderInterval(int subId, int reminderInterval)", "public void setCellBroadcastAlertVibrationEnabled(int subId, int isAlertVibrationEnabled)", "public void setCellBroadcastAlertSpeechEnabled(int subId, int isAlertSpeechEnabled)", "public void setCellBroadcastEtwsTestAlertEnabled(int subId, int isEtwsTestAlertEnabled)", "public void setCellBroadcastAreaInfoMessageEnabled(int subId, int isAreaInfoMessageEnabled)", "public void setCellBroadcastTestAlertEnabled(int subId, int isTestAlertEnabled)", "public void setCellBroadcastOptOutDialogEnabled(int subId, int isOptOutDialogEnabled)", "public void setEnhanced4GModeEnabled(int subId, int isEnhanced4GModeEnabled)", "public void setVideoTelephonyEnabled(int subId, int isVideoTelephonyEnabled)", "public void setWifiCallingEnabled(int subId, int isWifiCallingEnabled)", "public void setWifiCallingMode(int subId, @ImsMmTelManager.WiFiCallingMode int wifiCallingMode)", "public void setWifiCallingModeForRoaming(int subId, @ImsMmTelManager.WiFiCallingMode int wifiCallingModeForRoaming)", "public void setWifiCallingEnabledForRoaming(int subId, int isWifiCallingEnabledForRoaming)", "public void setOpportunistic(int subId, boolean isOpportunistic)", "public void setOpportunistic(int subId, int isOpportunistic)", "public void setGroupUuid(int subId, @NonNull String groupUuid)", "public void setCountryIso(int subId, @NonNull String countryIso)", "public void setCarrierId(int subId, int carrierId)", "public void setProfileClass(int subId, @ProfileClass int profileClass)", "public void setSubscriptionType(int subId, @SubscriptionType int type)", "public void setGroupOwner(int subId, @NonNull String groupOwner)", "public void setEnabledMobileDataPolicies(int subId, @NonNull String enabledMobileDataPolicies)", "public void setImsi(int subId, @NonNull String imsi)", "public void setUiccApplicationsEnabled(int subId, boolean areUiccApplicationsEnabled)", "public void setUiccApplicationsEnabled(int subId, int areUiccApplicationsEnabled)", "public void setRcsUceEnabled(int subId, int isRcsUceEnabled)", "public void setCrossSimCallingEnabled(int subId, int isCrossSimCallingEnabled)", "public void setRcsConfig(int subId, @NonNull byte[] rcsConfig)", "public void setAllowedNetworkTypesForReasons(int subId, @NonNull String allowedNetworkTypesForReasons)", "public void setDeviceToDeviceStatusSharingPreference(int subId, @DeviceToDeviceStatusSharingPreference int deviceToDeviceStatusSharingPreference)", "public void setVoImsOptInEnabled(int subId, int isVoImsOptInEnabled)", "public void setDeviceToDeviceStatusSharingContacts(int subId, @NonNull String deviceToDeviceStatusSharingContacts)", "public void setNrAdvancedCallingEnabled(int subId, int isNrAdvancedCallingEnabled)", "public void setNumberFromCarrier(int subId, @NonNull String numberFromCarrier)", "public void setNumberFromIms(int subId, @NonNull String numberFromIms)", "public void setPortIndex(int subId, int portIndex)", "public void setUsageSetting(int subId, @UsageSetting int usageSetting)", "public void setLastUsedTPMessageReference(int subId, int lastUsedTPMessageReference)", "public void setUserId(int subId, @UserIdInt int userId)", "public void setSatelliteEnabled(int subId, int isSatelliteEnabled)", "public void setSatelliteAttachEnabledForCarrier(int subId, int isSatelliteAttachEnabledForCarrier)", "public void setNtn(int subId, int isNtn)", "public void setGroupDisabled(int subId, boolean isGroupDisabled)", "public void setServiceCapabilities(int subId, int capabilities)", "public void setSatelliteEntitlementStatus(int subId, int isSatelliteEntitlementStatus)", "public void setSatelliteEntitlementPlmns(int subId, @NonNull String satelliteEntitlementPlmns)", "public void setSatelliteEntitlementPlmnList(int subId, @NonNull List<String> satelliteEntitlementPlmnList)", "public void reloadDatabaseSync()", "private void loadDatabaseInternal()", "private void initializeDatabase()", "private SubscriptionInfoInternal createSubscriptionInfoFromCursor(@NonNull Cursor cursor)", "public void syncToGroup(int subId)", "public SubscriptionInfoInternal getSubscriptionInfoInternal(int subId)", "public List<SubscriptionInfoInternal> getAllSubscriptions()", "public SubscriptionInfoInternal getSubscriptionInfoInternalByIccId(@NonNull String iccId)", "public void setTransferStatus(int subId, int status)", "private void log(@NonNull String s)", "private void loge(@NonNull String s)", "private void logv(@NonNull String s)", "private void logel(@NonNull String s)", "private void logl(@NonNull String s)", "public void dump(@NonNull FileDescriptor fd, @NonNull PrintWriter printWriter, @NonNull String[] args)" ],
+  "variableNames" : [ "LOG_TAG", "VDBG", "INVALID_ROW_INDEX", "SUBSCRIPTION_GET_METHOD_MAP", "SUBSCRIPTION_SET_INTEGER_METHOD_MAP", "SUBSCRIPTION_SET_STRING_METHOD_MAP", "SUBSCRIPTION_SET_BYTE_ARRAY_METHOD_MAP", "GROUP_SHARING_COLUMNS", "DEPRECATED_DATABASE_COLUMNS", "mContext", "mFeatureFlags", "mCallback", "mUiccController", "mReadWriteLock", "mAsyncMode", "mLocalLog", "mAllSubscriptionInfoInternalCache", "mDatabaseInitialized" ]
+}
